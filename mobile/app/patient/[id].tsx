@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3 } from 'lucide-react-native';
+import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital } from 'lucide-react-native';
 import { getPatientById, deletePatient } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { EditPatientModal } from '../../src/components/patients';
 import type { Patient, AppointmentWithPatient } from '../../src/types/database';
 
-type TabType = 'appointments' | 'exams' | 'payments';
+type TabType = 'appointments' | 'procedures' | 'exams' | 'payments';
 
 export default function PatientDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -192,28 +192,37 @@ export default function PatientDetail() {
                     <View className="flex-row bg-gray-100 rounded-xl p-1">
                         <TouchableOpacity
                             onPress={() => setActiveTab('appointments')}
-                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'appointments' ? 'bg-white' : ''}`}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'appointments' ? 'bg-white' : ''}`}
                         >
                             <Calendar size={18} color={activeTab === 'appointments' ? '#0D9488' : '#6B7280'} />
-                            <Text className={`text-xs mt-1 ${activeTab === 'appointments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'appointments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
                                 Consultas
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
+                            onPress={() => setActiveTab('procedures')}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'procedures' ? 'bg-white' : ''}`}
+                        >
+                            <Hospital size={18} color={activeTab === 'procedures' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'procedures' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Procedimentos
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
                             onPress={() => setActiveTab('exams')}
-                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'exams' ? 'bg-white' : ''}`}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'exams' ? 'bg-white' : ''}`}
                         >
                             <FileText size={18} color={activeTab === 'exams' ? '#0D9488' : '#6B7280'} />
-                            <Text className={`text-xs mt-1 ${activeTab === 'exams' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'exams' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
                                 Exames
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('payments')}
-                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'payments' ? 'bg-white' : ''}`}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'payments' ? 'bg-white' : ''}`}
                         >
                             <CreditCard size={18} color={activeTab === 'payments' ? '#0D9488' : '#6B7280'} />
-                            <Text className={`text-xs mt-1 ${activeTab === 'payments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'payments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
                                 Pagamentos
                             </Text>
                         </TouchableOpacity>
@@ -268,6 +277,22 @@ export default function PatientDetail() {
                                     })}
                                 </View>
                             )}
+                        </View>
+                    </View>
+                )}
+
+                {/* Procedures Tab */}
+                {activeTab === 'procedures' && (
+                    <View className="mx-4 mb-4">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <View className="p-4 border-b border-gray-100">
+                                <Text className="font-semibold text-gray-900">Procedimentos Realizados</Text>
+                            </View>
+                            <View className="p-8 items-center">
+                                <Hospital size={40} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-4">Nenhum procedimento registrado</Text>
+                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
+                            </View>
                         </View>
                     </View>
                 )}

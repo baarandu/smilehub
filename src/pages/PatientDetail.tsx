@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar as CalendarIcon, FileText, CreditCard, User } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, FileText, CreditCard, User, Hospital } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,6 +9,7 @@ import { appointmentsService } from '@/services/appointments';
 import { 
   PatientHeader, 
   AppointmentsTab, 
+  ProceduresTab,
   PaymentsTab, 
   PatientInfoTab,
   DocumentUpload,
@@ -88,10 +89,14 @@ export default function PatientDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="appointments" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="appointments" className="gap-2">
             <CalendarIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Consultas</span>
+          </TabsTrigger>
+          <TabsTrigger value="procedures" className="gap-2">
+            <Hospital className="w-4 h-4" />
+            <span className="hidden sm:inline">Procedimentos</span>
           </TabsTrigger>
           <TabsTrigger value="exams" className="gap-2">
             <FileText className="w-4 h-4" />
@@ -109,6 +114,10 @@ export default function PatientDetail() {
 
         <TabsContent value="appointments" className="mt-6">
           <AppointmentsTab appointments={appointments} loading={loadingAppointments} />
+        </TabsContent>
+
+        <TabsContent value="procedures" className="mt-6">
+          <ProceduresTab />
         </TabsContent>
 
         <TabsContent value="exams" className="mt-6">

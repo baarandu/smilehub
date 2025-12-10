@@ -6,6 +6,7 @@ export { NewPatientDialog } from './NewPatientDialog';
 export { EditPatientDialog } from './EditPatientDialog';
 export { PatientHeader } from './PatientHeader';
 export { AppointmentsTab } from './AppointmentsTab';
+export { ProceduresTab } from './ProceduresTab';
 export { PaymentsTab } from './PaymentsTab';
 export { PatientInfoTab } from './PatientInfoTab';
 
