@@ -16,6 +16,21 @@ export interface Database {
           phone: string
           email: string | null
           birth_date: string | null
+          cpf: string | null
+          rg: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          zip_code: string | null
+          occupation: string | null
+          emergency_contact: string | null
+          emergency_phone: string | null
+          health_insurance: string | null
+          health_insurance_number: string | null
+          allergies: string | null
+          medications: string | null
+          medical_history: string | null
+          avatar_url: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -26,6 +41,21 @@ export interface Database {
           phone: string
           email?: string | null
           birth_date?: string | null
+          cpf?: string | null
+          rg?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          occupation?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          health_insurance?: string | null
+          health_insurance_number?: string | null
+          allergies?: string | null
+          medications?: string | null
+          medical_history?: string | null
+          avatar_url?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -36,6 +66,21 @@ export interface Database {
           phone?: string
           email?: string | null
           birth_date?: string | null
+          cpf?: string | null
+          rg?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          occupation?: string | null
+          emergency_contact?: string | null
+          emergency_phone?: string | null
+          health_insurance?: string | null
+          health_insurance_number?: string | null
+          allergies?: string | null
+          medications?: string | null
+          medical_history?: string | null
+          avatar_url?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -77,6 +122,7 @@ export interface Database {
           date: string
           time: string
           status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled'
+          location: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -87,6 +133,7 @@ export interface Database {
           date: string
           time: string
           status?: 'scheduled' | 'confirmed' | 'completed' | 'cancelled'
+          location?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -97,6 +144,7 @@ export interface Database {
           date?: string
           time?: string
           status?: 'scheduled' | 'confirmed' | 'completed' | 'cancelled'
+          location?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -146,3 +194,25 @@ export type ReturnAlert = {
   days_until_return: number
 }
 
+// Form data type for patient registration
+export type PatientFormData = {
+  name: string
+  phone: string
+  email: string
+  birthDate: string
+  cpf: string
+  rg: string
+  address: string
+  city: string
+  state: string
+  zipCode: string
+  occupation: string
+  emergencyContact: string
+  emergencyPhone: string
+  healthInsurance: string
+  healthInsuranceNumber: string
+  allergies: string
+  medications: string
+  medicalHistory: string
+  notes: string
+}

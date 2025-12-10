@@ -96,6 +96,29 @@ export const appointmentsService = {
     
     if (error) throw error;
     return count || 0;
+  },
+
+  async getByDateRange(startDate: string, endDate: string): Promise<Appointment[]> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate);
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getDatesWithAppointments(startDate: string, endDate: string): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('date')
+      .gte('date', startDate)
+      .lte('date', endDate);
+    
+    if (error) throw error;
+    const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
+    return uniqueDates;
   }
 };
 

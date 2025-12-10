@@ -1,18 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { patientsService } from '@/services/patients';
-import type { PatientInsert, PatientUpdate } from '@/types/database';
+import {
+  getPatients,
+  getPatientById,
+  createPatientFromForm,
+  updatePatientFromForm,
+  deletePatient,
+  searchPatients,
+} from '@/services/patients';
+import type { PatientFormData } from '@/types/database';
 
 export function usePatients() {
   return useQuery({
     queryKey: ['patients'],
-    queryFn: () => patientsService.getAll(),
+    queryFn: getPatients,
   });
 }
 
 export function usePatient(id: string) {
   return useQuery({
     queryKey: ['patients', id],
-    queryFn: () => patientsService.getById(id),
+    queryFn: () => getPatientById(id),
     enabled: !!id,
   });
 }
@@ -20,15 +27,8 @@ export function usePatient(id: string) {
 export function usePatientSearch(query: string) {
   return useQuery({
     queryKey: ['patients', 'search', query],
-    queryFn: () => patientsService.search(query),
+    queryFn: () => searchPatients(query),
     enabled: query.length >= 2,
-  });
-}
-
-export function usePatientsCount() {
-  return useQuery({
-    queryKey: ['patients', 'count'],
-    queryFn: () => patientsService.count(),
   });
 }
 
@@ -36,7 +36,7 @@ export function useCreatePatient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (patient: PatientInsert) => patientsService.create(patient),
+    mutationFn: (formData: PatientFormData) => createPatientFromForm(formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
@@ -47,8 +47,8 @@ export function useUpdatePatient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PatientUpdate }) => 
-      patientsService.update(id, data),
+    mutationFn: ({ id, formData }: { id: string; formData: PatientFormData }) => 
+      updatePatientFromForm(id, formData),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patients', variables.id] });
@@ -60,10 +60,17 @@ export function useDeletePatient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string) => patientsService.delete(id),
+    mutationFn: (id: string) => deletePatient(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
   });
 }
 
+export function usePatientsCount() {
+  const { data: patients, isLoading } = usePatients();
+  return {
+    data: patients?.length || 0,
+    isLoading,
+  };
+}

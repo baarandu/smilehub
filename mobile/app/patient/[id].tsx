@@ -1,0 +1,344 @@
+import { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3 } from 'lucide-react-native';
+import { getPatientById, deletePatient } from '../../src/services/patients';
+import { appointmentsService } from '../../src/services/appointments';
+import { EditPatientModal } from '../../src/components/patients';
+import type { Patient, AppointmentWithPatient } from '../../src/types/database';
+
+type TabType = 'appointments' | 'exams' | 'payments';
+
+export default function PatientDetail() {
+    const { id } = useLocalSearchParams<{ id: string }>();
+    const router = useRouter();
+    const [patient, setPatient] = useState<Patient | null>(null);
+    const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<TabType>('appointments');
+    const [showEditModal, setShowEditModal] = useState(false);
+
+    useEffect(() => {
+        if (id) {
+            loadPatient();
+            loadAppointments();
+        }
+    }, [id]);
+
+    const loadPatient = async () => {
+        try {
+            setLoading(true);
+            const data = await getPatientById(id!);
+            setPatient(data);
+        } catch (error) {
+            console.error('Error loading patient:', error);
+            Alert.alert('Erro', 'Não foi possível carregar os dados do paciente');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadAppointments = async () => {
+        try {
+            const data = await appointmentsService.getByPatient(id!);
+            setAppointments(data);
+        } catch (error) {
+            console.error('Error loading appointments:', error);
+        }
+    };
+
+    const getInitials = (name: string) => {
+        return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    };
+
+    const formatDateDisplay = (dateStr: string | null) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr + 'T00:00:00');
+        return date.toLocaleDateString('pt-BR');
+    };
+
+    const calculateAge = (dateStr: string | null) => {
+        if (!dateStr) return null;
+        const birth = new Date(dateStr + 'T00:00:00');
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
+    const handleDelete = () => {
+        if (!patient) return;
+        
+        Alert.alert(
+            'Excluir Paciente',
+            `Tem certeza que deseja excluir ${patient.name}? Esta ação não pode ser desfeita.`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deletePatient(patient.id);
+                            router.back();
+                        } catch (error) {
+                            console.error('Error deleting patient:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir o paciente');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
+        scheduled: { label: 'Agendado', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
+        confirmed: { label: 'Confirmado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
+        completed: { label: 'Compareceu', bgColor: 'bg-emerald-100', textColor: 'text-emerald-700' },
+        cancelled: { label: 'Cancelado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+    };
+
+    if (loading) {
+        return (
+            <SafeAreaView className="flex-1 bg-gray-50">
+                <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="large" color="#0D9488" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!patient) {
+        return (
+            <SafeAreaView className="flex-1 bg-gray-50">
+                <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
+                    <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                        <ArrowLeft size={24} color="#0D9488" />
+                    </TouchableOpacity>
+                    <Text className="text-lg font-semibold text-gray-900">Paciente não encontrado</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView className="flex-1 bg-gray-50">
+            {/* Header */}
+            <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
+                <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                    <ArrowLeft size={24} color="#0D9488" />
+                </TouchableOpacity>
+                <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>
+                <TouchableOpacity 
+                    onPress={() => setShowEditModal(true)}
+                    className="bg-teal-50 p-2 rounded-lg mr-2"
+                >
+                    <Edit3 size={20} color="#0D9488" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    onPress={handleDelete}
+                    className="bg-red-50 p-2 rounded-lg"
+                >
+                    <Trash2 size={20} color="#EF4444" />
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView className="flex-1">
+                {/* Patient Card */}
+                <View className="bg-white m-4 p-5 rounded-xl border border-gray-100">
+                    <View className="flex-row items-center gap-4">
+                        <View className="w-16 h-16 rounded-xl bg-teal-500 items-center justify-center">
+                            <Text className="text-white font-bold text-xl">
+                                {getInitials(patient.name)}
+                            </Text>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-xl font-bold text-gray-900">{patient.name}</Text>
+                            {patient.occupation && (
+                                <Text className="text-gray-500 mt-1">{patient.occupation}</Text>
+                            )}
+                        </View>
+                    </View>
+
+                    <View className="mt-4 gap-3">
+                        <View className="flex-row items-center gap-3">
+                            <Phone size={16} color="#0D9488" />
+                            <Text className="text-gray-700">{patient.phone}</Text>
+                        </View>
+                        {patient.email && (
+                            <View className="flex-row items-center gap-3">
+                                <Mail size={16} color="#0D9488" />
+                                <Text className="text-gray-700">{patient.email}</Text>
+                            </View>
+                        )}
+                        {patient.birth_date && (
+                            <View className="flex-row items-center gap-3">
+                                <Calendar size={16} color="#0D9488" />
+                                <Text className="text-gray-700">
+                                    {formatDateDisplay(patient.birth_date)}
+                                    {calculateAge(patient.birth_date) && ` (${calculateAge(patient.birth_date)} anos)`}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                {/* Tabs */}
+                <View className="mx-4 mb-4">
+                    <View className="flex-row bg-gray-100 rounded-xl p-1">
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('appointments')}
+                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'appointments' ? 'bg-white' : ''}`}
+                        >
+                            <Calendar size={18} color={activeTab === 'appointments' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-xs mt-1 ${activeTab === 'appointments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Consultas
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('exams')}
+                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'exams' ? 'bg-white' : ''}`}
+                        >
+                            <FileText size={18} color={activeTab === 'exams' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-xs mt-1 ${activeTab === 'exams' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Exames
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('payments')}
+                            className={`flex-1 py-3 rounded-lg items-center ${activeTab === 'payments' ? 'bg-white' : ''}`}
+                        >
+                            <CreditCard size={18} color={activeTab === 'payments' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-xs mt-1 ${activeTab === 'payments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Pagamentos
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Appointments Tab */}
+                {activeTab === 'appointments' && (
+                    <View className="mx-4 mb-4">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <View className="p-4 border-b border-gray-100">
+                                <Text className="font-semibold text-gray-900">Histórico de Consultas</Text>
+                            </View>
+                            {appointments.length === 0 ? (
+                                <View className="p-8 items-center">
+                                    <Calendar size={40} color="#D1D5DB" />
+                                    <Text className="text-gray-400 mt-4">Nenhuma consulta registrada</Text>
+                                </View>
+                            ) : (
+                                <View>
+                                    {appointments.map((apt, index) => {
+                                        const status = statusConfig[apt.status] || statusConfig.scheduled;
+                                        return (
+                                            <View 
+                                                key={apt.id} 
+                                                className={`p-4 flex-row items-center gap-4 ${index > 0 ? 'border-t border-gray-100' : ''}`}
+                                            >
+                                                <View className="items-center min-w-[50px]">
+                                                    <Text className="text-lg font-bold text-teal-600">
+                                                        {new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                    </Text>
+                                                    <Text className="text-xs text-gray-400">
+                                                        {new Date(apt.date + 'T00:00:00').getFullYear()}
+                                                    </Text>
+                                                </View>
+                                                <View className="flex-1">
+                                                    <Text className="font-medium text-gray-900">{apt.time?.slice(0, 5)}</Text>
+                                                    {apt.location && (
+                                                        <View className="flex-row items-center gap-1 mt-1">
+                                                            <MapPin size={12} color="#6B7280" />
+                                                            <Text className="text-gray-500 text-sm">{apt.location}</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <View className={`px-2 py-1 rounded-full ${status.bgColor}`}>
+                                                    <Text className={`text-xs font-medium ${status.textColor}`}>
+                                                        {status.label}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                )}
+
+                {/* Exams Tab */}
+                {activeTab === 'exams' && (
+                    <View className="mx-4 mb-4">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <View className="p-4 border-b border-gray-100">
+                                <Text className="font-semibold text-gray-900">Exames e Documentos</Text>
+                            </View>
+                            <View className="p-8 items-center">
+                                <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
+                                    <Upload size={24} color="#9CA3AF" />
+                                </View>
+                                <Text className="text-gray-400 text-center">
+                                    Upload de exames disponível na versão web
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* Payments Tab */}
+                {activeTab === 'payments' && (
+                    <View className="mx-4 mb-4">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <View className="p-4 border-b border-gray-100">
+                                <Text className="font-semibold text-gray-900">Pagamentos Realizados</Text>
+                            </View>
+                            <View className="p-8 items-center">
+                                <CreditCard size={40} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-4">Nenhum pagamento registrado</Text>
+                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* Health Info */}
+                {(patient.allergies || patient.health_insurance) && (
+                    <View className="bg-white mx-4 mb-4 p-5 rounded-xl border border-gray-100">
+                        <View className="flex-row items-center gap-2 mb-4">
+                            <Heart size={18} color="#0D9488" />
+                            <Text className="font-semibold text-gray-900">Informações de Saúde</Text>
+                        </View>
+                        {patient.health_insurance && (
+                            <View className="mb-3">
+                                <Text className="text-xs text-gray-400 uppercase">Convênio</Text>
+                                <Text className="text-gray-700">{patient.health_insurance}</Text>
+                            </View>
+                        )}
+                        {patient.allergies && (
+                            <View className="p-3 bg-red-50 rounded-lg">
+                                <Text className="text-xs text-red-500 uppercase font-medium">⚠️ Alergias</Text>
+                                <Text className="text-red-700 mt-1">{patient.allergies}</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                <View className="h-8" />
+            </ScrollView>
+
+            {/* Edit Patient Modal */}
+            <EditPatientModal
+                visible={showEditModal}
+                patient={patient}
+                onClose={() => setShowEditModal(false)}
+                onSuccess={loadPatient}
+            />
+        </SafeAreaView>
+    );
+}

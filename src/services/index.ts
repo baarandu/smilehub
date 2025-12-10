@@ -1,4 +1,4 @@
-export { patientsService } from './patients';
-export { appointmentsService } from './appointments';
-export { consultationsService } from './consultations';
-
+export * from './patients';
+export * from './appointments';
+export * from './consultations';
+export * from './documents';

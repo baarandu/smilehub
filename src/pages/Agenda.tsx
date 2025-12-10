@@ -1,93 +1,140 @@
-import { useState } from 'react';
-import { format, addDays, startOfWeek } from 'date-fns';
+import { useState, useEffect } from 'react';
+import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Plus, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { mockAppointments, mockPatients } from '@/data/mockData';
-import { Appointment } from '@/types';
-import { cn } from '@/lib/utils';
+import { appointmentsService } from '@/services/appointments';
+import { getPatients } from '@/services/patients';
+import { locationsService, type Location } from '@/services/locations';
+import type { AppointmentWithPatient, Patient } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import {
+  AgendaCalendar,
+  WeekNavigation,
+  AppointmentCard,
+  NewAppointmentDialog,
+} from '@/components/agenda';
 
 export default function Agenda() {
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(new Date('2024-12-10'));
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
+  const [datesWithAppointments, setDatesWithAppointments] = useState<Date[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newAppointment, setNewAppointment] = useState({
-    patientId: '',
-    time: '',
-    notes: '',
-  });
+
+  useEffect(() => {
+    loadDayAppointments();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    loadMonthDates();
+  }, [calendarMonth]);
+
+  useEffect(() => {
+    loadPatients();
+    loadLocations();
+  }, []);
+
+  const loadDayAppointments = async () => {
+    try {
+      setLoading(true);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const data = await appointmentsService.getByDate(dateStr);
+      setAppointments(data);
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMonthDates = async () => {
+    try {
+      const start = startOfMonth(calendarMonth);
+      const end = endOfMonth(calendarMonth);
+      const startStr = format(start, 'yyyy-MM-dd');
+      const endStr = format(end, 'yyyy-MM-dd');
+      
+      const dates = await appointmentsService.getDatesWithAppointments(startStr, endStr);
+      setDatesWithAppointments(dates.map(d => new Date(d + 'T00:00:00')));
+    } catch (error) {
+      console.error('Error loading month dates:', error);
+    }
+  };
+
+  const loadPatients = async () => {
+    try {
+      const data = await getPatients();
+      setPatients(data);
+    } catch (error) {
+      console.error('Error loading patients:', error);
+    }
+  };
+
+  const loadLocations = async () => {
+    try {
+      const data = await locationsService.getAll();
+      setLocations(data);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const dayAppointments = appointments
-    .filter((a) => a.date === dateString)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const dayAppointments = appointments.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  const getAppointmentCountForDate = (date: Date) => {
-    const str = format(date, 'yyyy-MM-dd');
-    return appointments.filter((a) => a.date === str).length;
+  const handleStatusChange = async (appointmentId: string, status: AppointmentWithPatient['status']) => {
+    try {
+      await appointmentsService.updateStatus(appointmentId, status);
+      setAppointments(
+        appointments.map((a) =>
+          a.id === appointmentId ? { ...a, status } : a
+        )
+      );
+      toast.success('Status atualizado!');
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Erro ao atualizar status');
+    }
   };
 
-  const handleStatusChange = (appointmentId: string, status: Appointment['status']) => {
-    setAppointments(
-      appointments.map((a) =>
-        a.id === appointmentId ? { ...a, status } : a
-      )
-    );
-    toast.success('Status atualizado!');
-  };
-
-  const handleAddAppointment = () => {
-    if (!newAppointment.patientId || !newAppointment.time) {
+  const handleAddAppointment = async (data: { patientId: string; time: string; location: string; notes: string }) => {
+    if (!data.patientId || !data.time) {
       toast.error('Selecione um paciente e horário');
       return;
     }
 
-    const patient = mockPatients.find((p) => p.id === newAppointment.patientId);
-    if (!patient) return;
+    try {
+      await appointmentsService.create({
+        patient_id: data.patientId,
+        date: dateString,
+        time: data.time,
+        status: 'scheduled',
+        location: data.location || null,
+        notes: data.notes || null,
+      });
 
-    const appointment: Appointment = {
-      id: String(Date.now()),
-      patientId: newAppointment.patientId,
-      patientName: patient.name,
-      date: dateString,
-      time: newAppointment.time,
-      status: 'scheduled',
-      notes: newAppointment.notes || undefined,
-    };
-
-    setAppointments([...appointments, appointment]);
-    setNewAppointment({ patientId: '', time: '', notes: '' });
-    setDialogOpen(false);
-    toast.success('Consulta agendada com sucesso!');
+      setDialogOpen(false);
+      toast.success('Consulta agendada com sucesso!');
+      loadDayAppointments();
+      loadMonthDates();
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      toast.error('Erro ao agendar consulta');
+    }
   };
 
-  const statusConfig = {
-    scheduled: { label: 'Agendado', class: 'bg-primary text-primary-foreground' },
-    completed: { label: 'Compareceu', class: 'bg-success text-success-foreground' },
-    missed: { label: 'Faltou', class: 'bg-destructive text-destructive-foreground' },
-    rescheduled: { label: 'Reagendou', class: 'bg-warning text-warning-foreground' },
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const handleWeekChange = (days: number) => {
+    setSelectedDate(addDays(selectedDate, days));
   };
 
   return (
@@ -100,168 +147,52 @@ export default function Agenda() {
             {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Agendamento
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Agendar Consulta</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>Paciente *</Label>
-                <Select
-                  value={newAppointment.patientId}
-                  onValueChange={(v) => setNewAppointment({ ...newAppointment, patientId: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockPatients.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Horário *</Label>
-                <Input
-                  type="time"
-                  value={newAppointment.time}
-                  onChange={(e) => setNewAppointment({ ...newAppointment, time: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Input
-                  value={newAppointment.notes}
-                  onChange={(e) => setNewAppointment({ ...newAppointment, notes: e.target.value })}
-                  placeholder="Ex: Consulta de rotina"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="flex-1" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button className="flex-1" onClick={handleAddAppointment}>
-                  Agendar
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <NewAppointmentDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          patients={patients}
+          locations={locations}
+          selectedDate={dateString}
+          onAdd={handleAddAppointment}
+        />
       </div>
+
+      {/* Calendar */}
+      <AgendaCalendar
+        selectedDate={selectedDate}
+        calendarMonth={calendarMonth}
+        datesWithAppointments={datesWithAppointments}
+        onDateSelect={handleDateSelect}
+        onMonthChange={setCalendarMonth}
+      />
 
       {/* Week Navigation */}
-      <div className="bg-card rounded-xl p-4 shadow-card border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSelectedDate(addDays(selectedDate, -7))}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <span className="font-medium text-foreground">
-            {format(weekStart, "d MMM", { locale: ptBR })} - {format(addDays(weekStart, 6), "d MMM", { locale: ptBR })}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSelectedDate(addDays(selectedDate, 7))}
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
-        </div>
-        <div className="grid grid-cols-7 gap-2">
-          {weekDays.map((day) => {
-            const isSelected = format(day, 'yyyy-MM-dd') === dateString;
-            const count = getAppointmentCountForDate(day);
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
-                className={cn(
-                  "flex flex-col items-center p-2 rounded-lg transition-all",
-                  isSelected
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted text-foreground"
-                )}
-              >
-                <span className="text-xs uppercase opacity-70">
-                  {format(day, 'EEE', { locale: ptBR })}
-                </span>
-                <span className="text-lg font-semibold">{format(day, 'd')}</span>
-                {count > 0 && (
-                  <span className={cn(
-                    "text-xs mt-1 px-1.5 rounded-full",
-                    isSelected ? "bg-primary-foreground/20" : "bg-accent text-accent-foreground"
-                  )}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <WeekNavigation
+        selectedDate={selectedDate}
+        datesWithAppointments={datesWithAppointments}
+        onDateSelect={setSelectedDate}
+        onWeekChange={handleWeekChange}
+      />
 
       {/* Appointments List */}
-      {dayAppointments.length === 0 ? (
+      {loading ? (
+        <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      ) : dayAppointments.length === 0 ? (
         <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
           <p className="text-muted-foreground">Nenhuma consulta agendada para este dia</p>
         </div>
       ) : (
         <div className="space-y-3">
           {dayAppointments.map((appointment, index) => (
-            <div
+            <AppointmentCard
               key={appointment.id}
-              className="bg-card rounded-xl p-4 shadow-card border border-border animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="text-center min-w-[60px]">
-                  <p className="text-xl font-bold text-primary">{appointment.time}</p>
-                </div>
-                <div 
-                  className="flex-1 cursor-pointer"
-                  onClick={() => navigate(`/pacientes/${appointment.patientId}`)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-                      <User className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{appointment.patientName}</p>
-                      {appointment.notes && (
-                        <p className="text-sm text-muted-foreground">{appointment.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <Select
-                  value={appointment.status}
-                  onValueChange={(v) => handleStatusChange(appointment.id, v as Appointment['status'])}
-                >
-                  <SelectTrigger className={cn("w-[130px] h-8 text-xs", statusConfig[appointment.status].class)}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scheduled">Agendado</SelectItem>
-                    <SelectItem value="completed">Compareceu</SelectItem>
-                    <SelectItem value="missed">Faltou</SelectItem>
-                    <SelectItem value="rescheduled">Reagendou</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              appointment={appointment}
+              index={index}
+              onStatusChange={handleStatusChange}
+              onPatientClick={(patientId) => navigate(`/pacientes/${patientId}`)}
+            />
           ))}
         </div>
       )}

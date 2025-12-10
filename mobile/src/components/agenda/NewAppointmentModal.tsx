@@ -1,0 +1,272 @@
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { X, ChevronDown } from 'lucide-react-native';
+import type { Patient } from '../../types/database';
+import type { Location } from '../../services/locations';
+
+interface NewAppointmentModalProps {
+  visible: boolean;
+  selectedDate: Date;
+  patients: Patient[];
+  locations: Location[];
+  onClose: () => void;
+  onSubmit: (data: {
+    patientId: string;
+    time: string;
+    location: string;
+    notes: string;
+  }) => Promise<void>;
+}
+
+export function NewAppointmentModal({
+  visible,
+  selectedDate,
+  patients,
+  locations,
+  onClose,
+  onSubmit,
+}: NewAppointmentModalProps) {
+  const [patientSearch, setPatientSearch] = React.useState('');
+  const [showLocationPicker, setShowLocationPicker] = React.useState(false);
+  const [newAppointment, setNewAppointment] = React.useState({
+    patientId: '',
+    patientName: '',
+    time: '',
+    location: '',
+    notes: '',
+  });
+
+  const filteredPatients = patientSearch.length > 0
+    ? patients.filter(p => 
+        p.name.toLowerCase().includes(patientSearch.toLowerCase())
+      )
+    : [];
+
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    };
+    return date.toLocaleDateString('pt-BR', options);
+  };
+
+  const formatTimeInput = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    if (numbers.length <= 2) return numbers;
+    return `${numbers.slice(0, 2)}:${numbers.slice(2, 4)}`;
+  };
+
+  const handleClose = () => {
+    setPatientSearch('');
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setShowLocationPicker(false);
+    onClose();
+  };
+
+  const handleSubmit = async () => {
+    if (!newAppointment.patientId) {
+      Alert.alert('Erro', 'Selecione um paciente');
+      return;
+    }
+    if (!newAppointment.time || newAppointment.time.length < 5) {
+      Alert.alert('Erro', 'Informe um horário válido (HH:MM)');
+      return;
+    }
+
+    await onSubmit({
+      patientId: newAppointment.patientId,
+      time: newAppointment.time,
+      location: newAppointment.location,
+      notes: newAppointment.notes,
+    });
+
+    handleClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView className="flex-1 bg-gray-50">
+        {/* Header */}
+        <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
+          <TouchableOpacity onPress={handleClose}>
+            <X size={24} color="#6B7280" />
+          </TouchableOpacity>
+          <Text className="text-lg font-semibold text-gray-900">Novo Agendamento</Text>
+          <View className="w-6" />
+        </View>
+
+        <ScrollView className="flex-1 px-4 py-6">
+          {/* Selected Date Info */}
+          <View className="bg-teal-50 rounded-xl p-4 mb-6">
+            <Text className="text-teal-700 font-medium text-center capitalize">
+              {formatDate(selectedDate)}
+            </Text>
+          </View>
+
+          {/* Patient Search */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Paciente *</Text>
+            {newAppointment.patientId ? (
+              <View className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex-row items-center justify-between">
+                <Text className="text-teal-800 font-medium">{newAppointment.patientName}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
+                    setPatientSearch('');
+                  }}
+                >
+                  <X size={20} color="#0D9488" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                <TextInput
+                  className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900"
+                  placeholder="Digite o nome do paciente..."
+                  value={patientSearch}
+                  onChangeText={setPatientSearch}
+                  autoCapitalize="words"
+                />
+                {filteredPatients.length > 0 && (
+                  <View className="bg-white border border-gray-200 rounded-xl mt-2 overflow-hidden">
+                    {filteredPatients.slice(0, 5).map((patient, index) => (
+                      <TouchableOpacity
+                        key={patient.id}
+                        onPress={() => {
+                          setNewAppointment({
+                            ...newAppointment,
+                            patientId: patient.id,
+                            patientName: patient.name,
+                          });
+                          setPatientSearch('');
+                        }}
+                        className={`p-4 ${index > 0 ? 'border-t border-gray-100' : ''}`}
+                      >
+                        <Text className="font-medium text-gray-900">{patient.name}</Text>
+                        {patient.phone && (
+                          <Text className="text-gray-500 text-sm">{patient.phone}</Text>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {patientSearch.length > 0 && filteredPatients.length === 0 && (
+                  <View className="bg-gray-50 rounded-xl mt-2 p-4">
+                    <Text className="text-gray-500 text-center">Nenhum paciente encontrado</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Time Input */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Horário *</Text>
+            <TextInput
+              className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900"
+              placeholder="HH:MM"
+              value={newAppointment.time}
+              onChangeText={(text) => setNewAppointment({ ...newAppointment, time: formatTimeInput(text) })}
+              keyboardType="numeric"
+              maxLength={5}
+            />
+          </View>
+
+          {/* Location Picker */}
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento</Text>
+            {!showLocationPicker ? (
+              <TouchableOpacity
+                onPress={() => setShowLocationPicker(true)}
+                className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-between"
+              >
+                <Text className={newAppointment.location ? 'text-gray-900' : 'text-gray-400'}>
+                  {newAppointment.location || 'Selecione o local'}
+                </Text>
+                <ChevronDown size={20} color="#6B7280" />
+              </TouchableOpacity>
+            ) : (
+              <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                  <Text className="font-medium text-gray-700">Selecione o local</Text>
+                  <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
+                    <X size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+                
+                <TouchableOpacity
+                  onPress={() => {
+                    setNewAppointment({ ...newAppointment, location: '' });
+                    setShowLocationPicker(false);
+                  }}
+                  className="p-3 border-b border-gray-100"
+                >
+                  <Text className="text-gray-500">Nenhum local</Text>
+                </TouchableOpacity>
+
+                {locations.length === 0 ? (
+                  <View className="p-4 items-center">
+                    <Text className="text-gray-400 text-sm">Nenhum local cadastrado</Text>
+                  </View>
+                ) : (
+                  locations.map((location, index) => (
+                    <TouchableOpacity
+                      key={location.id}
+                      onPress={() => {
+                        setNewAppointment({ ...newAppointment, location: location.name });
+                        setShowLocationPicker(false);
+                      }}
+                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${
+                        newAppointment.location === location.name ? 'bg-teal-50' : ''
+                      }`}
+                    >
+                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>
+                        {location.name}
+                      </Text>
+                      {location.address && (
+                        <Text className="text-gray-500 text-sm">{location.address}</Text>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Notes Input */}
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Observações</Text>
+            <TextInput
+              className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900"
+              placeholder="Ex: Consulta de rotina"
+              value={newAppointment.notes}
+              onChangeText={(text) => setNewAppointment({ ...newAppointment, notes: text })}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          {/* Actions */}
+          <View className="flex-row gap-3">
+            <TouchableOpacity
+              onPress={handleClose}
+              className="flex-1 bg-gray-100 py-4 rounded-xl"
+            >
+              <Text className="text-gray-700 font-semibold text-center">Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              className="flex-1 bg-teal-600 py-4 rounded-xl"
+            >
+              <Text className="text-white font-semibold text-center">Agendar</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+import React from 'react';
+

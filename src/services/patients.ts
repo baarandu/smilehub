@@ -1,79 +1,144 @@
 import { supabase } from '@/lib/supabase';
-import type { Patient, PatientInsert, PatientUpdate } from '@/types/database';
+import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
 
-export const patientsService = {
-  async getAll(): Promise<Patient[]> {
-    const { data, error } = await supabase
-      .from('patients')
-      .select('*')
-      .order('name');
-    
-    if (error) throw error;
-    return data || [];
-  },
+export async function getPatients(): Promise<Patient[]> {
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .order('name');
 
-  async getById(id: string): Promise<Patient | null> {
-    const { data, error } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+  return data || [];
+}
 
-  async search(query: string): Promise<Patient[]> {
-    const { data, error } = await supabase
-      .from('patients')
-      .select('*')
-      .ilike('name', `%${query}%`)
-      .order('name')
-      .limit(10);
-    
-    if (error) throw error;
-    return data || [];
-  },
+export async function getPatientById(id: string): Promise<Patient | null> {
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  async create(patient: PatientInsert): Promise<Patient> {
-    const { data, error } = await supabase
-      .from('patients')
-      .insert(patient)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
+  if (error) throw error;
+  return data;
+}
 
-  async update(id: string, patient: PatientUpdate): Promise<Patient> {
-    const { data, error } = await supabase
-      .from('patients')
-      .update(patient)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  },
+export async function createPatient(patient: PatientInsert): Promise<Patient> {
+  const { data, error } = await supabase
+    .from('patients')
+    .insert(patient)
+    .select()
+    .single();
 
-  async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('patients')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
-  },
+  if (error) throw error;
+  return data;
+}
 
-  async count(): Promise<number> {
-    const { count, error } = await supabase
-      .from('patients')
-      .select('*', { count: 'exact', head: true });
-    
-    if (error) throw error;
-    return count || 0;
-  }
-};
+export async function createPatientFromForm(formData: PatientFormData): Promise<Patient> {
+  const patient: PatientInsert = {
+    name: formData.name,
+    phone: formData.phone,
+    email: formData.email || null,
+    birth_date: formData.birthDate || null,
+    cpf: formData.cpf || null,
+    rg: formData.rg || null,
+    address: formData.address || null,
+    city: formData.city || null,
+    state: formData.state || null,
+    zip_code: formData.zipCode || null,
+    occupation: formData.occupation || null,
+    emergency_contact: formData.emergencyContact || null,
+    emergency_phone: formData.emergencyPhone || null,
+    health_insurance: formData.healthInsurance || null,
+    health_insurance_number: formData.healthInsuranceNumber || null,
+    allergies: formData.allergies || null,
+    medications: formData.medications || null,
+    medical_history: formData.medicalHistory || null,
+    notes: formData.notes || null,
+  };
 
+  return createPatient(patient);
+}
+
+export async function updatePatient(id: string, patient: PatientUpdate): Promise<Patient> {
+  const { data, error } = await supabase
+    .from('patients')
+    .update(patient)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePatientFromForm(id: string, formData: PatientFormData): Promise<Patient> {
+  const patient: PatientUpdate = {
+    name: formData.name,
+    phone: formData.phone,
+    email: formData.email || null,
+    birth_date: formData.birthDate || null,
+    cpf: formData.cpf || null,
+    rg: formData.rg || null,
+    address: formData.address || null,
+    city: formData.city || null,
+    state: formData.state || null,
+    zip_code: formData.zipCode || null,
+    occupation: formData.occupation || null,
+    emergency_contact: formData.emergencyContact || null,
+    emergency_phone: formData.emergencyPhone || null,
+    health_insurance: formData.healthInsurance || null,
+    health_insurance_number: formData.healthInsuranceNumber || null,
+    allergies: formData.allergies || null,
+    medications: formData.medications || null,
+    medical_history: formData.medicalHistory || null,
+    notes: formData.notes || null,
+  };
+
+  return updatePatient(id, patient);
+}
+
+export async function deletePatient(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('patients')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+export async function searchPatients(query: string): Promise<Patient[]> {
+  const { data, error } = await supabase
+    .from('patients')
+    .select('*')
+    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf.ilike.%${query}%`)
+    .order('name')
+    .limit(20);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Convert Patient to PatientFormData
+export function patientToFormData(patient: Patient): PatientFormData {
+  return {
+    name: patient.name,
+    phone: patient.phone,
+    email: patient.email || '',
+    birthDate: patient.birth_date || '',
+    cpf: patient.cpf || '',
+    rg: patient.rg || '',
+    address: patient.address || '',
+    city: patient.city || '',
+    state: patient.state || '',
+    zipCode: patient.zip_code || '',
+    occupation: patient.occupation || '',
+    emergencyContact: patient.emergency_contact || '',
+    emergencyPhone: patient.emergency_phone || '',
+    healthInsurance: patient.health_insurance || '',
+    healthInsuranceNumber: patient.health_insurance_number || '',
+    allergies: patient.allergies || '',
+    medications: patient.medications || '',
+    medicalHistory: patient.medical_history || '',
+    notes: patient.notes || '',
+  };
+}

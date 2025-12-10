@@ -1,0 +1,2 @@
+export { EditPatientModal } from './EditPatientModal';
+

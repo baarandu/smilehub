@@ -5,7 +5,7 @@ import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { PatientInsert } from '@/types/database';
+import type { PatientFormData } from '@/types/database';
 
 export default function Patients() {
   const [search, setSearch] = useState('');
@@ -20,18 +20,13 @@ export default function Patients() {
       (p) =>
         p.name.toLowerCase().includes(query) ||
         p.phone.includes(query) ||
-        (p.email && p.email.toLowerCase().includes(query))
+        (p.email && p.email.toLowerCase().includes(query)) ||
+        (p.cpf && p.cpf.includes(query))
     );
   }, [search, patients]);
 
-  const handleAddPatient = async (data: { name: string; phone: string; email: string; birthDate: string }) => {
-    const newPatient: PatientInsert = {
-      name: data.name,
-      phone: data.phone,
-      email: data.email || null,
-      birth_date: data.birthDate || null,
-    };
-    await createPatient.mutateAsync(newPatient);
+  const handleAddPatient = async (formData: PatientFormData) => {
+    await createPatient.mutateAsync(formData);
   };
 
   return (

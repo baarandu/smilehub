@@ -2,6 +2,7 @@ import { Users, Calendar, Bell, TrendingUp } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ReturnAlertsList } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
+import { ProfileMenu } from '@/components/profile';
 import { usePatientsCount } from '@/hooks/usePatients';
 import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
@@ -17,11 +18,14 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Bem-vinda de volta! Aqui está o resumo do dia.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Bem-vinda de volta! Aqui está o resumo do dia.
+          </p>
+        </div>
+        <ProfileMenu />
       </div>
 
       {/* Stats */}
