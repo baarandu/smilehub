@@ -1,0 +1,101 @@
+import { supabase } from '@/lib/supabase';
+import type { 
+  Appointment, 
+  AppointmentInsert, 
+  AppointmentUpdate,
+  AppointmentWithPatient 
+} from '@/types/database';
+
+export const appointmentsService = {
+  async getAll(): Promise<AppointmentWithPatient[]> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        patients (name, phone)
+      `)
+      .order('date')
+      .order('time');
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getByDate(date: string): Promise<AppointmentWithPatient[]> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        patients (name, phone)
+      `)
+      .eq('date', date)
+      .order('time');
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getToday(): Promise<AppointmentWithPatient[]> {
+    const today = new Date().toISOString().split('T')[0];
+    return this.getByDate(today);
+  },
+
+  async getByPatient(patientId: string): Promise<Appointment[]> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  },
+
+  async create(appointment: AppointmentInsert): Promise<Appointment> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert(appointment)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id: string, appointment: AppointmentUpdate): Promise<Appointment> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update(appointment)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async updateStatus(id: string, status: Appointment['status']): Promise<Appointment> {
+    return this.update(id, { status });
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async countToday(): Promise<number> {
+    const today = new Date().toISOString().split('T')[0];
+    const { count, error } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .eq('date', today);
+    
+    if (error) throw error;
+    return count || 0;
+  }
+};
+
