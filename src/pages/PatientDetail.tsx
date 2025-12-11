@@ -1,47 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar as CalendarIcon, FileText, CreditCard, User, Hospital } from 'lucide-react';
+import { ArrowLeft, FileText, CreditCard, Hospital, ClipboardList, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePatient } from '@/hooks/usePatients';
-import { appointmentsService } from '@/services/appointments';
-import { 
-  PatientHeader, 
-  AppointmentsTab, 
+import {
+  PatientHeader,
   ProceduresTab,
-  PaymentsTab, 
-  PatientInfoTab,
+  PaymentsTab,
   ExamsTab,
-  EditPatientDialog
+  EditPatientDialog,
+  AnamneseTab,
+  BudgetsTab
 } from '@/components/patients';
-import type { AppointmentWithPatient } from '@/types/database';
 
 export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
-  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
-  const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [showEditDialog, setShowEditDialog] = useState(false);
-
-  useEffect(() => {
-    if (id) {
-      loadAppointments();
-    }
-  }, [id]);
-
-  const loadAppointments = async () => {
-    try {
-      setLoadingAppointments(true);
-      const data = await appointmentsService.getByPatient(id!);
-      setAppointments(data as AppointmentWithPatient[]);
-    } catch (error) {
-      console.error('Error loading appointments:', error);
-    } finally {
-      setLoadingAppointments(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -88,11 +66,15 @@ export default function PatientDetail() {
       />
 
       {/* Tabs */}
-      <Tabs defaultValue="appointments" className="w-full">
+      <Tabs defaultValue="anamnese" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="appointments" className="gap-2">
-            <CalendarIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Consultas</span>
+          <TabsTrigger value="anamnese" className="gap-2">
+            <ClipboardList className="w-4 h-4" />
+            <span className="hidden sm:inline">Anamnese</span>
+          </TabsTrigger>
+          <TabsTrigger value="budgets" className="gap-2">
+            <Calculator className="w-4 h-4" />
+            <span className="hidden sm:inline">Orçamentos</span>
           </TabsTrigger>
           <TabsTrigger value="procedures" className="gap-2">
             <Hospital className="w-4 h-4" />
@@ -106,14 +88,14 @@ export default function PatientDetail() {
             <CreditCard className="w-4 h-4" />
             <span className="hidden sm:inline">Pagamentos</span>
           </TabsTrigger>
-          <TabsTrigger value="info" className="gap-2">
-            <User className="w-4 h-4" />
-            <span className="hidden sm:inline">Info</span>
-          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="appointments" className="mt-6">
-          <AppointmentsTab appointments={appointments} loading={loadingAppointments} />
+        <TabsContent value="anamnese" className="mt-6">
+          <AnamneseTab patientId={patient.id} />
+        </TabsContent>
+
+        <TabsContent value="budgets" className="mt-6">
+          <BudgetsTab patientId={patient.id} />
         </TabsContent>
 
         <TabsContent value="procedures" className="mt-6">
@@ -126,10 +108,6 @@ export default function PatientDetail() {
 
         <TabsContent value="payments" className="mt-6">
           <PaymentsTab />
-        </TabsContent>
-
-        <TabsContent value="info" className="mt-6">
-          <PatientInfoTab patient={patient} />
         </TabsContent>
       </Tabs>
     </div>

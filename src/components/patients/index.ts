@@ -12,4 +12,6 @@ export { PatientInfoTab } from './PatientInfoTab';
 export { NewProcedureDialog } from './NewProcedureDialog';
 export { ExamsTab } from './ExamsTab';
 export { NewExamDialog } from './NewExamDialog';
+export { AnamneseTab } from './AnamneseTab';
+export { BudgetsTab } from './BudgetsTab';
 
