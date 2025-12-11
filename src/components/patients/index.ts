@@ -9,4 +9,7 @@ export { AppointmentsTab } from './AppointmentsTab';
 export { ProceduresTab } from './ProceduresTab';
 export { PaymentsTab } from './PaymentsTab';
 export { PatientInfoTab } from './PatientInfoTab';
+export { NewProcedureDialog } from './NewProcedureDialog';
+export { ExamsTab } from './ExamsTab';
+export { NewExamDialog } from './NewExamDialog';
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, File, Image, FileText, Trash2, Eye, Loader2 } from 'lucide-react';
+import { Upload, X, File, Image, FileText, Trash2, Eye, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -113,7 +113,20 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="bg-card rounded-xl p-6 border border-border space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-foreground">Exames e Documentos</h3>
+        <Button
+          size="sm"
+          className="gap-2"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Plus className="w-4 h-4" />
+          Novo Exame
+        </Button>
+      </div>
+
       {/* Upload Section */}
       <div className="border-2 border-dashed border-border rounded-xl p-6">
         <input

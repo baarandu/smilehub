@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { NewAppointmentDialogProps } from './types';
 
 export function NewAppointmentDialog({
@@ -28,14 +29,52 @@ export function NewAppointmentDialog({
 }: NewAppointmentDialogProps) {
   const [form, setForm] = useState({
     patientId: '',
+    patientName: '',
     time: '',
     location: '',
     notes: '',
   });
+  const [patientSearch, setPatientSearch] = useState('');
+  const [showPatientList, setShowPatientList] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+      setPatientSearch('');
+      setShowPatientList(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (showPatientList) {
+        setShowPatientList(false);
+      }
+    };
+    
+    if (showPatientList) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showPatientList]);
+
+  const filteredPatients = patientSearch.length > 0
+    ? patients.filter(p => 
+        p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+        p.phone?.includes(patientSearch)
+      )
+    : [];
+
+  const handleSelectPatient = (patient: { id: string; name: string }) => {
+    setForm({ ...form, patientId: patient.id, patientName: patient.name });
+    setPatientSearch('');
+    setShowPatientList(false);
+  };
 
   const handleSubmit = () => {
     onAdd(form);
-    setForm({ patientId: '', time: '', location: '', notes: '' });
+    setForm({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setPatientSearch('');
   };
 
   return (
@@ -52,21 +91,64 @@ export function NewAppointmentDialog({
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label>Paciente *</Label>
-            <Select
-              value={form.patientId}
-              onValueChange={(v) => setForm({ ...form, patientId: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {form.patientId ? (
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                <span className="flex-1 font-medium">{form.patientName}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setForm({ ...form, patientId: '', patientName: '' })}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Digite o nome do paciente..."
+                    value={patientSearch}
+                    onChange={(e) => {
+                      setPatientSearch(e.target.value);
+                      setShowPatientList(true);
+                    }}
+                    onFocus={() => setShowPatientList(true)}
+                    className="pl-9"
+                  />
+                </div>
+                {showPatientList && filteredPatients.length > 0 && (
+                  <div 
+                    className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {filteredPatients.slice(0, 10).map((patient) => (
+                      <button
+                        key={patient.id}
+                        type="button"
+                        onClick={() => handleSelectPatient(patient)}
+                        className="w-full text-left px-4 py-2 hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <div className="font-medium">{patient.name}</div>
+                        {patient.phone && (
+                          <div className="text-sm text-muted-foreground">{patient.phone}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showPatientList && patientSearch.length > 0 && filteredPatients.length === 0 && (
+                  <div 
+                    className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-4 text-center text-muted-foreground"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Nenhum paciente encontrado
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Horário *</Label>

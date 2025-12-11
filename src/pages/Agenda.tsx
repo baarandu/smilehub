@@ -8,6 +8,16 @@ import type { AppointmentWithPatient, Patient } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   AgendaCalendar,
   WeekNavigation,
   AppointmentCard,
@@ -24,6 +34,9 @@ export default function Agenda() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentWithPatient | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
 
   useEffect(() => {
     loadDayAppointments();
@@ -37,6 +50,12 @@ export default function Agenda() {
     loadPatients();
     loadLocations();
   }, []);
+
+  useEffect(() => {
+    if (dialogOpen) {
+      loadPatients();
+    }
+  }, [dialogOpen]);
 
   const loadDayAppointments = async () => {
     try {
@@ -137,6 +156,33 @@ export default function Agenda() {
     setSelectedDate(addDays(selectedDate, days));
   };
 
+  const handleEditAppointment = (appointment: AppointmentWithPatient) => {
+    setEditingAppointment(appointment);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteAppointment = (appointment: AppointmentWithPatient) => {
+    setAppointmentToDelete(appointment);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!appointmentToDelete) return;
+    
+    try {
+      await appointmentsService.delete(appointmentToDelete.id);
+      toast.success('Consulta excluída com sucesso!');
+      loadDayAppointments();
+      loadMonthDates();
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      toast.error('Erro ao excluir consulta');
+    } finally {
+      setDeleteDialogOpen(false);
+      setAppointmentToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -192,10 +238,33 @@ export default function Agenda() {
               index={index}
               onStatusChange={handleStatusChange}
               onPatientClick={(patientId) => navigate(`/pacientes/${patientId}`)}
+              onEdit={handleEditAppointment}
+              onDelete={handleDeleteAppointment}
             />
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Consulta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a consulta de{' '}
+              <strong>{appointmentToDelete?.patients?.name}</strong> às{' '}
+              <strong>{appointmentToDelete?.time?.slice(0, 5)}</strong>?
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

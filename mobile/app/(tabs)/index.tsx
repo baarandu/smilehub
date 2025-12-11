@@ -14,7 +14,7 @@ export default function Dashboard() {
     const [todayCount, setTodayCount] = useState(0);
     const [pendingReturns, setPendingReturns] = useState(0);
     const [todayAppointments, setTodayAppointments] = useState<AppointmentWithPatient[]>([]);
-    
+
     // Profile & Locations modal state
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showLocationsModal, setShowLocationsModal] = useState(false);
@@ -40,8 +40,13 @@ export default function Dashboard() {
             setTodayCount(today);
             setPendingReturns(returns);
             setTodayAppointments(appointments);
-        } catch (error) {
-            console.error('Error loading data:', error);
+        } catch (error: any) {
+            console.error('Error loading data:', {
+                message: error?.message,
+                code: error?.code,
+                details: error?.details,
+                hint: error?.hint,
+            });
         } finally {
             setLoading(false);
         }
@@ -141,7 +146,7 @@ export default function Dashboard() {
                             Bem-vinda de volta! Aqui está o resumo do dia.
                         </Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         className="flex-row items-center gap-2"
                         onPress={() => setShowProfileModal(true)}
                     >
@@ -228,7 +233,7 @@ export default function Dashboard() {
 
             {/* Profile Modal */}
             <Modal visible={showProfileModal} animationType="fade" transparent>
-                <TouchableOpacity 
+                <TouchableOpacity
                     className="flex-1 bg-black/50 justify-end"
                     activeOpacity={1}
                     onPress={() => setShowProfileModal(false)}
@@ -247,7 +252,7 @@ export default function Dashboard() {
                             <Text className="text-gray-700 font-medium">Alterar Senha</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
                             onPress={openLocationsModal}
                         >
@@ -260,7 +265,7 @@ export default function Dashboard() {
                             <Text className="text-red-600 font-medium">Sair</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             className="mt-4 p-4"
                             onPress={() => setShowProfileModal(false)}
                         >
@@ -369,11 +374,11 @@ export default function Dashboard() {
     );
 }
 
-function StatsCard({ title, value, icon, trend, isPositive }: { 
-    title: string; 
-    value: string; 
-    icon: React.ReactNode; 
-    trend?: string; 
+function StatsCard({ title, value, icon, trend, isPositive }: {
+    title: string;
+    value: string;
+    icon: React.ReactNode;
+    trend?: string;
     isPositive?: boolean;
 }) {
     return (

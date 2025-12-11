@@ -1,4 +1,4 @@
-import { User, MapPin } from 'lucide-react';
+import { User, MapPin, Edit3, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AppointmentWithPatient } from '@/types/database';
 import { STATUS_CONFIG, type AppointmentCardProps } from './types';
@@ -15,6 +16,8 @@ export function AppointmentCard({
   index,
   onStatusChange,
   onPatientClick,
+  onEdit,
+  onDelete,
 }: AppointmentCardProps) {
   return (
     <div
@@ -47,20 +50,38 @@ export function AppointmentCard({
             </div>
           </div>
         </div>
-        <Select
-          value={appointment.status}
-          onValueChange={(v) => onStatusChange(appointment.id, v as AppointmentWithPatient['status'])}
-        >
-          <SelectTrigger className={cn("w-[130px] h-8 text-xs", STATUS_CONFIG[appointment.status]?.class)}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="scheduled">Agendado</SelectItem>
-            <SelectItem value="confirmed">Confirmado</SelectItem>
-            <SelectItem value="completed">Compareceu</SelectItem>
-            <SelectItem value="cancelled">Cancelado</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={appointment.status}
+            onValueChange={(v) => onStatusChange(appointment.id, v as AppointmentWithPatient['status'])}
+          >
+            <SelectTrigger className={cn("w-[130px] h-8 text-xs", STATUS_CONFIG[appointment.status]?.class)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="scheduled">Agendado</SelectItem>
+              <SelectItem value="confirmed">Confirmado</SelectItem>
+              <SelectItem value="completed">Compareceu</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-primary"
+            onClick={() => onEdit?.(appointment)}
+          >
+            <Edit3 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete?.(appointment)}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

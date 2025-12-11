@@ -21,6 +21,8 @@ export interface AppointmentCardProps {
   index: number;
   onStatusChange: (id: string, status: AppointmentWithPatient['status']) => void;
   onPatientClick: (patientId: string) => void;
+  onEdit?: (appointment: AppointmentWithPatient) => void;
+  onDelete?: (appointment: AppointmentWithPatient) => void;
 }
 
 export interface NewAppointmentDialogProps {

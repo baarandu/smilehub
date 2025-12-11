@@ -12,7 +12,7 @@ import {
   ProceduresTab,
   PaymentsTab, 
   PatientInfoTab,
-  DocumentUpload,
+  ExamsTab,
   EditPatientDialog
 } from '@/components/patients';
 import type { AppointmentWithPatient } from '@/types/database';
@@ -117,11 +117,11 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="procedures" className="mt-6">
-          <ProceduresTab />
+          <ProceduresTab patientId={patient.id} />
         </TabsContent>
 
         <TabsContent value="exams" className="mt-6">
-          <DocumentUpload patientId={patient.id} />
+          <ExamsTab patientId={patient.id} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">

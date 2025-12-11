@@ -191,6 +191,79 @@ export interface Database {
           updated_at?: string
         }
       }
+      procedures: {
+        Row: {
+          id: string
+          patient_id: string
+          date: string
+          location: string | null
+          description: string | null
+          value: number | null
+          payment_method: 'cash' | 'debit' | 'credit' | null
+          installments: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          date: string
+          location?: string | null
+          description?: string | null
+          value?: number | null
+          payment_method?: 'cash' | 'debit' | 'credit' | null
+          installments?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          date?: string
+          location?: string | null
+          description?: string | null
+          value?: number | null
+          payment_method?: 'cash' | 'debit' | 'credit' | null
+          installments?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      exams: {
+        Row: {
+          id: string
+          patient_id: string
+          name: string
+          order_date: string
+          exam_date: string | null
+          file_url: string | null
+          file_type: 'document' | 'photo' | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          name: string
+          order_date: string
+          exam_date?: string | null
+          file_url?: string | null
+          file_type?: 'document' | 'photo' | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          name?: string
+          order_date?: string
+          exam_date?: string | null
+          file_url?: string | null
+          file_type?: 'document' | 'photo' | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -221,6 +294,14 @@ export type ConsultationUpdate = Database['public']['Tables']['consultations']['
 export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update']
+
+export type Procedure = Database['public']['Tables']['procedures']['Row']
+export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
+export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
+
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type ExamInsert = Database['public']['Tables']['exams']['Insert']
+export type ExamUpdate = Database['public']['Tables']['exams']['Update']
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {

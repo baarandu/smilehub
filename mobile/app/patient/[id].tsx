@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital } from 'lucide-react-native';
+import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital, ClipboardList, Plus, Calculator } from 'lucide-react-native';
 import { getPatientById, deletePatient } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { EditPatientModal } from '../../src/components/patients';
 import type { Patient, AppointmentWithPatient } from '../../src/types/database';
 
-type TabType = 'appointments' | 'procedures' | 'exams' | 'payments';
+type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
 export default function PatientDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,7 +16,7 @@ export default function PatientDetail() {
     const [patient, setPatient] = useState<Patient | null>(null);
     const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<TabType>('appointments');
+    const [activeTab, setActiveTab] = useState<TabType>('anamnese');
     const [showEditModal, setShowEditModal] = useState(false);
 
     useEffect(() => {
@@ -72,7 +72,7 @@ export default function PatientDetail() {
 
     const handleDelete = () => {
         if (!patient) return;
-        
+
         Alert.alert(
             'Excluir Paciente',
             `Tem certeza que deseja excluir ${patient.name}? Esta ação não pode ser desfeita.`,
@@ -133,13 +133,13 @@ export default function PatientDetail() {
                     <ArrowLeft size={24} color="#0D9488" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => setShowEditModal(true)}
                     className="bg-teal-50 p-2 rounded-lg mr-2"
                 >
                     <Edit3 size={20} color="#0D9488" />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={handleDelete}
                     className="bg-red-50 p-2 rounded-lg"
                 >
@@ -191,12 +191,21 @@ export default function PatientDetail() {
                 <View className="mx-4 mb-4">
                     <View className="flex-row bg-gray-100 rounded-xl p-1">
                         <TouchableOpacity
-                            onPress={() => setActiveTab('appointments')}
-                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'appointments' ? 'bg-white' : ''}`}
+                            onPress={() => setActiveTab('anamnese')}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'anamnese' ? 'bg-white' : ''}`}
                         >
-                            <Calendar size={18} color={activeTab === 'appointments' ? '#0D9488' : '#6B7280'} />
-                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'appointments' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
-                                Consultas
+                            <ClipboardList size={18} color={activeTab === 'anamnese' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'anamnese' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Anamnese
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('budgets')}
+                            className={`flex-1 py-4 rounded-lg items-center ${activeTab === 'budgets' ? 'bg-white' : ''}`}
+                        >
+                            <Calculator size={18} color={activeTab === 'budgets' ? '#0D9488' : '#6B7280'} />
+                            <Text className={`text-[10px] mt-1.5 ${activeTab === 'budgets' ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                Orçamentos
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -229,54 +238,46 @@ export default function PatientDetail() {
                     </View>
                 </View>
 
-                {/* Appointments Tab */}
-                {activeTab === 'appointments' && (
+                {/* Anamnese Tab */}
+                {activeTab === 'anamnese' && (
                     <View className="mx-4 mb-4">
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100">
-                                <Text className="font-semibold text-gray-900">Histórico de Consultas</Text>
+                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
+                                <Text className="font-semibold text-gray-900">Anamnese do Paciente</Text>
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Em breve', 'Adicionar anamnese em desenvolvimento')}
+                                    className="bg-teal-500 p-2 rounded-lg"
+                                >
+                                    <Plus size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
                             </View>
-                            {appointments.length === 0 ? (
-                                <View className="p-8 items-center">
-                                    <Calendar size={40} color="#D1D5DB" />
-                                    <Text className="text-gray-400 mt-4">Nenhuma consulta registrada</Text>
-                                </View>
-                            ) : (
-                                <View>
-                                    {appointments.map((apt, index) => {
-                                        const status = statusConfig[apt.status] || statusConfig.scheduled;
-                                        return (
-                                            <View 
-                                                key={apt.id} 
-                                                className={`p-4 flex-row items-center gap-4 ${index > 0 ? 'border-t border-gray-100' : ''}`}
-                                            >
-                                                <View className="items-center min-w-[50px]">
-                                                    <Text className="text-lg font-bold text-teal-600">
-                                                        {new Date(apt.date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                                                    </Text>
-                                                    <Text className="text-xs text-gray-400">
-                                                        {new Date(apt.date + 'T00:00:00').getFullYear()}
-                                                    </Text>
-                                                </View>
-                                                <View className="flex-1">
-                                                    <Text className="font-medium text-gray-900">{apt.time?.slice(0, 5)}</Text>
-                                                    {apt.location && (
-                                                        <View className="flex-row items-center gap-1 mt-1">
-                                                            <MapPin size={12} color="#6B7280" />
-                                                            <Text className="text-gray-500 text-sm">{apt.location}</Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-                                                <View className={`px-2 py-1 rounded-full ${status.bgColor}`}>
-                                                    <Text className={`text-xs font-medium ${status.textColor}`}>
-                                                        {status.label}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            )}
+                            <View className="p-8 items-center">
+                                <ClipboardList size={40} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-4">Nenhuma anamnese registrada</Text>
+                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
+                            </View>
+                        </View>
+                    </View>
+                )}
+
+                {/* Budgets Tab */}
+                {activeTab === 'budgets' && (
+                    <View className="mx-4 mb-4">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
+                                <Text className="font-semibold text-gray-900">Orçamentos</Text>
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Em breve', 'Adicionar orçamento em desenvolvimento')}
+                                    className="bg-teal-500 p-2 rounded-lg"
+                                >
+                                    <Plus size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            </View>
+                            <View className="p-8 items-center">
+                                <Calculator size={40} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-4">Nenhum orçamento registrado</Text>
+                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
+                            </View>
                         </View>
                     </View>
                 )}
@@ -285,8 +286,14 @@ export default function PatientDetail() {
                 {activeTab === 'procedures' && (
                     <View className="mx-4 mb-4">
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100">
+                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Procedimentos Realizados</Text>
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Em breve', 'Adicionar procedimento em desenvolvimento')}
+                                    className="bg-teal-500 p-2 rounded-lg"
+                                >
+                                    <Plus size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
                             </View>
                             <View className="p-8 items-center">
                                 <Hospital size={40} color="#D1D5DB" />
@@ -301,8 +308,14 @@ export default function PatientDetail() {
                 {activeTab === 'exams' && (
                     <View className="mx-4 mb-4">
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100">
+                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Exames e Documentos</Text>
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Em breve', 'Adicionar exame em desenvolvimento')}
+                                    className="bg-teal-500 p-2 rounded-lg"
+                                >
+                                    <Plus size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
                             </View>
                             <View className="p-8 items-center">
                                 <View className="w-16 h-16 bg-gray-100 rounded-full items-center justify-center mb-4">
@@ -320,8 +333,14 @@ export default function PatientDetail() {
                 {activeTab === 'payments' && (
                     <View className="mx-4 mb-4">
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100">
+                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Pagamentos Realizados</Text>
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Em breve', 'Adicionar pagamento em desenvolvimento')}
+                                    className="bg-teal-500 p-2 rounded-lg"
+                                >
+                                    <Plus size={16} color="#FFFFFF" />
+                                </TouchableOpacity>
                             </View>
                             <View className="p-8 items-center">
                                 <CreditCard size={40} color="#D1D5DB" />
