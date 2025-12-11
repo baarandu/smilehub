@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Modal, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, ChevronDown } from 'lucide-react-native';
 import type { Patient } from '../../types/database';
@@ -10,7 +11,7 @@ interface NewAppointmentModalProps {
   patients: Patient[];
   locations: Location[];
   onClose: () => void;
-  onSubmit: (data: {
+  onCreateAppointment: (appointment: {
     patientId: string;
     time: string;
     location: string;
@@ -24,7 +25,7 @@ export function NewAppointmentModal({
   patients,
   locations,
   onClose,
-  onSubmit,
+  onCreateAppointment,
 }: NewAppointmentModalProps) {
   const [patientSearch, setPatientSearch] = React.useState('');
   const [showLocationPicker, setShowLocationPicker] = React.useState(false);
@@ -37,16 +38,16 @@ export function NewAppointmentModal({
   });
 
   const filteredPatients = patientSearch.length > 0
-    ? patients.filter(p => 
-        p.name.toLowerCase().includes(patientSearch.toLowerCase())
-      )
+    ? patients.filter(p =>
+      p.name.toLowerCase().includes(patientSearch.toLowerCase())
+    )
     : [];
 
   const formatDate = (date: Date) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
     };
     return date.toLocaleDateString('pt-BR', options);
   };
@@ -57,14 +58,7 @@ export function NewAppointmentModal({
     return `${numbers.slice(0, 2)}:${numbers.slice(2, 4)}`;
   };
 
-  const handleClose = () => {
-    setPatientSearch('');
-    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
-    setShowLocationPicker(false);
-    onClose();
-  };
-
-  const handleSubmit = async () => {
+  const handleCreate = async () => {
     if (!newAppointment.patientId) {
       Alert.alert('Erro', 'Selecione um paciente');
       return;
@@ -74,20 +68,26 @@ export function NewAppointmentModal({
       return;
     }
 
-    await onSubmit({
+    await onCreateAppointment({
       patientId: newAppointment.patientId,
       time: newAppointment.time,
       location: newAppointment.location,
       notes: newAppointment.notes,
     });
 
-    handleClose();
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setPatientSearch('');
+  };
+
+  const handleClose = () => {
+    setPatientSearch('');
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    onClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView className="flex-1 bg-gray-50">
-        {/* Header */}
         <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
           <TouchableOpacity onPress={handleClose}>
             <X size={24} color="#6B7280" />
@@ -97,25 +97,21 @@ export function NewAppointmentModal({
         </View>
 
         <ScrollView className="flex-1 px-4 py-6">
-          {/* Selected Date Info */}
           <View className="bg-teal-50 rounded-xl p-4 mb-6">
             <Text className="text-teal-700 font-medium text-center capitalize">
               {formatDate(selectedDate)}
             </Text>
           </View>
 
-          {/* Patient Search */}
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Paciente *</Text>
             {newAppointment.patientId ? (
               <View className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex-row items-center justify-between">
                 <Text className="text-teal-800 font-medium">{newAppointment.patientName}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
-                    setPatientSearch('');
-                  }}
-                >
+                <TouchableOpacity onPress={() => {
+                  setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
+                  setPatientSearch('');
+                }}>
                   <X size={20} color="#0D9488" />
                 </TouchableOpacity>
               </View>
@@ -134,19 +130,13 @@ export function NewAppointmentModal({
                       <TouchableOpacity
                         key={patient.id}
                         onPress={() => {
-                          setNewAppointment({
-                            ...newAppointment,
-                            patientId: patient.id,
-                            patientName: patient.name,
-                          });
+                          setNewAppointment({ ...newAppointment, patientId: patient.id, patientName: patient.name });
                           setPatientSearch('');
                         }}
                         className={`p-4 ${index > 0 ? 'border-t border-gray-100' : ''}`}
                       >
                         <Text className="font-medium text-gray-900">{patient.name}</Text>
-                        {patient.phone && (
-                          <Text className="text-gray-500 text-sm">{patient.phone}</Text>
-                        )}
+                        {patient.phone && <Text className="text-gray-500 text-sm">{patient.phone}</Text>}
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -160,7 +150,6 @@ export function NewAppointmentModal({
             )}
           </View>
 
-          {/* Time Input */}
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Horário *</Text>
             <TextInput
@@ -173,7 +162,6 @@ export function NewAppointmentModal({
             />
           </View>
 
-          {/* Location Picker */}
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento</Text>
             {!showLocationPicker ? (
@@ -194,17 +182,12 @@ export function NewAppointmentModal({
                     <X size={20} color="#6B7280" />
                   </TouchableOpacity>
                 </View>
-                
                 <TouchableOpacity
-                  onPress={() => {
-                    setNewAppointment({ ...newAppointment, location: '' });
-                    setShowLocationPicker(false);
-                  }}
+                  onPress={() => { setNewAppointment({ ...newAppointment, location: '' }); setShowLocationPicker(false); }}
                   className="p-3 border-b border-gray-100"
                 >
                   <Text className="text-gray-500">Nenhum local</Text>
                 </TouchableOpacity>
-
                 {locations.length === 0 ? (
                   <View className="p-4 items-center">
                     <Text className="text-gray-400 text-sm">Nenhum local cadastrado</Text>
@@ -213,20 +196,11 @@ export function NewAppointmentModal({
                   locations.map((location, index) => (
                     <TouchableOpacity
                       key={location.id}
-                      onPress={() => {
-                        setNewAppointment({ ...newAppointment, location: location.name });
-                        setShowLocationPicker(false);
-                      }}
-                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${
-                        newAppointment.location === location.name ? 'bg-teal-50' : ''
-                      }`}
+                      onPress={() => { setNewAppointment({ ...newAppointment, location: location.name }); setShowLocationPicker(false); }}
+                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${newAppointment.location === location.name ? 'bg-teal-50' : ''}`}
                     >
-                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>
-                        {location.name}
-                      </Text>
-                      {location.address && (
-                        <Text className="text-gray-500 text-sm">{location.address}</Text>
-                      )}
+                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>{location.name}</Text>
+                      {location.address && <Text className="text-gray-500 text-sm">{location.address}</Text>}
                     </TouchableOpacity>
                   ))
                 )}
@@ -234,7 +208,6 @@ export function NewAppointmentModal({
             )}
           </View>
 
-          {/* Notes Input */}
           <View className="mb-6">
             <Text className="text-sm font-medium text-gray-700 mb-2">Observações</Text>
             <TextInput
@@ -247,18 +220,11 @@ export function NewAppointmentModal({
             />
           </View>
 
-          {/* Actions */}
           <View className="flex-row gap-3">
-            <TouchableOpacity
-              onPress={handleClose}
-              className="flex-1 bg-gray-100 py-4 rounded-xl"
-            >
+            <TouchableOpacity onPress={handleClose} className="flex-1 bg-gray-100 py-4 rounded-xl">
               <Text className="text-gray-700 font-semibold text-center">Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSubmit}
-              className="flex-1 bg-teal-600 py-4 rounded-xl"
-            >
+            <TouchableOpacity onPress={handleCreate} className="flex-1 bg-teal-600 py-4 rounded-xl">
               <Text className="text-white font-semibold text-center">Agendar</Text>
             </TouchableOpacity>
           </View>
@@ -267,6 +233,3 @@ export function NewAppointmentModal({
     </Modal>
   );
 }
-
-import React from 'react';
-

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import type { Patient, PatientFormData } from '../../src/types/database';
@@ -40,6 +40,13 @@ export default function Patients() {
     useEffect(() => {
         loadPatients();
     }, []);
+
+    // Recarrega pacientes quando a tela recebe foco (voltando do detalhe)
+    useFocusEffect(
+        useCallback(() => {
+            loadPatients();
+        }, [])
+    );
 
     const loadPatients = async () => {
         try {
@@ -168,7 +175,7 @@ export default function Patients() {
                             {patients.length} pacientes cadastrados
                         </Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => setShowModal(true)}
                         className="bg-teal-500 p-3 rounded-xl"
                     >
@@ -239,7 +246,7 @@ export default function Patients() {
             {/* New Patient Modal */}
             <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView className="flex-1 bg-white">
-                    <KeyboardAvoidingView 
+                    <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         className="flex-1"
                     >
