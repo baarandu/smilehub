@@ -509,6 +509,21 @@ export default function PatientDetail() {
                                     <Plus size={16} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
+                            {/* Legend */}
+                            <View className="px-4 py-2 bg-gray-50 flex-row items-center gap-4 border-b border-gray-100">
+                                <View className="flex-row items-center gap-1">
+                                    <View className="w-3 h-3 rounded bg-yellow-300" />
+                                    <Text className="text-xs text-gray-500">Pendente</Text>
+                                </View>
+                                <View className="flex-row items-center gap-1">
+                                    <View className="w-3 h-3 rounded bg-green-400" />
+                                    <Text className="text-xs text-gray-500">Aprovado</Text>
+                                </View>
+                                <View className="flex-row items-center gap-1">
+                                    <View className="w-3 h-3 rounded bg-blue-400" />
+                                    <Text className="text-xs text-gray-500">Pago</Text>
+                                </View>
+                            </View>
                             {budgets.length > 0 ? (
                                 <View>
                                     {budgets.map((budget) => {
@@ -539,16 +554,28 @@ export default function PatientDetail() {
                                                             try {
                                                                 const parsed = JSON.parse(budget.notes || '{}');
                                                                 if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                                                                    return parsed.teeth.map((tooth: ToothEntry, idx: number) => (
-                                                                        <View key={idx} className="bg-teal-50 border border-teal-100 px-3 py-2 rounded-lg">
-                                                                            <Text className="text-teal-800 font-medium text-sm">
-                                                                                {getToothDisplayName(tooth.tooth)}
-                                                                            </Text>
-                                                                            <Text className="text-teal-600 text-xs">
-                                                                                {tooth.treatments.join(', ')}
-                                                                            </Text>
-                                                                        </View>
-                                                                    ));
+                                                                    return parsed.teeth.map((tooth: ToothEntry, idx: number) => {
+                                                                        const status = tooth.status || 'pending';
+                                                                        const bgColor = status === 'approved' ? 'bg-green-50 border-green-200'
+                                                                            : status === 'paid' ? 'bg-blue-50 border-blue-200'
+                                                                                : 'bg-yellow-50 border-yellow-200';
+                                                                        const titleColor = status === 'approved' ? 'text-green-800'
+                                                                            : status === 'paid' ? 'text-blue-800'
+                                                                                : 'text-yellow-800';
+                                                                        const subtitleColor = status === 'approved' ? 'text-green-600'
+                                                                            : status === 'paid' ? 'text-blue-600'
+                                                                                : 'text-yellow-600';
+                                                                        return (
+                                                                            <View key={idx} className={`border px-3 py-2 rounded-lg ${bgColor}`}>
+                                                                                <Text className={`font-medium text-sm ${titleColor}`}>
+                                                                                    {getToothDisplayName(tooth.tooth)}
+                                                                                </Text>
+                                                                                <Text className={`text-xs ${subtitleColor}`}>
+                                                                                    {tooth.treatments.join(', ')}
+                                                                                </Text>
+                                                                            </View>
+                                                                        );
+                                                                    });
                                                                 }
                                                             } catch (e) { }
                                                             // Fallback to budget_items
