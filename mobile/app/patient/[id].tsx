@@ -8,7 +8,7 @@ import { appointmentsService } from '../../src/services/appointments';
 import { anamnesesService } from '../../src/services/anamneses';
 import { budgetsService } from '../../src/services/budgets';
 import { EditPatientModal, NewAnamneseModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal } from '../../src/components/patients';
-import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
+import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
 import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems } from '../../src/types/database';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
@@ -528,20 +528,38 @@ export default function PatientDetail() {
                                                     onPress={() => handleViewBudget(budget)}
                                                     activeOpacity={0.7}
                                                 >
-                                                    <View className="flex-row items-center justify-between mb-2">
+                                                    <View className="flex-row items-center justify-between mb-3">
                                                         <Text className="text-sm text-gray-500">
                                                             {new Date(budget.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                                                         </Text>
                                                     </View>
-                                                    <Text className="font-medium text-gray-900 mb-1">{budget.treatment}</Text>
-                                                    <View className="flex-row flex-wrap gap-1 mb-2">
-                                                        {budget.budget_items.map((item, idx) => (
-                                                            <View key={idx} className="bg-gray-100 px-2 py-0.5 rounded">
-                                                                <Text className="text-xs text-gray-600">
-                                                                    {item.tooth}{item.faces.length > 0 ? `: ${item.faces.join(', ')}` : ''}
-                                                                </Text>
-                                                            </View>
-                                                        ))}
+                                                    <View className="flex-row flex-wrap gap-2 mb-3">
+                                                        {(() => {
+                                                            // Parse teeth from notes JSON
+                                                            try {
+                                                                const parsed = JSON.parse(budget.notes || '{}');
+                                                                if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                                                                    return parsed.teeth.map((tooth: ToothEntry, idx: number) => (
+                                                                        <View key={idx} className="bg-teal-50 border border-teal-100 px-3 py-2 rounded-lg">
+                                                                            <Text className="text-teal-800 font-medium text-sm">
+                                                                                {getToothDisplayName(tooth.tooth)}
+                                                                            </Text>
+                                                                            <Text className="text-teal-600 text-xs">
+                                                                                {tooth.treatments.join(', ')}
+                                                                            </Text>
+                                                                        </View>
+                                                                    ));
+                                                                }
+                                                            } catch (e) { }
+                                                            // Fallback to budget_items
+                                                            return budget.budget_items.map((item, idx) => (
+                                                                <View key={idx} className="bg-gray-100 px-2 py-1 rounded">
+                                                                    <Text className="text-xs text-gray-600">
+                                                                        {getToothDisplayName(item.tooth)}
+                                                                    </Text>
+                                                                </View>
+                                                            ));
+                                                        })()}
                                                     </View>
                                                     <Text className="text-lg font-bold text-teal-600">
                                                         R$ {budget.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
