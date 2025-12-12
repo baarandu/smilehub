@@ -6,10 +6,11 @@ import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, Cred
 import { getPatientById, deletePatient } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { anamnesesService } from '../../src/services/anamneses';
+import { proceduresService } from '../../src/services/procedures';
 import { budgetsService } from '../../src/services/budgets';
-import { EditPatientModal, NewAnamneseModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal } from '../../src/components/patients';
+import { EditPatientModal, NewAnamneseModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
-import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems } from '../../src/types/database';
+import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems, Procedure } from '../../src/types/database';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
@@ -31,6 +32,9 @@ export default function PatientDetail() {
     const [selectedPaymentItem, setSelectedPaymentItem] = useState<{ budgetId: string; toothIndex: number; tooth: ToothEntry } | null>(null);
     const [showBudgetViewModal, setShowBudgetViewModal] = useState(false);
     const [viewBudget, setViewBudget] = useState<BudgetWithItems | null>(null);
+    const [procedures, setProcedures] = useState<Procedure[]>([]);
+    const [showProcedureModal, setShowProcedureModal] = useState(false);
+    const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -38,6 +42,7 @@ export default function PatientDetail() {
             loadAppointments();
             loadAnamneses();
             loadBudgets();
+            loadProcedures();
         }
     }, [id]);
 
@@ -145,6 +150,48 @@ export default function PatientDetail() {
                         } catch (error) {
                             console.error('Error deleting budget:', error);
                             Alert.alert('Erro', 'Não foi possível excluir o orçamento');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const loadProcedures = async () => {
+        try {
+            const data = await proceduresService.getByPatient(id!);
+            setProcedures(data);
+        } catch (error) {
+            console.error('Error loading procedures:', error);
+        }
+    };
+
+    const handleAddProcedure = () => {
+        setSelectedProcedure(null);
+        setShowProcedureModal(true);
+    };
+
+    const handleEditProcedure = (procedure: Procedure) => {
+        setSelectedProcedure(procedure);
+        setShowProcedureModal(true);
+    };
+
+    const handleDeleteProcedure = (procedure: Procedure) => {
+        Alert.alert(
+            'Excluir Procedimento',
+            'Tem certeza que deseja excluir este procedimento?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await proceduresService.delete(procedure.id);
+                            loadProcedures();
+                        } catch (error) {
+                            console.error('Error deleting procedure:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir o procedimento');
                         }
                     },
                 },
@@ -424,7 +471,7 @@ export default function PatientDetail() {
                             </View>
                             {anamneses.length > 0 ? (
                                 <View>
-                                    {anamneses.map((anamnese) => (
+                                    {anamneses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((anamnese) => (
                                         <View
                                             key={anamnese.id}
                                             className="p-4 border-b border-gray-50"
@@ -526,7 +573,7 @@ export default function PatientDetail() {
                             </View>
                             {budgets.length > 0 ? (
                                 <View>
-                                    {budgets.map((budget) => {
+                                    {budgets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((budget) => {
                                         const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
                                             pending: { label: 'Pendente', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
                                             approved: { label: 'Aprovado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
@@ -630,17 +677,151 @@ export default function PatientDetail() {
                             <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Procedimentos Realizados</Text>
                                 <TouchableOpacity
-                                    onPress={() => Alert.alert('Em breve', 'Adicionar procedimento em desenvolvimento')}
+                                    onPress={handleAddProcedure}
                                     className="bg-teal-500 p-2 rounded-lg"
                                 >
                                     <Plus size={16} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
-                            <View className="p-8 items-center">
-                                <Hospital size={40} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum procedimento registrado</Text>
-                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
-                            </View>
+                            {procedures.length > 0 ? (
+                                <View>
+                                    {procedures.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((procedure) => (
+                                        <View
+                                            key={procedure.id}
+                                            className="p-4 border-b border-gray-50 bg-white"
+                                        >
+                                            <View className="flex-row items-center justify-between mb-2">
+                                                <View className="flex-row items-center gap-2">
+                                                    <Calendar size={14} color="#6B7280" />
+                                                    <Text className="text-sm text-gray-500">
+                                                        {new Date(procedure.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                                    </Text>
+                                                </View>
+                                                <View className="flex-row gap-2">
+                                                    <TouchableOpacity
+                                                        onPress={() => handleEditProcedure(procedure)}
+                                                        className="bg-teal-50 p-2 rounded-lg"
+                                                    >
+                                                        <Edit3 size={16} color="#0D9488" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={() => handleDeleteProcedure(procedure)}
+                                                        className="bg-red-50 p-2 rounded-lg"
+                                                    >
+                                                        <Trash2 size={16} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+
+                                            <View className="mb-2">
+                                                {procedure.location && (
+                                                    <View className="flex-row items-center gap-1 mb-2">
+                                                        <MapPin size={14} color="#6B7280" />
+                                                        <Text className="text-gray-600 text-sm">{procedure.location}</Text>
+                                                    </View>
+                                                )}
+                                                {procedure.description && (() => {
+                                                    const parts = procedure.description.split('\n\nObs: ');
+                                                    const itemsPart = parts[0];
+                                                    const obsPart = parts.length > 1 ? parts[1] : (itemsPart.startsWith('Obs: ') ? itemsPart.replace('Obs: ', '') : null);
+
+                                                    // Parse items lines
+                                                    const lines = itemsPart.split('\n');
+                                                    const structuredItems: { treatment: string; tooth: string; value: string }[] = [];
+                                                    const unstructuredLines: string[] = [];
+
+                                                    lines.forEach(line => {
+                                                        const cleanLine = line.trim().replace(/^•\s*/, '');
+                                                        if (!cleanLine) return;
+
+                                                        // Try pipe separator
+                                                        let sections = cleanLine.split(' | ');
+                                                        if (sections.length < 3) {
+                                                            // Fallback to dash
+                                                            sections = cleanLine.split(' - ');
+                                                        }
+
+                                                        if (sections.length >= 3) {
+                                                            structuredItems.push({
+                                                                treatment: sections[0].trim(),
+                                                                tooth: sections[1].trim(),
+                                                                value: sections.slice(2).join(' - ').trim()
+                                                            });
+                                                        } else {
+                                                            // If line doesn't look like OBS header, parse as text
+                                                            if (!cleanLine.startsWith('Obs:')) {
+                                                                unstructuredLines.push(line);
+                                                            }
+                                                        }
+                                                    });
+
+                                                    return (
+                                                        <View className="gap-3 mt-2">
+                                                            {/* Structured Breakdown */}
+                                                            {structuredItems.length > 0 && (
+                                                                <View className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                                    <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Detalhamento</Text>
+                                                                    <View className="gap-3">
+                                                                        {structuredItems.map((item, idx) => (
+                                                                            <View key={idx} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                                                                <Text className="font-bold text-gray-900 text-base mb-1">{item.tooth}</Text>
+                                                                                <View className="flex-row flex-wrap">
+                                                                                    <Text className="text-gray-600 text-sm">
+                                                                                        {item.treatment} <Text className="font-bold text-teal-600">- {item.value}</Text>
+                                                                                    </Text>
+                                                                                </View>
+                                                                            </View>
+                                                                        ))}
+                                                                    </View>
+                                                                </View>
+                                                            )}
+
+                                                            {/* Unstructured Text (Legacy) */}
+                                                            {structuredItems.length === 0 && unstructuredLines.map((line, idx) => (
+                                                                <Text key={idx} className="text-gray-800 text-sm leading-5">{line}</Text>
+                                                            ))}
+
+                                                            {/* Observations */}
+                                                            {obsPart && (
+                                                                <View className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                                                                    <Text className="text-xs font-bold text-amber-700 uppercase mb-1">Observações</Text>
+                                                                    <Text className="text-gray-800 text-sm">{obsPart}</Text>
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                    );
+                                                })()}
+                                            </View>
+
+                                            <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-50">
+                                                <View>
+                                                    {procedure.value != null && (
+                                                        <Text className="text-lg font-bold text-teal-600">
+                                                            R$ {procedure.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                                {procedure.payment_method && (
+                                                    <View className="bg-gray-100 px-2 py-1 rounded">
+                                                        <Text className="text-xs text-gray-600 capitalize">
+                                                            {procedure.payment_method === 'credit' ? 'Crédito' :
+                                                                procedure.payment_method === 'debit' ? 'Débito' :
+                                                                    procedure.payment_method === 'cash' ? 'Dinheiro' : procedure.payment_method}
+                                                            {procedure.installments > 1 && ` (${procedure.installments}x)`}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <View className="p-8 items-center">
+                                    <Hospital size={40} color="#D1D5DB" />
+                                    <Text className="text-gray-400 mt-4">Nenhum procedimento registrado</Text>
+                                    <Text className="text-gray-300 text-sm mt-2">Toque no + para adicionar</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 )}
@@ -673,8 +854,17 @@ export default function PatientDetail() {
                 {/* Payments Tab */}
                 {activeTab === 'payments' && (() => {
                     const paymentItems = getAllPaymentItems();
-                    const pendingItems = paymentItems.filter(i => i.tooth.status === 'approved');
-                    const paidItems = paymentItems.filter(i => i.tooth.status === 'paid');
+                    const pendingItems = paymentItems
+                        .filter(i => i.tooth.status === 'approved')
+                        .sort((a, b) => new Date(b.budgetDate).getTime() - new Date(a.budgetDate).getTime());
+
+                    const paidItems = paymentItems
+                        .filter(i => i.tooth.status === 'paid')
+                        .sort((a, b) => {
+                            const dateA = a.tooth.paymentDate || a.budgetDate;
+                            const dateB = b.tooth.paymentDate || b.budgetDate;
+                            return new Date(dateB).getTime() - new Date(dateA).getTime();
+                        });
                     const getToothTotal = (tooth: ToothEntry) => calculateToothTotal(tooth.values);
                     const getToothDisplayName = (tooth: string) => tooth.includes('Arcada') ? tooth : `Dente ${tooth}`;
                     const getPaymentMethodLabel = (method: string) => {
@@ -833,20 +1023,18 @@ export default function PatientDetail() {
             />
 
             {/* Payment Method Modal */}
-            {selectedPaymentItem && (
-                <PaymentMethodModal
-                    visible={showPaymentModal}
-                    onClose={() => {
-                        setShowPaymentModal(false);
-                        setSelectedPaymentItem(null);
-                    }}
-                    onConfirm={handleConfirmPayment}
-                    itemName={selectedPaymentItem.tooth.tooth.includes('Arcada')
-                        ? selectedPaymentItem.tooth.tooth
-                        : `Dente ${selectedPaymentItem.tooth.tooth}`}
-                    value={calculateToothTotal(selectedPaymentItem.tooth.values)}
-                />
-            )}
+            <PaymentMethodModal
+                visible={showPaymentModal}
+                onClose={() => {
+                    setShowPaymentModal(false);
+                    setSelectedPaymentItem(null);
+                }}
+                onConfirm={handleConfirmPayment}
+                itemName={selectedPaymentItem?.tooth.tooth.includes('Arcada')
+                    ? selectedPaymentItem?.tooth.tooth
+                    : `Dente ${selectedPaymentItem?.tooth.tooth}`}
+                value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
+            />
 
             {/* Budget View Modal */}
             <BudgetViewModal
@@ -857,6 +1045,18 @@ export default function PatientDetail() {
                     setViewBudget(null);
                 }}
                 onUpdate={loadBudgets}
+            />
+
+            {/* New Procedure Modal */}
+            <NewProcedureModal
+                visible={showProcedureModal}
+                patientId={patient.id}
+                onClose={() => {
+                    setShowProcedureModal(false);
+                    setSelectedProcedure(null);
+                }}
+                onSuccess={loadProcedures}
+                procedure={selectedProcedure}
             />
         </SafeAreaView>
     );

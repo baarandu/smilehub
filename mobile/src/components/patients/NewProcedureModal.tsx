@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Calendar, MapPin, ChevronDown } from 'lucide-react-native';
+import { X, Calendar, MapPin, ChevronDown, Check, Square, Info } from 'lucide-react-native';
 import { proceduresService } from '../../services/procedures';
 import { locationsService, type Location } from '../../services/locations';
+import { budgetsService } from '../../services/budgets';
 import type { ProcedureInsert, Procedure } from '../../types/database';
+import { getToothDisplayName, type ToothEntry } from './budgetUtils';
 
 interface NewProcedureModalProps {
   visible: boolean;
@@ -12,6 +15,15 @@ interface NewProcedureModalProps {
   onClose: () => void;
   onSuccess: () => void;
   procedure?: Procedure | null;
+}
+
+interface ApprovedItemOption {
+  id: string;
+  label: string;
+  value: number;
+  treatment: string;
+  tooth: string;
+  budgetId: string;
 }
 
 export function NewProcedureModal({
@@ -27,39 +39,48 @@ export function NewProcedureModal({
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     location: '',
-    description: '',
     value: '',
     paymentMethod: '',
     installments: '1',
   });
 
+  const [observations, setObservations] = useState('');
+
+  // Budget Integration State
+  const [loadingBudgets, setLoadingBudgets] = useState(false);
+  const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (visible) {
       loadLocations();
+      loadApprovedItems();
+
       if (procedure) {
-        // Preencher formulário com dados do procedimento
-        // Garantir que os dados sejam mantidos mesmo se o procedure mudar
+        // Edit mode
         setForm({
           date: procedure.date,
           location: procedure.location || '',
-          description: procedure.description || '',
           value: procedure.value ? procedure.value.toFixed(2).replace('.', ',') : '',
           paymentMethod: procedure.payment_method || '',
           installments: procedure.installments?.toString() || '1',
         });
+        setObservations(procedure.description || '');
+        setSelectedItemIds([]);
       } else {
-        // Resetar formulário apenas se não houver procedure
+        // Create mode
         setForm({
           date: new Date().toISOString().split('T')[0],
           location: '',
-          description: '',
           value: '',
           paymentMethod: '',
           installments: '1',
         });
+        setObservations('');
+        setSelectedItemIds([]);
       }
     }
-  }, [visible, procedure?.id]); // Usar procedure?.id para garantir que atualiza quando o procedimento muda
+  }, [visible, procedure?.id]);
 
   const loadLocations = async () => {
     try {
@@ -68,6 +89,77 @@ export function NewProcedureModal({
     } catch (error) {
       console.error('Error loading locations:', error);
     }
+  };
+
+  const loadApprovedItems = async () => {
+    setLoadingBudgets(true);
+    try {
+      const budgets = await budgetsService.getByPatient(patientId);
+      const options: ApprovedItemOption[] = [];
+
+      budgets.forEach(budget => {
+        if (!budget.notes) return;
+        try {
+          const notesData = JSON.parse(budget.notes);
+          if (notesData.teeth && Array.isArray(notesData.teeth)) {
+            const teeth: ToothEntry[] = notesData.teeth;
+
+            teeth.forEach((toothEntry, toothIndex) => {
+              if (toothEntry.status === 'paid') {
+                toothEntry.treatments.forEach((treatment, treatmentIndex) => {
+                  const valStr = toothEntry.values[treatment] || '0';
+                  const val = parseInt(valStr) / 100;
+
+                  const uniqueId = `${budget.id}_${toothIndex}_${treatmentIndex}`;
+
+                  options.push({
+                    id: uniqueId,
+                    label: `${treatment} - ${getToothDisplayName(toothEntry.tooth)}`,
+                    value: val,
+                    treatment: treatment,
+                    tooth: toothEntry.tooth,
+                    budgetId: budget.id
+                  });
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing budget notes', e);
+        }
+      });
+
+      setApprovedItems(options);
+    } catch (error) {
+      console.error('Error loading budgets', error);
+      Alert.alert('Erro', 'Erro ao carregar itens aprovados');
+    } finally {
+      setLoadingBudgets(false);
+    }
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItemIds(prev => {
+      const isSelected = prev.includes(itemId);
+      let newSelection = isSelected
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId];
+
+      updateFormFromSelection(newSelection);
+      return newSelection;
+    });
+  };
+
+  const updateFormFromSelection = (selection: string[]) => {
+    if (procedure) return;
+
+    const selectedOptions = approvedItems.filter(item => selection.includes(item.id));
+    const totalValue = selectedOptions.reduce((sum, item) => sum + item.value, 0);
+
+    setForm(prev => ({
+      ...prev,
+      value: totalValue > 0 ? totalValue.toFixed(2).replace('.', ',') : prev.value
+    }));
   };
 
   const formatCurrency = (value: string) => {
@@ -85,24 +177,12 @@ export function NewProcedureModal({
   };
 
   const isValidDate = (day: number, month: number, year: number): boolean => {
-    // Validar mês (1-12)
     if (month < 1 || month > 12) return false;
-
-    // Validar ano (não pode ser muito antigo ou futuro)
     if (year < 1900 || year > 2100) return false;
-
-    // Validar dia baseado no mês
     const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-    // Verificar ano bissexto
     const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-    if (isLeapYear) {
-      daysInMonth[1] = 29;
-    }
-
-    // Validar dia
+    if (isLeapYear) { daysInMonth[1] = 29; }
     if (day < 1 || day > daysInMonth[month - 1]) return false;
-
     return true;
   };
 
@@ -110,17 +190,11 @@ export function NewProcedureModal({
     if (!dateStr || dateStr.length < 10) return null;
     const parts = dateStr.split('/');
     if (parts.length !== 3) return null;
-
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
     const year = parseInt(parts[2], 10);
-
-    // Validar se são números válidos
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-
-    // Validar se a data é real
     if (!isValidDate(day, month, year)) return null;
-
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   };
 
@@ -130,48 +204,62 @@ export function NewProcedureModal({
       return;
     }
 
+    if (!form.location) {
+      Alert.alert('Erro', 'Local de Atendimento é obrigatório');
+      return;
+    }
+
+    // Generate Final Description
+    let finalDescription = '';
+
+    if (procedure) {
+      // logic for Edit Mode: trust the content currently in 'observations' input
+      finalDescription = observations;
+    } else {
+      // logic for Create Mode: generate structure
+      if (selectedItemIds.length > 0) {
+        const selectedOptions = approvedItems.filter(item => selectedItemIds.includes(item.id));
+        const itemsText = selectedOptions.map(item => {
+          const valueFormatted = item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          return `• ${item.treatment} | ${item.tooth.includes('Arcada') ? item.tooth : `Dente ${item.tooth}`} | R$ ${valueFormatted}`;
+        }).join('\n');
+        finalDescription += itemsText;
+      }
+      if (observations) {
+        if (finalDescription) finalDescription += '\n\n';
+        finalDescription += `Obs: ${observations}`;
+      }
+    }
+
     try {
       setSaving(true);
       let dateStr = form.date;
 
-      // Se a data está no formato DD/MM/YYYY, converter para YYYY-MM-DD
       if (form.date.includes('/')) {
         const converted = formatDateForDB(form.date);
         if (!converted) {
-          Alert.alert('Erro', 'Por favor, insira uma data válida (DD/MM/AAAA).\nExemplo: 31/12/2024');
+          Alert.alert('Erro', 'Por favor, insira uma data válida (DD/MM/AAAA).');
           setSaving(false);
           return;
         }
         dateStr = converted;
       }
 
-      // Validar formato final
-      if (!dateStr || dateStr.length !== 10) {
-        Alert.alert('Erro', 'Por favor, insira uma data válida');
-        setSaving(false);
-        return;
-      }
-
-      // Validação adicional: verificar se a data é válida usando Date
-      const testDate = new Date(dateStr);
-      if (isNaN(testDate.getTime())) {
-        Alert.alert('Erro', 'Por favor, insira uma data válida');
-        setSaving(false);
-        return;
-      }
-
       const procedureData: ProcedureInsert = {
         patient_id: patientId,
         date: dateStr,
         location: form.location || null,
-        description: form.description || '',
+        description: finalDescription || '',
         value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) || 0 : 0,
-        payment_method: form.paymentMethod || null,
-        installments: form.paymentMethod === 'credit' ? parseInt(form.installments) : 1,
+        payment_method: null, // Removed as per user request (items are already paid)
+        installments: null,
       };
 
       if (procedure) {
-        await proceduresService.update(procedure.id, procedureData);
+        await proceduresService.update(procedure.id, {
+          ...procedureData,
+          description: observations || null, // In edit, use observations as the full description
+        });
         Alert.alert('Sucesso', 'Procedimento atualizado!');
       } else {
         await proceduresService.create(procedureData);
@@ -209,7 +297,7 @@ export function NewProcedureModal({
           </View>
 
           <ScrollView className="flex-1 px-4 py-4">
-            <View className="gap-4">
+            <View className="gap-6 pb-8">
               <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2">Data *</Text>
                 <TextInput
@@ -219,24 +307,7 @@ export function NewProcedureModal({
                     : form.date}
                   onChangeText={(text) => {
                     const formatted = formatDateInput(text);
-                    // Só atualizar se a formatação for válida
-                    if (formatted.length <= 10) {
-                      // Se completou a data (10 caracteres), validar
-                      if (formatted.length === 10) {
-                        const dbDate = formatDateForDB(formatted);
-                        if (dbDate) {
-                          // Data válida, salvar no formato do banco
-                          setForm({ ...form, date: dbDate });
-                          return;
-                        } else {
-                          // Data inválida, manter o formato visual mas não salvar no banco ainda
-                          setForm({ ...form, date: formatted });
-                          return;
-                        }
-                      }
-                      // Ainda digitando, apenas formatar
-                      setForm({ ...form, date: formatted });
-                    }
+                    setForm({ ...form, date: formatted });
                   }}
                   placeholder="DD/MM/AAAA"
                   placeholderTextColor="#9CA3AF"
@@ -246,7 +317,7 @@ export function NewProcedureModal({
               </View>
 
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento</Text>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento *</Text>
                 {!showLocationPicker ? (
                   <TouchableOpacity
                     onPress={() => setShowLocationPicker(true)}
@@ -259,69 +330,98 @@ export function NewProcedureModal({
                   </TouchableOpacity>
                 ) : (
                   <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    {/* Header */}
                     <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
                       <Text className="font-medium text-gray-700">Selecione o local</Text>
                       <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
                         <X size={20} color="#6B7280" />
                       </TouchableOpacity>
                     </View>
-
-                    {/* Options */}
                     <TouchableOpacity
-                      onPress={() => {
-                        setForm({ ...form, location: '' });
-                        setShowLocationPicker(false);
-                      }}
+                      onPress={() => { setForm({ ...form, location: '' }); setShowLocationPicker(false); }}
                       className="p-3 border-b border-gray-100"
                     >
                       <Text className="text-gray-500">Nenhum local</Text>
                     </TouchableOpacity>
-
-                    {locations.length === 0 ? (
-                      <View className="p-4 items-center">
-                        <Text className="text-gray-400 text-sm">Nenhum local cadastrado</Text>
-                      </View>
-                    ) : (
-                      locations.map((location, index) => (
-                        <TouchableOpacity
-                          key={location.id}
-                          onPress={() => {
-                            setForm({ ...form, location: location.name });
-                            setShowLocationPicker(false);
-                          }}
-                          className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${form.location === location.name ? 'bg-teal-50' : ''
-                            }`}
-                        >
-                          <Text className={`font-medium ${form.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>
-                            {location.name}
-                          </Text>
-                          {location.address && (
-                            <Text className="text-gray-500 text-sm">{location.address}</Text>
-                          )}
-                        </TouchableOpacity>
-                      ))
-                    )}
+                    {locations.map((location, index) => (
+                      <TouchableOpacity
+                        key={location.id}
+                        onPress={() => {
+                          setForm({ ...form, location: location.name });
+                          setShowLocationPicker(false);
+                        }}
+                        className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                      >
+                        <Text className="font-medium text-gray-900">{location.name}</Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 )}
               </View>
 
+              {!procedure && (
+                <View className="bg-white border border-gray-200 rounded-xl p-4">
+                  <View className="flex-row items-center justify-between mb-3">
+                    <Text className="font-semibold text-teal-800">Procedimentos Pagos</Text>
+                    {loadingBudgets && <ActivityIndicator size="small" color="#0D9488" />}
+                  </View>
+
+                  {approvedItems.length === 0 && !loadingBudgets ? (
+                    <View className="flex-row items-center gap-2 py-2">
+                      <Info size={16} color="#9CA3AF" />
+                      <Text className="text-gray-400 italic">Nenhum item pago disponível.</Text>
+                    </View>
+                  ) : (
+                    <View className="max-h-48">
+                      <ScrollView nestedScrollEnabled>
+                        {approvedItems.map((item) => {
+                          const isSelected = selectedItemIds.includes(item.id);
+                          return (
+                            <TouchableOpacity
+                              key={item.id}
+                              className="flex-row items-start py-2 border-b border-gray-50 last:border-0"
+                              onPress={() => toggleItemSelection(item.id)}
+                            >
+                              <View className="mt-0.5 mr-3">
+                                {isSelected ? (
+                                  <View className="bg-teal-500 rounded-sm">
+                                    <Check size={16} color="#FFF" />
+                                  </View>
+                                ) : (
+                                  <Square size={18} color="#D1D5DB" />
+                                )}
+                              </View>
+                              <View className="flex-1">
+                                <Text className={`text-sm ${isSelected ? 'text-teal-900 font-medium' : 'text-gray-700'}`}>
+                                  {item.label}
+                                </Text>
+                                <Text className="text-xs text-gray-500 mt-0.5">
+                                  R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Descrição</Text>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Observações</Text>
                 <TextInput
-                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                  placeholder="Descreva o procedimento realizado..."
+                  className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 min-h-[80px]"
+                  placeholder="Observações adicionais..."
                   placeholderTextColor="#9CA3AF"
-                  value={form.description}
-                  onChangeText={(text) => setForm({ ...form, description: text })}
+                  value={observations}
+                  onChangeText={setObservations}
                   multiline
-                  numberOfLines={3}
                   textAlignVertical="top"
                 />
               </View>
 
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Valor (R$)</Text>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Valor Total (R$)</Text>
                 <TextInput
                   className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
                   placeholder="0,00"
@@ -335,65 +435,7 @@ export function NewProcedureModal({
                 />
               </View>
 
-              <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</Text>
-                <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    onPress={() => setForm({ ...form, paymentMethod: 'cash', installments: '1' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'cash' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                      }`}
-                  >
-                    <Text className={`text-center font-medium ${form.paymentMethod === 'cash' ? 'text-white' : 'text-gray-700'
-                      }`}>
-                      Dinheiro
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setForm({ ...form, paymentMethod: 'debit', installments: '1' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'debit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                      }`}
-                  >
-                    <Text className={`text-center font-medium ${form.paymentMethod === 'debit' ? 'text-white' : 'text-gray-700'
-                      }`}>
-                      Débito
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setForm({ ...form, paymentMethod: 'credit' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'credit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                      }`}
-                  >
-                    <Text className={`text-center font-medium ${form.paymentMethod === 'credit' ? 'text-white' : 'text-gray-700'
-                      }`}>
-                      Crédito
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
 
-              {form.paymentMethod === 'credit' && (
-                <View>
-                  <Text className="text-sm font-medium text-gray-700 mb-2">Número de Parcelas</Text>
-                  <TextInput
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                    placeholder="1"
-                    placeholderTextColor="#9CA3AF"
-                    value={form.installments}
-                    onChangeText={(text) => {
-                      const num = text.replace(/\D/g, '');
-                      if (num && parseInt(num) >= 1 && parseInt(num) <= 12) {
-                        setForm({ ...form, installments: num });
-                      } else if (!num) {
-                        setForm({ ...form, installments: '' });
-                      }
-                    }}
-                    keyboardType="numeric"
-                    maxLength={2}
-                  />
-                </View>
-              )}
-
-              <View className="h-8" />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -401,4 +443,3 @@ export function NewProcedureModal({
     </Modal>
   );
 }
-

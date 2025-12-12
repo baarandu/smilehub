@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Loader2 } from 'lucide-react';
+import { Calendar, Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +31,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useCreateProcedure, useUpdateProcedure, useDeleteProcedure } from '@/hooks/useProcedures';
 import { locationsService, type Location } from '@/services/locations';
+import { budgetsService } from '@/services/budgets';
 import { toast } from 'sonner';
+import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 import type { Procedure } from '@/types/database';
 
 interface NewProcedureDialogProps {
@@ -38,6 +42,15 @@ interface NewProcedureDialogProps {
   patientId: string;
   locations: Location[];
   procedure?: Procedure | null;
+}
+
+interface ApprovedItemOption {
+  id: string;
+  label: string;
+  value: number;
+  treatment: string;
+  tooth: string;
+  budgetId: string;
 }
 
 export function NewProcedureDialog({
@@ -49,98 +62,210 @@ export function NewProcedureDialog({
 }: NewProcedureDialogProps) {
   const createProcedure = useCreateProcedure();
   const updateProcedure = useUpdateProcedure();
+  const deleteProcedure = useDeleteProcedure();
+
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     location: '',
-    description: '',
     value: '',
     paymentMethod: '',
     installments: '1',
   });
+
+  const [observations, setObservations] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Budget Integration State
+  const [loadingBudgets, setLoadingBudgets] = useState(false);
+  const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
+      loadApprovedItems();
+
       if (procedure) {
-        // Preencher formulário com dados do procedimento
-        // Garantir que os dados sejam mantidos mesmo se o procedure mudar
-        const procedureId = procedure.id;
+        // Edit mode
         setForm({
           date: procedure.date,
           location: procedure.location || '',
-          description: procedure.description || '',
           value: procedure.value ? procedure.value.toFixed(2).replace('.', ',') : '',
           paymentMethod: procedure.payment_method || '',
           installments: procedure.installments?.toString() || '1',
         });
+
+        // Extract observations from description if possible
+        // Note: We can't easily reverse-engineer the items selection from the string description,
+        // so in edit mode we treat the whole description as "observations" or static text.
+        // For simplicity, we put the full description in observations for editing.
+        setObservations(procedure.description || '');
+        setSelectedItemIds([]); // Clear selection on edit to avoid overwriting, or maybe we shouldn't allow selecting items on edit?
+        // User decision: "New Procedure" implies creation. Edit might just be manual.
+        // We will allow adding MORE items to an existing procedure if desired, 
+        // but typically edit handles the fields manually.
+
       } else {
-        // Resetar formulário apenas se não houver procedure
+        // Create mode
         setForm({
           date: new Date().toISOString().split('T')[0],
           location: '',
-          description: '',
           value: '',
           paymentMethod: '',
           installments: '1',
         });
+        setObservations('');
+        setSelectedItemIds([]);
       }
     }
-  }, [procedure?.id, open]); // Usar procedure?.id para garantir que atualiza quando o procedimento muda
+  }, [procedure?.id, open]);
+
+  const loadApprovedItems = async () => {
+    setLoadingBudgets(true);
+    try {
+      const budgets = await budgetsService.getByPatient(patientId);
+      const options: ApprovedItemOption[] = [];
+
+      budgets.forEach(budget => {
+        if (!budget.notes) return;
+        try {
+          const notesData = JSON.parse(budget.notes);
+          if (notesData.teeth && Array.isArray(notesData.teeth)) {
+            const teeth: ToothEntry[] = notesData.teeth;
+
+            teeth.forEach((toothEntry, toothIndex) => {
+              if (toothEntry.status === 'paid') {
+                toothEntry.treatments.forEach((treatment, treatmentIndex) => {
+                  const valStr = toothEntry.values[treatment] || '0';
+                  const val = parseInt(valStr) / 100;
+
+                  // Generate a unique ID for selection
+                  const uniqueId = `${budget.id}_${toothIndex}_${treatmentIndex}`;
+
+                  options.push({
+                    id: uniqueId,
+                    label: `${treatment} - ${getToothDisplayName(toothEntry.tooth)}`,
+                    value: val,
+                    treatment: treatment,
+                    tooth: toothEntry.tooth,
+                    budgetId: budget.id
+                  });
+                });
+              }
+            });
+          }
+        } catch (e) {
+          console.error('Error parsing budget notes', e);
+        }
+      });
+
+      setApprovedItems(options);
+    } catch (error) {
+      console.error('Error loading budgets', error);
+      toast.error('Erro ao carregar itens aprovados');
+    } finally {
+      setLoadingBudgets(false);
+    }
+  };
+
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItemIds(prev => {
+      const isSelected = prev.includes(itemId);
+      let newSelection = isSelected
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId];
+
+      updateFormFromSelection(newSelection);
+      return newSelection;
+    });
+  };
+
+  const updateFormFromSelection = (selection: string[]) => {
+    // Only auto-update value if creating new procedure (not creating conflict in edit)
+    if (procedure) return;
+
+    const selectedOptions = approvedItems.filter(item => selection.includes(item.id));
+    const totalValue = selectedOptions.reduce((sum, item) => sum + item.value, 0);
+
+    setForm(prev => ({
+      ...prev,
+      value: totalValue > 0 ? totalValue.toFixed(2).replace('.', ',') : prev.value
+    }));
+  };
 
   const isValidDate = (dateStr: string): boolean => {
     if (!dateStr || dateStr.length !== 10) return false;
-    
-    // Verificar formato YYYY-MM-DD
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateStr)) return false;
-    
     const date = new Date(dateStr);
-    
-    // Verificar se a data é válida
     if (isNaN(date.getTime())) return false;
-    
-    // Verificar se a data não foi alterada (ex: 2024-02-30 vira 2024-03-01)
-    const [year, month, day] = dateStr.split('-').map(Number);
-    if (date.getFullYear() !== year || 
-        date.getMonth() + 1 !== month || 
-        date.getDate() !== day) {
-      return false;
-    }
-    
-    // Validar ano (não pode ser muito antigo ou futuro)
-    if (year < 1900 || year > 2100) return false;
-    
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!form.date) {
       toast.error('Data é obrigatória');
       return;
     }
 
-    // Validar se a data é real
+    if (!form.location) {
+      toast.error('Local de Atendimento é obrigatório');
+      return;
+    }
+
     if (!isValidDate(form.date)) {
       toast.error('Por favor, insira uma data válida');
       return;
+    }
+
+    // Generate Final Description
+    let finalDescription = '';
+
+    // Add selected items details
+    if (selectedItemIds.length > 0) {
+      const selectedOptions = approvedItems.filter(item => selectedItemIds.includes(item.id));
+      const itemsText = selectedOptions.map(item => {
+        const valueFormatted = item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return `• ${item.treatment} | ${item.tooth.includes('Arcada') ? item.tooth : `Dente ${item.tooth}`} | R$ ${valueFormatted}`;
+      }).join('\n');
+      finalDescription += itemsText;
+    }
+
+    // Append observations
+    if (observations) {
+      if (finalDescription) finalDescription += '\n\n';
+      finalDescription += `Obs: ${observations}`;
+    }
+
+    // Fallback if empty
+    if (!finalDescription && !procedure) {
+      // If creating and nothing selected/typed
+      // finalDescription = ''; 
+    } else if (!finalDescription && procedure) {
+      // If editing and cleared everything
+      finalDescription = '';
     }
 
     try {
       const procedureData = {
         date: form.date,
         location: form.location || null,
-        description: form.description || null,
-        value: form.value ? parseFloat(form.value.replace(',', '.')) : null,
-        payment_method: form.paymentMethod || null,
-        installments: form.paymentMethod === 'credit' ? parseInt(form.installments) : 1,
+        description: finalDescription || null,
+        value: form.value ? parseFloat(form.value.replace('.', '').replace(',', '.')) : null,
+        payment_method: null,
+        installments: null,
       };
 
       if (procedure) {
         await updateProcedure.mutateAsync({
           id: procedure.id,
-          data: procedureData,
+          data: {
+            ...procedureData,
+            // If editing, we typically keep the manual description unless specific change logic is requested.
+            // Here, 'observations' (editing state) becomes the Description.
+            description: observations || null,
+          },
         });
         toast.success('Procedimento atualizado com sucesso!');
       } else {
@@ -150,9 +275,8 @@ export function NewProcedureDialog({
         });
         toast.success('Procedimento registrado com sucesso!');
       }
-      
+
       onOpenChange(false);
-      // Não resetar o formulário aqui, deixar o useEffect gerenciar
     } catch (error) {
       console.error('Error saving procedure:', error);
       toast.error(`Erro ao ${procedure ? 'atualizar' : 'registrar'} procedimento`);
@@ -161,7 +285,6 @@ export function NewProcedureDialog({
 
   const handleDelete = async () => {
     if (!procedure) return;
-    
     try {
       await deleteProcedure.mutateAsync(procedure.id);
       toast.success('Procedimento excluído com sucesso!');
@@ -182,137 +305,152 @@ export function NewProcedureDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{procedure ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="date">Data *</Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="date"
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="pl-10"
-                required
-              />
+
+        <ScrollArea className="flex-1 pr-4">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-2">
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Data *</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="date"
+                    type="date"
+                    value={form.date}
+                    onChange={(e) => setForm({ ...form, date: e.target.value })}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">Local de Atendimento *</Label>
+                <Select
+                  value={form.location}
+                  onValueChange={(v) => setForm({ ...form, location: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o local" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.name}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Local de Atendimento</Label>
-            <Select
-              value={form.location}
-              onValueChange={(v) => setForm({ ...form, location: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.name}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            {!procedure && (
+              <div className="space-y-3 border rounded-lg p-4 bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold text-teal-800">Selecionar Procedimentos Pagos</Label>
+                  {loadingBudgets && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Descreva o procedimento realizado..."
-              rows={3}
-            />
-          </div>
+                {approvedItems.length === 0 && !loadingBudgets ? (
+                  <div className="text-sm text-muted-foreground py-2 italic flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Nenhum item pago disponível nos orçamentos.
+                  </div>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto space-y-2 bg-white p-2 rounded border">
+                    {approvedItems.map((item) => (
+                      <div key={item.id} className="flex items-start space-x-2 py-1">
+                        <Checkbox
+                          id={item.id}
+                          checked={selectedItemIds.includes(item.id)}
+                          onCheckedChange={() => toggleItemSelection(item.id)}
+                        />
+                        <div className="grid gap-1.5 leading-none">
+                          <label
+                            htmlFor={item.id}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {item.label}
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="value">Valor (R$)</Label>
-            <Input
-              id="value"
-              value={form.value}
-              onChange={(e) => {
-                const formatted = formatCurrency(e.target.value);
-                setForm({ ...form, value: formatted });
-              }}
-              placeholder="0,00"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-            <Select
-              value={form.paymentMethod}
-              onValueChange={(v) => setForm({ ...form, paymentMethod: v, installments: v === 'credit' ? form.installments : '1' })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Dinheiro</SelectItem>
-                <SelectItem value="debit">Cartão de Débito</SelectItem>
-                <SelectItem value="credit">Cartão de Crédito</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {form.paymentMethod === 'credit' && (
             <div className="space-y-2">
-              <Label htmlFor="installments">Número de Parcelas</Label>
-              <Input
-                id="installments"
-                type="number"
-                min="1"
-                max="12"
-                value={form.installments}
-                onChange={(e) => setForm({ ...form, installments: e.target.value })}
-                placeholder="1"
+              <Label htmlFor="observations">Observações {selectedItemIds.length > 0 && <span className="text-xs font-normal text-muted-foreground">(Será adicionado à descrição junto com os itens)</span>}</Label>
+              <Textarea
+                id="observations"
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Digite observações adicionais..."
+                rows={3}
               />
             </div>
-          )}
 
-          <div className="flex gap-3 pt-4">
-            {procedure && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="value">Valor Total (R$)</Label>
+                <Input
+                  id="value"
+                  value={form.value}
+                  onChange={(e) => {
+                    const formatted = formatCurrency(e.target.value);
+                    setForm({ ...form, value: formatted });
+                  }}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              {procedure && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={createProcedure.isPending || updateProcedure.isPending}
+                >
+                  Excluir
+                </Button>
+              )}
               <Button
                 type="button"
-                variant="destructive"
+                variant="outline"
                 className="flex-1"
-                onClick={() => setDeleteDialogOpen(true)}
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 bg-teal-600 hover:bg-teal-700"
                 disabled={createProcedure.isPending || updateProcedure.isPending}
               >
-                Excluir
+                {(createProcedure.isPending || updateProcedure.isPending) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  'Salvar'
+                )}
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              className="flex-1" 
-              disabled={createProcedure.isPending || updateProcedure.isPending}
-            >
-              {(createProcedure.isPending || updateProcedure.isPending) ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                'Salvar'
-              )}
-            </Button>
-          </div>
-        </form>
+            </div>
+          </form>
+        </ScrollArea>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
