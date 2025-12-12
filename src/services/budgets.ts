@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
-import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '../types/database';
+import { supabase } from '@/lib/supabase';
+import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
 
 export const budgetsService = {
     async getByPatient(patientId: string): Promise<BudgetWithItems[]> {
@@ -29,7 +29,7 @@ export const budgetsService = {
 
         // Create budget items
         if (items.length > 0) {
-            const itemsWithBudgetId = items.map(item => ({
+            const itemsWithBudgetId: BudgetItemInsert[] = items.map(item => ({
                 ...item,
                 budget_id: budgetData.id,
             }));

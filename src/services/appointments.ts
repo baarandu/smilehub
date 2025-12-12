@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase';
-import type { 
-  Appointment, 
-  AppointmentInsert, 
+import type {
+  Appointment,
+  AppointmentInsert,
   AppointmentUpdate,
-  AppointmentWithPatient 
+  AppointmentWithPatient
 } from '@/types/database';
 
 export const appointmentsService = {
@@ -16,7 +16,7 @@ export const appointmentsService = {
       `)
       .order('date')
       .order('time');
-    
+
     if (error) throw error;
     return data || [];
   },
@@ -30,7 +30,7 @@ export const appointmentsService = {
       `)
       .eq('date', date)
       .order('time');
-    
+
     if (error) throw error;
     return data || [];
   },
@@ -46,7 +46,7 @@ export const appointmentsService = {
       .select('*')
       .eq('patient_id', patientId)
       .order('date', { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
   },
@@ -57,8 +57,9 @@ export const appointmentsService = {
       .insert(appointment)
       .select()
       .single();
-    
+
     if (error) throw error;
+    if (!data) throw new Error('Failed to create appointment');
     return data;
   },
 
@@ -69,8 +70,9 @@ export const appointmentsService = {
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
+    if (!data) throw new Error('Failed to update appointment');
     return data;
   },
 
@@ -83,7 +85,7 @@ export const appointmentsService = {
       .from('appointments')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw error;
   },
 
@@ -93,7 +95,7 @@ export const appointmentsService = {
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('date', today);
-    
+
     if (error) throw error;
     return count || 0;
   },
@@ -104,7 +106,7 @@ export const appointmentsService = {
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate);
-    
+
     if (error) throw error;
     return data || [];
   },
@@ -115,7 +117,7 @@ export const appointmentsService = {
       .select('date')
       .gte('date', startDate)
       .lte('date', endDate);
-    
+
     if (error) throw error;
     const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
     return uniqueDates;

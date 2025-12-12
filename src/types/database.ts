@@ -86,47 +86,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      patient_documents: {
-        Row: {
-          id: string
-          patient_id: string
-          name: string
-          description: string | null
-          file_url: string
-          file_type: string | null
-          file_size: number | null
-          category: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
-          uploaded_at: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          patient_id: string
-          name: string
-          description?: string | null
-          file_url: string
-          file_type?: string | null
-          file_size?: number | null
-          category?: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
-          uploaded_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          patient_id?: string
-          name?: string
-          description?: string | null
-          file_url?: string
-          file_type?: string | null
-          file_size?: number | null
-          category?: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
-          uploaded_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
       consultations: {
         Row: {
           id: string
@@ -152,6 +111,44 @@ export interface Database {
           date?: string
           notes?: string | null
           suggested_return_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      procedures: {
+        Row: {
+          id: string
+          patient_id: string
+          date: string
+          description: string
+          value: number
+          payment_method: string | null
+          installments: number | null
+          location: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          date: string
+          description: string
+          value: number
+          payment_method?: string | null
+          installments?: number | null
+          location?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          date?: string
+          description?: string
+          value?: number
+          payment_method?: string | null
+          installments?: number | null
+          location?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -191,16 +188,41 @@ export interface Database {
           updated_at?: string
         }
       }
-      procedures: {
+      anamneses: {
         Row: {
           id: string
           patient_id: string
           date: string
-          location: string | null
-          description: string | null
-          value: number | null
-          payment_method: 'cash' | 'debit' | 'credit' | null
-          installments: number
+          medical_treatment: boolean
+          medical_treatment_details: string | null
+          recent_surgery: boolean
+          recent_surgery_details: string | null
+          healing_problems: boolean
+          healing_problems_details: string | null
+          current_medication: boolean
+          current_medication_details: string | null
+          local_anesthesia_history: boolean
+          anesthesia_reaction: boolean
+          anesthesia_reaction_details: string | null
+          pregnant_or_breastfeeding: boolean
+          smoker_or_drinker: boolean
+          smoker_or_drinker_details: string | null
+          fasting: boolean
+          diabetes: boolean
+          diabetes_details: string | null
+          depression_anxiety_panic: boolean
+          depression_anxiety_panic_details: string | null
+          seizure_epilepsy: boolean
+          seizure_epilepsy_details: string | null
+          heart_disease: boolean
+          heart_disease_details: string | null
+          hypertension: boolean
+          pacemaker: boolean
+          infectious_disease: boolean
+          infectious_disease_details: string | null
+          arthritis: boolean
+          gastritis_reflux: boolean
+          notes: string | null
           created_at: string
           updated_at: string
         }
@@ -208,11 +230,36 @@ export interface Database {
           id?: string
           patient_id: string
           date: string
-          location?: string | null
-          description?: string | null
-          value?: number | null
-          payment_method?: 'cash' | 'debit' | 'credit' | null
-          installments?: number
+          medical_treatment?: boolean
+          medical_treatment_details?: string | null
+          recent_surgery?: boolean
+          recent_surgery_details?: string | null
+          healing_problems?: boolean
+          healing_problems_details?: string | null
+          current_medication?: boolean
+          current_medication_details?: string | null
+          local_anesthesia_history?: boolean
+          anesthesia_reaction?: boolean
+          anesthesia_reaction_details?: string | null
+          pregnant_or_breastfeeding?: boolean
+          smoker_or_drinker?: boolean
+          smoker_or_drinker_details?: string | null
+          fasting?: boolean
+          diabetes?: boolean
+          diabetes_details?: string | null
+          depression_anxiety_panic?: boolean
+          depression_anxiety_panic_details?: string | null
+          seizure_epilepsy?: boolean
+          seizure_epilepsy_details?: string | null
+          heart_disease?: boolean
+          heart_disease_details?: string | null
+          hypertension?: boolean
+          pacemaker?: boolean
+          infectious_disease?: boolean
+          infectious_disease_details?: string | null
+          arthritis?: boolean
+          gastritis_reflux?: boolean
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -220,48 +267,96 @@ export interface Database {
           id?: string
           patient_id?: string
           date?: string
-          location?: string | null
-          description?: string | null
-          value?: number | null
-          payment_method?: 'cash' | 'debit' | 'credit' | null
-          installments?: number
+          medical_treatment?: boolean
+          medical_treatment_details?: string | null
+          recent_surgery?: boolean
+          recent_surgery_details?: string | null
+          healing_problems?: boolean
+          healing_problems_details?: string | null
+          current_medication?: boolean
+          current_medication_details?: string | null
+          local_anesthesia_history?: boolean
+          anesthesia_reaction?: boolean
+          anesthesia_reaction_details?: string | null
+          pregnant_or_breastfeeding?: boolean
+          smoker_or_drinker?: boolean
+          smoker_or_drinker_details?: string | null
+          fasting?: boolean
+          diabetes?: boolean
+          diabetes_details?: string | null
+          depression_anxiety_panic?: boolean
+          depression_anxiety_panic_details?: string | null
+          seizure_epilepsy?: boolean
+          seizure_epilepsy_details?: string | null
+          heart_disease?: boolean
+          heart_disease_details?: string | null
+          hypertension?: boolean
+          pacemaker?: boolean
+          infectious_disease?: boolean
+          infectious_disease_details?: string | null
+          arthritis?: boolean
+          gastritis_reflux?: boolean
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
       }
-      exams: {
+      budgets: {
         Row: {
           id: string
           patient_id: string
-          name: string
-          order_date: string
-          exam_date: string | null
-          file_url: string | null
-          file_type: 'document' | 'photo' | null
+          date: string
+          treatment: string
+          value: number
+          status: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           patient_id: string
-          name: string
-          order_date: string
-          exam_date?: string | null
-          file_url?: string | null
-          file_type?: 'document' | 'photo' | null
+          date: string
+          treatment: string
+          value: number
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           patient_id?: string
-          name?: string
-          order_date?: string
-          exam_date?: string | null
-          file_url?: string | null
-          file_type?: 'document' | 'photo' | null
+          date?: string
+          treatment?: string
+          value?: number
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      budget_items: {
+        Row: {
+          id: string
+          budget_id: string
+          tooth: string
+          faces: string[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          budget_id: string
+          tooth: string
+          faces: string[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          budget_id?: string
+          tooth?: string
+          faces?: string[]
+          created_at?: string
         }
       }
     }
@@ -273,7 +368,6 @@ export interface Database {
     }
     Enums: {
       appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
-      document_category: 'exam' | 'xray' | 'photo' | 'document' | 'prescription'
     }
   }
 }
@@ -282,10 +376,6 @@ export interface Database {
 export type Patient = Database['public']['Tables']['patients']['Row']
 export type PatientInsert = Database['public']['Tables']['patients']['Insert']
 export type PatientUpdate = Database['public']['Tables']['patients']['Update']
-
-export type PatientDocument = Database['public']['Tables']['patient_documents']['Row']
-export type PatientDocumentInsert = Database['public']['Tables']['patient_documents']['Insert']
-export type PatientDocumentUpdate = Database['public']['Tables']['patient_documents']['Update']
 
 export type Consultation = Database['public']['Tables']['consultations']['Row']
 export type ConsultationInsert = Database['public']['Tables']['consultations']['Insert']
@@ -299,9 +389,21 @@ export type Procedure = Database['public']['Tables']['procedures']['Row']
 export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
 export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
 
-export type Exam = Database['public']['Tables']['exams']['Row']
-export type ExamInsert = Database['public']['Tables']['exams']['Insert']
-export type ExamUpdate = Database['public']['Tables']['exams']['Update']
+export type Anamnese = Database['public']['Tables']['anamneses']['Row']
+export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']
+export type AnamneseUpdate = Database['public']['Tables']['anamneses']['Update']
+
+export type Budget = Database['public']['Tables']['budgets']['Row']
+export type BudgetInsert = Database['public']['Tables']['budgets']['Insert']
+export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
+
+export type BudgetItem = Database['public']['Tables']['budget_items']['Row']
+export type BudgetItemInsert = Database['public']['Tables']['budget_items']['Insert']
+export type BudgetItemUpdate = Database['public']['Tables']['budget_items']['Update']
+
+export type BudgetWithItems = Budget & {
+  budget_items: BudgetItem[]
+}
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {

@@ -107,7 +107,7 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
-          <PaymentsTab />
+          <PaymentsTab patientId={patient.id} />
         </TabsContent>
       </Tabs>
     </div>

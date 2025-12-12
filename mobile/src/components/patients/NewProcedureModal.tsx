@@ -164,8 +164,8 @@ export function NewProcedureModal({
         patient_id: patientId,
         date: dateStr,
         location: form.location || null,
-        description: form.description || null,
-        value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) || null : null,
+        description: form.description || '',
+        value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) || 0 : 0,
         payment_method: form.paymentMethod || null,
         installments: form.paymentMethod === 'credit' ? parseInt(form.installments) : 1,
       };

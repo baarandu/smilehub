@@ -115,6 +115,44 @@ export interface Database {
           updated_at?: string
         }
       }
+      procedures: {
+        Row: {
+          id: string
+          patient_id: string
+          date: string
+          description: string
+          value: number
+          payment_method: string | null
+          installments: number | null
+          location: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          date: string
+          description: string
+          value: number
+          payment_method?: string | null
+          installments?: number | null
+          location?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          date?: string
+          description?: string
+          value?: number
+          payment_method?: string | null
+          installments?: number | null
+          location?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       appointments: {
         Row: {
           id: string
@@ -346,6 +384,10 @@ export type ConsultationUpdate = Database['public']['Tables']['consultations']['
 export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update']
+
+export type Procedure = Database['public']['Tables']['procedures']['Row']
+export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
+export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
 
 export type Anamnese = Database['public']['Tables']['anamneses']['Row']
 export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']

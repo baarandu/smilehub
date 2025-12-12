@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, CheckCircle, Clock, CreditCard } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
@@ -99,13 +99,13 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
 
     const grandTotal = teethList.reduce((sum, t) => sum + getToothTotal(t), 0);
 
+    const insets = useSafeAreaInsets();
+
     if (!budget) return null;
 
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-            <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
-                {/* Spacer for status bar */}
-                <View className="h-6 bg-white" />
+            <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
                 {/* Header */}
                 <View className="bg-white border-b border-gray-200 px-4 py-4 flex-row items-center justify-between">
                     <View>
@@ -247,7 +247,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
 
                     <View className="h-8" />
                 </ScrollView>
-            </SafeAreaView>
+            </View>
         </Modal>
     );
 }
