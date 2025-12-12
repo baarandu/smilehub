@@ -272,7 +272,7 @@ export interface Database {
       [_ in never]: never
     }
     Enums: {
-      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled'
+      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
       document_category: 'exam' | 'xray' | 'photo' | 'document' | 'prescription'
     }
   }

@@ -38,6 +38,8 @@ export const STATUS_CONFIG = {
   scheduled: { label: 'Agendado', class: 'bg-primary text-primary-foreground' },
   confirmed: { label: 'Confirmado', class: 'bg-blue-500 text-white' },
   completed: { label: 'Compareceu', class: 'bg-success text-success-foreground' },
+  no_show: { label: 'Não Compareceu', class: 'bg-orange-500 text-white' },
   cancelled: { label: 'Cancelado', class: 'bg-destructive text-destructive-foreground' },
+  rescheduled: { label: 'Remarcado', class: 'bg-purple-500 text-white' },
 } as const;
 

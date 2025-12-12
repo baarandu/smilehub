@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Calendar, Plus, MapPin } from 'lucide-react-native';
@@ -19,6 +19,8 @@ export default function Agenda() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
     const [showModal, setShowModal] = useState(false);
+    const [showStatusPicker, setShowStatusPicker] = useState(false);
+    const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithPatient | null>(null);
 
     useEffect(() => {
         loadAppointments();
@@ -138,7 +140,37 @@ export default function Agenda() {
         scheduled: { label: 'Agendado', bgColor: 'bg-teal-100', textColor: 'text-teal-700' },
         confirmed: { label: 'Confirmado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
         completed: { label: 'Compareceu', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
+        no_show: { label: 'Não Compareceu', bgColor: 'bg-orange-100', textColor: 'text-orange-700' },
         cancelled: { label: 'Cancelado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+        rescheduled: { label: 'Remarcado', bgColor: 'bg-purple-100', textColor: 'text-purple-700' },
+    };
+
+    const statusOptions = [
+        { value: 'scheduled', label: 'Agendado' },
+        { value: 'confirmed', label: 'Confirmado' },
+        { value: 'completed', label: 'Compareceu' },
+        { value: 'no_show', label: 'Não Compareceu' },
+        { value: 'cancelled', label: 'Cancelado' },
+        { value: 'rescheduled', label: 'Remarcado' },
+    ];
+
+    const handleStatusPress = (appointment: AppointmentWithPatient) => {
+        setSelectedAppointment(appointment);
+        setShowStatusPicker(true);
+    };
+
+    const handleStatusChange = async (newStatus: string) => {
+        if (!selectedAppointment) return;
+
+        try {
+            await appointmentsService.update(selectedAppointment.id, { status: newStatus });
+            setShowStatusPicker(false);
+            setSelectedAppointment(null);
+            await loadAppointments();
+        } catch (error) {
+            console.error('Error updating status:', error);
+            Alert.alert('Erro', 'Não foi possível atualizar o status');
+        }
     };
 
     return (
@@ -218,11 +250,17 @@ export default function Agenda() {
                                                 <Text className="font-semibold text-gray-900">
                                                     {apt.patients?.name}
                                                 </Text>
-                                                <View className={`px-2 py-0.5 rounded-full ${status.bgColor}`}>
+                                                <TouchableOpacity
+                                                    onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusPress(apt);
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-full ${status.bgColor}`}
+                                                >
                                                     <Text className={`text-xs font-medium ${status.textColor}`}>
                                                         {status.label}
                                                     </Text>
-                                                </View>
+                                                </TouchableOpacity>
                                             </View>
                                             {apt.location && (
                                                 <View className="flex-row items-center gap-1 mt-1">
@@ -253,6 +291,60 @@ export default function Agenda() {
                 onClose={() => setShowModal(false)}
                 onCreateAppointment={handleCreateAppointment}
             />
+
+            {/* Status Picker Modal */}
+            <Modal
+                visible={showStatusPicker}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowStatusPicker(false)}
+            >
+                <Pressable
+                    className="flex-1 bg-black/50 justify-end"
+                    onPress={() => setShowStatusPicker(false)}
+                >
+                    <Pressable className="bg-white rounded-t-3xl" onPress={(e) => e.stopPropagation()}>
+                        <View className="p-4 border-b border-gray-100">
+                            <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
+                            <Text className="text-lg font-semibold text-gray-900 text-center">
+                                Alterar Status
+                            </Text>
+                            {selectedAppointment && (
+                                <Text className="text-gray-500 text-center mt-1">
+                                    {selectedAppointment.patients?.name}
+                                </Text>
+                            )}
+                        </View>
+                        <View className="p-4">
+                            {statusOptions.map((option) => {
+                                const config = statusConfig[option.value];
+                                const isSelected = selectedAppointment?.status === option.value;
+                                return (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        onPress={() => handleStatusChange(option.value)}
+                                        className={`flex-row items-center p-4 rounded-xl mb-2 ${isSelected ? 'bg-gray-100' : 'bg-gray-50'}`}
+                                    >
+                                        <View className={`w-3 h-3 rounded-full mr-3 ${config.bgColor.replace('100', '500')}`} />
+                                        <Text className={`flex-1 font-medium ${isSelected ? 'text-teal-600' : 'text-gray-700'}`}>
+                                            {option.label}
+                                        </Text>
+                                        {isSelected && (
+                                            <Text className="text-teal-600">✓</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowStatusPicker(false)}
+                            className="p-4 border-t border-gray-100"
+                        >
+                            <Text className="text-center text-gray-500 font-medium">Cancelar</Text>
+                        </TouchableOpacity>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </SafeAreaView>
     );
 }

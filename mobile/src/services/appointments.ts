@@ -20,7 +20,7 @@ export const appointmentsService = {
       `)
       .eq('date', date)
       .order('time');
-    
+
     if (error) throw error;
     return data || [];
   },
@@ -36,7 +36,7 @@ export const appointmentsService = {
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('date', today);
-    
+
     if (error) throw error;
     return count || 0;
   },
@@ -47,7 +47,7 @@ export const appointmentsService = {
       .select('date')
       .gte('date', startDate)
       .lte('date', endDate);
-    
+
     if (error) throw error;
     const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
     return uniqueDates;
@@ -59,7 +59,7 @@ export const appointmentsService = {
       .insert(appointment)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -74,9 +74,21 @@ export const appointmentsService = {
       .eq('patient_id', patientId)
       .order('date', { ascending: false })
       .order('time', { ascending: false });
-    
+
     if (error) throw error;
     return data || [];
+  },
+
+  async update(id: string, updates: Partial<AppointmentInsert>): Promise<Appointment> {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 };
 

@@ -28,7 +28,7 @@ export function AppointmentCard({
         <div className="text-center min-w-[60px]">
           <p className="text-xl font-bold text-primary">{appointment.time?.slice(0, 5)}</p>
         </div>
-        <div 
+        <div
           className="flex-1 cursor-pointer"
           onClick={() => onPatientClick(appointment.patient_id)}
         >
@@ -62,7 +62,9 @@ export function AppointmentCard({
               <SelectItem value="scheduled">Agendado</SelectItem>
               <SelectItem value="confirmed">Confirmado</SelectItem>
               <SelectItem value="completed">Compareceu</SelectItem>
+              <SelectItem value="no_show">Não Compareceu</SelectItem>
               <SelectItem value="cancelled">Cancelado</SelectItem>
+              <SelectItem value="rescheduled">Remarcado</SelectItem>
             </SelectContent>
           </Select>
           <Button
