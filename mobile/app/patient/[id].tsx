@@ -5,8 +5,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital, ClipboardList, Plus, Calculator } from 'lucide-react-native';
 import { getPatientById, deletePatient } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
-import { EditPatientModal } from '../../src/components/patients';
-import type { Patient, AppointmentWithPatient } from '../../src/types/database';
+import { anamnesesService } from '../../src/services/anamneses';
+import { EditPatientModal, NewAnamneseModal } from '../../src/components/patients';
+import type { Patient, AppointmentWithPatient, Anamnese } from '../../src/types/database';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
@@ -18,11 +19,15 @@ export default function PatientDetail() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('anamnese');
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showAnamneseModal, setShowAnamneseModal] = useState(false);
+    const [anamneses, setAnamneses] = useState<Anamnese[]>([]);
+    const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
 
     useEffect(() => {
         if (id) {
             loadPatient();
             loadAppointments();
+            loadAnamneses();
         }
     }, [id]);
 
@@ -46,6 +51,53 @@ export default function PatientDetail() {
         } catch (error) {
             console.error('Error loading appointments:', error);
         }
+    };
+
+    const loadAnamneses = async () => {
+        try {
+            const data = await anamnesesService.getByPatient(id!);
+            setAnamneses(data);
+        } catch (error) {
+            console.error('Error loading anamneses:', error);
+        }
+    };
+
+    const handleAddAnamnese = () => {
+        setSelectedAnamnese(null);
+        setShowAnamneseModal(true);
+    };
+
+    const handleEditAnamnese = (anamnese: Anamnese) => {
+        setSelectedAnamnese(anamnese);
+        setShowAnamneseModal(true);
+    };
+
+    const handleDeleteAnamnese = (anamnese: Anamnese) => {
+        Alert.alert(
+            'Excluir Anamnese',
+            'Tem certeza que deseja excluir esta anamnese?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await anamnesesService.delete(anamnese.id);
+                            loadAnamneses();
+                        } catch (error) {
+                            console.error('Error deleting anamnese:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir a anamnese');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const formatAnamneseDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
     const getInitials = (name: string) => {
@@ -245,17 +297,82 @@ export default function PatientDetail() {
                             <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Anamnese do Paciente</Text>
                                 <TouchableOpacity
-                                    onPress={() => Alert.alert('Em breve', 'Adicionar anamnese em desenvolvimento')}
+                                    onPress={handleAddAnamnese}
                                     className="bg-teal-500 p-2 rounded-lg"
                                 >
                                     <Plus size={16} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
-                            <View className="p-8 items-center">
-                                <ClipboardList size={40} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhuma anamnese registrada</Text>
-                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
-                            </View>
+                            {anamneses.length > 0 ? (
+                                <View>
+                                    {anamneses.map((anamnese) => (
+                                        <View
+                                            key={anamnese.id}
+                                            className="p-4 border-b border-gray-50"
+                                        >
+                                            <View className="flex-row items-center justify-between mb-2">
+                                                <Text className="text-sm text-gray-500">
+                                                    {formatAnamneseDate(anamnese.created_at)}
+                                                </Text>
+                                                <View className="flex-row gap-2">
+                                                    <TouchableOpacity
+                                                        onPress={() => handleEditAnamnese(anamnese)}
+                                                        className="bg-teal-50 p-2 rounded-lg"
+                                                    >
+                                                        <Edit3 size={16} color="#0D9488" />
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={() => handleDeleteAnamnese(anamnese)}
+                                                        className="bg-red-50 p-2 rounded-lg"
+                                                    >
+                                                        <Trash2 size={16} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                            <View className="flex-row flex-wrap gap-1">
+                                                {anamnese.medical_treatment && (
+                                                    <View className="bg-amber-100 px-2 py-0.5 rounded">
+                                                        <Text className="text-xs text-amber-700">Em tratamento</Text>
+                                                    </View>
+                                                )}
+                                                {anamnese.current_medication && (
+                                                    <View className="bg-blue-100 px-2 py-0.5 rounded">
+                                                        <Text className="text-xs text-blue-700">Medicação</Text>
+                                                    </View>
+                                                )}
+                                                {anamnese.pregnant_or_breastfeeding && (
+                                                    <View className="bg-pink-100 px-2 py-0.5 rounded">
+                                                        <Text className="text-xs text-pink-700">Gestante/Lactante</Text>
+                                                    </View>
+                                                )}
+                                                {anamnese.anesthesia_reaction && (
+                                                    <View className="bg-red-100 px-2 py-0.5 rounded">
+                                                        <Text className="text-xs text-red-700">Reação anestesia</Text>
+                                                    </View>
+                                                )}
+                                                {anamnese.healing_problems && (
+                                                    <View className="bg-orange-100 px-2 py-0.5 rounded">
+                                                        <Text className="text-xs text-orange-700">Cicatrização</Text>
+                                                    </View>
+                                                )}
+                                                {!anamnese.medical_treatment && !anamnese.current_medication &&
+                                                    !anamnese.pregnant_or_breastfeeding && !anamnese.anesthesia_reaction &&
+                                                    !anamnese.healing_problems && (
+                                                        <View className="bg-green-100 px-2 py-0.5 rounded">
+                                                            <Text className="text-xs text-green-700">Sem alertas</Text>
+                                                        </View>
+                                                    )}
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <View className="p-8 items-center">
+                                    <ClipboardList size={40} color="#D1D5DB" />
+                                    <Text className="text-gray-400 mt-4">Nenhuma anamnese registrada</Text>
+                                    <Text className="text-gray-300 text-sm mt-2">Toque no + para adicionar</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 )}
@@ -382,6 +499,18 @@ export default function PatientDetail() {
                 patient={patient}
                 onClose={() => setShowEditModal(false)}
                 onSuccess={loadPatient}
+            />
+
+            {/* New Anamnese Modal */}
+            <NewAnamneseModal
+                visible={showAnamneseModal}
+                patientId={patient.id}
+                onClose={() => {
+                    setShowAnamneseModal(false);
+                    setSelectedAnamnese(null);
+                }}
+                onSuccess={loadAnamneses}
+                anamnese={selectedAnamnese}
             />
         </SafeAreaView>
     );

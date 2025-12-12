@@ -150,6 +150,119 @@ export interface Database {
           updated_at?: string
         }
       }
+      anamneses: {
+        Row: {
+          id: string
+          patient_id: string
+          date: string
+          medical_treatment: boolean
+          medical_treatment_details: string | null
+          recent_surgery: boolean
+          recent_surgery_details: string | null
+          healing_problems: boolean
+          healing_problems_details: string | null
+          current_medication: boolean
+          current_medication_details: string | null
+          local_anesthesia_history: boolean
+          anesthesia_reaction: boolean
+          anesthesia_reaction_details: string | null
+          pregnant_or_breastfeeding: boolean
+          smoker_or_drinker: boolean
+          smoker_or_drinker_details: string | null
+          fasting: boolean
+          diabetes: boolean
+          diabetes_details: string | null
+          depression_anxiety_panic: boolean
+          depression_anxiety_panic_details: string | null
+          seizure_epilepsy: boolean
+          seizure_epilepsy_details: string | null
+          heart_disease: boolean
+          heart_disease_details: string | null
+          hypertension: boolean
+          pacemaker: boolean
+          infectious_disease: boolean
+          infectious_disease_details: string | null
+          arthritis: boolean
+          gastritis_reflux: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          date: string
+          medical_treatment?: boolean
+          medical_treatment_details?: string | null
+          recent_surgery?: boolean
+          recent_surgery_details?: string | null
+          healing_problems?: boolean
+          healing_problems_details?: string | null
+          current_medication?: boolean
+          current_medication_details?: string | null
+          local_anesthesia_history?: boolean
+          anesthesia_reaction?: boolean
+          anesthesia_reaction_details?: string | null
+          pregnant_or_breastfeeding?: boolean
+          smoker_or_drinker?: boolean
+          smoker_or_drinker_details?: string | null
+          fasting?: boolean
+          diabetes?: boolean
+          diabetes_details?: string | null
+          depression_anxiety_panic?: boolean
+          depression_anxiety_panic_details?: string | null
+          seizure_epilepsy?: boolean
+          seizure_epilepsy_details?: string | null
+          heart_disease?: boolean
+          heart_disease_details?: string | null
+          hypertension?: boolean
+          pacemaker?: boolean
+          infectious_disease?: boolean
+          infectious_disease_details?: string | null
+          arthritis?: boolean
+          gastritis_reflux?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          date?: string
+          medical_treatment?: boolean
+          medical_treatment_details?: string | null
+          recent_surgery?: boolean
+          recent_surgery_details?: string | null
+          healing_problems?: boolean
+          healing_problems_details?: string | null
+          current_medication?: boolean
+          current_medication_details?: string | null
+          local_anesthesia_history?: boolean
+          anesthesia_reaction?: boolean
+          anesthesia_reaction_details?: string | null
+          pregnant_or_breastfeeding?: boolean
+          smoker_or_drinker?: boolean
+          smoker_or_drinker_details?: string | null
+          fasting?: boolean
+          diabetes?: boolean
+          diabetes_details?: string | null
+          depression_anxiety_panic?: boolean
+          depression_anxiety_panic_details?: string | null
+          seizure_epilepsy?: boolean
+          seizure_epilepsy_details?: string | null
+          heart_disease?: boolean
+          heart_disease_details?: string | null
+          hypertension?: boolean
+          pacemaker?: boolean
+          infectious_disease?: boolean
+          infectious_disease_details?: string | null
+          arthritis?: boolean
+          gastritis_reflux?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -175,6 +288,10 @@ export type ConsultationUpdate = Database['public']['Tables']['consultations']['
 export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update']
+
+export type Anamnese = Database['public']['Tables']['anamneses']['Row']
+export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']
+export type AnamneseUpdate = Database['public']['Tables']['anamneses']['Update']
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
