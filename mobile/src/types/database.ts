@@ -263,6 +263,64 @@ export interface Database {
           updated_at?: string
         }
       }
+      budgets: {
+        Row: {
+          id: string
+          patient_id: string
+          date: string
+          treatment: string
+          value: number
+          status: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          date: string
+          treatment: string
+          value: number
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          date?: string
+          treatment?: string
+          value?: number
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      budget_items: {
+        Row: {
+          id: string
+          budget_id: string
+          tooth: string
+          faces: string[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          budget_id: string
+          tooth: string
+          faces: string[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          budget_id?: string
+          tooth?: string
+          faces?: string[]
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -292,6 +350,18 @@ export type AppointmentUpdate = Database['public']['Tables']['appointments']['Up
 export type Anamnese = Database['public']['Tables']['anamneses']['Row']
 export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']
 export type AnamneseUpdate = Database['public']['Tables']['anamneses']['Update']
+
+export type Budget = Database['public']['Tables']['budgets']['Row']
+export type BudgetInsert = Database['public']['Tables']['budgets']['Insert']
+export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
+
+export type BudgetItem = Database['public']['Tables']['budget_items']['Row']
+export type BudgetItemInsert = Database['public']['Tables']['budget_items']['Insert']
+export type BudgetItemUpdate = Database['public']['Tables']['budget_items']['Update']
+
+export type BudgetWithItems = Budget & {
+  budget_items: BudgetItem[]
+}
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {

@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital, ClipboardList, Plus, Calculator } from 'lucide-react-native';
+import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital, ClipboardList, Plus, Calculator, Banknote, CheckCircle, Clock } from 'lucide-react-native';
 import { getPatientById, deletePatient } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { anamnesesService } from '../../src/services/anamneses';
-import { EditPatientModal, NewAnamneseModal } from '../../src/components/patients';
-import type { Patient, AppointmentWithPatient, Anamnese } from '../../src/types/database';
+import { budgetsService } from '../../src/services/budgets';
+import { EditPatientModal, NewAnamneseModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal } from '../../src/components/patients';
+import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
+import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems } from '../../src/types/database';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
@@ -20,14 +22,22 @@ export default function PatientDetail() {
     const [activeTab, setActiveTab] = useState<TabType>('anamnese');
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
+    const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [anamneses, setAnamneses] = useState<Anamnese[]>([]);
     const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
+    const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
+    const [selectedBudget, setSelectedBudget] = useState<BudgetWithItems | null>(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedPaymentItem, setSelectedPaymentItem] = useState<{ budgetId: string; toothIndex: number; tooth: ToothEntry } | null>(null);
+    const [showBudgetViewModal, setShowBudgetViewModal] = useState(false);
+    const [viewBudget, setViewBudget] = useState<BudgetWithItems | null>(null);
 
     useEffect(() => {
         if (id) {
             loadPatient();
             loadAppointments();
             loadAnamneses();
+            loadBudgets();
         }
     }, [id]);
 
@@ -93,6 +103,115 @@ export default function PatientDetail() {
                 },
             ]
         );
+    };
+
+    const loadBudgets = async () => {
+        try {
+            const data = await budgetsService.getByPatient(id!);
+            setBudgets(data);
+        } catch (error) {
+            console.error('Error loading budgets:', error);
+        }
+    };
+
+    const handleAddBudget = () => {
+        setSelectedBudget(null);
+        setShowBudgetModal(true);
+    };
+
+    const handleEditBudget = (budget: BudgetWithItems) => {
+        setSelectedBudget(budget);
+        setShowBudgetModal(true);
+    };
+
+    const handleViewBudget = (budget: BudgetWithItems) => {
+        setViewBudget(budget);
+        setShowBudgetViewModal(true);
+    };
+
+    const handleDeleteBudget = (budget: BudgetWithItems) => {
+        Alert.alert(
+            'Excluir Orçamento',
+            'Tem certeza que deseja excluir este orçamento?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await budgetsService.delete(budget.id);
+                            loadBudgets();
+                        } catch (error) {
+                            console.error('Error deleting budget:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir o orçamento');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    // Get all approved and paid items from all budgets
+    const getAllPaymentItems = () => {
+        const items: { budgetId: string; toothIndex: number; tooth: ToothEntry; budgetDate: string }[] = [];
+        budgets.forEach(budget => {
+            if (budget.notes) {
+                try {
+                    const parsed = JSON.parse(budget.notes);
+                    if (parsed.teeth) {
+                        parsed.teeth.forEach((tooth: ToothEntry, index: number) => {
+                            if (tooth.status === 'approved' || tooth.status === 'paid') {
+                                items.push({ budgetId: budget.id, toothIndex: index, tooth, budgetDate: budget.date });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // Invalid JSON, skip
+                }
+            }
+        });
+        return items;
+    };
+
+    const handlePaymentClick = (budgetId: string, toothIndex: number, tooth: ToothEntry) => {
+        setSelectedPaymentItem({ budgetId, toothIndex, tooth });
+        setShowPaymentModal(true);
+    };
+
+    const handleConfirmPayment = async (method: string, installments: number) => {
+        if (!selectedPaymentItem) return;
+
+        try {
+            const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
+            if (!budget?.notes) return;
+
+            const parsed = JSON.parse(budget.notes);
+            if (!parsed.teeth) return;
+
+            // Update the tooth entry with payment info
+            parsed.teeth[selectedPaymentItem.toothIndex] = {
+                ...parsed.teeth[selectedPaymentItem.toothIndex],
+                status: 'paid',
+                paymentMethod: method,
+                paymentInstallments: installments,
+                paymentDate: new Date().toISOString().split('T')[0],
+            };
+
+            // Save updated budget
+            await budgetsService.update(selectedPaymentItem.budgetId, {
+                notes: JSON.stringify(parsed),
+            });
+
+            Alert.alert('Sucesso', 'Pagamento registrado com sucesso!');
+            loadBudgets();
+        } catch (error) {
+            console.error('Error registering payment:', error);
+            Alert.alert('Erro', 'Não foi possível registrar o pagamento');
+        } finally {
+            setShowPaymentModal(false);
+            setSelectedPaymentItem(null);
+        }
     };
 
     const formatAnamneseDate = (dateStr: string) => {
@@ -384,17 +503,77 @@ export default function PatientDetail() {
                             <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                                 <Text className="font-semibold text-gray-900">Orçamentos</Text>
                                 <TouchableOpacity
-                                    onPress={() => Alert.alert('Em breve', 'Adicionar orçamento em desenvolvimento')}
+                                    onPress={handleAddBudget}
                                     className="bg-teal-500 p-2 rounded-lg"
                                 >
                                     <Plus size={16} color="#FFFFFF" />
                                 </TouchableOpacity>
                             </View>
-                            <View className="p-8 items-center">
-                                <Calculator size={40} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum orçamento registrado</Text>
-                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
-                            </View>
+                            {budgets.length > 0 ? (
+                                <View>
+                                    {budgets.map((budget) => {
+                                        const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
+                                            pending: { label: 'Pendente', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
+                                            approved: { label: 'Aprovado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
+                                            rejected: { label: 'Rejeitado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+                                            completed: { label: 'Concluído', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
+                                        };
+                                        const status = statusConfig[budget.status] || statusConfig.pending;
+                                        return (
+                                            <View
+                                                key={budget.id}
+                                                className="p-4 border-b border-gray-50"
+                                            >
+                                                <TouchableOpacity
+                                                    onPress={() => handleViewBudget(budget)}
+                                                    activeOpacity={0.7}
+                                                >
+                                                    <View className="flex-row items-center justify-between mb-2">
+                                                        <Text className="text-sm text-gray-500">
+                                                            {new Date(budget.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                                        </Text>
+                                                    </View>
+                                                    <Text className="font-medium text-gray-900 mb-1">{budget.treatment}</Text>
+                                                    <View className="flex-row flex-wrap gap-1 mb-2">
+                                                        {budget.budget_items.map((item, idx) => (
+                                                            <View key={idx} className="bg-gray-100 px-2 py-0.5 rounded">
+                                                                <Text className="text-xs text-gray-600">
+                                                                    {item.tooth}{item.faces.length > 0 ? `: ${item.faces.join(', ')}` : ''}
+                                                                </Text>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                    <Text className="text-lg font-bold text-teal-600">
+                                                        R$ {budget.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                                <View className="flex-row gap-2 mt-3 pt-3 border-t border-gray-100">
+                                                    <TouchableOpacity
+                                                        onPress={() => handleEditBudget(budget)}
+                                                        className="flex-1 flex-row items-center justify-center gap-2 bg-teal-50 py-2 rounded-lg"
+                                                    >
+                                                        <Edit3 size={14} color="#0D9488" />
+                                                        <Text className="text-teal-600 text-sm font-medium">Editar</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        onPress={() => handleDeleteBudget(budget)}
+                                                        className="flex-1 flex-row items-center justify-center gap-2 bg-red-50 py-2 rounded-lg"
+                                                    >
+                                                        <Trash2 size={14} color="#EF4444" />
+                                                        <Text className="text-red-600 text-sm font-medium">Excluir</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            ) : (
+                                <View className="p-8 items-center">
+                                    <Calculator size={40} color="#D1D5DB" />
+                                    <Text className="text-gray-400 mt-4">Nenhum orçamento registrado</Text>
+                                    <Text className="text-gray-300 text-sm mt-2">Toque no + para adicionar</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 )}
@@ -447,26 +626,109 @@ export default function PatientDetail() {
                 )}
 
                 {/* Payments Tab */}
-                {activeTab === 'payments' && (
-                    <View className="mx-4 mb-4">
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
-                                <Text className="font-semibold text-gray-900">Pagamentos Realizados</Text>
-                                <TouchableOpacity
-                                    onPress={() => Alert.alert('Em breve', 'Adicionar pagamento em desenvolvimento')}
-                                    className="bg-teal-500 p-2 rounded-lg"
-                                >
-                                    <Plus size={16} color="#FFFFFF" />
-                                </TouchableOpacity>
+                {activeTab === 'payments' && (() => {
+                    const paymentItems = getAllPaymentItems();
+                    const pendingItems = paymentItems.filter(i => i.tooth.status === 'approved');
+                    const paidItems = paymentItems.filter(i => i.tooth.status === 'paid');
+                    const getToothTotal = (tooth: ToothEntry) => calculateToothTotal(tooth.values);
+                    const getToothDisplayName = (tooth: string) => tooth.includes('Arcada') ? tooth : `Dente ${tooth}`;
+                    const getPaymentMethodLabel = (method: string) => {
+                        const labels: Record<string, string> = { cash: 'Dinheiro', credit: 'Crédito', debit: 'Débito', pix: 'PIX' };
+                        return labels[method] || method;
+                    };
+
+                    return (
+                        <View className="mx-4 mb-4 gap-4">
+                            {/* Pending Payments */}
+                            <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                                <View className="p-4 border-b border-gray-100 flex-row items-center gap-2">
+                                    <Clock size={18} color="#CA8A04" />
+                                    <Text className="font-semibold text-gray-900">Aguardando Pagamento</Text>
+                                    <View className="bg-yellow-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-yellow-700 text-xs font-medium">{pendingItems.length}</Text>
+                                    </View>
+                                </View>
+                                {pendingItems.length === 0 ? (
+                                    <View className="p-6 items-center">
+                                        <Text className="text-gray-400">Nenhum item aprovado pendente de pagamento</Text>
+                                        <Text className="text-gray-300 text-sm mt-1">Aprove itens no orçamento para aparecerem aqui</Text>
+                                    </View>
+                                ) : (
+                                    pendingItems.map((item, idx) => {
+                                        const total = getToothTotal(item.tooth);
+                                        return (
+                                            <View key={`${item.budgetId}-${item.toothIndex}`} className={`p-4 ${idx < pendingItems.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                                                <View className="flex-row items-center justify-between">
+                                                    <View className="flex-1">
+                                                        <Text className="font-medium text-gray-900">{getToothDisplayName(item.tooth.tooth)}</Text>
+                                                        <Text className="text-gray-500 text-sm">{item.tooth.treatments.join(', ')}</Text>
+                                                        <Text className="text-teal-600 font-semibold mt-1">
+                                                            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </Text>
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        onPress={() => handlePaymentClick(item.budgetId, item.toothIndex, item.tooth)}
+                                                        className="bg-teal-500 px-4 py-2 rounded-lg flex-row items-center gap-1"
+                                                    >
+                                                        <Banknote size={16} color="#FFFFFF" />
+                                                        <Text className="text-white font-medium">Pagar</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        );
+                                    })
+                                )}
                             </View>
-                            <View className="p-8 items-center">
-                                <CreditCard size={40} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum pagamento registrado</Text>
-                                <Text className="text-gray-300 text-sm mt-2">Funcionalidade em desenvolvimento</Text>
+
+                            {/* Paid Items */}
+                            <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                                <View className="p-4 border-b border-gray-100 flex-row items-center gap-2">
+                                    <CheckCircle size={18} color="#16A34A" />
+                                    <Text className="font-semibold text-gray-900">Pagamentos Realizados</Text>
+                                    <View className="bg-green-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-green-700 text-xs font-medium">{paidItems.length}</Text>
+                                    </View>
+                                </View>
+                                {paidItems.length === 0 ? (
+                                    <View className="p-6 items-center">
+                                        <CreditCard size={32} color="#D1D5DB" />
+                                        <Text className="text-gray-400 mt-2">Nenhum pagamento registrado</Text>
+                                    </View>
+                                ) : (
+                                    paidItems.map((item, idx) => {
+                                        const total = getToothTotal(item.tooth);
+                                        return (
+                                            <View key={`${item.budgetId}-${item.toothIndex}`} className={`p-4 bg-green-50 ${idx < paidItems.length - 1 ? 'border-b border-green-100' : ''}`}>
+                                                <View className="flex-row items-center justify-between">
+                                                    <View className="flex-1">
+                                                        <Text className="font-medium text-gray-900">{getToothDisplayName(item.tooth.tooth)}</Text>
+                                                        <Text className="text-gray-500 text-sm">{item.tooth.treatments.join(', ')}</Text>
+                                                        <View className="flex-row items-center gap-2 mt-1">
+                                                            <Text className="text-green-600 font-semibold">
+                                                                R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            </Text>
+                                                            <Text className="text-gray-400">•</Text>
+                                                            <Text className="text-gray-500 text-sm">
+                                                                {getPaymentMethodLabel(item.tooth.paymentMethod || '')}
+                                                                {item.tooth.paymentInstallments && item.tooth.paymentInstallments > 1 ? ` ${item.tooth.paymentInstallments}x` : ''}
+                                                            </Text>
+                                                        </View>
+                                                        {item.tooth.paymentDate && (
+                                                            <Text className="text-gray-400 text-xs mt-1">
+                                                                Pago em {new Date(item.tooth.paymentDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                                            </Text>
+                                                        )}
+                                                    </View>
+                                                    <CheckCircle size={24} color="#16A34A" />
+                                                </View>
+                                            </View>
+                                        );
+                                    })
+                                )}
                             </View>
                         </View>
-                    </View>
-                )}
+                    );
+                })()}
 
                 {/* Health Info */}
                 {(patient.allergies || patient.health_insurance) && (
@@ -511,6 +773,45 @@ export default function PatientDetail() {
                 }}
                 onSuccess={loadAnamneses}
                 anamnese={selectedAnamnese}
+            />
+
+            {/* New Budget Modal */}
+            <NewBudgetModal
+                visible={showBudgetModal}
+                patientId={patient.id}
+                onClose={() => {
+                    setShowBudgetModal(false);
+                    setSelectedBudget(null);
+                }}
+                onSuccess={loadBudgets}
+                budget={selectedBudget}
+            />
+
+            {/* Payment Method Modal */}
+            {selectedPaymentItem && (
+                <PaymentMethodModal
+                    visible={showPaymentModal}
+                    onClose={() => {
+                        setShowPaymentModal(false);
+                        setSelectedPaymentItem(null);
+                    }}
+                    onConfirm={handleConfirmPayment}
+                    itemName={selectedPaymentItem.tooth.tooth.includes('Arcada')
+                        ? selectedPaymentItem.tooth.tooth
+                        : `Dente ${selectedPaymentItem.tooth.tooth}`}
+                    value={calculateToothTotal(selectedPaymentItem.tooth.values)}
+                />
+            )}
+
+            {/* Budget View Modal */}
+            <BudgetViewModal
+                visible={showBudgetViewModal}
+                budget={viewBudget}
+                onClose={() => {
+                    setShowBudgetViewModal(false);
+                    setViewBudget(null);
+                }}
+                onUpdate={loadBudgets}
             />
         </SafeAreaView>
     );

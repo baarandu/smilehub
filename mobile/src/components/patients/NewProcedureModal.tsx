@@ -87,22 +87,22 @@ export function NewProcedureModal({
   const isValidDate = (day: number, month: number, year: number): boolean => {
     // Validar mês (1-12)
     if (month < 1 || month > 12) return false;
-    
+
     // Validar ano (não pode ser muito antigo ou futuro)
     if (year < 1900 || year > 2100) return false;
-    
+
     // Validar dia baseado no mês
     const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    
+
     // Verificar ano bissexto
     const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
     if (isLeapYear) {
       daysInMonth[1] = 29;
     }
-    
+
     // Validar dia
     if (day < 1 || day > daysInMonth[month - 1]) return false;
-    
+
     return true;
   };
 
@@ -110,17 +110,17 @@ export function NewProcedureModal({
     if (!dateStr || dateStr.length < 10) return null;
     const parts = dateStr.split('/');
     if (parts.length !== 3) return null;
-    
+
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
     const year = parseInt(parts[2], 10);
-    
+
     // Validar se são números válidos
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-    
+
     // Validar se a data é real
     if (!isValidDate(day, month, year)) return null;
-    
+
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   };
 
@@ -133,7 +133,7 @@ export function NewProcedureModal({
     try {
       setSaving(true);
       let dateStr = form.date;
-      
+
       // Se a data está no formato DD/MM/YYYY, converter para YYYY-MM-DD
       if (form.date.includes('/')) {
         const converted = formatDateForDB(form.date);
@@ -144,14 +144,14 @@ export function NewProcedureModal({
         }
         dateStr = converted;
       }
-      
+
       // Validar formato final
       if (!dateStr || dateStr.length !== 10) {
         Alert.alert('Erro', 'Por favor, insira uma data válida');
         setSaving(false);
         return;
       }
-      
+
       // Validação adicional: verificar se a data é válida usando Date
       const testDate = new Date(dateStr);
       if (isNaN(testDate.getTime())) {
@@ -190,7 +190,7 @@ export function NewProcedureModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView className="flex-1 bg-gray-50">
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           className="flex-1"
         >
@@ -214,7 +214,7 @@ export function NewProcedureModal({
                 <Text className="text-sm font-medium text-gray-700 mb-2">Data *</Text>
                 <TextInput
                   className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                  value={form.date.includes('-') 
+                  value={form.date.includes('-')
                     ? new Date(form.date + 'T00:00:00').toLocaleDateString('pt-BR')
                     : form.date}
                   onChangeText={(text) => {
@@ -266,7 +266,7 @@ export function NewProcedureModal({
                         <X size={20} color="#6B7280" />
                       </TouchableOpacity>
                     </View>
-                    
+
                     {/* Options */}
                     <TouchableOpacity
                       onPress={() => {
@@ -290,9 +290,8 @@ export function NewProcedureModal({
                             setForm({ ...form, location: location.name });
                             setShowLocationPicker(false);
                           }}
-                          className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${
-                            form.location === location.name ? 'bg-teal-50' : ''
-                          }`}
+                          className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${form.location === location.name ? 'bg-teal-50' : ''
+                            }`}
                         >
                           <Text className={`font-medium ${form.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>
                             {location.name}
@@ -341,37 +340,31 @@ export function NewProcedureModal({
                 <View className="flex-row gap-2">
                   <TouchableOpacity
                     onPress={() => setForm({ ...form, paymentMethod: 'cash', installments: '1' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${
-                      form.paymentMethod === 'cash' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                    }`}
+                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'cash' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
+                      }`}
                   >
-                    <Text className={`text-center font-medium ${
-                      form.paymentMethod === 'cash' ? 'text-white' : 'text-gray-700'
-                    }`}>
+                    <Text className={`text-center font-medium ${form.paymentMethod === 'cash' ? 'text-white' : 'text-gray-700'
+                      }`}>
                       Dinheiro
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setForm({ ...form, paymentMethod: 'debit', installments: '1' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${
-                      form.paymentMethod === 'debit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                    }`}
+                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'debit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
+                      }`}
                   >
-                    <Text className={`text-center font-medium ${
-                      form.paymentMethod === 'debit' ? 'text-white' : 'text-gray-700'
-                    }`}>
+                    <Text className={`text-center font-medium ${form.paymentMethod === 'debit' ? 'text-white' : 'text-gray-700'
+                      }`}>
                       Débito
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => setForm({ ...form, paymentMethod: 'credit' })}
-                    className={`flex-1 px-4 py-3 rounded-xl ${
-                      form.paymentMethod === 'credit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
-                    }`}
+                    className={`flex-1 px-4 py-3 rounded-xl ${form.paymentMethod === 'credit' ? 'bg-teal-500' : 'bg-gray-50 border border-gray-200'
+                      }`}
                   >
-                    <Text className={`text-center font-medium ${
-                      form.paymentMethod === 'credit' ? 'text-white' : 'text-gray-700'
-                    }`}>
+                    <Text className={`text-center font-medium ${form.paymentMethod === 'credit' ? 'text-white' : 'text-gray-700'
+                      }`}>
                       Crédito
                     </Text>
                   </TouchableOpacity>
