@@ -61,7 +61,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         <Text className="text-gray-400 italic">Nenhuma despesa no período</Text>
                     </View>
                 ) : (
-                    expenseTransactions.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
+                    expenseTransactions.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((transaction) => (
                         <View key={transaction.id} className="p-4 border-b border-gray-50 flex-row items-center justify-between">
                             <View className="flex-1 mr-4">
                                 <View className="flex-row items-start gap-3">

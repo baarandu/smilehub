@@ -77,7 +77,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             <Text className="text-gray-400 italic">Nenhuma receita no período</Text>
                         </View>
                     ) : (
-                        incomeTransactions.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
+                        incomeTransactions.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((transaction) => (
                             <TouchableOpacity
                                 key={transaction.id}
                                 onPress={() => setSelectedTransaction(transaction)}
