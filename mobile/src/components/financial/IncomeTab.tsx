@@ -401,46 +401,37 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 </View>
 
                                 {/* Financial Breakdown */}
-                                {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount) && (() => {
-                                    console.log('[DEBUG] Rendering Financial Breakdown', {
-                                        tax_amount: selectedTransaction.tax_amount,
-                                        card_fee_amount: selectedTransaction.card_fee_amount,
-                                        anticipation_amount: (selectedTransaction as any).anticipation_amount,
-                                    });
-                                    return (
-                                        <View className="bg-gray-50 rounded-xl p-4">
-                                            <Text className="text-sm font-bold text-gray-900 mb-3">Detalhamento Financeiro</Text>
-                                            <View>
-                                                <View className="flex-row justify-between items-center">
-                                                    <Text className="text-gray-600">Valor Bruto</Text>
-                                                    <Text className="font-semibold text-gray-900">{formatCurrency(selectedTransaction.amount)}</Text>
-                                                </View>
-                                                {selectedTransaction.tax_amount && selectedTransaction.tax_amount > 0 && (
-                                                    <View className="flex-row justify-between items-center">
-                                                        <Text className="text-gray-500 text-sm">Imposto ({selectedTransaction.tax_rate || 0}%)</Text>
-                                                        <Text className="text-red-500 text-sm">- {formatCurrency(selectedTransaction.tax_amount)}</Text>
-                                                    </View>
-                                                )}
-                                                {selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0 && (
-                                                    <View className="flex-row justify-between items-center">
-                                                        <Text className="text-gray-500 text-sm">Taxa do Cartão ({selectedTransaction.card_fee_rate || 0}%)</Text>
-                                                        <Text className="text-red-500 text-sm">- {formatCurrency(selectedTransaction.card_fee_amount)}</Text>
-                                                    </View>
-                                                )}
-                                                {(selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0 && (
-                                                    <View className="flex-row justify-between items-center">
-                                                        <Text className="text-gray-500 text-sm">Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)</Text>
-                                                        <Text className="text-red-500 text-sm">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</Text>
-                                                    </View>
-                                                )}
-                                                <View className="border-t border-gray-200 mt-2 pt-2 flex-row justify-between items-center">
-                                                    <Text className="font-bold text-gray-900">Valor Líquido</Text>
-                                                    <Text className="font-bold text-green-600">{formatCurrency(selectedTransaction.net_amount || selectedTransaction.amount)}</Text>
-                                                </View>
-                                            </View>
+                                {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount) && (
+                                    <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
+                                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 12 }}>Detalhamento Financeiro</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Text style={{ color: '#4b5563' }}>Valor Bruto</Text>
+                                            <Text style={{ fontWeight: '600', color: '#111827' }}>{formatCurrency(selectedTransaction.amount)}</Text>
                                         </View>
-                                    );
-                                })()}
+                                        {selectedTransaction.tax_amount && selectedTransaction.tax_amount > 0 ? (
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                                <Text style={{ color: '#6b7280', fontSize: 14 }}>Imposto ({selectedTransaction.tax_rate || 0}%)</Text>
+                                                <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(selectedTransaction.tax_amount)}</Text>
+                                            </View>
+                                        ) : null}
+                                        {selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0 ? (
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                                <Text style={{ color: '#6b7280', fontSize: 14 }}>Taxa do Cartão ({selectedTransaction.card_fee_rate || 0}%)</Text>
+                                                <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(selectedTransaction.card_fee_amount)}</Text>
+                                            </View>
+                                        ) : null}
+                                        {(selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0 ? (
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                                <Text style={{ color: '#6b7280', fontSize: 14 }}>Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)</Text>
+                                                <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((selectedTransaction as any).anticipation_amount)}</Text>
+                                            </View>
+                                        ) : null}
+                                        <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 8, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Text style={{ fontWeight: 'bold', color: '#111827' }}>Valor Líquido</Text>
+                                            <Text style={{ fontWeight: 'bold', color: '#16a34a' }}>{formatCurrency(selectedTransaction.net_amount || selectedTransaction.amount)}</Text>
+                                        </View>
+                                    </View>
+                                )}
 
                                 {/* Installments / Payment History */}
                                 {relatedInstallments.length > 0 && (
