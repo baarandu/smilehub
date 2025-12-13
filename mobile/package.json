@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.87.1",
     "base64-arraybuffer": "^1.0.2",
     "clsx": "^2.1.1",

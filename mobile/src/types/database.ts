@@ -414,6 +414,14 @@ export interface Database {
           location: string | null
           patient_id: string | null
           related_entity_id: string | null
+          user_id: string
+          net_amount: number | null
+          tax_rate: number | null
+          tax_amount: number | null
+          card_fee_rate: number | null
+          card_fee_amount: number | null
+          commission_rate: number | null
+          commission_amount: number | null
           created_at: string
           updated_at: string
         }
@@ -427,6 +435,14 @@ export interface Database {
           location?: string | null
           patient_id?: string | null
           related_entity_id?: string | null
+          user_id?: string
+          net_amount?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          card_fee_rate?: number | null
+          card_fee_amount?: number | null
+          commission_rate?: number | null
+          commission_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -440,8 +456,67 @@ export interface Database {
           location?: string | null
           patient_id?: string | null
           related_entity_id?: string | null
+          net_amount?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          card_fee_rate?: number | null
+          card_fee_amount?: number | null
+          commission_rate?: number | null
+          commission_amount?: number | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      financial_settings: {
+        Row: {
+          id: string
+          user_id: string
+          tax_rate: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tax_rate?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tax_rate?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      card_fee_config: {
+        Row: {
+          id: string
+          user_id: string
+          brand: string
+          payment_type: string
+          installments: number
+          rate: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          brand: string
+          payment_type: string
+          installments?: number
+          rate: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          brand?: string
+          payment_type?: string
+          installments?: number
+          rate?: number
+          created_at?: string
         }
       }
     }
@@ -469,7 +544,9 @@ export type ConsultationUpdate = Database['public']['Tables']['consultations']['
 export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update']
-
+export type FinancialSettings = Database['public']['Tables']['financial_settings']['Row']
+export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
+export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
 export type Procedure = Database['public']['Tables']['procedures']['Row']
 export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
 export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
@@ -493,6 +570,10 @@ export type FinancialTransactionUpdate = Database['public']['Tables']['financial
 export type Exam = Database['public']['Tables']['exams']['Row']
 export type ExamInsert = Database['public']['Tables']['exams']['Insert']
 export type ExamUpdate = Database['public']['Tables']['exams']['Update']
+
+export type FinancialTransactionWithPatient = FinancialTransaction & {
+  patients: Pick<Patient, 'name'> | null
+}
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]

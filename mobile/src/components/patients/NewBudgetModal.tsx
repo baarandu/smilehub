@@ -291,7 +291,7 @@ export function NewBudgetModal({
         }
 
         if (!location) {
-            Alert.alert('Atenção', 'Selecione um local de atendimento');
+            Alert.alert('Atenção', 'É obrigatório selecionar o local de atendimento para salvar o orçamento.');
             return;
         }
 
@@ -373,7 +373,9 @@ export function NewBudgetModal({
                             </View>
 
                             <View className="p-4">
-                                <Text className="text-gray-900 font-medium mb-2">Local de Atendimento *</Text>
+                                <Text className="text-gray-900 font-medium mb-2">
+                                    Local de Atendimento <Text className="text-red-500">*</Text>
+                                </Text>
                                 {!showLocationPicker ? (
                                     <TouchableOpacity
                                         onPress={() => setShowLocationPicker(true)}

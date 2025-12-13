@@ -219,7 +219,7 @@ export default function PatientDetail() {
         setShowPaymentModal(true);
     };
 
-    const handleConfirmPayment = async (method: string, transactions?: { date: string; amount: number; method: string }[], brand?: string) => {
+    const handleConfirmPayment = async (method: string, transactions?: { date: string; amount: number; method: string }[], brand?: string, breakdown?: any) => {
         if (!selectedPaymentItem) return;
 
         try {
@@ -234,7 +234,6 @@ export default function PatientDetail() {
 
             // If transactions array provided (new modal style), use it. 
             // Otherwise fallback to single (though modal now sends array).
-            // Calculate total installments count for metadata
             const installmentsCount = transactions ? transactions.length : 1;
 
             parsed.teeth[selectedPaymentItem.toothIndex] = {
@@ -244,51 +243,93 @@ export default function PatientDetail() {
                 paymentInstallments: installmentsCount,
                 paymentDate: new Date().toISOString().split('T')[0],
                 location: budgetLocation,
-                // Store detailed history including Brand if present
                 paymentDetails: transactions,
-                paymentBrand: brand
+                paymentBrand: brand,
+                // Save breakdown in the Budget JSON for record keeping
+                financialBreakdown: breakdown
             };
 
             await budgetsService.update(selectedPaymentItem.budgetId, {
                 notes: JSON.stringify(parsed),
             });
 
-            // If we have detailed transactions, create them
-            if (transactions && transactions.length > 0) {
-                // Format description with Brand if available
-                const brandText = brand ? ` (${brand.toUpperCase()})` : '';
-                const descriptionBase = `${selectedTooth.treatments.join(', ')}${brandText} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+            const methodLabels: Record<string, string> = {
+                credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
+            };
+            const methodLabel = methodLabels[method] || method;
+            const paymentTag = brand ? `(${methodLabel} - ${brand.toUpperCase()})` : `(${methodLabel})`;
 
+            // Format Description
+            const descriptionBase = `${selectedTooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+
+            if (transactions && transactions.length > 0) {
+                // We have specific transactions (installments or single)
                 for (let i = 0; i < transactions.length; i++) {
                     const t = transactions[i];
                     const suffix = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
+
+                    // Calculate proportional deductions if breakdown exists
+                    // If it's Anticipated, we only have 1 transaction usually, so we dump all deductions there.
+                    // If it's Installments (not anticipated), we split deductions by count or by amount ratio?
+                    // Equal split (by count) is safest if amounts are equal. If amounts vary (last installment diff), ratio is better.
+
+                    let deductionPayload = {};
+                    if (breakdown) {
+                        // Ratio of this transaction vs Total Gross
+                        const ratio = t.amount / breakdown.grossAmount;
+
+                        deductionPayload = {
+                            net_amount: breakdown.netAmount * ratio,
+                            tax_rate: breakdown.taxRate,
+                            tax_amount: breakdown.taxAmount * ratio,
+                            card_fee_rate: breakdown.cardFeeRate,
+                            card_fee_amount: breakdown.cardFeeAmount * ratio,
+                            // Commission - placeholder for now, usually 0 or calculated elsewhere
+                            // Anticipation
+                            anticipation_rate: breakdown.anticipationRate,
+                            anticipation_amount: (breakdown.anticipationAmount || 0) * ratio
+                        };
+                    }
 
                     await financialService.create({
                         type: 'income',
                         amount: t.amount,
                         description: descriptionBase + suffix,
                         category: 'Procedimento',
-                        date: t.date, // User selected date (YYYY-MM-DD)
+                        date: t.date,
                         location: budgetLocation,
                         patient_id: patient?.id,
-                        related_entity_id: budget.id
+                        related_entity_id: budget.id,
+                        ...deductionPayload
                     });
                 }
             } else {
-                // Fallback (should not happen with new modal)
+                // Fallback (legacy path, simplified)
                 const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
-                const brandText = brand ? ` (${brand.toUpperCase()})` : '';
-                const description = `${selectedTooth.treatments.join(', ')}${brandText} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+
+                let deductionPayload = {};
+                if (breakdown) {
+                    deductionPayload = {
+                        net_amount: breakdown.netAmount,
+                        tax_rate: breakdown.taxRate,
+                        tax_amount: breakdown.taxAmount,
+                        card_fee_rate: breakdown.cardFeeRate,
+                        card_fee_amount: breakdown.cardFeeAmount,
+                        anticipation_rate: breakdown.anticipationRate,
+                        anticipation_amount: breakdown.anticipationAmount
+                    };
+                }
 
                 await financialService.create({
                     type: 'income',
                     amount: itemTotal,
-                    description: description,
+                    description: descriptionBase,
                     category: 'Procedimento',
                     date: new Date().toISOString().split('T')[0],
                     location: budgetLocation,
                     patient_id: patient?.id,
-                    related_entity_id: budget.id
+                    related_entity_id: budget.id,
+                    ...deductionPayload
                 });
             }
 

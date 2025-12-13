@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { ChevronLeft, ChevronRight, ChevronDown, Plus } from 'lucide-react-native';
-import { useFocusEffect } from 'expo-router';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Settings } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { financialService } from '../../src/services/financial';
-import type { FinancialTransaction } from '../../src/types/database';
+import type { FinancialTransaction, FinancialTransactionWithPatient } from '../../src/types/database';
 import { IncomeTab } from '../../src/components/financial/IncomeTab';
 import { ExpensesTab } from '../../src/components/financial/ExpensesTab';
 import { ClosureTab } from '../../src/components/financial/ClosureTab';
@@ -17,7 +17,8 @@ type PeriodType = 'monthly' | 'yearly';
 type TabType = 'income' | 'expenses' | 'closure';
 
 export default function Financial() {
-    const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+    const router = useRouter();
+    const [transactions, setTransactions] = useState<FinancialTransactionWithPatient[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('income');
 
@@ -96,9 +97,17 @@ export default function Financial() {
                         <Text className="text-2xl font-bold text-gray-900">Financeiro</Text>
                         <Text className="text-gray-500 mt-1">Gestão de caixa</Text>
                     </View>
-                    <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={() => Alert.alert("Em breve", "Adicionar transação manual")}>
-                        <Plus size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    <View className="flex-row gap-2">
+                        <TouchableOpacity
+                            className="bg-gray-100 p-3 rounded-xl border border-gray-200"
+                            onPress={() => router.push('/settings/financial')}
+                        >
+                            <Settings size={20} color="#4B5563" />
+                        </TouchableOpacity>
+                        <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={() => Alert.alert("Em breve", "Adicionar transação manual")}>
+                            <Plus size={20} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Period Controls */}

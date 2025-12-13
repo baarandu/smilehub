@@ -7,6 +7,7 @@ import { appointmentsService } from '../../src/services/appointments';
 import { consultationsService } from '../../src/services/consultations';
 import { locationsService, type Location } from '../../src/services/locations';
 import type { AppointmentWithPatient } from '../../src/types/database';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Dashboard() {
     const [loading, setLoading] = useState(true);
@@ -15,6 +16,8 @@ export default function Dashboard() {
     const [pendingReturns, setPendingReturns] = useState(0);
     const [todayAppointments, setTodayAppointments] = useState<AppointmentWithPatient[]>([]);
 
+    const { signOut, user } = useAuth();
+
     // Profile & Locations modal state
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showLocationsModal, setShowLocationsModal] = useState(false);
@@ -22,6 +25,25 @@ export default function Dashboard() {
     const [editingLocation, setEditingLocation] = useState<Location | null>(null);
     const [locationForm, setLocationForm] = useState({ name: '', address: '' });
     const [showLocationForm, setShowLocationForm] = useState(false);
+
+    const handleLogout = () => {
+        Alert.alert(
+            'Sair do App',
+            'Tem certeza que deseja sair?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Sair',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setShowProfileModal(false);
+                        await signOut();
+                        // Navigation is handled by _layout's Auth Guard
+                    }
+                }
+            ]
+        );
+    };
 
     useEffect(() => {
         loadData();
@@ -260,7 +282,10 @@ export default function Dashboard() {
                             <Text className="text-gray-700 font-medium">Gerenciar Locais</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity className="flex-row items-center gap-4 p-4 bg-red-50 rounded-xl">
+                        <TouchableOpacity
+                            className="flex-row items-center gap-4 p-4 bg-red-50 rounded-xl"
+                            onPress={handleLogout}
+                        >
                             <LogOut size={20} color="#EF4444" />
                             <Text className="text-red-600 font-medium">Sair</Text>
                         </TouchableOpacity>
