@@ -401,7 +401,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 </View>
 
                                 {/* Financial Breakdown */}
-                                {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount) && (
+                                {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount || (selectedTransaction as any).location_amount) && (
                                     <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
                                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 12 }}>Detalhamento Financeiro</Text>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -424,6 +424,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                                                 <Text style={{ color: '#6b7280', fontSize: 14 }}>Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)</Text>
                                                 <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((selectedTransaction as any).anticipation_amount)}</Text>
+                                            </View>
+                                        ) : null}
+                                        {(selectedTransaction as any).location_amount && (selectedTransaction as any).location_amount > 0 ? (
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                                <Text style={{ color: '#6b7280', fontSize: 14 }}>Taxa do Local ({(selectedTransaction as any).location_rate || 0}%)</Text>
+                                                <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((selectedTransaction as any).location_amount)}</Text>
                                             </View>
                                         ) : null}
                                         <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 8, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

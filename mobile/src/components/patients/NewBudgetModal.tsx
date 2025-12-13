@@ -46,6 +46,7 @@ export function NewBudgetModal({
     // Locations
     const [locations, setLocations] = useState<Location[]>([]);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [locationRate, setLocationRate] = useState('');
 
     // Current tooth being edited
     const [selectedTooth, setSelectedTooth] = useState<string>('');
@@ -77,6 +78,10 @@ export function NewBudgetModal({
                         if (parsed.location) {
                             setLocation(parsed.location);
                         }
+                        // Load location rate if available
+                        if (parsed.locationRate) {
+                            setLocationRate(parsed.locationRate.toString());
+                        }
                     } catch {
                         // Backwards compatibility
                         setTeethList(budget.budget_items.map(item => ({
@@ -107,6 +112,7 @@ export function NewBudgetModal({
     const resetForm = () => {
         setDate(new Date().toISOString().split('T')[0]);
         setLocation('');
+        setLocationRate('');
         setTeethList([]);
         resetCurrentTooth();
     };
@@ -304,7 +310,8 @@ export function NewBudgetModal({
             // Store complete teeth data in notes as JSON
             const notesData = JSON.stringify({
                 teeth: teethList,
-                location: location, // Save location here
+                location: location,
+                locationRate: locationRate ? parseFloat(locationRate) : 0,
             });
 
             // Create budget items for database (use short IDs)
@@ -531,6 +538,20 @@ export function NewBudgetModal({
                                             />
                                         </View>
                                     ))}
+                                </View>
+                            )}
+
+                            {/* Location Rate Input - only show if location is selected */}
+                            {location && (
+                                <View className="mt-3 p-4 border-b border-gray-100">
+                                    <Text className="text-gray-700 text-sm mb-1">Taxa do Local (%)</Text>
+                                    <TextInput
+                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
+                                        placeholder="Ex: 30"
+                                        value={locationRate}
+                                        onChangeText={setLocationRate}
+                                        keyboardType="numeric"
+                                    />
                                 </View>
                             )}
 

@@ -230,6 +230,7 @@ export default function PatientDetail() {
             if (!parsed.teeth) return;
 
             const budgetLocation = parsed.location || null;
+            const budgetLocationRate = parsed.locationRate || 0;
             const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
 
             // If transactions array provided (new modal style), use it. 
@@ -273,21 +274,32 @@ export default function PatientDetail() {
                     // If it's Installments (not anticipated), we split deductions by count or by amount ratio?
                     // Equal split (by count) is safest if amounts are equal. If amounts vary (last installment diff), ratio is better.
 
-                    let deductionPayload = {};
+                    let deductionPayload: Record<string, any> = {};
                     if (breakdown) {
                         // Ratio of this transaction vs Total Gross
                         const ratio = t.amount / breakdown.grossAmount;
 
+                        // Calculate location fee
+                        const locationAmount = (t.amount * budgetLocationRate) / 100;
+
                         deductionPayload = {
-                            net_amount: breakdown.netAmount * ratio,
+                            net_amount: (breakdown.netAmount * ratio) - locationAmount,
                             tax_rate: breakdown.taxRate,
                             tax_amount: breakdown.taxAmount * ratio,
                             card_fee_rate: breakdown.cardFeeRate,
                             card_fee_amount: breakdown.cardFeeAmount * ratio,
-                            // Commission - placeholder for now, usually 0 or calculated elsewhere
-                            // Anticipation
                             anticipation_rate: breakdown.anticipationRate,
-                            anticipation_amount: (breakdown.anticipationAmount || 0) * ratio
+                            anticipation_amount: (breakdown.anticipationAmount || 0) * ratio,
+                            location_rate: budgetLocationRate,
+                            location_amount: locationAmount
+                        };
+                    } else if (budgetLocationRate > 0) {
+                        // No breakdown but has location rate
+                        const locationAmount = (t.amount * budgetLocationRate) / 100;
+                        deductionPayload = {
+                            net_amount: t.amount - locationAmount,
+                            location_rate: budgetLocationRate,
+                            location_amount: locationAmount
                         };
                     }
 
@@ -307,16 +319,26 @@ export default function PatientDetail() {
                 // Fallback (legacy path, simplified)
                 const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
 
-                let deductionPayload = {};
+                let deductionPayload: Record<string, any> = {};
+                const locationAmount = (itemTotal * budgetLocationRate) / 100;
+
                 if (breakdown) {
                     deductionPayload = {
-                        net_amount: breakdown.netAmount,
+                        net_amount: breakdown.netAmount - locationAmount,
                         tax_rate: breakdown.taxRate,
                         tax_amount: breakdown.taxAmount,
                         card_fee_rate: breakdown.cardFeeRate,
                         card_fee_amount: breakdown.cardFeeAmount,
                         anticipation_rate: breakdown.anticipationRate,
-                        anticipation_amount: breakdown.anticipationAmount
+                        anticipation_amount: breakdown.anticipationAmount,
+                        location_rate: budgetLocationRate,
+                        location_amount: locationAmount
+                    };
+                } else if (budgetLocationRate > 0) {
+                    deductionPayload = {
+                        net_amount: itemTotal - locationAmount,
+                        location_rate: budgetLocationRate,
+                        location_amount: locationAmount
                     };
                 }
 
