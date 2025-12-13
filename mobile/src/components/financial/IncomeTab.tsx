@@ -67,9 +67,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         fontSize: 14,
                         fontWeight: '500',
                         color: subTab === 'gross' ? '#16a34a' : '#6b7280'
-                    }}>
-                        Receita Bruta
-                    </Text>
+                    }}>Receita Bruta</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => setSubTab('net')}
@@ -89,9 +87,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         fontSize: 14,
                         fontWeight: '500',
                         color: subTab === 'net' ? '#16a34a' : '#6b7280'
-                    }}>
-                        Receita Líquida
-                    </Text>
+                    }}>Receita Líquida</Text>
                 </TouchableOpacity>
             </View>
 
