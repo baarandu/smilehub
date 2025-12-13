@@ -425,6 +425,8 @@ export interface Database {
           card_fee_amount: number | null
           commission_rate: number | null
           commission_amount: number | null
+          location_rate: number | null
+          location_amount: number | null
           created_at: string
           updated_at: string
         }
@@ -446,6 +448,8 @@ export interface Database {
           card_fee_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          location_rate?: number | null
+          location_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -466,6 +470,8 @@ export interface Database {
           card_fee_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          location_rate?: number | null
+          location_amount?: number | null
           created_at?: string
           updated_at?: string
         }

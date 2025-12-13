@@ -311,13 +311,11 @@ export function NewBudgetModal({
             const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))];
 
             // Store complete teeth data in notes as JSON
-            console.log('[DEBUG] Saving Budget - Location:', location, 'Rate Input:', locationRate);
             const notesData = JSON.stringify({
                 teeth: teethList,
                 location: location,
                 locationRate: locationRate ? parseFloat(locationRate) : 0,
             });
-            console.log('[DEBUG] Saving Budget - Notes Data:', notesData);
 
             // Create budget items for database (use short IDs)
             const budgetItems = teethList.map(t => ({
@@ -550,13 +548,15 @@ export function NewBudgetModal({
                             {/* Location Rate Input - only show if location is selected */}
                             {location && (
                                 <View className="mt-3 p-4 border-b border-gray-100">
-                                    <Text className="text-gray-700 text-sm mb-1">Taxa do Local (%)</Text>
+                                    <Text className="text-sm font-medium text-gray-700 mb-1">
+                                        Taxa do Procedimento (%)
+                                    </Text>
                                     <TextInput
-                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
-                                        placeholder="Ex: 30"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-900"
+                                        placeholder="0"
+                                        keyboardType="numeric"
                                         value={locationRate}
                                         onChangeText={setLocationRate}
-                                        keyboardType="numeric"
                                     />
                                 </View>
                             )}

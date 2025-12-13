@@ -61,15 +61,12 @@ export const budgetsService = {
     },
 
     async update(id: string, budget: BudgetUpdate): Promise<Budget> {
-        console.log('[DEBUG] Service Update Budget ID:', id, 'Payload notes length:', budget.notes?.length);
         const { data, error } = await supabase
             .from('budgets')
             .update(budget as any)
             .eq('id', id)
             .select()
             .single();
-
-        console.log('[DEBUG] Service Update Result notes:', (data as any)?.notes);
 
         if (error) throw error;
         if (!data) throw new Error('Failed to update budget');

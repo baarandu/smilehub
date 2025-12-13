@@ -81,7 +81,6 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
         if (!patientId) return;
         try {
             const data = await budgetsService.getByPatient(patientId);
-            console.log('[DEBUG] Hook loadBudgets - Fetched:', data.length, 'First notes:', data[0]?.notes);
             if (isMounted.current) setBudgets(data);
         } catch (error) {
             console.error('Error loading budgets:', error);

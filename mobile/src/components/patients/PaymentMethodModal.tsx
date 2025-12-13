@@ -125,8 +125,6 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     const calculateBreakdown = (): FinancialBreakdown => {
         const grossAmount = value;
 
-        console.log('[DEBUG] PaymentMethodModal - Props:', { value, locationRate });
-
         // 1. Tax
         const taxRate = filesSettings?.tax_rate || 0;
         const taxAmount = (grossAmount * taxRate) / 100;
@@ -296,11 +294,14 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     </View>
                                 )}
                                 {(breakdown.locationAmount > 0) && (
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-xs text-gray-500">Taxa do Local ({breakdown.locationRate}%):</Text>
-                                        <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.locationAmount)}</Text>
-                                    </View>
-                                )}
+                                    <View className="flex-row justify-between mb-1">
+                                        <Text className="text-gray-500 text-sm">
+                                            Taxa do Procedimento ({locationRate ? locationRate.toFixed(2).replace('.', ',') : '0'}%):
+                                        </Text>
+                                        <Text className="text-red-500 text-sm font-medium">
+                                            - R$ {breakdown.locationAmount.toFixed(2).replace('.', ',')}
+                                        </Text>
+                                    </View>)}
                                 <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-200">
                                     <Text className="font-semibold text-gray-900">Valor Líquido:</Text>
                                     <Text className="font-bold text-teal-700">R$ {formatCurrency(breakdown.netAmount)}</Text>
