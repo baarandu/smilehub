@@ -654,6 +654,22 @@ export default function PatientDetail() {
                 onConfirm={handleConfirmPayment}
                 itemName={selectedPaymentItem?.tooth.tooth.includes('Arcada') ? selectedPaymentItem?.tooth.tooth : `Dente ${selectedPaymentItem?.tooth.tooth}`}
                 value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
+                locationRate={(() => {
+                    if (!selectedPaymentItem) return 0;
+                    const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
+                    console.log('[DEBUG] Payment Modal - Budget found:', !!budget, 'Notes:', budget?.notes);
+                    if (!budget?.notes) return 0;
+                    try {
+                        const parsed = JSON.parse(budget.notes);
+                        console.log('[DEBUG] Payment Modal - Parsed notes:', parsed);
+                        const rate = typeof parsed.locationRate === 'number' ? parsed.locationRate : parseFloat(parsed.locationRate || '0');
+                        console.log('[DEBUG] Payment Modal - Derived rate:', rate);
+                        return rate;
+                    } catch (e) {
+                        console.log('[DEBUG] Payment Modal - Parse error:', e);
+                        return 0;
+                    }
+                })()}
             />
 
             <BudgetViewModal

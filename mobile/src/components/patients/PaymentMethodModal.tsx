@@ -18,6 +18,8 @@ export interface FinancialBreakdown {
     cardFeeAmount: number;
     anticipationRate: number;
     anticipationAmount: number;
+    locationRate: number;
+    locationAmount: number;
     netAmount: number;
     isAnticipated: boolean;
 }
@@ -28,9 +30,10 @@ interface PaymentMethodModalProps {
     onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string, breakdown?: FinancialBreakdown) => void;
     itemName: string;
     value: number;
+    locationRate?: number;
 }
 
-export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value }: PaymentMethodModalProps) {
+export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value, locationRate = 0 }: PaymentMethodModalProps) {
     const [loadingSettings, setLoadingSettings] = useState(false);
 
     // Settings State
@@ -120,7 +123,9 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     // Calculation Logic
     const calculateBreakdown = (): FinancialBreakdown => {
-        const grossAmount = value; // Always base calculation on full value
+        const grossAmount = value;
+
+        console.log('[DEBUG] PaymentMethodModal - Props:', { value, locationRate });
 
         // 1. Tax
         const taxRate = filesSettings?.tax_rate || 0;
@@ -164,8 +169,11 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         const amountAfterCardFee = grossAmount - cardFeeAmount;
         const anticipationAmount = (amountAfterCardFee * antRate) / 100;
 
+        // 4. Location Fee
+        const locationAmount = (grossAmount * locationRate) / 100;
+
         // Net
-        const netAmount = grossAmount - taxAmount - cardFeeAmount - anticipationAmount;
+        const netAmount = grossAmount - taxAmount - cardFeeAmount - anticipationAmount - locationAmount;
 
         return {
             grossAmount,
@@ -175,6 +183,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             cardFeeAmount,
             anticipationRate: antRate,
             anticipationAmount,
+            locationRate,
+            locationAmount,
             netAmount,
             isAnticipated
         };
@@ -283,6 +293,12 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     <View className="flex-row justify-between">
                                         <Text className="text-xs text-gray-500">Antecipação ({breakdown.anticipationRate}%):</Text>
                                         <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
+                                    </View>
+                                )}
+                                {(breakdown.locationAmount > 0) && (
+                                    <View className="flex-row justify-between">
+                                        <Text className="text-xs text-gray-500">Taxa do Local ({breakdown.locationRate}%):</Text>
+                                        <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.locationAmount)}</Text>
                                     </View>
                                 )}
                                 <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-200">
