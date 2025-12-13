@@ -188,6 +188,47 @@ export interface Database {
           updated_at?: string
         }
       }
+      exams: {
+        Row: {
+          id: string
+          patient_id: string
+          procedure_id: string | null
+          name: string
+          order_date: string
+          exam_date: string | null
+          file_url: string | null
+          file_urls: string[] | null
+          file_type: 'document' | 'photo' | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          procedure_id?: string | null
+          name: string
+          order_date: string
+          exam_date?: string | null
+          file_url?: string | null
+          file_urls?: string[] | null
+          file_type?: 'document' | 'photo' | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          procedure_id?: string | null
+          name?: string
+          order_date?: string
+          exam_date?: string | null
+          file_url?: string | null
+          file_urls?: string[] | null
+          file_type?: 'document' | 'photo' | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
       anamneses: {
         Row: {
           id: string
@@ -358,60 +399,59 @@ export interface Database {
           faces?: string[]
           created_at?: string
         }
+      },
+      financial_transactions: {
+        Row: {
+          id: string
+          type: 'income' | 'expense'
+          amount: number
+          description: string
+          category: string
+          date: string
+          location: string | null
+          patient_id: string | null
+          related_entity_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: 'income' | 'expense'
+          amount: number
+          description: string
+          category: string
+          date: string
+          location?: string | null
+          patient_id?: string | null
+          related_entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: 'income' | 'expense'
+          amount?: number
+          description?: string
+          category?: string
+          date?: string
+          location?: string | null
+          patient_id?: string | null
+          related_entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
-    financial_transactions: {
-      Row: {
-        id: string
-        type: 'income' | 'expense'
-        amount: number
-        description: string
-        category: string
-        date: string
-        location: string | null
-        patient_id: string | null
-        related_entity_id: string | null
-        created_at: string
-        updated_at: string
-      }
-      Insert: {
-        id?: string
-        type: 'income' | 'expense'
-        amount: number
-        description: string
-        category: string
-        date: string
-        location?: string | null
-        patient_id?: string | null
-        related_entity_id?: string | null
-        created_at?: string
-        updated_at?: string
-      }
-      Update: {
-        id?: string
-        type?: 'income' | 'expense'
-        amount?: number
-        description?: string
-        category?: string
-        date?: string
-        location?: string | null
-        patient_id?: string | null
-        related_entity_id?: string | null
-        created_at?: string
-        updated_at?: string
-      }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
     }
   }
-  Views: {
-    [_ in never]: never
-  }
-  Functions: {
-    [_ in never]: never
-  }
-  Enums: {
-    appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
-  }
-}
 }
 
 // Helper types for easier usage
@@ -430,6 +470,10 @@ export type AppointmentUpdate = Database['public']['Tables']['appointments']['Up
 export type Procedure = Database['public']['Tables']['procedures']['Row']
 export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
 export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
+
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type ExamInsert = Database['public']['Tables']['exams']['Insert']
+export type ExamUpdate = Database['public']['Tables']['exams']['Update']
 
 export type Anamnese = Database['public']['Tables']['anamneses']['Row']
 export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']

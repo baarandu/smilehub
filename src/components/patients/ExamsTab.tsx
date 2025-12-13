@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Plus, Calendar as CalendarIcon, Trash2, Eye, Download } from 'lucide-react';
+import { FileText, Plus, Calendar as CalendarIcon, Trash2, Eye, Download, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useExams, useDeleteExam } from '@/hooks/useExams';
@@ -37,6 +37,11 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
   const handleView = (exam: Exam) => {
     if (exam.file_url) {
       window.open(exam.file_url, '_blank');
+    } else if (exam.file_urls && exam.file_urls.length > 0) {
+      // Open first attachment or show list? For now open all (popups might block) or just first.
+      // Let's open the first one for simplicity as per mobile behavior.
+      const url = exam.file_urls[0];
+      if (url) window.open(url, '_blank');
     } else {
       toast.info('Este exame não possui arquivo anexado');
     }
@@ -52,16 +57,11 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
             Novo Exame
           </Button>
         </div>
-        
+
         {isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
-          </div>
-        ) : exams?.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-40" />
-            <p>Nenhum exame registrado</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -92,7 +92,18 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {exam.file_url && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setEditingExam(exam);
+                        setShowDialog(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    {(exam.file_url || (exam.file_urls && exam.file_urls.length > 0)) && (
                       <Button
                         variant="ghost"
                         size="icon"

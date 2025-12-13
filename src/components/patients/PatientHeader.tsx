@@ -1,6 +1,7 @@
 import { Phone, Mail, Calendar as CalendarIcon, Clock, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Patient } from '@/types/database';
+import { useAnamneses } from '@/hooks/useAnamneses';
 
 interface PatientHeaderProps {
   patient: Patient;
@@ -31,8 +32,40 @@ export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
 
   const age = calculateAge(patient.birth_date);
 
+  const { data: anamneses } = useAnamneses(patient.id);
+  const latestAnamnese = anamneses?.[0];
+
+  const getBadges = () => {
+    if (!latestAnamnese) return [];
+
+    const badges = [
+      { condition: latestAnamnese.medical_treatment, label: 'Em Tratamento Médico', color: 'bg-blue-100 text-blue-700' },
+      { condition: latestAnamnese.pregnant_or_breastfeeding, label: 'Gestante/Lactante', color: 'bg-pink-100 text-pink-700' },
+      { condition: latestAnamnese.diabetes, label: 'Diabetes', color: 'bg-red-100 text-red-700' },
+      { condition: latestAnamnese.hypertension, label: 'Hipertensão', color: 'bg-red-100 text-red-700' },
+      { condition: latestAnamnese.heart_disease, label: 'Doença Cardíaca', color: 'bg-red-100 text-red-700' },
+      { condition: latestAnamnese.pacemaker, label: 'Marcapasso', color: 'bg-purple-100 text-purple-700' },
+      { condition: latestAnamnese.infectious_disease, label: 'Doença Infecciosa', color: 'bg-yellow-100 text-yellow-700' },
+      { condition: latestAnamnese.anesthesia_reaction, label: 'Reação a Anestesia', color: 'bg-red-100 text-red-700' },
+      { condition: latestAnamnese.smoker_or_drinker, label: 'Fumante/Etilista', color: 'bg-gray-100 text-gray-700' },
+      { condition: latestAnamnese.healing_problems, label: 'Prob. Cicatrização', color: 'bg-orange-100 text-orange-700' },
+      { condition: latestAnamnese.current_medication, label: 'Medicação em Uso', color: 'bg-blue-100 text-blue-700' },
+      { condition: latestAnamnese.recent_surgery, label: 'Cirurgia Recente', color: 'bg-orange-100 text-orange-700' },
+      { condition: latestAnamnese.depression_anxiety_panic, label: 'Ansiedade/Depressão', color: 'bg-purple-100 text-purple-700' },
+      { condition: latestAnamnese.seizure_epilepsy, label: 'Epilepsia', color: 'bg-purple-100 text-purple-700' },
+      { condition: latestAnamnese.arthritis, label: 'Artrite/Artrose', color: 'bg-orange-100 text-orange-700' },
+      { condition: latestAnamnese.gastritis_reflux, label: 'Gastrite/Refluxo', color: 'bg-yellow-100 text-yellow-700' },
+      { condition: latestAnamnese.local_anesthesia_history, label: 'Anestesia Local', color: 'bg-green-100 text-green-700' },
+      { condition: latestAnamnese.fasting, label: 'Jejum', color: 'bg-blue-100 text-blue-700' },
+    ];
+
+    return badges.filter(b => b.condition);
+  };
+
+  const badges = getBadges();
+
   return (
-    <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in">
+    <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-start gap-6">
         <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0">
           <span className="text-2xl font-bold text-primary-foreground">
@@ -81,6 +114,19 @@ export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
           </div>
         </div>
       </div>
+
+      {badges.length > 0 && (
+        <div className="pt-4 border-t border-border flex flex-wrap gap-2">
+          {badges.map((badge, index) => (
+            <span
+              key={index}
+              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}
+            >
+              {badge.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
