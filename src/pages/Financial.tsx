@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Plus, MapPin } from 'lucide-react';
+import { Plus, MapPin, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   FilterType,
@@ -86,10 +86,16 @@ export default function Financial() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1">Controle de receitas e despesas</p>
         </div>
-        <Button className="gap-2" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
-          <Plus className="w-4 h-4" />
-          Nova Transação
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => window.location.href = '/financeiro/configuracoes'}>
+            <Settings className="w-4 h-4 mr-2" />
+            Configurações
+          </Button>
+          <Button className="gap-2" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+            <Plus className="w-4 h-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
 
       <PeriodSelector
@@ -114,52 +120,58 @@ export default function Financial() {
       />
 
       {/* Revenue by Location Breakdown */}
-      {transactions.some(t => t.type === 'income' && t.location) && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-muted-foreground">Receita por Unidade</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Object.entries(transactions
-              .filter(t => t.type === 'income' && t.location)
-              .reduce((acc, t) => {
-                const loc = t.location!;
-                acc[loc] = (acc[loc] || 0) + t.amount;
-                return acc;
-              }, {} as Record<string, number>))
-              .map(([location, amount]) => (
-                <div key={location} className="bg-card rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground font-medium mb-1 truncate max-w-[120px]" title={location}>{location}</p>
-                      <p className="text-lg font-bold text-green-600">
-                        {amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </p>
-                    </div>
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <MapPin className="w-4 h-4 text-green-600" />
+      {
+        transactions.some(t => t.type === 'income' && t.location) && (
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Receita por Unidade</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Object.entries(transactions
+                .filter(t => t.type === 'income' && t.location)
+                .reduce((acc, t) => {
+                  const loc = t.location!;
+                  acc[loc] = (acc[loc] || 0) + t.amount;
+                  return acc;
+                }, {} as Record<string, number>))
+                .map(([location, amount]) => (
+                  <div key={location} className="bg-card rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground font-medium mb-1 truncate max-w-[120px]" title={location}>{location}</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </p>
+                      </div>
+                      <div className="p-2 bg-green-50 rounded-lg">
+                        <MapPin className="w-4 h-4 text-green-600" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {loading ? (
-        <div className="flex justify-center p-8">
-          <span className="text-muted-foreground">Carregando...</span>
-        </div>
-      ) : (
-        <TransactionsList
-          transactions={filteredTransactions}
-          filter={filter}
-          onClearFilter={() => setFilter('all')}
-        />
-      )}
+      {
+        loading ? (
+          <div className="flex justify-center p-8">
+            <span className="text-muted-foreground">Carregando...</span>
+          </div>
+        ) : (
+          <TransactionsList
+            transactions={filteredTransactions}
+            filter={filter}
+            onClearFilter={() => setFilter('all')}
+          />
+        )
+      }
 
       {/* Click outside to close dropdowns */}
-      {(showMonthPicker || showYearPicker) && (
-        <div className="fixed inset-0 z-40" onClick={closeDropdowns} />
-      )}
-    </div>
+      {
+        (showMonthPicker || showYearPicker) && (
+          <div className="fixed inset-0 z-40" onClick={closeDropdowns} />
+        )
+      }
+    </div >
   );
 }

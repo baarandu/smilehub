@@ -11,6 +11,7 @@ import Agenda from "./pages/Agenda";
 import Alerts from "./pages/Alerts";
 import Materials from "./pages/Materials";
 import Financial from "./pages/Financial";
+import FinancialSettings from "./pages/FinancialSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const AppContent = () => (
       <Route path="/alertas" element={<Alerts />} />
       <Route path="/materiais" element={<Materials />} />
       <Route path="/financeiro" element={<Financial />} />
+      <Route path="/financeiro/configuracoes" element={<FinancialSettings />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </AppLayout>

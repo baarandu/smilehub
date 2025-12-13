@@ -48,6 +48,8 @@ export type ToothEntry = {
     paymentInstallments?: number;
     paymentDate?: string;
     location?: string;
+    financialBreakdown?: any;
+    faces?: string[];
 };
 
 // Helper to get short tooth ID for database (max 10 chars)

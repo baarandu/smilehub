@@ -411,6 +411,13 @@ export interface Database {
           location: string | null
           patient_id: string | null
           related_entity_id: string | null
+          net_amount: number | null
+          tax_rate: number | null
+          tax_amount: number | null
+          card_fee_rate: number | null
+          card_fee_amount: number | null
+          anticipation_rate: number | null
+          anticipation_amount: number | null
           created_at: string
           updated_at: string
         }
@@ -424,6 +431,13 @@ export interface Database {
           location?: string | null
           patient_id?: string | null
           related_entity_id?: string | null
+          net_amount?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          card_fee_rate?: number | null
+          card_fee_amount?: number | null
+          anticipation_rate?: number | null
+          anticipation_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -437,8 +451,67 @@ export interface Database {
           location?: string | null
           patient_id?: string | null
           related_entity_id?: string | null
+          net_amount?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          card_fee_rate?: number | null
+          card_fee_amount?: number | null
+          anticipation_rate?: number | null
+          anticipation_amount?: number | null
           created_at?: string
           updated_at?: string
+        }
+      },
+      financial_settings: {
+        Row: {
+          id: string
+          user_id: string
+          tax_rate: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tax_rate?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tax_rate?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      card_fee_config: {
+        Row: {
+          id: string
+          user_id: string
+          brand: string
+          payment_type: string
+          installments: number
+          rate: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          brand: string
+          payment_type: string
+          installments?: number
+          rate: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          brand?: string
+          payment_type?: string
+          installments?: number
+          rate?: number
+          created_at?: string
         }
       }
     }
@@ -490,6 +563,14 @@ export type BudgetItemUpdate = Database['public']['Tables']['budget_items']['Upd
 export type FinancialTransaction = Database['public']['Tables']['financial_transactions']['Row']
 export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
 export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
+
+export type FinancialSettings = Database['public']['Tables']['financial_settings']['Row']
+export type FinancialSettingsInsert = Database['public']['Tables']['financial_settings']['Insert']
+export type FinancialSettingsUpdate = Database['public']['Tables']['financial_settings']['Update']
+
+export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
+export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
+export type CardFeeConfigUpdate = Database['public']['Tables']['card_fee_config']['Update']
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]

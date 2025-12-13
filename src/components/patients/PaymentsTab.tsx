@@ -8,6 +8,7 @@ import { budgetsService } from '@/services/budgets';
 import { formatMoney, getToothDisplayName, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
 import { PaymentMethodDialog } from './PaymentMethodDialog';
+import { financialService } from '@/services/financial';
 
 interface PaymentsTabProps {
   patientId: string;
@@ -95,7 +96,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     setSelectedItem(item);
   };
 
-  const handleConfirmPayment = async (method: string, installments: number) => {
+  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any) => {
     if (!selectedItem) return;
 
     try {
@@ -107,13 +108,61 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       if (!teeth) return;
 
+      // 1. Create Financial Transactions
+      const totalAmount = getItemValue(selectedItem);
+      const isAnticipated = breakdown?.isAnticipated || false;
+      const numTransactions = isAnticipated ? 1 : installments;
+      const amountPerTx = totalAmount / installments; // Installment value logic for card
+      // If active anticipation, we might receive less? No, we receive full amount usually minus fees, represented as 1 tx.
+      // But for 'amount' field in transaction, it usually tracks the Gross.
+      // If isAnticipated, we create 1 transaction of full gross.
+
+      const txAmount = isAnticipated ? totalAmount : (totalAmount / installments);
+
+      // We need to split the breakdown proportionaly if multiple installments
+      // If anticipated, all deductions go to the single transaction.
+      // If installments, split tax/fees by N.
+
+      const netAmountPerTx = breakdown?.netAmount ? (breakdown.netAmount / numTransactions) : txAmount;
+      const taxAmountPerTx = breakdown?.taxAmount ? (breakdown.taxAmount / numTransactions) : 0;
+      const cardFeeAmountPerTx = breakdown?.cardFeeAmount ? (breakdown.cardFeeAmount / numTransactions) : 0;
+      const anticipationAmountPerTx = breakdown?.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
+
+      const today = new Date();
+
+      for (let i = 0; i < numTransactions; i++) {
+        const date = new Date(today);
+        if (!isAnticipated) {
+          date.setMonth(date.getMonth() + i);
+        }
+
+        await financialService.create({
+          type: 'income',
+          amount: txAmount, // Store GROSS
+          description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)} (${i + 1}/${numTransactions})`,
+          category: 'Tratamento',
+          date: date.toISOString(),
+          patient_id: patientId,
+          related_entity_id: budget.id,
+          // Deductions
+          net_amount: netAmountPerTx,
+          tax_rate: breakdown?.taxRate,
+          tax_amount: taxAmountPerTx,
+          card_fee_rate: breakdown?.cardFeeRate,
+          card_fee_amount: cardFeeAmountPerTx,
+          anticipation_rate: breakdown?.anticipationRate,
+          anticipation_amount: anticipationAmountPerTx
+        });
+      }
+
       // Update item status
       teeth[selectedItem.toothIndex] = {
         ...teeth[selectedItem.toothIndex],
         status: 'paid',
         paymentMethod: method as any,
-        paymentInstallments: installments,
-        paymentDate: new Date().toISOString().split('T')[0]
+        paymentInstallments: installments, // Keep original installments for record
+        paymentDate: new Date().toISOString().split('T')[0],
+        financialBreakdown: breakdown // Save breakdown in notes for history
       };
 
       // Check overall status
@@ -128,7 +177,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         status: newBudgetStatus
       });
 
-      toast({ title: "Pagamento Registrado", description: "O item foi marcado como pago." });
+      toast({ title: "Pagamento Registrado", description: "O item foi marcado como pago e lançado no financeiro." });
       loadData(); // Reload to refresh lists
     } catch (error) {
       console.error(error);
