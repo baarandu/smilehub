@@ -453,11 +453,20 @@ export default function PatientDetail() {
                                             </View>
                                             <View className="flex-row flex-wrap gap-1">
                                                 {anamnese.medical_treatment && <View className="bg-amber-100 px-2 py-0.5 rounded"><Text className="text-xs text-amber-700">Em tratamento</Text></View>}
+                                                {anamnese.recent_surgery && <View className="bg-purple-100 px-2 py-0.5 rounded"><Text className="text-xs text-purple-700">Cirurgia recente</Text></View>}
                                                 {anamnese.current_medication && <View className="bg-blue-100 px-2 py-0.5 rounded"><Text className="text-xs text-blue-700">Medicação</Text></View>}
                                                 {anamnese.pregnant_or_breastfeeding && <View className="bg-pink-100 px-2 py-0.5 rounded"><Text className="text-xs text-pink-700">Gestante/Lactante</Text></View>}
                                                 {anamnese.anesthesia_reaction && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Reação anestesia</Text></View>}
                                                 {anamnese.healing_problems && <View className="bg-orange-100 px-2 py-0.5 rounded"><Text className="text-xs text-orange-700">Cicatrização</Text></View>}
-                                                {!anamnese.medical_treatment && !anamnese.current_medication && !anamnese.pregnant_or_breastfeeding && !anamnese.anesthesia_reaction && !anamnese.healing_problems && (
+                                                {anamnese.diabetes && <View className="bg-violet-100 px-2 py-0.5 rounded"><Text className="text-xs text-violet-700">Diabetes</Text></View>}
+                                                {anamnese.heart_disease && <View className="bg-rose-100 px-2 py-0.5 rounded"><Text className="text-xs text-rose-700">Cardíaco</Text></View>}
+                                                {anamnese.hypertension && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Hipertensão</Text></View>}
+                                                {anamnese.pacemaker && <View className="bg-slate-100 px-2 py-0.5 rounded"><Text className="text-xs text-slate-700">Marcapasso</Text></View>}
+                                                {anamnese.infectious_disease && <View className="bg-yellow-100 px-2 py-0.5 rounded"><Text className="text-xs text-yellow-700">Doença infecciosa</Text></View>}
+                                                {anamnese.smoker_or_drinker && <View className="bg-gray-200 px-2 py-0.5 rounded"><Text className="text-xs text-gray-700">Fumante/Álcool</Text></View>}
+                                                {anamnese.depression_anxiety_panic && <View className="bg-indigo-100 px-2 py-0.5 rounded"><Text className="text-xs text-indigo-700">Ansiedade/Depressão</Text></View>}
+                                                {anamnese.seizure_epilepsy && <View className="bg-cyan-100 px-2 py-0.5 rounded"><Text className="text-xs text-cyan-700">Epilepsia</Text></View>}
+                                                {!anamnese.medical_treatment && !anamnese.recent_surgery && !anamnese.current_medication && !anamnese.pregnant_or_breastfeeding && !anamnese.anesthesia_reaction && !anamnese.healing_problems && !anamnese.diabetes && !anamnese.heart_disease && !anamnese.hypertension && !anamnese.pacemaker && !anamnese.infectious_disease && !anamnese.smoker_or_drinker && !anamnese.depression_anxiety_panic && !anamnese.seizure_epilepsy && (
                                                     <View className="bg-green-100 px-2 py-0.5 rounded"><Text className="text-xs text-green-700">Sem alertas</Text></View>
                                                 )}
                                             </View>
