@@ -1,7 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Settings } from 'lucide-react-native';
-import { useFocusEffect, Link } from 'expo-router';
 import { financialService } from '../../src/services/financial';
 import type { FinancialTransaction, FinancialTransactionWithPatient } from '../../src/types/database';
 import { IncomeTab } from '../../src/components/financial/IncomeTab';
@@ -54,11 +53,10 @@ export default function Financial() {
         }
     }, [selectedYear, selectedMonth, periodType]);
 
-    useFocusEffect(
-        useCallback(() => {
-            loadData();
-        }, [loadData])
-    );
+    // Use useEffect instead of useFocusEffect to avoid navigation context dependency
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     // Navigation Handlers
     const navigateMonth = (direction: 'prev' | 'next') => {
@@ -97,11 +95,12 @@ export default function Financial() {
                         <Text className="text-gray-500 mt-1">Gestão de caixa</Text>
                     </View>
                     <View className="flex-row gap-2">
-                        <Link href="/settings/financial" asChild>
-                            <TouchableOpacity className="bg-gray-100 p-3 rounded-xl border border-gray-200">
-                                <Settings size={20} color="#4B5563" />
-                            </TouchableOpacity>
-                        </Link>
+                        <TouchableOpacity
+                            className="bg-gray-100 p-3 rounded-xl border border-gray-200"
+                            onPress={() => Alert.alert('Info', 'Navegação desabilitada temporariamente')}
+                        >
+                            <Settings size={20} color="#4B5563" />
+                        </TouchableOpacity>
                         <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={() => Alert.alert("Em breve", "Adicionar transação manual")}>
                             <Plus size={20} color="#FFFFFF" />
                         </TouchableOpacity>
