@@ -15,6 +15,7 @@ interface BudgetViewModalProps {
 
 export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetViewModalProps) {
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
+    const [budgetLocation, setBudgetLocation] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -29,6 +30,8 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
                     }));
                     setTeethList(teeth);
                 }
+                // Preserve location from original budget
+                setBudgetLocation(parsed.location || null);
             } catch (e) {
                 setTeethList([]);
             }
@@ -77,7 +80,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
         try {
             setSaving(true);
             await budgetsService.update(budget.id, {
-                notes: JSON.stringify({ teeth: updatedList }),
+                notes: JSON.stringify({ teeth: updatedList, location: budgetLocation }),
             });
             onUpdate();
         } catch (error) {
