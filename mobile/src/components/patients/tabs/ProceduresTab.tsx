@@ -20,9 +20,7 @@ export function ProceduresTab({
     onDelete,
     onPreviewImage,
 }: ProceduresTabProps) {
-    const sortedProcedures = [...procedures].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
+
 
     const getPaymentMethodLabel = (method: string) => {
         switch (method) {
@@ -80,7 +78,7 @@ export function ProceduresTab({
                 {/* List */}
                 {procedures.length > 0 ? (
                     <View>
-                        {sortedProcedures.map((procedure) => {
+                        {procedures.map((procedure) => {
                             const procedureExams = exams.filter(e => e.procedure_id === procedure.id);
                             const { structuredItems, unstructuredLines, obsPart } = procedure.description
                                 ? parseDescription(procedure.description)
