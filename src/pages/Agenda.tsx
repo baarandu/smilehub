@@ -76,7 +76,7 @@ export default function Agenda() {
       const end = endOfMonth(calendarMonth);
       const startStr = format(start, 'yyyy-MM-dd');
       const endStr = format(end, 'yyyy-MM-dd');
-      
+
       const dates = await appointmentsService.getDatesWithAppointments(startStr, endStr);
       setDatesWithAppointments(dates.map(d => new Date(d + 'T00:00:00')));
     } catch (error) {
@@ -120,7 +120,7 @@ export default function Agenda() {
     }
   };
 
-  const handleAddAppointment = async (data: { patientId: string; time: string; location: string; notes: string }) => {
+  const handleAddAppointment = async (data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => {
     if (!data.patientId || !data.time) {
       toast.error('Selecione um paciente e horário');
       return;
@@ -134,6 +134,7 @@ export default function Agenda() {
         status: 'scheduled',
         location: data.location || null,
         notes: data.notes || null,
+        procedure_name: data.procedure || null,
       });
 
       setDialogOpen(false);
@@ -168,7 +169,7 @@ export default function Agenda() {
 
   const confirmDelete = async () => {
     if (!appointmentToDelete) return;
-    
+
     try {
       await appointmentsService.delete(appointmentToDelete.id);
       toast.success('Consulta excluída com sucesso!');

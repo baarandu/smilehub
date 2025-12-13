@@ -33,13 +33,14 @@ export function NewAppointmentDialog({
     time: '',
     location: '',
     notes: '',
+    procedure: '',
   });
   const [patientSearch, setPatientSearch] = useState('');
   const [showPatientList, setShowPatientList] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setForm({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+      setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
       setPatientSearch('');
       setShowPatientList(false);
     }
@@ -51,7 +52,7 @@ export function NewAppointmentDialog({
         setShowPatientList(false);
       }
     };
-    
+
     if (showPatientList) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
@@ -59,10 +60,10 @@ export function NewAppointmentDialog({
   }, [showPatientList]);
 
   const filteredPatients = patientSearch.length > 0
-    ? patients.filter(p => 
-        p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
-        p.phone?.includes(patientSearch)
-      )
+    ? patients.filter(p =>
+      p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
+      p.phone?.includes(patientSearch)
+    )
     : [];
 
   const handleSelectPatient = (patient: { id: string; name: string }) => {
@@ -73,7 +74,7 @@ export function NewAppointmentDialog({
 
   const handleSubmit = () => {
     onAdd(form);
-    setForm({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
     setPatientSearch('');
   };
 
@@ -120,7 +121,7 @@ export function NewAppointmentDialog({
                   />
                 </div>
                 {showPatientList && filteredPatients.length > 0 && (
-                  <div 
+                  <div
                     className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -140,7 +141,7 @@ export function NewAppointmentDialog({
                   </div>
                 )}
                 {showPatientList && patientSearch.length > 0 && filteredPatients.length === 0 && (
-                  <div 
+                  <div
                     className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-4 text-center text-muted-foreground"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -156,6 +157,14 @@ export function NewAppointmentDialog({
               type="time"
               value={form.time}
               onChange={(e) => setForm({ ...form, time: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Procedimento</Label>
+            <Input
+              value={form.procedure}
+              onChange={(e) => setForm({ ...form, procedure: e.target.value })}
+              placeholder="Ex: Limpeza, Exodontia"
             />
           </div>
           <div className="space-y-2">

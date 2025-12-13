@@ -47,6 +47,9 @@ export function AppointmentCard({
               {appointment.notes && (
                 <p className="text-xs text-muted-foreground/70">{appointment.notes}</p>
               )}
+              {appointment.procedure_name && (
+                <p className="text-xs font-medium text-emerald-600 mt-0.5">{appointment.procedure_name}</p>
+              )}
             </div>
           </div>
         </div>

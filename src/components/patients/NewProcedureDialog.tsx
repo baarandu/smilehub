@@ -171,12 +171,20 @@ export function NewProcedureDialog({
   const toggleItemSelection = (itemId: string) => {
     setSelectedItemIds(prev => {
       const isSelected = prev.includes(itemId);
-      let newSelection = isSelected
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId];
 
-      updateFormFromSelection(newSelection);
-      return newSelection;
+      if (isSelected) {
+        // Removing selection - remove from finalized too
+        setFinalizedItemIds(current => current.filter(id => id !== itemId));
+        const newSelection = prev.filter(id => id !== itemId);
+        updateFormFromSelection(newSelection);
+        return newSelection;
+      } else {
+        // Adding selection - Default to FINALIZED
+        setFinalizedItemIds(current => [...current, itemId]);
+        const newSelection = [...prev, itemId];
+        updateFormFromSelection(newSelection);
+        return newSelection;
+      }
     });
   };
 
@@ -440,15 +448,15 @@ export function NewProcedureDialog({
                           <div className="flex items-center space-x-2 pl-6">
                             <Checkbox
                               id={`finalize-${item.id}`}
-                              checked={finalizedItemIds.includes(item.id)}
+                              checked={!finalizedItemIds.includes(item.id)}
                               onCheckedChange={() => toggleFinalizeItem(item.id)}
-                              className="h-3.5 w-3.5"
+                              className="h-3.5 w-3.5 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
                             />
                             <label
                               htmlFor={`finalize-${item.id}`}
-                              className="text-xs text-muted-foreground cursor-pointer"
+                              className={`text-xs cursor-pointer ${!finalizedItemIds.includes(item.id) ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}
                             >
-                              Finalizar nesta sessão?
+                              Tratamento não finalizado (manter na lista)
                             </label>
                           </div>
                         )}

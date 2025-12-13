@@ -31,7 +31,7 @@ export interface NewAppointmentDialogProps {
   patients: Patient[];
   locations: Location[];
   selectedDate: string;
-  onAdd: (data: { patientId: string; time: string; location: string; notes: string }) => void;
+  onAdd: (data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => void;
 }
 
 export const STATUS_CONFIG = {
