@@ -187,10 +187,16 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                                 );
                                             })()}
 
-                                            <View className="flex-row items-center gap-2 mt-1">
+                                            <View className="flex-row items-center gap-2 mt-1 flex-wrap">
                                                 <Text className="text-xs text-gray-400">
                                                     {formatDate(transaction.date)}
                                                 </Text>
+                                                {transaction.location && (
+                                                    <View className="flex-row items-center gap-1 bg-teal-50 px-1.5 py-0.5 rounded">
+                                                        <MapPin size={10} color="#0D9488" />
+                                                        <Text className="text-xs text-teal-600">{transaction.location}</Text>
+                                                    </View>
+                                                )}
                                             </View>
                                         </View>
                                     </View>
