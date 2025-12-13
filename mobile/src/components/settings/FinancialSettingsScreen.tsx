@@ -20,6 +20,10 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
     const [showFeeModal, setShowFeeModal] = useState(false);
 
+    // Filters
+    const [filterBrand, setFilterBrand] = useState('all');
+    const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
+
     // Fee Form
     const [editingFee, setEditingFee] = useState<CardFeeConfig | null>(null);
     const [feeBrand, setFeeBrand] = useState('visa');
@@ -189,6 +193,53 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                             </TouchableOpacity>
                         </View>
 
+                        {/* Filters */}
+                        <View className="px-4 py-3 bg-white border-b border-gray-100">
+                            {/* Type Filter */}
+                            <View className="flex-row gap-2 mb-3">
+                                {['all', 'credit', 'debit'].map(type => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        onPress={() => setFilterType(type as any)}
+                                        className={`px-3 py-1.5 rounded-full border ${filterType === type
+                                                ? 'bg-teal-50 border-teal-200'
+                                                : 'bg-white border-gray-200'
+                                            }`}
+                                    >
+                                        <Text className={`text-xs font-medium capitalize ${filterType === type ? 'text-teal-700' : 'text-gray-600'
+                                            }`}>
+                                            {type === 'all' ? 'Todos os Tipos' : type === 'credit' ? 'Crédito' : 'Débito'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Brand Filter */}
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+                                <TouchableOpacity
+                                    onPress={() => setFilterBrand('all')}
+                                    className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === 'all' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'
+                                        }`}
+                                >
+                                    <Text className={`text-xs font-medium ${filterBrand === 'all' ? 'text-teal-700' : 'text-gray-600'}`}>
+                                        Todas
+                                    </Text>
+                                </TouchableOpacity>
+                                {Array.from(new Set(cardFees.map(f => f.brand))).sort().map(brand => (
+                                    <TouchableOpacity
+                                        key={brand}
+                                        onPress={() => setFilterBrand(brand)}
+                                        className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === brand ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'
+                                            }`}
+                                    >
+                                        <Text className={`text-xs font-medium capitalize ${filterBrand === brand ? 'text-teal-700' : 'text-gray-600'}`}>
+                                            {brand === 'others' ? 'Outras' : brand}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+
                         <View className="p-4">
                             {cardFees.length === 0 ? (
                                 <Text className="text-gray-400 text-center italic py-4">Nenhuma taxa cadastrada</Text>
@@ -202,6 +253,11 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                         <View className="w-10" />
                                     </View>
                                     {cardFees
+                                        .filter(fee => {
+                                            if (filterBrand !== 'all' && fee.brand !== filterBrand) return false;
+                                            if (filterType !== 'all' && fee.payment_type !== filterType) return false;
+                                            return true;
+                                        })
                                         .sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments)
                                         .map((fee) => (
                                             <View key={fee.id} className="flex-row items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
