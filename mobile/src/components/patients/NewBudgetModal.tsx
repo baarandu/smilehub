@@ -308,11 +308,13 @@ export function NewBudgetModal({
             const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))];
 
             // Store complete teeth data in notes as JSON
+            console.log('[DEBUG] Saving Budget - Location:', location, 'Rate Input:', locationRate);
             const notesData = JSON.stringify({
                 teeth: teethList,
                 location: location,
                 locationRate: locationRate ? parseFloat(locationRate) : 0,
             });
+            console.log('[DEBUG] Saving Budget - Notes Data:', notesData);
 
             // Create budget items for database (use short IDs)
             const budgetItems = teethList.map(t => ({
