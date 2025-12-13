@@ -410,7 +410,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         <Text className="text-sm font-bold text-gray-900 mb-3">
                                             Detalhamento Financeiro
                                         </Text>
-                                        <View className="gap-2">
+                                        <View style={{ gap: 8 }}>
                                             <View className="flex-row justify-between items-center">
                                                 <Text className="text-gray-600">Valor Bruto</Text>
                                                 <Text className="font-semibold text-gray-900">{formatCurrency(selectedTransaction.amount)}</Text>
