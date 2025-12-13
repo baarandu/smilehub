@@ -73,7 +73,7 @@ export function BudgetSummarySection({
                                     )}
                                 </TouchableOpacity>
                                 <Text className="font-bold text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                {item.faces.length > 0 && (
+                                {item.faces && item.faces.length > 0 && (
                                     <Text className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
                                         {item.faces.map(f => FACES.find(face => face.id === f)?.label).join(', ')}
                                     </Text>
@@ -92,7 +92,7 @@ export function BudgetSummarySection({
                             item.treatments.map(treatment => {
                                 const val = item.values[treatment];
                                 const numVal = val ? parseInt(val, 10) / 100 : 0;
-                                const material = item.materials[treatment];
+                                const material = item.materials?.[treatment];
                                 return (
                                     <View key={treatment} className="flex-row justify-between items-center py-1 ml-2">
                                         <View className="flex-1">

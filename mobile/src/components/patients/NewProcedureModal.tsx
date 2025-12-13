@@ -412,7 +412,7 @@ export function NewProcedureModal({
       if (procedure) {
         const updated = await proceduresService.update(procedure.id, {
           ...procedureData,
-          description: observations || null,
+          description: observations || undefined,
         });
         procedureId = updated.id;
         Alert.alert('Sucesso', 'Procedimento atualizado!');
