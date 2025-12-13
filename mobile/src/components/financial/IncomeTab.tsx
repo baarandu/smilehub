@@ -48,20 +48,48 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     return (
         <View className="flex-1">
             {/* Sub-tabs */}
-            <View className="flex-row mx-4 mt-4 mb-2 bg-gray-100 rounded-xl p-1">
+            <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 16, marginBottom: 8, backgroundColor: '#f3f4f6', borderRadius: 12, padding: 4 }}>
                 <TouchableOpacity
                     onPress={() => setSubTab('gross')}
-                    className={`flex-1 py-2 rounded-lg ${subTab === 'gross' ? 'bg-white shadow-sm' : ''}`}
+                    style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        backgroundColor: subTab === 'gross' ? '#ffffff' : 'transparent',
+                        shadowColor: subTab === 'gross' ? '#000' : 'transparent',
+                        shadowOpacity: subTab === 'gross' ? 0.1 : 0,
+                        shadowRadius: 2,
+                        elevation: subTab === 'gross' ? 2 : 0,
+                    }}
                 >
-                    <Text className={`text-center text-sm font-medium ${subTab === 'gross' ? 'text-green-600' : 'text-gray-500'}`}>
+                    <Text style={{
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontWeight: '500',
+                        color: subTab === 'gross' ? '#16a34a' : '#6b7280'
+                    }}>
                         Receita Bruta
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => setSubTab('net')}
-                    className={`flex-1 py-2 rounded-lg ${subTab === 'net' ? 'bg-white shadow-sm' : ''}`}
+                    style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        backgroundColor: subTab === 'net' ? '#ffffff' : 'transparent',
+                        shadowColor: subTab === 'net' ? '#000' : 'transparent',
+                        shadowOpacity: subTab === 'net' ? 0.1 : 0,
+                        shadowRadius: 2,
+                        elevation: subTab === 'net' ? 2 : 0,
+                    }}
                 >
-                    <Text className={`text-center text-sm font-medium ${subTab === 'net' ? 'text-green-600' : 'text-gray-500'}`}>
+                    <Text style={{
+                        textAlign: 'center',
+                        fontSize: 14,
+                        fontWeight: '500',
+                        color: subTab === 'net' ? '#16a34a' : '#6b7280'
+                    }}>
                         Receita Líquida
                     </Text>
                 </TouchableOpacity>
