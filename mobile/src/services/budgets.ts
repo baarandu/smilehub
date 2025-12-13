@@ -63,6 +63,7 @@ export const budgetsService = {
     async update(id: string, budget: BudgetUpdate): Promise<Budget> {
         const { data, error } = await supabase
             .from('budgets')
+            // @ts-ignore: Supabase types mismatch workaround
             .update(budget as any)
             .eq('id', id)
             .select()
