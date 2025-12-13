@@ -230,9 +230,71 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     <X size={20} color="white" />
                                 </TouchableOpacity>
                             </View>
-                            <Text className="text-teal-50 mt-4 text-sm opacity-90">
-                                {selectedTransaction?.description}
-                            </Text>
+                            {selectedTransaction && (() => {
+                                const rawDesc = selectedTransaction.description;
+                                const patientName = selectedTransaction.patients?.name || '';
+
+                                // Extract Installment info
+                                const installmentMatch = rawDesc.match(/\(\d+\/\d+\)/);
+                                const installmentInfo = installmentMatch ? installmentMatch[0].replace(/[()]/g, '') : null;
+
+                                let workingDesc = rawDesc;
+                                if (installmentMatch) {
+                                    workingDesc = workingDesc.replace(installmentMatch[0], '');
+                                }
+
+                                // Extract Method
+                                const methodMatch = workingDesc.match(/\((.*?)\)/);
+                                const rawPaymentInfo = methodMatch ? methodMatch[1] : null;
+
+                                if (methodMatch) {
+                                    workingDesc = workingDesc.replace(methodMatch[0], '');
+                                }
+
+                                // Process Method and Brand
+                                let displayMethod = 'Não informado';
+                                let displayBrand = null;
+
+                                if (rawPaymentInfo) {
+                                    const methodParts = rawPaymentInfo.split(' - ');
+                                    let methodType = methodParts[0];
+                                    if (methodType.toLowerCase() === 'crédito' || methodType.toLowerCase() === 'credit') methodType = 'Cartão de Crédito';
+                                    if (methodType.toLowerCase() === 'débito' || methodType.toLowerCase() === 'debit') methodType = 'Cartão de Débito';
+                                    displayMethod = methodType;
+                                    if (methodParts.length > 1) {
+                                        displayBrand = methodParts[1].replace('_', '/');
+                                    }
+                                }
+
+                                // Split and Filter Parts
+                                const parts = workingDesc.split(' - ').map(p => p.trim());
+                                const filteredParts = parts.filter(p => p && p.toLowerCase() !== patientName.toLowerCase());
+
+                                let tooth = '';
+                                let procedure = '';
+
+                                filteredParts.forEach(part => {
+                                    if (part.toLowerCase().startsWith('dente') || part.toLowerCase().startsWith('arcada')) {
+                                        tooth = part;
+                                    } else {
+                                        procedure = procedure ? `${procedure} - ${part}` : part;
+                                    }
+                                });
+
+                                if (!procedure && filteredParts.length > 0 && !tooth) procedure = filteredParts.join(' - ');
+                                if (!procedure) procedure = 'Procedimento';
+
+                                const line2 = tooth ? `${tooth} - ${procedure}` : procedure;
+
+                                return (
+                                    <View className="mt-4">
+                                        <Text className="text-teal-50 text-sm opacity-90">{line2}</Text>
+                                        <Text className="text-teal-100 text-xs mt-1">
+                                            {displayMethod}{displayBrand ? ` - ${displayBrand}` : ''}{installmentInfo ? ` (${installmentInfo})` : ''}
+                                        </Text>
+                                    </View>
+                                );
+                            })()}
                         </View>
 
                         <ScrollView className="max-h-[400px]">
