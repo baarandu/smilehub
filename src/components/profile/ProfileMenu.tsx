@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Key, MapPin, LogOut } from 'lucide-react';
+import { User, Key, MapPin, LogOut, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,9 +9,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LocationsModal } from './LocationsModal';
+import { CardFeesModal } from './CardFeesModal';
 
 export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
+  const [cardFeesOpen, setCardFeesOpen] = useState(false);
 
   return (
     <>
@@ -32,12 +34,19 @@ export function ProfileMenu() {
             <Key className="mr-2 h-4 w-4" />
             <span>Alterar Senha</span>
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => setLocationsOpen(true)}
           >
             <MapPin className="mr-2 h-4 w-4" />
             <span>Gerenciar Locais</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setCardFeesOpen(true)}
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            <span>Gerenciar Cartões</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="cursor-pointer text-destructive">
@@ -48,6 +57,7 @@ export function ProfileMenu() {
       </DropdownMenu>
 
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
+      <CardFeesModal open={cardFeesOpen} onOpenChange={setCardFeesOpen} />
     </>
   );
 }

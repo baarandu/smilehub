@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { ArrowLeft, Save, Plus, Trash2, CreditCard, Percent, X } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig } from '../../types/database';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function FinancialSettingsScreen() {
-    const router = useRouter();
+interface Props {
+    onBack?: () => void;
+}
+
+export default function FinancialSettingsScreen({ onBack }: Props) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -67,22 +69,28 @@ export default function FinancialSettingsScreen() {
                 return;
             }
 
+            setSaving(true);
             const rate = parseFloat(feeRate.replace(',', '.'));
             const installments = parseInt(feeInstallments);
+
+            // Force installments to 1 for debit to ensure consistency
+            const finalInstallments = feeType === 'debit' ? 1 : installments;
 
             await settingsService.saveCardFee({
                 brand: feeBrand,
                 payment_type: feeType,
-                installments: feeType === 'debit' ? 1 : installments,
+                installments: finalInstallments,
                 rate,
                 id: editingFee?.id // Pass ID if editing to help debugging, though upsert uses unique keys
             });
 
             setShowFeeModal(false);
-            loadSettings();
+            await loadSettings(); // Wait for reload
         } catch (error) {
-            Alert.alert('Erro', 'Falha ao salvar regra de cartão');
-            console.error(error);
+            console.error('Save error:', error);
+            Alert.alert('Erro', 'Falha ao salvar regra de cartão. Verifique os dados.');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -122,7 +130,7 @@ export default function FinancialSettingsScreen() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                <TouchableOpacity onPress={() => onBack?.()} className="mr-4">
                     <ArrowLeft size={24} color="#0D9488" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900">Configurações Financeiras</Text>
@@ -197,7 +205,9 @@ export default function FinancialSettingsScreen() {
                                         .sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments)
                                         .map((fee) => (
                                             <View key={fee.id} className="flex-row items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <Text className="flex-1 font-medium capitalize text-gray-900">{fee.brand}</Text>
+                                                <Text className="flex-1 font-medium capitalize text-gray-900">
+                                                    {fee.brand === 'others' ? 'Outras Bandeiras' : fee.brand}
+                                                </Text>
                                                 <Text className="w-20 text-center text-xs text-gray-600 bg-white border border-gray-200 py-1 rounded capitalize">
                                                     {fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}
                                                 </Text>
@@ -222,87 +232,135 @@ export default function FinancialSettingsScreen() {
                 </ScrollView>
             )}
 
-            {/* Fee Modal */}
-            <Modal visible={showFeeModal} transparent animationType="slide" onRequestClose={() => setShowFeeModal(false)}>
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 justify-end">
-                    <TouchableOpacity className="flex-1 bg-black/30" onPress={() => setShowFeeModal(false)} />
-                    <View className="bg-white rounded-t-3xl p-6">
-                        <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-bold text-gray-900">Nova Regra de Taxa</Text>
-                            <TouchableOpacity onPress={() => setShowFeeModal(false)} className="bg-gray-100 p-2 rounded-full">
-                                <X size={20} color="#374151" />
+            {/* Fee Modal - Using inline overlay instead of Modal to avoid navigation context issues */}
+            {showFeeModal && (
+                <View className="absolute inset-0 z-50">
+                    <TouchableOpacity
+                        className="absolute inset-0 bg-black/30"
+                        activeOpacity={1}
+                        onPress={() => setShowFeeModal(false)}
+                    />
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        className="flex-1 justify-end"
+                        pointerEvents="box-none"
+                    >
+                        <View className="bg-white rounded-t-3xl p-6">
+                            <View className="flex-row justify-between items-center mb-6">
+                                <Text className="text-xl font-bold text-gray-900">Nova Regra de Taxa</Text>
+                                <TouchableOpacity onPress={() => setShowFeeModal(false)} className="bg-gray-100 p-2 rounded-full">
+                                    <X size={20} color="#374151" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View className="flex-row gap-4 mb-4">
+                                <View className="flex-1">
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Bandeira</Text>
+                                    <View className="flex-row flex-wrap gap-2">
+                                        {[
+                                            { id: 'visa', label: 'Visa' },
+                                            { id: 'mastercard', label: 'Mastercard' },
+                                            { id: 'elo', label: 'Elo' },
+                                            { id: 'amex', label: 'Amex' },
+                                            { id: 'hipercard', label: 'Hipercard' },
+                                            { id: 'others', label: 'Outras Bandeiras' }
+                                        ].map(b => (
+                                            <TouchableOpacity
+                                                key={b.id}
+                                                onPress={() => setFeeBrand(b.id)}
+                                                className={`px-3 py-2 rounded-lg border ${feeBrand === b.id ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-200'}`}
+                                            >
+                                                <Text className={`capitalize ${feeBrand === b.id ? 'text-white' : 'text-gray-700'}`}>{b.label}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View className="flex-row gap-4 mb-4">
+                                <View className="flex-1">
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Tipo</Text>
+                                    <View className="flex-row bg-gray-100 p-1 rounded-lg">
+                                        <TouchableOpacity
+                                            onPress={() => setFeeType('credit')}
+                                            style={{
+                                                flex: 1,
+                                                paddingVertical: 8,
+                                                alignItems: 'center',
+                                                borderRadius: 6,
+                                                backgroundColor: feeType === 'credit' ? '#fff' : 'transparent',
+                                                shadowColor: feeType === 'credit' ? '#000' : 'transparent',
+                                                shadowOpacity: feeType === 'credit' ? 0.1 : 0,
+                                                shadowRadius: 2,
+                                                elevation: feeType === 'credit' ? 2 : 0,
+                                            }}
+                                        >
+                                            <Text style={{
+                                                fontWeight: feeType === 'credit' ? 'bold' : 'normal',
+                                                color: feeType === 'credit' ? '#0D9488' : '#6B7280'
+                                            }}>Crédito</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => setFeeType('debit')}
+                                            style={{
+                                                flex: 1,
+                                                paddingVertical: 8,
+                                                alignItems: 'center',
+                                                borderRadius: 6,
+                                                backgroundColor: feeType === 'debit' ? '#fff' : 'transparent',
+                                                shadowColor: feeType === 'debit' ? '#000' : 'transparent',
+                                                shadowOpacity: feeType === 'debit' ? 0.1 : 0,
+                                                shadowRadius: 2,
+                                                elevation: feeType === 'debit' ? 2 : 0,
+                                            }}
+                                        >
+                                            <Text style={{
+                                                fontWeight: feeType === 'debit' ? 'bold' : 'normal',
+                                                color: feeType === 'debit' ? '#0D9488' : '#6B7280'
+                                            }}>Débito</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                                {feeType === 'credit' && (
+                                    <View className="w-24">
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Parcelas</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-center"
+                                            value={feeInstallments}
+                                            onChangeText={setFeeInstallments}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+                                )}
+                            </View>
+
+                            <View className="mb-6">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Taxa (%)</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-lg font-bold text-gray-900"
+                                    value={feeRate}
+                                    onChangeText={setFeeRate}
+                                    keyboardType="numeric"
+                                    placeholder="0.00"
+                                />
+                            </View>
+
+                            <TouchableOpacity
+                                onPress={handleSaveFee}
+                                disabled={saving}
+                                className="bg-teal-500 rounded-xl py-4 items-center"
+                            >
+                                {saving ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <Text className="text-white font-bold text-lg">Salvar Regra</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
-
-                        <View className="flex-row gap-4 mb-4">
-                            <View className="flex-1">
-                                <Text className="text-sm font-medium text-gray-700 mb-2">Bandeira</Text>
-                                <View className="flex-row flex-wrap gap-2">
-                                    {['visa', 'mastercard', 'elo', 'amex', 'hipercard'].map(b => (
-                                        <TouchableOpacity
-                                            key={b}
-                                            onPress={() => setFeeBrand(b)}
-                                            className={`px-3 py-2 rounded-lg border ${feeBrand === b ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-200'}`}
-                                        >
-                                            <Text className={`capitalize ${feeBrand === b ? 'text-white' : 'text-gray-700'}`}>{b}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-
-                        <View className="flex-row gap-4 mb-4">
-                            <View className="flex-1">
-                                <Text className="text-sm font-medium text-gray-700 mb-2">Tipo</Text>
-                                <View className="flex-row bg-gray-100 p-1 rounded-lg">
-                                    <TouchableOpacity
-                                        onPress={() => setFeeType('credit')}
-                                        className={`flex-1 py-2 items-center rounded-md ${feeType === 'credit' ? 'bg-white shadow-sm' : ''}`}
-                                    >
-                                        <Text className={feeType === 'credit' ? 'font-bold text-teal-600' : 'text-gray-500'}>Crédito</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={() => setFeeType('debit')}
-                                        className={`flex-1 py-2 items-center rounded-md ${feeType === 'debit' ? 'bg-white shadow-sm' : ''}`}
-                                    >
-                                        <Text className={feeType === 'debit' ? 'font-bold text-teal-600' : 'text-gray-500'}>Débito</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-
-                            {feeType === 'credit' && (
-                                <View className="w-24">
-                                    <Text className="text-sm font-medium text-gray-700 mb-2">Parcelas</Text>
-                                    <TextInput
-                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-center"
-                                        value={feeInstallments}
-                                        onChangeText={setFeeInstallments}
-                                        keyboardType="numeric"
-                                    />
-                                </View>
-                            )}
-                        </View>
-
-                        <View className="mb-6">
-                            <Text className="text-sm font-medium text-gray-700 mb-2">Taxa (%)</Text>
-                            <TextInput
-                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-lg font-bold text-gray-900"
-                                value={feeRate}
-                                onChangeText={setFeeRate}
-                                keyboardType="numeric"
-                                placeholder="0.00"
-                            />
-                        </View>
-
-                        <TouchableOpacity
-                            onPress={handleSaveFee}
-                            className="bg-teal-500 rounded-xl py-4 items-center"
-                        >
-                            <Text className="text-white font-bold text-lg">Salvar Regra</Text>
-                        </TouchableOpacity>
-                    </View>
-                </KeyboardAvoidingView>
-            </Modal>
+                    </KeyboardAvoidingView>
+                </View>
+            )}
         </SafeAreaView>
     );
 }

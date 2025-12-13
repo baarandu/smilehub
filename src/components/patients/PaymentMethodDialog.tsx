@@ -43,7 +43,7 @@ const CARD_BRANDS = [
     { id: 'elo', label: 'Elo' },
     { id: 'hipercard', label: 'Hipercard' },
     { id: 'amex', label: 'Amex' },
-    { id: 'others', label: 'Outros' },
+    { id: 'others', label: 'Outras Bandeiras' },
 ];
 
 export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value }: PaymentMethodDialogProps) {
