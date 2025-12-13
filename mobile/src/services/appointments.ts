@@ -8,6 +8,7 @@ interface AppointmentInsert {
   status: string;
   location?: string | null;
   notes?: string | null;
+  procedure_name?: string | null;
 }
 
 export const appointmentsService = {

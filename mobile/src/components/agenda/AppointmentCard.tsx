@@ -34,6 +34,9 @@ export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) 
               </Text>
             </View>
           </View>
+          {appointment.procedure_name && (
+            <Text className="text-gray-700 font-medium text-sm mt-1">{appointment.procedure_name}</Text>
+          )}
           {appointment.location && (
             <View className="flex-row items-center gap-1 mt-1">
               <MapPin size={12} color="#6B7280" />

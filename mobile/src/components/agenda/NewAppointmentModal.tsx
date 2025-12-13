@@ -16,6 +16,7 @@ interface NewAppointmentModalProps {
     time: string;
     location: string;
     notes: string;
+    procedure?: string;
   }) => Promise<void>;
 }
 
@@ -35,6 +36,7 @@ export function NewAppointmentModal({
     time: '',
     location: '',
     notes: '',
+    procedure: '',
   });
 
   const filteredPatients = patientSearch.length > 0
@@ -73,15 +75,16 @@ export function NewAppointmentModal({
       time: newAppointment.time,
       location: newAppointment.location,
       notes: newAppointment.notes,
+      procedure: newAppointment.procedure,
     });
 
-    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
     setPatientSearch('');
   };
 
   const handleClose = () => {
     setPatientSearch('');
-    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '' });
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
     onClose();
   };
 
@@ -159,6 +162,16 @@ export function NewAppointmentModal({
               onChangeText={(text) => setNewAppointment({ ...newAppointment, time: formatTimeInput(text) })}
               keyboardType="numeric"
               maxLength={5}
+            />
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Procedimento</Text>
+            <TextInput
+              className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900"
+              placeholder="Ex: Limpeza, Exodontia"
+              value={newAppointment.procedure}
+              onChangeText={(text) => setNewAppointment({ ...newAppointment, procedure: text })}
             />
           </View>
 

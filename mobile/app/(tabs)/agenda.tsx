@@ -112,6 +112,7 @@ export default function Agenda() {
         time: string;
         location: string;
         notes: string;
+        procedure?: string;
     }) => {
         try {
             const dateStr = selectedDate.toISOString().split('T')[0];
@@ -122,6 +123,7 @@ export default function Agenda() {
                 status: 'scheduled',
                 location: appointment.location || null,
                 notes: appointment.notes || null,
+                procedure_name: appointment.procedure || null,
             });
 
             setShowModal(false);
@@ -262,6 +264,11 @@ export default function Agenda() {
                                                     </Text>
                                                 </TouchableOpacity>
                                             </View>
+                                            {apt.procedure_name && (
+                                                <Text className="text-gray-700 font-medium text-sm mt-1">
+                                                    {apt.procedure_name}
+                                                </Text>
+                                            )}
                                             {apt.location && (
                                                 <View className="flex-row items-center gap-1 mt-1">
                                                     <MapPin size={12} color="#6B7280" />
