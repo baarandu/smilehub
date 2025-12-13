@@ -284,12 +284,20 @@ export function NewProcedureModal({
   const toggleItemSelection = (itemId: string) => {
     setSelectedItemIds(prev => {
       const isSelected = prev.includes(itemId);
-      let newSelection = isSelected
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId];
 
-      updateFormFromSelection(newSelection);
-      return newSelection;
+      if (isSelected) {
+        // Removing selection - remove from finalized too
+        setFinalizedItemIds(current => current.filter(id => id !== itemId));
+        const newSelection = prev.filter(id => id !== itemId);
+        updateFormFromSelection(newSelection);
+        return newSelection;
+      } else {
+        // Adding selection - Default to FINALIZED
+        setFinalizedItemIds(current => [...current, itemId]);
+        const newSelection = [...prev, itemId];
+        updateFormFromSelection(newSelection);
+        return newSelection;
+      }
     });
   };
 
@@ -728,11 +736,11 @@ export function NewProcedureModal({
                                   className="flex-row items-center ml-8 mb-2 gap-2"
                                   onPress={() => toggleFinalizeItem(item.id)}
                                 >
-                                  <View className={`w-4 h-4 rounded border ${isFinalized ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'} items-center justify-center`}>
-                                    {isFinalized && <Check size={12} color="#FFF" />}
+                                  <View className={`w-4 h-4 rounded border ${!isFinalized ? 'bg-orange-500 border-orange-500' : 'border-gray-300 bg-white'} items-center justify-center`}>
+                                    {!isFinalized && <Check size={12} color="#FFF" />}
                                   </View>
-                                  <Text className={`text-xs ${isFinalized ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
-                                    Finalizar nesta sessão?
+                                  <Text className={`text-xs ${!isFinalized ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                                    Tratamento não finalizado (manter na lista)
                                   </Text>
                                 </TouchableOpacity>
                               )}
