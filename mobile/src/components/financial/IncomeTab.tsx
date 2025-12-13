@@ -363,11 +363,11 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             })()}
                         </View>
 
-                        <ScrollView className="max-h-[400px]">
-                            <View className="p-6 gap-6">
+                        <ScrollView style={{ maxHeight: 400 }}>
+                            <View style={{ padding: 24, gap: 24 }}>
                                 {/* Main Info */}
-                                <View className="gap-4">
-                                    <View className="flex-row items-center gap-3">
+                                <View style={{ gap: 16 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <TrendingUp size={20} color="#374151" />
                                         </View>
@@ -379,7 +379,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </View>
                                     </View>
 
-                                    <View className="flex-row items-center gap-3">
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <MapPin size={20} color="#374151" />
                                         </View>
@@ -391,7 +391,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </View>
                                     </View>
 
-                                    <View className="flex-row items-center gap-3">
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <Calendar size={20} color="#374151" />
                                         </View>
@@ -453,10 +453,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">
                                             Histórico de Parcelas
                                         </Text>
-                                        <View className="gap-3">
+                                        <View style={{ gap: 12 }}>
                                             {relatedInstallments.map((inst, index) => (
-                                                <View key={inst.id} className={`flex-row justify-between items-center p-3 rounded-lg ${inst.id === selectedTransaction?.id ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-                                                    <View className="flex-row items-center gap-3">
+                                                <View key={inst.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: inst.id === selectedTransaction?.id ? '#f0fdf4' : '#f9fafb', borderWidth: inst.id === selectedTransaction?.id ? 1 : 0, borderColor: '#bbf7d0' }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                                         <View className="w-6 h-6 rounded-full bg-white items-center justify-center border border-gray-200">
                                                             <Text className="text-xs text-gray-500">{index + 1}</Text>
                                                         </View>
