@@ -1,0 +1,1 @@
+export { usePatientData } from './usePatientData';
