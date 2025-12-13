@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Settings } from 'lucide-react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, Link } from 'expo-router';
 import { financialService } from '../../src/services/financial';
 import type { FinancialTransaction, FinancialTransactionWithPatient } from '../../src/types/database';
 import { IncomeTab } from '../../src/components/financial/IncomeTab';
@@ -17,7 +17,6 @@ type PeriodType = 'monthly' | 'yearly';
 type TabType = 'income' | 'expenses' | 'closure';
 
 export default function Financial() {
-    const router = useRouter();
     const [transactions, setTransactions] = useState<FinancialTransactionWithPatient[]>([]);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('income');
@@ -98,12 +97,11 @@ export default function Financial() {
                         <Text className="text-gray-500 mt-1">Gestão de caixa</Text>
                     </View>
                     <View className="flex-row gap-2">
-                        <TouchableOpacity
-                            className="bg-gray-100 p-3 rounded-xl border border-gray-200"
-                            onPress={() => router.push('/settings/financial')}
-                        >
-                            <Settings size={20} color="#4B5563" />
-                        </TouchableOpacity>
+                        <Link href="/settings/financial" asChild>
+                            <TouchableOpacity className="bg-gray-100 p-3 rounded-xl border border-gray-200">
+                                <Settings size={20} color="#4B5563" />
+                            </TouchableOpacity>
+                        </Link>
                         <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={() => Alert.alert("Em breve", "Adicionar transação manual")}>
                             <Plus size={20} color="#FFFFFF" />
                         </TouchableOpacity>
