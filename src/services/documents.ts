@@ -124,3 +124,4 @@ export const DOCUMENT_CATEGORIES = [
   { value: 'prescription', label: 'Receita' },
 ] as const;
 
+

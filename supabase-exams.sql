@@ -1,61 +1,64 @@
--- Criar tabela de exames
-CREATE TABLE IF NOT EXISTS exams (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  order_date DATE NOT NULL,
-  exam_date DATE,
-  file_url TEXT,
-  file_type VARCHAR(50),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+-- Create exams table
+create table if not exists public.exams (
+  id uuid default gen_random_uuid() primary key,
+  patient_id uuid references public.patients(id) not null,
+  procedure_id uuid references public.procedures(id),
+  title text not null,
+  date date not null,
+  description text,
+  file_urls text[] not null default '{}',
+  type text not null default 'image',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Índices
-CREATE INDEX IF NOT EXISTS idx_exams_patient_id ON exams(patient_id);
-CREATE INDEX IF NOT EXISTS idx_exams_order_date ON exams(order_date);
-CREATE INDEX IF NOT EXISTS idx_exams_exam_date ON exams(exam_date);
+-- Enable RLS
+alter table public.exams enable row level security;
 
--- RLS Policies
-ALTER TABLE exams ENABLE ROW LEVEL SECURITY;
+-- Create policies
+create policy "Enable read access for authenticated users"
+on public.exams for select
+to authenticated
+using (true);
 
--- Policy: Usuários podem ver todos os exames
-DROP POLICY IF EXISTS "Users can view all exams" ON exams;
-CREATE POLICY "Users can view all exams"
-  ON exams FOR SELECT
-  USING (true);
+create policy "Enable insert access for authenticated users"
+on public.exams for insert
+to authenticated
+with check (true);
 
--- Policy: Usuários podem inserir exames
-DROP POLICY IF EXISTS "Users can insert exams" ON exams;
-CREATE POLICY "Users can insert exams"
-  ON exams FOR INSERT
-  WITH CHECK (true);
+create policy "Enable update access for authenticated users"
+on public.exams for update
+to authenticated
+using (true);
 
--- Policy: Usuários podem atualizar exames
-DROP POLICY IF EXISTS "Users can update exams" ON exams;
-CREATE POLICY "Users can update exams"
-  ON exams FOR UPDATE
-  USING (true)
-  WITH CHECK (true);
+create policy "Enable delete access for authenticated users"
+on public.exams for delete
+to authenticated
+using (true);
 
--- Policy: Usuários podem deletar exames
-DROP POLICY IF EXISTS "Users can delete exams" ON exams;
-CREATE POLICY "Users can delete exams"
-  ON exams FOR DELETE
-  USING (true);
+-- Create storage bucket for exams if not exists
+insert into storage.buckets (id, name, public)
+values ('exams', 'exams', true)
+on conflict (id) do nothing;
 
--- Trigger para updated_at
-CREATE OR REPLACE FUNCTION update_exams_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Storage policies
+create policy "Give users access to own folder 1qoi23_0"
+on storage.objects for select
+to authenticated
+using (bucket_id = 'exams');
 
-DROP TRIGGER IF EXISTS exams_updated_at ON exams;
-CREATE TRIGGER exams_updated_at
-  BEFORE UPDATE ON exams
-  FOR EACH ROW
-  EXECUTE FUNCTION update_exams_updated_at();
+create policy "Give users access to own folder 1qoi23_1"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'exams');
 
+create policy "Give users access to own folder 1qoi23_2"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'exams');
+
+-- Trigger for updated_at
+CREATE TRIGGER handle_exams_updated_at
+BEFORE UPDATE ON public.exams
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_updated_at();

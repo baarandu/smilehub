@@ -1,6 +1,8 @@
 export { EditPatientModal } from './EditPatientModal';
 export { NewAnamneseModal } from './NewAnamneseModal';
+export { AnamneseSummaryModal } from './AnamneseSummaryModal';
 export { NewBudgetModal } from './NewBudgetModal';
 export { PaymentMethodModal } from './PaymentMethodModal';
 export { BudgetViewModal } from './BudgetViewModal';
 export { NewProcedureModal } from './NewProcedureModal';
+export { NewExamModal } from './NewExamModal';

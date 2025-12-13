@@ -79,6 +79,7 @@ export function NewProcedureDialog({
   const [loadingBudgets, setLoadingBudgets] = useState(false);
   const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [finalizedItemIds, setFinalizedItemIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -192,6 +193,15 @@ export function NewProcedureDialog({
     }));
   };
 
+  const toggleFinalizeItem = (itemId: string) => {
+    setFinalizedItemIds(prev => {
+      const isSelected = prev.includes(itemId);
+      return isSelected
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId];
+    });
+  };
+
   const isValidDate = (dateStr: string): boolean => {
     if (!dateStr || dateStr.length !== 10) return false;
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -273,6 +283,49 @@ export function NewProcedureDialog({
           patient_id: patientId,
           ...procedureData,
         });
+
+        // Update Budget Items Status
+        if (selectedItemIds.length > 0) {
+          const itemsByBudget: Record<string, { toothIndex: number; treatment: string }[]> = {};
+
+          approvedItems.filter(item => selectedItemIds.includes(item.id)).forEach(item => {
+            if (!itemsByBudget[item.budgetId]) itemsByBudget[item.budgetId] = [];
+            const parts = item.id.split('_');
+            const toothIndex = parseInt(parts[parts.length - 2]);
+            const treatmentStr = item.treatment;
+
+            if (finalizedItemIds.includes(item.id)) {
+              if (!itemsByBudget[item.budgetId]) itemsByBudget[item.budgetId] = [];
+              itemsByBudget[item.budgetId].push({ toothIndex, treatment: treatmentStr });
+            }
+          });
+
+          for (const [budgetId, itemsToUpdate] of Object.entries(itemsByBudget)) {
+            try {
+              const budget = await budgetsService.getById(budgetId);
+              //@ts-ignore
+              if (budget && budget.notes) {
+                //@ts-ignore
+                const parsed = JSON.parse(budget.notes);
+                let modified = false;
+
+                itemsToUpdate.forEach(({ toothIndex }) => {
+                  if (parsed.teeth && parsed.teeth[toothIndex]) {
+                    parsed.teeth[toothIndex].status = 'completed';
+                    modified = true;
+                  }
+                });
+
+                if (modified) {
+                  await budgetsService.update(budgetId, { notes: JSON.stringify(parsed) });
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to update budget ${budgetId}`, err);
+            }
+          }
+        }
+
         toast.success('Procedimento registrado com sucesso!');
       }
 
@@ -364,23 +417,41 @@ export function NewProcedureDialog({
                 ) : (
                   <div className="max-h-40 overflow-y-auto space-y-2 bg-white p-2 rounded border">
                     {approvedItems.map((item) => (
-                      <div key={item.id} className="flex items-start space-x-2 py-1">
-                        <Checkbox
-                          id={item.id}
-                          checked={selectedItemIds.includes(item.id)}
-                          onCheckedChange={() => toggleItemSelection(item.id)}
-                        />
-                        <div className="grid gap-1.5 leading-none">
-                          <label
-                            htmlFor={item.id}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {item.label}
-                          </label>
-                          <p className="text-xs text-muted-foreground">
-                            R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
+                      <div key={item.id} className="flex flex-col py-1 space-y-1">
+                        <div className="flex items-start space-x-2">
+                          <Checkbox
+                            id={item.id}
+                            checked={selectedItemIds.includes(item.id)}
+                            onCheckedChange={() => toggleItemSelection(item.id)}
+                          />
+                          <div className="grid gap-1.5 leading-none">
+                            <label
+                              htmlFor={item.id}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {item.label}
+                            </label>
+                            <p className="text-xs text-muted-foreground">
+                              R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
                         </div>
+                        {selectedItemIds.includes(item.id) && (
+                          <div className="flex items-center space-x-2 pl-6">
+                            <Checkbox
+                              id={`finalize-${item.id}`}
+                              checked={finalizedItemIds.includes(item.id)}
+                              onCheckedChange={() => toggleFinalizeItem(item.id)}
+                              className="h-3.5 w-3.5"
+                            />
+                            <label
+                              htmlFor={`finalize-${item.id}`}
+                              className="text-xs text-muted-foreground cursor-pointer"
+                            >
+                              Finalizar nesta sessão?
+                            </label>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

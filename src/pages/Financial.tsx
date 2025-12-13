@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Plus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   FilterType,
@@ -9,18 +9,8 @@ import {
   FinancialStatsCards,
   TransactionsList,
 } from '@/components/financial';
-
-// Dados mock temporários - depois integrar com Supabase
-const mockTransactions: Transaction[] = [
-  { id: '1', type: 'income', description: 'Consulta - Maria Silva', amount: 150, date: '2024-12-10', category: 'Consulta' },
-  { id: '2', type: 'income', description: 'Limpeza - João Santos', amount: 200, date: '2024-12-10', category: 'Procedimento' },
-  { id: '3', type: 'expense', description: 'Compra de materiais', amount: 450, date: '2024-12-09', category: 'Materiais' },
-  { id: '4', type: 'income', description: 'Clareamento - Ana Oliveira', amount: 800, date: '2024-11-15', category: 'Procedimento' },
-  { id: '5', type: 'expense', description: 'Conta de luz', amount: 280, date: '2024-11-08', category: 'Despesas Fixas' },
-  { id: '6', type: 'income', description: 'Restauração - Pedro Costa', amount: 350, date: '2024-10-20', category: 'Procedimento' },
-  { id: '7', type: 'expense', description: 'Aluguel', amount: 2500, date: '2024-12-05', category: 'Despesas Fixas' },
-  { id: '8', type: 'income', description: 'Canal - Lucas Mendes', amount: 1200, date: '2024-12-03', category: 'Procedimento' },
-];
+import { financialService } from '@/services/financial';
+import { toast } from 'sonner';
 
 export default function Financial() {
   const [filter, setFilter] = useState<FilterType>('all');
@@ -30,39 +20,51 @@ export default function Financial() {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
 
-  // Calculate period boundaries
-  const getPeriodBoundaries = () => {
-    if (periodType === 'monthly') {
-      const start = new Date(selectedYear, selectedMonth, 1);
-      const end = new Date(selectedYear, selectedMonth + 1, 0);
-      return { start, end };
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load Data
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      let start: Date, end: Date;
+
+      if (periodType === 'monthly') {
+        start = new Date(selectedYear, selectedMonth, 1);
+        end = new Date(selectedYear, selectedMonth + 1, 0);
+      } else {
+        start = new Date(selectedYear, 0, 1);
+        end = new Date(selectedYear, 11, 31);
+      }
+
+      const data = await financialService.getTransactions(start, end);
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error loading financial data:', error);
+      toast.error('Erro ao carregar dados financeiros');
+    } finally {
+      setLoading(false);
     }
-    const start = new Date(selectedYear, 0, 1);
-    const end = new Date(selectedYear, 11, 31);
-    return { start, end };
-  };
+  }, [selectedYear, selectedMonth, periodType]);
 
-  const { start, end } = getPeriodBoundaries();
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // Filter transactions by period
-  const periodTransactions = mockTransactions.filter((t) => {
-    const transactionDate = new Date(t.date);
-    return transactionDate >= start && transactionDate <= end;
-  });
 
   // Calculate totals
-  const totalIncome = periodTransactions
+  const totalIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = periodTransactions
+  const totalExpenses = transactions
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpenses;
 
   // Filter by type
-  const filteredTransactions = periodTransactions.filter((t) => {
+  const filteredTransactions = transactions.filter((t) => {
     if (filter === 'all') return true;
     return t.type === filter;
   });
@@ -84,7 +86,7 @@ export default function Financial() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground mt-1">Controle de receitas e despesas</p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
           <Plus className="w-4 h-4" />
           Nova Transação
         </Button>
@@ -111,11 +113,48 @@ export default function Financial() {
         onFilterClick={handleFilterClick}
       />
 
-      <TransactionsList
-        transactions={filteredTransactions}
-        filter={filter}
-        onClearFilter={() => setFilter('all')}
-      />
+      {/* Revenue by Location Breakdown */}
+      {transactions.some(t => t.type === 'income' && t.location) && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">Receita por Unidade</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Object.entries(transactions
+              .filter(t => t.type === 'income' && t.location)
+              .reduce((acc, t) => {
+                const loc = t.location!;
+                acc[loc] = (acc[loc] || 0) + t.amount;
+                return acc;
+              }, {} as Record<string, number>))
+              .map(([location, amount]) => (
+                <div key={location} className="bg-card rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium mb-1 truncate max-w-[120px]" title={location}>{location}</p>
+                      <p className="text-lg font-bold text-green-600">
+                        {amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      </p>
+                    </div>
+                    <div className="p-2 bg-green-50 rounded-lg">
+                      <MapPin className="w-4 h-4 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center p-8">
+          <span className="text-muted-foreground">Carregando...</span>
+        </div>
+      ) : (
+        <TransactionsList
+          transactions={filteredTransactions}
+          filter={filter}
+          onClearFilter={() => setFilter('all')}
+        />
+      )}
 
       {/* Click outside to close dropdowns */}
       {(showMonthPicker || showYearPicker) && (

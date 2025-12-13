@@ -12,3 +12,4 @@ export const STATUS_CONFIG: Record<string, { label: string; bgColor: string; tex
   cancelled: { label: 'Cancelado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
 };
 
+

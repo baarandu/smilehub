@@ -4,10 +4,14 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Keyb
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Calendar, MapPin, ChevronDown, Check, Square, Info } from 'lucide-react-native';
 import { proceduresService } from '../../services/procedures';
+import { examsService } from '../../services/exams';
 import { locationsService, type Location } from '../../services/locations';
 import { budgetsService } from '../../services/budgets';
 import type { ProcedureInsert, Procedure } from '../../types/database';
 import { getToothDisplayName, type ToothEntry } from './budgetUtils';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { Camera, Image as ImageIcon, FileText, Upload, Trash2 } from 'lucide-react-native';
 
 interface NewProcedureModalProps {
   visible: boolean;
@@ -45,11 +49,64 @@ export function NewProcedureModal({
   });
 
   const [observations, setObservations] = useState('');
+  const [files, setFiles] = useState<{ uri: string; name: string; type: string }[]>([]);
+
+  // File Picker Logic
+  const pickImage = async (useCamera: boolean) => {
+    try {
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+        })
+        : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 0.8,
+          allowsMultipleSelection: true,
+        });
+
+      if (!result.canceled) {
+        const newFiles = result.assets.map(asset => ({
+          uri: asset.uri,
+          name: asset.fileName || `photo_${Date.now()}.jpg`,
+          type: asset.mimeType || 'image/jpeg',
+        }));
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        multiple: true,
+      });
+
+      if (!result.canceled) {
+        const newFiles = result.assets.map((asset: any) => ({
+          uri: asset.uri,
+          name: asset.name,
+          type: asset.mimeType || 'application/octet-stream',
+        }));
+        setFiles(prev => [...prev, ...newFiles]);
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível selecionar o documento');
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Budget Integration State
   const [loadingBudgets, setLoadingBudgets] = useState(false);
   const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [finalizedItemIds, setFinalizedItemIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (visible) {
@@ -78,6 +135,7 @@ export function NewProcedureModal({
         });
         setObservations('');
         setSelectedItemIds([]);
+        setFiles([]);
       }
     }
   }, [visible, procedure?.id]);
@@ -160,6 +218,15 @@ export function NewProcedureModal({
       ...prev,
       value: totalValue > 0 ? totalValue.toFixed(2).replace('.', ',') : prev.value
     }));
+  };
+
+  const toggleFinalizeItem = (itemId: string) => {
+    setFinalizedItemIds(prev => {
+      const isSelected = prev.includes(itemId);
+      return isSelected
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId];
+    });
   };
 
   const formatCurrency = (value: string) => {
@@ -248,22 +315,122 @@ export function NewProcedureModal({
       const procedureData: ProcedureInsert = {
         patient_id: patientId,
         date: dateStr,
-        location: form.location || null,
+        location: form.location || undefined,
         description: finalDescription || '',
         value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) || 0 : 0,
-        payment_method: null, // Removed as per user request (items are already paid)
-        installments: null,
+        payment_method: undefined, // Removed as per user request (items are already paid)
+        installments: undefined,
       };
 
+      let procedureId = procedure?.id;
+
       if (procedure) {
-        await proceduresService.update(procedure.id, {
+        const updated = await proceduresService.update(procedure.id, {
           ...procedureData,
-          description: observations || null, // In edit, use observations as the full description
+          description: observations || null,
         });
+        procedureId = updated.id;
         Alert.alert('Sucesso', 'Procedimento atualizado!');
       } else {
-        await proceduresService.create(procedureData);
+        const created = await proceduresService.create(procedureData);
+        procedureId = created.id;
+
+        // Update Budget Items Status
+        if (selectedItemIds.length > 0) {
+          // Group selected items by budget
+          const itemsByBudget: Record<string, { toothIndex: number; treatment: string }[]> = {};
+
+          approvedItems.filter(item => selectedItemIds.includes(item.id)).forEach(item => {
+            if (!itemsByBudget[item.budgetId]) itemsByBudget[item.budgetId] = [];
+            // item.id format: `${budget.id}_${toothIndex}_${treatmentIndex}`
+            // We need to parse back or perform lookup. 
+            // Wait, item object already has budgetId. But approvedItems doesn't have indices explicitly separate? 
+            // Ah, 'id' is composite. Let's rely on re-fetching or using the composite ID logic.
+            // Better: The 'approvedItems' state already we populated has budgetId. 
+            // We need references to toothIndex and treatmentIndex. 
+            // I will update the ApprovedItemOption interface to carry these indices for easier processing.
+            // Assuming I can't easily change the interface right now without breaking loadApprovedItems, 
+            // let's parse the ID which is `${budget.id}_${toothIndex}_${treatmentIndex}`.
+            const parts = item.id.split('_');
+            // parts[0] is budgetId (might contain underscores... caution). 
+            // Actually budget UUIDs shouldn't have underscores if standard, but hyphens.
+            // Let's use the stored budgetId in item option to be safe, and parse the tail.
+            // The ID generation was: `${budget.id}_${toothIndex}_${treatmentIndex}`. 
+            // Let's assume budgetId is everything before the last two underscores.
+            // Safe way: split by underscore, last is treatmentIndex, second last is toothIndex.
+            const toothIndex = parseInt(parts[parts.length - 2]);
+            const treatmentStr = item.treatment; // We have this in item option
+
+            // Only mark as finalized if user checked "Finalizar"
+            if (finalizedItemIds.includes(item.id)) {
+              if (!itemsByBudget[item.budgetId]) itemsByBudget[item.budgetId] = [];
+              itemsByBudget[item.budgetId].push({ toothIndex, treatment: treatmentStr });
+            }
+          });
+
+          // Process updates per budget
+          for (const [budgetId, itemsToUpdate] of Object.entries(itemsByBudget)) {
+            try {
+              const budget = await budgetsService.getById(budgetId);
+              if (budget && budget.notes) {
+                const parsed = JSON.parse(budget.notes);
+                let modified = false;
+
+                itemsToUpdate.forEach(({ toothIndex, treatment }) => {
+                  if (parsed.teeth && parsed.teeth[toothIndex]) {
+                    // Logic: If a tooth has multiple treatments, 'status' is per tooth, BUT our requirement is per item?
+                    // The user said: "os que ja forem finalizados... devem sair da lista de procediments pagos e irem pra lista de procediemtos concluído"
+                    // The ToothEntry has a single 'status' field for the whole tooth/entry.
+                    // If the ToothEntry has multiple treatments (e.g. Canal + Bloco), can we finalize just one?
+                    // The current structure: `status: 'pending' | 'approved' | 'paid' | 'completed'` on the ToothEntry.
+                    // This implies status is atomic per Tooth Entry (set of treatments on a tooth).
+                    // If we have multiple treatments on the same tooth entry, they share status.
+                    // So if we finalize, we finalize the whole Entry.
+                    // Let's proceed with that assumption: Changing status of the ToothEntry to 'completed'.
+
+                    parsed.teeth[toothIndex].status = 'completed';
+                    modified = true;
+                  }
+                });
+
+                if (modified) {
+                  await budgetsService.update(budgetId, { notes: JSON.stringify(parsed) });
+                }
+              }
+            } catch (err) {
+              console.error(`Failed to update budget ${budgetId}`, err);
+            }
+          }
+        }
+
         Alert.alert('Sucesso', 'Procedimento registrado!');
+      }
+
+      // Handle Attachments
+      if (files.length > 0 && procedureId) {
+        try {
+          const uploadedUrls = [];
+          for (const file of files) {
+            const url = await examsService.uploadFile(file);
+            uploadedUrls.push(url);
+          }
+          if (uploadedUrls.length > 0) {
+            await examsService.create({
+              patient_id: patientId,
+              procedure_id: procedureId,
+              title: 'Anexos do Procedimento',
+              name: 'Anexos do Procedimento',
+              date: procedureData.date,
+              order_date: procedureData.date,
+              description: `Arquivos anexados ao procedimento`,
+              file_urls: uploadedUrls,
+              type: 'exam'
+            });
+          }
+        } catch (e) {
+          console.error('Error uploading attachments', e);
+          Alert.alert('Aviso', 'Procedimento salvo, mas houve erro ao salvar anexos.');
+        }
       }
       onSuccess();
       onClose();
@@ -358,6 +525,55 @@ export function NewProcedureModal({
                 )}
               </View>
 
+              <View>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Anexos ({files.length})</Text>
+
+                {/* Action Buttons */}
+                <View className="flex-row gap-2 mb-4">
+                  <TouchableOpacity
+                    onPress={() => pickImage(false)}
+                    className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
+                  >
+                    <ImageIcon size={20} color="#0D9488" className="mb-1" />
+                    <Text className="text-xs text-gray-700 font-medium">Galeria</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => pickImage(true)}
+                    className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
+                  >
+                    <Camera size={20} color="#0D9488" className="mb-1" />
+                    <Text className="text-xs text-gray-700 font-medium">Câmera</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={pickDocument}
+                    className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
+                  >
+                    <FileText size={20} color="#0D9488" className="mb-1" />
+                    <Text className="text-xs text-gray-700 font-medium">Arquivo</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* File List */}
+                {files.length > 0 && (
+                  <View className="gap-2 mb-4">
+                    {files.map((file, index) => (
+                      <View key={index} className="flex-row items-center bg-white p-3 rounded-xl border border-gray-200">
+                        <View className="w-8 h-8 rounded bg-gray-100 items-center justify-center mr-3">
+                          <FileText size={16} color="#6B7280" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-xs font-medium text-gray-900" numberOfLines={1}>{file.name}</Text>
+                          <Text className="text-[10px] text-gray-500">{file.type}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => removeFile(index)} className="p-2">
+                          <Trash2 size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+
               {!procedure && (
                 <View className="bg-white border border-gray-200 rounded-xl p-4">
                   <View className="flex-row items-center justify-between mb-3">
@@ -375,30 +591,45 @@ export function NewProcedureModal({
                       <ScrollView nestedScrollEnabled>
                         {approvedItems.map((item) => {
                           const isSelected = selectedItemIds.includes(item.id);
+                          const isFinalized = finalizedItemIds.includes(item.id);
                           return (
-                            <TouchableOpacity
-                              key={item.id}
-                              className="flex-row items-start py-2 border-b border-gray-50 last:border-0"
-                              onPress={() => toggleItemSelection(item.id)}
-                            >
-                              <View className="mt-0.5 mr-3">
-                                {isSelected ? (
-                                  <View className="bg-teal-500 rounded-sm">
-                                    <Check size={16} color="#FFF" />
+                            <View key={item.id} className="border-b border-gray-50 last:border-0">
+                              <TouchableOpacity
+                                className="flex-row items-start py-2"
+                                onPress={() => toggleItemSelection(item.id)}
+                              >
+                                <View className="mt-0.5 mr-3">
+                                  {isSelected ? (
+                                    <View className="bg-teal-500 rounded-sm">
+                                      <Check size={16} color="#FFF" />
+                                    </View>
+                                  ) : (
+                                    <Square size={18} color="#D1D5DB" />
+                                  )}
+                                </View>
+                                <View className="flex-1">
+                                  <Text className={`text-sm ${isSelected ? 'text-teal-900 font-medium' : 'text-gray-700'}`}>
+                                    {item.label}
+                                  </Text>
+                                  <Text className="text-xs text-gray-500 mt-0.5">
+                                    R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </Text>
+                                </View>
+                              </TouchableOpacity>
+                              {isSelected && (
+                                <TouchableOpacity
+                                  className="flex-row items-center ml-8 mb-2 gap-2"
+                                  onPress={() => toggleFinalizeItem(item.id)}
+                                >
+                                  <View className={`w-4 h-4 rounded border ${isFinalized ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'} items-center justify-center`}>
+                                    {isFinalized && <Check size={12} color="#FFF" />}
                                   </View>
-                                ) : (
-                                  <Square size={18} color="#D1D5DB" />
-                                )}
-                              </View>
-                              <View className="flex-1">
-                                <Text className={`text-sm ${isSelected ? 'text-teal-900 font-medium' : 'text-gray-700'}`}>
-                                  {item.label}
-                                </Text>
-                                <Text className="text-xs text-gray-500 mt-0.5">
-                                  R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </Text>
-                              </View>
-                            </TouchableOpacity>
+                                  <Text className={`text-xs ${isFinalized ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>
+                                    Finalizar nesta sessão?
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
                           );
                         })}
                       </ScrollView>

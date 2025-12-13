@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Phone, Mail, MapPin, Heart, FileText, Calendar, Trash2, CreditCard, Upload, Edit3, Hospital, ClipboardList, Plus, Calculator, Banknote, CheckCircle, Clock } from 'lucide-react-native';
@@ -8,21 +8,29 @@ import { appointmentsService } from '../../src/services/appointments';
 import { anamnesesService } from '../../src/services/anamneses';
 import { proceduresService } from '../../src/services/procedures';
 import { budgetsService } from '../../src/services/budgets';
-import { EditPatientModal, NewAnamneseModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal } from '../../src/components/patients';
+import { documentsService } from '../../src/services/documents';
+import { financialService } from '../../src/services/financial';
+import { examsService } from '../../src/services/exams';
+import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
-import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems, Procedure } from '../../src/types/database';
+import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
+import * as Linking from 'expo-linking';
+import { Image } from 'react-native';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
 export default function PatientDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const isMounted = useRef(true);
     const [patient, setPatient] = useState<Patient | null>(null);
     const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('anamnese');
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
+    const [showAnamneseSummaryModal, setShowAnamneseSummaryModal] = useState(false);
+    const [summaryAnamnese, setSummaryAnamnese] = useState<Anamnese | null>(null);
     const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [anamneses, setAnamneses] = useState<Anamnese[]>([]);
     const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
@@ -35,6 +43,14 @@ export default function PatientDetail() {
     const [procedures, setProcedures] = useState<Procedure[]>([]);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
     const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
+    const [exams, setExams] = useState<Exam[]>([]);
+    const [showExamModal, setShowExamModal] = useState(false);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
+    }, []);
 
     useEffect(() => {
         if (id) {
@@ -43,19 +59,29 @@ export default function PatientDetail() {
             loadAnamneses();
             loadBudgets();
             loadProcedures();
+            loadExams();
         }
     }, [id]);
 
     const loadPatient = async () => {
         try {
-            setLoading(true);
+            if (isMounted.current) setLoading(true);
             const data = await getPatientById(id!);
-            setPatient(data);
+            if (isMounted.current) setPatient(data);
         } catch (error) {
             console.error('Error loading patient:', error);
-            Alert.alert('Erro', 'Não foi possível carregar os dados do paciente');
+            if (isMounted.current) Alert.alert('Erro', 'Não foi possível carregar os dados do paciente');
         } finally {
-            setLoading(false);
+            if (isMounted.current) setLoading(false);
+        }
+    };
+
+    const loadExams = async () => {
+        try {
+            const data = await examsService.getByPatient(id!);
+            if (isMounted.current) setExams(data);
+        } catch (error) {
+            console.error('Error loading exams:', error);
         }
     };
 
@@ -108,6 +134,11 @@ export default function PatientDetail() {
                 },
             ]
         );
+    };
+
+    const handleViewAnamnese = (anamnese: Anamnese) => {
+        setSummaryAnamnese(anamnese);
+        setShowAnamneseSummaryModal(true);
     };
 
     const loadBudgets = async () => {
@@ -236,18 +267,40 @@ export default function PatientDetail() {
             const parsed = JSON.parse(budget.notes);
             if (!parsed.teeth) return;
 
-            // Update the tooth entry with payment info
+            // Retrieve location from budget notes
+            const budgetLocation = parsed.location || null;
+
+            const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
+
+            // 1. Update the tooth entry with payment info
             parsed.teeth[selectedPaymentItem.toothIndex] = {
-                ...parsed.teeth[selectedPaymentItem.toothIndex],
+                ...selectedTooth,
                 status: 'paid',
                 paymentMethod: method,
                 paymentInstallments: installments,
                 paymentDate: new Date().toISOString().split('T')[0],
+                location: budgetLocation // Save location to item as snapshot
             };
 
-            // Save updated budget
+            // 2. Save updated budget
             await budgetsService.update(selectedPaymentItem.budgetId, {
                 notes: JSON.stringify(parsed),
+            });
+
+            // 3. Create Financial Transaction (Income)
+            // Calculate total for this item
+            const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: any) => acc + (parseInt(val) || 0), 0) / 100;
+            const description = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+
+            await financialService.create({
+                type: 'income',
+                amount: itemTotal,
+                description: description,
+                category: 'Procedimento', // or 'Tratamento'
+                date: new Date().toISOString().split('T')[0],
+                location: budgetLocation,
+                patient_id: patient?.id,
+                related_entity_id: budget.id
             });
 
             Alert.alert('Sucesso', 'Pagamento registrado com sucesso!');
@@ -471,9 +524,11 @@ export default function PatientDetail() {
                             </View>
                             {anamneses.length > 0 ? (
                                 <View>
-                                    {anamneses.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((anamnese) => (
-                                        <View
+                                    {anamneses.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((anamnese) => (
+                                        <TouchableOpacity
                                             key={anamnese.id}
+                                            onPress={() => handleViewAnamnese(anamnese)}
+                                            activeOpacity={0.7}
                                             className="p-4 border-b border-gray-50"
                                         >
                                             <View className="flex-row items-center justify-between mb-2">
@@ -482,13 +537,19 @@ export default function PatientDetail() {
                                                 </Text>
                                                 <View className="flex-row gap-2">
                                                     <TouchableOpacity
-                                                        onPress={() => handleEditAnamnese(anamnese)}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditAnamnese(anamnese);
+                                                        }}
                                                         className="bg-teal-50 p-2 rounded-lg"
                                                     >
                                                         <Edit3 size={16} color="#0D9488" />
                                                     </TouchableOpacity>
                                                     <TouchableOpacity
-                                                        onPress={() => handleDeleteAnamnese(anamnese)}
+                                                        onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteAnamnese(anamnese);
+                                                        }}
                                                         className="bg-red-50 p-2 rounded-lg"
                                                     >
                                                         <Trash2 size={16} color="#EF4444" />
@@ -529,7 +590,7 @@ export default function PatientDetail() {
                                                         </View>
                                                     )}
                                             </View>
-                                        </View>
+                                        </TouchableOpacity>
                                     ))}
                                 </View>
                             ) : (
@@ -573,7 +634,7 @@ export default function PatientDetail() {
                             </View>
                             {budgets.length > 0 ? (
                                 <View>
-                                    {budgets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((budget) => {
+                                    {budgets.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((budget) => {
                                         const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
                                             pending: { label: 'Pendente', bgColor: 'bg-amber-100', textColor: 'text-amber-700' },
                                             approved: { label: 'Aprovado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
@@ -685,7 +746,7 @@ export default function PatientDetail() {
                             </View>
                             {procedures.length > 0 ? (
                                 <View>
-                                    {procedures.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((procedure) => (
+                                    {procedures.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((procedure) => (
                                         <View
                                             key={procedure.id}
                                             className="p-4 border-b border-gray-50 bg-white"
@@ -812,6 +873,32 @@ export default function PatientDetail() {
                                                     </View>
                                                 )}
                                             </View>
+
+                                            {/* Attached Exams */}
+                                            {(() => {
+                                                const procedureExams = exams.filter(e => e.procedure_id === procedure.id);
+                                                if (procedureExams.length === 0) return null;
+                                                return (
+                                                    <View className="mt-3 pt-3 border-t border-gray-100">
+                                                        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Anexos</Text>
+                                                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                            <View className="flex-row gap-2">
+                                                                {procedureExams.flatMap(exam =>
+                                                                    (exam.file_urls || []).map((url, idx) => (
+                                                                        <TouchableOpacity
+                                                                            key={`${exam.id}-${idx}`}
+                                                                            onPress={() => setPreviewImage(url)}
+                                                                            className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden border border-gray-200"
+                                                                        >
+                                                                            <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
+                                                                        </TouchableOpacity>
+                                                                    ))
+                                                                )}
+                                                            </View>
+                                                        </ScrollView>
+                                                    </View>
+                                                );
+                                            })()}
                                         </View>
                                     ))}
                                 </View>
@@ -852,6 +939,64 @@ export default function PatientDetail() {
                 )}
 
                 {/* Payments Tab */}
+                {activeTab === 'exams' && (
+                    <View className="mx-4 mb-4 gap-4">
+                        <View className="flex-row justify-between items-center mb-2">
+                            <Text className="text-sm text-gray-500">Exames e Documentos</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowExamModal(true)}
+                                className="bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 flex-row items-center gap-1"
+                            >
+                                <Plus size={14} color="#0D9488" />
+                                <Text className="text-teal-700 text-xs font-medium">Adicionar</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {exams.length === 0 ? (
+                            <View className="bg-white p-8 rounded-xl items-center border border-gray-100 border-dashed">
+                                <Upload size={32} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-2">Nenhum exame anexado</Text>
+                            </View>
+                        ) : (
+                            exams.map(exam => (
+                                <View key={exam.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">
+                                    <View className="flex-row justify-between items-start mb-2">
+                                        <View className="flex-1">
+                                            <Text className="font-semibold text-gray-900">{exam.title}</Text>
+                                            <Text className="text-gray-500 text-xs">
+                                                {new Date(exam.date).toLocaleDateString('pt-BR')}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    {exam.description ? (
+                                        <Text className="text-gray-600 text-sm mb-3">{exam.description}</Text>
+                                    ) : null}
+
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-2">
+                                        {exam.file_urls && exam.file_urls.map((url, idx) => {
+                                            console.log('[ExamDisplay] Rendering image URL:', url);
+                                            return (
+                                                <TouchableOpacity
+                                                    key={idx}
+                                                    onPress={() => setPreviewImage(url)}
+                                                    style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: '#f3f4f6', overflow: 'hidden', borderWidth: 1, borderColor: '#e5e7eb', marginRight: 8 }}
+                                                >
+                                                    <Image
+                                                        source={{ uri: url }}
+                                                        style={{ width: 80, height: 80 }}
+                                                        resizeMode="cover"
+                                                        onError={(e) => console.log('[ExamDisplay] Image error:', e.nativeEvent.error, 'URL:', url)}
+                                                    />
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </View>
+                            ))
+                        )}
+                    </View>
+                )}
+
                 {activeTab === 'payments' && (() => {
                     const paymentItems = getAllPaymentItems();
                     const pendingItems = paymentItems
@@ -1010,6 +1155,16 @@ export default function PatientDetail() {
                 anamnese={selectedAnamnese}
             />
 
+            {/* Anamnese Summary Modal */}
+            <AnamneseSummaryModal
+                visible={showAnamneseSummaryModal}
+                anamnese={summaryAnamnese}
+                onClose={() => {
+                    setShowAnamneseSummaryModal(false);
+                    setSummaryAnamnese(null);
+                }}
+            />
+
             {/* New Budget Modal */}
             <NewBudgetModal
                 visible={showBudgetModal}
@@ -1055,9 +1210,54 @@ export default function PatientDetail() {
                     setShowProcedureModal(false);
                     setSelectedProcedure(null);
                 }}
-                onSuccess={loadProcedures}
+                onSuccess={() => {
+                    loadProcedures();
+                    loadExams(); // procedures might add exams
+                }}
                 procedure={selectedProcedure}
             />
+
+            <NewExamModal
+                visible={showExamModal}
+                patientId={id!}
+                onClose={() => setShowExamModal(false)}
+                onSuccess={loadExams}
+            />
+
+            {/* Image Preview Modal */}
+            <Modal
+                visible={!!previewImage}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setPreviewImage(null)}
+            >
+                <View style={{ flex: 1, backgroundColor: '#000' }}>
+                    <TouchableOpacity
+                        style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 30 }}
+                        onPress={() => setPreviewImage(null)}
+                    >
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+                        activeOpacity={1}
+                        onPress={() => setPreviewImage(null)}
+                    >
+                        <ActivityIndicator size="large" color="#fff" style={{ position: 'absolute' }} />
+                        {previewImage && (
+                            <Image
+                                source={{ uri: previewImage }}
+                                style={{
+                                    width: Dimensions.get('window').width,
+                                    height: Dimensions.get('window').height - 100
+                                }}
+                                resizeMode="contain"
+                                onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+                            />
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }

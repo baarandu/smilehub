@@ -39,17 +39,18 @@ export const TREATMENTS_WITH_MATERIAL = ['Bloco', 'Coroa', 'Faceta'];
 export const TREATMENTS_WITH_DESCRIPTION = ['Outros'];
 
 // Estrutura de cada dente com seus tratamentos
-export interface ToothEntry {
+export type ToothEntry = {
     tooth: string;
-    faces: string[];
     treatments: string[];
     values: Record<string, string>;
-    materials: Record<string, string>;
-    status: 'pending' | 'approved' | 'paid';
-    paymentMethod?: 'cash' | 'credit' | 'debit' | 'pix';
+    materials?: Record<string, string>;
+    faces?: string[];
+    status: 'pending' | 'approved' | 'paid' | 'completed';
+    paymentMethod?: string;
     paymentInstallments?: number;
     paymentDate?: string;
-}
+    location?: string;
+};
 
 // Helper to get short tooth ID for database (max 10 chars)
 export const getShortToothId = (tooth: string): string => {

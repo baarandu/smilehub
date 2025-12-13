@@ -360,16 +360,58 @@ export interface Database {
         }
       }
     }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
+    financial_transactions: {
+      Row: {
+        id: string
+        type: 'income' | 'expense'
+        amount: number
+        description: string
+        category: string
+        date: string
+        location: string | null
+        patient_id: string | null
+        related_entity_id: string | null
+        created_at: string
+        updated_at: string
+      }
+      Insert: {
+        id?: string
+        type: 'income' | 'expense'
+        amount: number
+        description: string
+        category: string
+        date: string
+        location?: string | null
+        patient_id?: string | null
+        related_entity_id?: string | null
+        created_at?: string
+        updated_at?: string
+      }
+      Update: {
+        id?: string
+        type?: 'income' | 'expense'
+        amount?: number
+        description?: string
+        category?: string
+        date?: string
+        location?: string | null
+        patient_id?: string | null
+        related_entity_id?: string | null
+        created_at?: string
+        updated_at?: string
+      }
     }
   }
+  Views: {
+    [_ in never]: never
+  }
+  Functions: {
+    [_ in never]: never
+  }
+  Enums: {
+    appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
+  }
+}
 }
 
 // Helper types for easier usage
@@ -400,6 +442,10 @@ export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
 export type BudgetItem = Database['public']['Tables']['budget_items']['Row']
 export type BudgetItemInsert = Database['public']['Tables']['budget_items']['Insert']
 export type BudgetItemUpdate = Database['public']['Tables']['budget_items']['Update']
+
+export type FinancialTransaction = Database['public']['Tables']['financial_transactions']['Row']
+export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
+export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]

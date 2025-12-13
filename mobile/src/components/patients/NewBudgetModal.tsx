@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Keyb
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Plus, ChevronDown, Check } from 'lucide-react-native';
 import { budgetsService } from '../../services/budgets';
+import { locationsService, type Location } from '../../services/locations';
 import type { BudgetInsert, BudgetWithItems } from '../../types/database';
 import {
     FACES,
@@ -40,6 +41,11 @@ export function NewBudgetModal({
 
     // Form state
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [location, setLocation] = useState('');
+
+    // Locations
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
 
     // Current tooth being edited
     const [selectedTooth, setSelectedTooth] = useState<string>('');
@@ -53,6 +59,7 @@ export function NewBudgetModal({
 
     useEffect(() => {
         if (visible) {
+            loadLocations();
             if (budget) {
                 setDate(budget.date);
                 // Parse budget items from notes
@@ -65,6 +72,10 @@ export function NewBudgetModal({
                                 ...t,
                                 status: t.status || 'pending',
                             })));
+                        }
+                        // Load location if available
+                        if (parsed.location) {
+                            setLocation(parsed.location);
                         }
                     } catch {
                         // Backwards compatibility
@@ -84,8 +95,18 @@ export function NewBudgetModal({
         }
     }, [visible, budget?.id]);
 
+    const loadLocations = async () => {
+        try {
+            const data = await locationsService.getAll();
+            setLocations(data);
+        } catch (error) {
+            console.error('Error loading locations:', error);
+        }
+    };
+
     const resetForm = () => {
         setDate(new Date().toISOString().split('T')[0]);
+        setLocation('');
         setTeethList([]);
         resetCurrentTooth();
     };
@@ -269,6 +290,11 @@ export function NewBudgetModal({
             return;
         }
 
+        if (!location) {
+            Alert.alert('Atenção', 'Selecione um local de atendimento');
+            return;
+        }
+
         try {
             setSaving(true);
 
@@ -278,12 +304,13 @@ export function NewBudgetModal({
             // Store complete teeth data in notes as JSON
             const notesData = JSON.stringify({
                 teeth: teethList,
+                location: location, // Save location here
             });
 
             // Create budget items for database (use short IDs)
             const budgetItems = teethList.map(t => ({
                 tooth: getShortToothId(t.tooth),
-                faces: t.faces,
+                faces: t.faces || [],
             }));
 
             const budgetData: BudgetInsert = {
@@ -330,9 +357,9 @@ export function NewBudgetModal({
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
-                        {/* Date Field */}
+                        {/* Date Field & Location */}
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-4">
+                            <View className="p-4 border-b border-gray-50">
                                 <Text className="text-gray-900 font-medium mb-2">Data do Orçamento *</Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
@@ -343,6 +370,48 @@ export function NewBudgetModal({
                                     keyboardType="numeric"
                                     maxLength={10}
                                 />
+                            </View>
+
+                            <View className="p-4">
+                                <Text className="text-gray-900 font-medium mb-2">Local de Atendimento *</Text>
+                                {!showLocationPicker ? (
+                                    <TouchableOpacity
+                                        onPress={() => setShowLocationPicker(true)}
+                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
+                                    >
+                                        <Text className={location ? 'text-gray-900' : 'text-gray-400'}>
+                                            {location || 'Selecione o local'}
+                                        </Text>
+                                        <ChevronDown size={20} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                                        <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                                            <Text className="font-medium text-gray-700">Selecione o local</Text>
+                                            <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
+                                                <X size={20} color="#6B7280" />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <TouchableOpacity
+                                            onPress={() => { setLocation(''); setShowLocationPicker(false); }}
+                                            className="p-3 border-b border-gray-100"
+                                        >
+                                            <Text className="text-gray-500">Nenhum local</Text>
+                                        </TouchableOpacity>
+                                        {locations.map((loc, index) => (
+                                            <TouchableOpacity
+                                                key={loc.id}
+                                                onPress={() => {
+                                                    setLocation(loc.name);
+                                                    setShowLocationPicker(false);
+                                                }}
+                                                className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                                            >
+                                                <Text className="font-medium text-gray-900">{loc.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
                         </View>
 

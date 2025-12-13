@@ -58,9 +58,8 @@ function TransactionItem({ transaction, index }: TransactionItemProps) {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            isIncome ? 'bg-success/10' : 'bg-destructive/10'
-          }`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isIncome ? 'bg-success/10' : 'bg-destructive/10'
+            }`}>
             {isIncome ? (
               <ArrowUpRight className="w-5 h-5 text-success" />
             ) : (
@@ -71,6 +70,7 @@ function TransactionItem({ transaction, index }: TransactionItemProps) {
             <p className="font-medium text-foreground">{transaction.description}</p>
             <p className="text-sm text-muted-foreground">
               {transaction.category} • {new Date(transaction.date).toLocaleDateString('pt-BR')}
+              {transaction.location && ` • ${transaction.location}`}
             </p>
           </div>
         </div>
@@ -81,4 +81,5 @@ function TransactionItem({ transaction, index }: TransactionItemProps) {
     </div>
   );
 }
+
 

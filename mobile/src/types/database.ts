@@ -359,6 +359,91 @@ export interface Database {
           created_at?: string
         }
       }
+      exams: {
+        Row: {
+          id: string
+          patient_id: string
+          procedure_id: string | null
+          title: string
+          name: string
+          date: string
+          order_date: string
+          description: string | null
+          file_urls: string[]
+          type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          procedure_id?: string | null
+          title: string
+          name: string
+          date: string
+          order_date: string
+          description?: string | null
+          file_urls?: string[]
+          type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          procedure_id?: string | null
+          title?: string
+          name?: string
+          date?: string
+          order_date?: string
+          description?: string | null
+          file_urls?: string[]
+          type?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      financial_transactions: {
+        Row: {
+          id: string
+          type: 'income' | 'expense'
+          amount: number
+          description: string
+          category: string
+          date: string
+          location: string | null
+          patient_id: string | null
+          related_entity_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          type: 'income' | 'expense'
+          amount: number
+          description: string
+          category: string
+          date: string
+          location?: string | null
+          patient_id?: string | null
+          related_entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          type?: 'income' | 'expense'
+          amount?: number
+          description?: string
+          category?: string
+          date?: string
+          location?: string | null
+          patient_id?: string | null
+          related_entity_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -400,6 +485,14 @@ export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
 export type BudgetItem = Database['public']['Tables']['budget_items']['Row']
 export type BudgetItemInsert = Database['public']['Tables']['budget_items']['Insert']
 export type BudgetItemUpdate = Database['public']['Tables']['budget_items']['Update']
+
+export type FinancialTransaction = Database['public']['Tables']['financial_transactions']['Row']
+export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
+export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
+
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type ExamInsert = Database['public']['Tables']['exams']['Insert']
+export type ExamUpdate = Database['public']['Tables']['exams']['Update']
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]

@@ -13,5 +13,6 @@ export { NewProcedureDialog } from './NewProcedureDialog';
 export { ExamsTab } from './ExamsTab';
 export { NewExamDialog } from './NewExamDialog';
 export { AnamneseTab } from './AnamneseTab';
+export { AnamneseSummaryDialog } from './AnamneseSummaryDialog';
 export { BudgetsTab } from './BudgetsTab';
 

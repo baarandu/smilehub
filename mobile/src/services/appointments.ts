@@ -22,7 +22,7 @@ export const appointmentsService = {
       .order('time');
 
     if (error) throw error;
-    return data || [];
+    return (data as unknown as AppointmentWithPatient[]) || [];
   },
 
   async getToday(): Promise<AppointmentWithPatient[]> {
@@ -49,19 +49,19 @@ export const appointmentsService = {
       .lte('date', endDate);
 
     if (error) throw error;
-    const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
+    const uniqueDates = [...new Set((data as any[])?.map(a => a.date) || [])];
     return uniqueDates;
   },
 
   async create(appointment: AppointmentInsert): Promise<Appointment> {
     const { data, error } = await supabase
       .from('appointments')
-      .insert(appointment)
+      .insert(appointment as any)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Appointment;
   },
 
   async getByPatient(patientId: string): Promise<AppointmentWithPatient[]> {
@@ -76,19 +76,18 @@ export const appointmentsService = {
       .order('time', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data as unknown as AppointmentWithPatient[]) || [];
   },
 
   async update(id: string, updates: Partial<AppointmentInsert>): Promise<Appointment> {
     const { data, error } = await supabase
       .from('appointments')
-      .update(updates)
+      .update(updates as any)
       .eq('id', id)
       .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Appointment;
   }
 };
-

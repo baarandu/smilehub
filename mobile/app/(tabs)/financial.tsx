@@ -1,18 +1,10 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight, ChevronDown, X } from 'lucide-react-native';
-
-const mockTransactions = [
-    { id: '1', type: 'income', description: 'Consulta - Maria Silva', amount: 150, date: '2024-12-10' },
-    { id: '2', type: 'income', description: 'Limpeza - João Santos', amount: 200, date: '2024-12-10' },
-    { id: '3', type: 'expense', description: 'Compra de materiais', amount: 450, date: '2024-12-09' },
-    { id: '4', type: 'income', description: 'Clareamento - Ana Oliveira', amount: 800, date: '2024-11-15' },
-    { id: '5', type: 'expense', description: 'Conta de luz', amount: 280, date: '2024-11-08' },
-    { id: '6', type: 'income', description: 'Restauração - Pedro Costa', amount: 350, date: '2024-10-20' },
-    { id: '7', type: 'expense', description: 'Aluguel', amount: 2500, date: '2024-12-05' },
-    { id: '8', type: 'income', description: 'Canal - Lucas Mendes', amount: 1200, date: '2024-12-03' },
-];
+import { DollarSign, TrendingUp, TrendingDown, Plus, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight, ChevronDown, X, MapPin } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
+import { financialService } from '../../src/services/financial';
+import type { FinancialTransaction } from '../../src/types/database';
 
 type FilterType = 'all' | 'income' | 'expense';
 type PeriodType = 'monthly' | 'yearly';
@@ -23,71 +15,77 @@ const MONTHS = [
 ];
 
 export default function Financial() {
+    const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Filters
     const [filter, setFilter] = useState<FilterType>('all');
     const [periodType, setPeriodType] = useState<PeriodType>('monthly');
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // UI State
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [showYearPicker, setShowYearPicker] = useState(false);
 
-    const getPeriodBoundaries = () => {
-        if (periodType === 'monthly') {
-            const start = new Date(selectedYear, selectedMonth, 1);
-            const end = new Date(selectedYear, selectedMonth + 1, 0);
-            return { start, end };
-        } else {
-            const start = new Date(selectedYear, 0, 1);
-            const end = new Date(selectedYear, 11, 31);
-            return { start, end };
+    // Data Loading
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            let start: Date, end: Date;
+
+            if (periodType === 'monthly') {
+                start = new Date(selectedYear, selectedMonth, 1);
+                end = new Date(selectedYear, selectedMonth + 1, 0);
+            } else {
+                start = new Date(selectedYear, 0, 1);
+                end = new Date(selectedYear, 11, 31);
+            }
+
+            // Adjust for timezone if needed, simple approach for now
+            const data = await financialService.getTransactions(start, end);
+            setTransactions(data);
+        } catch (error) {
+            console.error('Error loading financial data:', error);
+            Alert.alert('Erro', 'Não foi possível carregar os dados financeiros');
+        } finally {
+            setLoading(false);
         }
-    };
+    }, [selectedYear, selectedMonth, periodType]);
 
-    const { start, end } = getPeriodBoundaries();
+    useFocusEffect(
+        useCallback(() => {
+            loadData();
+        }, [loadData])
+    );
 
-    const periodTransactions = mockTransactions.filter((t) => {
-        const transactionDate = new Date(t.date);
-        return transactionDate >= start && transactionDate <= end;
-    });
-
-    const totalIncome = periodTransactions
+    // Calculations
+    const totalIncome = transactions
         .filter((t) => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalExpenses = periodTransactions
+    const totalExpenses = transactions
         .filter((t) => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
 
     const balance = totalIncome - totalExpenses;
 
-    const filteredTransactions = periodTransactions.filter((t) => {
+    // Local Filtering (Client side for now, can be server side later)
+    const filteredTransactions = transactions.filter((t) => {
         if (filter === 'all') return true;
         return t.type === filter;
     });
 
+    // Formatters
     const formatCurrency = (value: number) => {
         return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     };
 
-    const handleFilterClick = (type: FilterType) => {
-        setFilter(filter === type ? 'all' : type);
-    };
-
+    // Navigation Handlers
     const navigateMonth = (direction: 'prev' | 'next') => {
-        if (direction === 'next') {
-            if (selectedMonth === 11) {
-                setSelectedMonth(0);
-                setSelectedYear(selectedYear + 1);
-            } else {
-                setSelectedMonth(selectedMonth + 1);
-            }
-        } else {
-            if (selectedMonth === 0) {
-                setSelectedMonth(11);
-                setSelectedYear(selectedYear - 1);
-            } else {
-                setSelectedMonth(selectedMonth - 1);
-            }
-        }
+        const newDate = new Date(selectedYear, selectedMonth + (direction === 'next' ? 1 : -1));
+        setSelectedMonth(newDate.getMonth());
+        setSelectedYear(newDate.getFullYear());
     };
 
     const navigateYear = (direction: 'prev' | 'next') => {
@@ -108,18 +106,21 @@ export default function Financial() {
         }
     };
 
-    const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
+    const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView className="px-4 py-6">
+            <ScrollView
+                className="px-4 py-6"
+                refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+            >
                 {/* Header */}
                 <View className="flex-row justify-between items-center mb-6">
                     <View>
                         <Text className="text-2xl font-bold text-gray-900">Financeiro</Text>
                         <Text className="text-gray-500 mt-1">Receitas e despesas</Text>
                     </View>
-                    <TouchableOpacity className="bg-teal-500 p-3 rounded-xl">
+                    <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={() => Alert.alert("Em breve", "Adicionar despesa manual")}>
                         <Plus size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
@@ -151,7 +152,6 @@ export default function Financial() {
                     {/* Period Navigation */}
                     {periodType === 'monthly' ? (
                         <View className="flex-row items-center justify-center gap-2">
-                            {/* Month Selector */}
                             <TouchableOpacity onPress={() => navigateMonth('prev')} className="p-3">
                                 <ChevronLeft size={22} color="#0D9488" />
                             </TouchableOpacity>
@@ -166,22 +166,14 @@ export default function Financial() {
                                 <ChevronRight size={22} color="#0D9488" />
                             </TouchableOpacity>
 
-                            {/* Separator */}
                             <View className="w-px h-8 bg-gray-200 mx-2" />
 
-                            {/* Year Selector */}
-                            <TouchableOpacity onPress={() => navigateYear('prev')} className="p-3">
-                                <ChevronLeft size={22} color="#0D9488" />
-                            </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setShowYearPicker(true)}
                                 className="flex-row items-center gap-2 px-4 py-3 bg-gray-100 rounded-xl"
                             >
                                 <Text className="font-medium text-gray-900">{selectedYear}</Text>
                                 <ChevronDown size={16} color="#6B7280" />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => navigateYear('next')} className="p-3">
-                                <ChevronRight size={22} color="#0D9488" />
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -202,11 +194,10 @@ export default function Financial() {
                         </View>
                     )}
 
-                    {/* Go to current period */}
                     {!isCurrentPeriod() && (
                         <TouchableOpacity onPress={goToCurrentPeriod} className="mt-3">
                             <Text className="text-teal-600 text-center text-sm">
-                                Ir para {periodType === 'monthly' ? 'mês atual' : 'ano atual'}
+                                Ir para atual
                             </Text>
                         </TouchableOpacity>
                     )}
@@ -214,8 +205,8 @@ export default function Financial() {
 
                 {/* Stats Cards */}
                 <View className="gap-3 mb-6">
-                    <TouchableOpacity 
-                        onPress={() => handleFilterClick('income')}
+                    <TouchableOpacity
+                        onPress={() => setFilter(filter === 'income' ? 'all' : 'income')}
                         className={`bg-white p-4 rounded-xl border-2 ${filter === 'income' ? 'border-green-500' : 'border-gray-100'}`}
                         activeOpacity={0.7}
                     >
@@ -228,13 +219,36 @@ export default function Financial() {
                                 <TrendingUp size={24} color="#22C55E" />
                             </View>
                         </View>
-                        {filter === 'income' && (
-                            <Text className="text-green-600 text-xs mt-2 font-medium">✓ Filtro ativo</Text>
-                        )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        onPress={() => handleFilterClick('expense')}
+                    {/* Revenue by Location Breakdown - Only Show if there is data */}
+                    {Object.keys(transactions.filter(t => t.type === 'income' && t.location).reduce((acc, t) => {
+                        const loc = t.location!;
+                        acc[loc] = (acc[loc] || 0) + t.amount;
+                        return acc;
+                    }, {} as Record<string, number>)).length > 0 && (
+                            <View className="mt-2">
+                                <Text className="text-sm font-semibold text-gray-700 mb-2 ml-1">Receita por Local</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3 pl-1">
+                                    {Object.entries(transactions
+                                        .filter(t => t.type === 'income' && t.location)
+                                        .reduce((acc, t) => {
+                                            const loc = t.location!;
+                                            acc[loc] = (acc[loc] || 0) + t.amount;
+                                            return acc;
+                                        }, {} as Record<string, number>))
+                                        .map(([location, amount]) => (
+                                            <View key={location} className="bg-white p-3 rounded-lg border border-gray-100 mr-2 min-w-[120px]">
+                                                <Text className="text-xs text-gray-500 mb-1" numberOfLines={1}>{location}</Text>
+                                                <Text className="text-sm font-bold text-green-600">{formatCurrency(amount)}</Text>
+                                            </View>
+                                        ))}
+                                </ScrollView>
+                            </View>
+                        )}
+
+                    <TouchableOpacity
+                        onPress={() => setFilter(filter === 'expense' ? 'all' : 'expense')}
                         className={`bg-white p-4 rounded-xl border-2 ${filter === 'expense' ? 'border-red-500' : 'border-gray-100'}`}
                         activeOpacity={0.7}
                     >
@@ -247,9 +261,6 @@ export default function Financial() {
                                 <TrendingDown size={24} color="#EF4444" />
                             </View>
                         </View>
-                        {filter === 'expense' && (
-                            <Text className="text-red-600 text-xs mt-2 font-medium">✓ Filtro ativo</Text>
-                        )}
                     </TouchableOpacity>
 
                     <View className="bg-white p-4 rounded-xl border border-gray-100">
@@ -267,8 +278,8 @@ export default function Financial() {
                     </View>
                 </View>
 
-                {/* Transactions */}
-                <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                {/* Transactions List */}
+                <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-8">
                     <View className="p-4 border-b border-gray-100 flex-row justify-between items-center">
                         <View>
                             <Text className="font-semibold text-gray-900">
@@ -276,10 +287,10 @@ export default function Financial() {
                                 {filter === 'income' && 'Receitas'}
                                 {filter === 'expense' && 'Despesas'}
                             </Text>
-                            <Text className="text-gray-400 text-sm">{filteredTransactions.length} transação(ões)</Text>
+                            <Text className="text-gray-400 text-sm">{filteredTransactions.length} registros</Text>
                         </View>
                         {filter !== 'all' && (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setFilter('all')}
                                 className="flex-row items-center gap-1 px-3 py-1.5 bg-gray-100 rounded-full"
                             >
@@ -288,44 +299,54 @@ export default function Financial() {
                             </TouchableOpacity>
                         )}
                     </View>
-                    <View>
-                        {filteredTransactions.length === 0 ? (
-                            <View className="p-8 items-center">
-                                <Text className="text-gray-400">Nenhuma transação neste período</Text>
-                            </View>
-                        ) : (
-                            filteredTransactions.map((transaction) => (
-                                <View key={transaction.id} className="p-4 border-b border-gray-50 flex-row items-center justify-between">
-                                    <View className="flex-row items-center gap-3">
-                                        <View className={`w-10 h-10 rounded-lg items-center justify-center ${
-                                            transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
-                                        }`}>
+
+                    {loading ? (
+                        <View className="p-8">
+                            <ActivityIndicator size="small" color="#0D9488" />
+                        </View>
+                    ) : filteredTransactions.length === 0 ? (
+                        <View className="p-8 items-center">
+                            <Text className="text-gray-400 italic">Nenhum registro encontrado</Text>
+                        </View>
+                    ) : (
+                        filteredTransactions.map((transaction) => (
+                            <View key={transaction.id} className="p-4 border-b border-gray-50 flex-row items-center justify-between">
+                                <View className="flex-1 mr-4">
+                                    <View className="flex-row items-start gap-3">
+                                        <View className={`w-10 h-10 rounded-lg items-center justify-center ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                                            }`}>
                                             {transaction.type === 'income' ? (
                                                 <ArrowUpRight size={20} color="#22C55E" />
                                             ) : (
                                                 <ArrowDownRight size={20} color="#EF4444" />
                                             )}
                                         </View>
-                                        <View>
-                                            <Text className="font-medium text-gray-900">{transaction.description}</Text>
-                                            <Text className="text-gray-400 text-xs">
-                                                {new Date(transaction.date).toLocaleDateString('pt-BR')}
-                                            </Text>
+                                        <View className="flex-1">
+                                            <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
+                                            <View className="flex-row items-center gap-2 mt-1">
+                                                <Text className="text-gray-400 text-xs">
+                                                    {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                                                </Text>
+                                                {transaction.location && (
+                                                    <View className="flex-row items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded">
+                                                        <MapPin size={10} color="#6B7280" />
+                                                        <Text className="text-xs text-gray-500">{transaction.location}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
-                                    <Text className={`font-semibold ${transaction.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
-                                        {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
-                                    </Text>
                                 </View>
-                            ))
-                        )}
-                    </View>
+                                <Text className={`font-semibold whitespace-nowrap ${transaction.type === 'income' ? 'text-green-500' : 'text-red-500'}`}>
+                                    {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
+                                </Text>
+                            </View>
+                        ))
+                    )}
                 </View>
-
-                <View className="h-6" />
             </ScrollView>
 
-            {/* Month Picker Modal */}
+            {/* Pickers */}
             <Modal visible={showMonthPicker} transparent animationType="fade">
                 <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setShowMonthPicker(false)}>
                     <View className="bg-white rounded-2xl p-4 w-80 mx-4">
@@ -347,7 +368,6 @@ export default function Financial() {
                 </Pressable>
             </Modal>
 
-            {/* Year Picker Modal */}
             <Modal visible={showYearPicker} transparent animationType="fade">
                 <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setShowYearPicker(false)}>
                     <View className="bg-white rounded-2xl p-4 w-72 mx-4">

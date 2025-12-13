@@ -8,6 +8,7 @@ export interface Transaction {
   amount: number;
   date: string;
   category: string;
+  location?: string | null;
 }
 
 export const MONTHS = [
@@ -21,4 +22,5 @@ export const formatCurrency = (value: number) => {
     currency: 'BRL',
   }).format(value);
 };
+
 

@@ -138,3 +138,4 @@ INSERT INTO appointments (patient_id, date, time, status, notes)
 SELECT id, CURRENT_DATE, '15:30', 'scheduled', 'Clareamento dental'
 FROM patients WHERE name = 'Lucia Fernandes';
 
+

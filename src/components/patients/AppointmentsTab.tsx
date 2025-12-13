@@ -76,3 +76,4 @@ export function AppointmentsTab({ appointments, loading }: AppointmentsTabProps)
   );
 }
 
+
