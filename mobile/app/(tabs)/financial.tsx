@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable, RefreshControl, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { ChevronLeft, ChevronRight, ChevronDown, Plus, Settings } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { financialService } from '../../src/services/financial';
 import type { FinancialTransaction, FinancialTransactionWithPatient } from '../../src/types/database';
 import { IncomeTab } from '../../src/components/financial/IncomeTab';
@@ -97,7 +98,7 @@ export default function Financial() {
                     <View className="flex-row gap-2">
                         <TouchableOpacity
                             className="bg-gray-100 p-3 rounded-xl border border-gray-200"
-                            onPress={() => Alert.alert('Info', 'Navegação desabilitada temporariamente')}
+                            onPress={() => router.push('/settings/financial')}
                         >
                             <Settings size={20} color="#4B5563" />
                         </TouchableOpacity>
