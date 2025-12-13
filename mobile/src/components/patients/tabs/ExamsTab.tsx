@@ -1,17 +1,21 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Plus, Upload } from 'lucide-react-native';
+import { Plus, Upload, Edit3, Trash2 } from 'lucide-react-native';
 import type { Exam } from '../../../types/database';
 
 interface ExamsTabProps {
     exams: Exam[];
     onAdd: () => void;
+    onEdit?: (exam: Exam) => void;
+    onDelete?: (exam: Exam) => void;
     onPreviewImage: (url: string) => void;
 }
 
 export function ExamsTab({
     exams,
     onAdd,
+    onEdit,
+    onDelete,
     onPreviewImage,
 }: ExamsTabProps) {
     // Filter out exams that are procedure attachments (have procedure_id)
@@ -47,6 +51,25 @@ export function ExamsTab({
                                 <Text className="text-gray-500 text-xs">
                                     {new Date(exam.date).toLocaleDateString('pt-BR')}
                                 </Text>
+                            </View>
+                            {/* Action buttons */}
+                            <View className="flex-row gap-2">
+                                {onEdit && (
+                                    <TouchableOpacity
+                                        onPress={() => onEdit(exam)}
+                                        className="bg-teal-50 p-2 rounded-lg"
+                                    >
+                                        <Edit3 size={16} color="#0D9488" />
+                                    </TouchableOpacity>
+                                )}
+                                {onDelete && (
+                                    <TouchableOpacity
+                                        onPress={() => onDelete(exam)}
+                                        className="bg-red-50 p-2 rounded-lg"
+                                    >
+                                        <Trash2 size={16} color="#EF4444" />
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
 

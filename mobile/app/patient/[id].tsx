@@ -11,7 +11,7 @@ import { financialService } from '../../src/services/financial';
 import { examsService } from '../../src/services/exams';
 import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
-import type { Anamnese, BudgetWithItems, Procedure } from '../../src/types/database';
+import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
 import { usePatientData } from '../../src/hooks/usePatientData';
 import { ProceduresTab, ExamsTab, PaymentsTab } from '../../src/components/patients/tabs';
 import * as Linking from 'expo-linking';
@@ -54,7 +54,38 @@ export default function PatientDetail() {
     const [showProcedureModal, setShowProcedureModal] = useState(false);
     const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
     const [showExamModal, setShowExamModal] = useState(false);
+    const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+    // Exam handlers
+    const handleDeleteExam = (exam: Exam) => {
+        Alert.alert(
+            'Excluir Exame',
+            'Tem certeza que deseja excluir este exame? Esta ação não pode ser desfeita.',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await examsService.delete(exam.id);
+                            loadExams();
+                            Alert.alert('Sucesso', 'Exame excluído com sucesso');
+                        } catch (error) {
+                            console.error('Error deleting exam:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir o exame');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleEditExam = (exam: Exam) => {
+        setSelectedExam(exam);
+        setShowExamModal(true);
+    };
 
     // Anamnese handlers
     const handleAddAnamnese = () => {
@@ -593,7 +624,12 @@ export default function PatientDetail() {
                 {activeTab === 'exams' && (
                     <ExamsTab
                         exams={exams}
-                        onAdd={() => setShowExamModal(true)}
+                        onAdd={() => {
+                            setSelectedExam(null);
+                            setShowExamModal(true);
+                        }}
+                        onEdit={handleEditExam}
+                        onDelete={handleDeleteExam}
                         onPreviewImage={setPreviewImage}
                     />
                 )}
@@ -679,7 +715,16 @@ export default function PatientDetail() {
                 procedure={selectedProcedure}
             />
 
-            <NewExamModal visible={showExamModal} patientId={id!} onClose={() => setShowExamModal(false)} onSuccess={loadExams} />
+            <NewExamModal
+                visible={showExamModal}
+                patientId={id!}
+                onClose={() => {
+                    setShowExamModal(false);
+                    setSelectedExam(null);
+                }}
+                onSuccess={loadExams}
+                exam={selectedExam}
+            />
 
             {/* Image Preview Modal */}
             <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
