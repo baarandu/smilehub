@@ -230,7 +230,11 @@ export default function PatientDetail() {
             if (!parsed.teeth) return;
 
             const budgetLocation = parsed.location || null;
-            const budgetLocationRate = parsed.locationRate || 0;
+            // Prefer column, fallback to notes
+            const budgetLocationRate = budget.location_rate !== undefined && budget.location_rate !== null
+                ? budget.location_rate
+                : (parsed.locationRate || 0);
+
             const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
 
             // If transactions array provided (new modal style), use it. 
@@ -657,13 +661,20 @@ export default function PatientDetail() {
                 locationRate={(() => {
                     if (!selectedPaymentItem) return 0;
                     const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
-                    console.log('[DEBUG] Payment Modal - Budget found:', !!budget, 'Notes:', budget?.notes);
+                    console.log('[DEBUG] Payment Modal - Budget found:', !!budget, 'Notes:', budget?.notes, 'Column Rate:', budget?.location_rate);
+
+                    // Prefer column
+                    if (budget?.location_rate !== undefined && budget?.location_rate !== null) {
+                        console.log('[DEBUG] Payment Modal - Using Column Rate:', budget.location_rate);
+                        return budget.location_rate;
+                    }
+
                     if (!budget?.notes) return 0;
                     try {
                         const parsed = JSON.parse(budget.notes);
                         console.log('[DEBUG] Payment Modal - Parsed notes:', parsed);
                         const rate = typeof parsed.locationRate === 'number' ? parsed.locationRate : parseFloat(parsed.locationRate || '0');
-                        console.log('[DEBUG] Payment Modal - Derived rate:', rate);
+                        console.log('[DEBUG] Payment Modal - Derived rate form JSON:', rate);
                         return rate;
                     } catch (e) {
                         console.log('[DEBUG] Payment Modal - Parse error:', e);

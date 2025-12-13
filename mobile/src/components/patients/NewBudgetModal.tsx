@@ -78,9 +78,12 @@ export function NewBudgetModal({
                         if (parsed.location) {
                             setLocation(parsed.location);
                         }
-                        // Load location rate if available
-                        if (parsed.locationRate) {
-                            setLocationRate(parsed.locationRate.toString());
+                        // Load location rate (prefer column, fallback to notes)
+                        const rate = budget.location_rate !== undefined && budget.location_rate !== null
+                            ? budget.location_rate
+                            : (parsed.locationRate || 0);
+                        if (rate > 0) {
+                            setLocationRate(rate.toString());
                         }
                     } catch {
                         // Backwards compatibility
@@ -328,6 +331,7 @@ export function NewBudgetModal({
                 treatment: allTreatments.join(', '),
                 value: getGrandTotal(),
                 notes: notesData,
+                location_rate: locationRate ? parseFloat(locationRate) : 0,
             };
 
             if (budget) {

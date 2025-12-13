@@ -310,6 +310,7 @@ export interface Database {
           value: number
           status: 'pending' | 'approved' | 'rejected' | 'completed'
           notes: string | null
+          location_rate: number | null
           created_at: string
           updated_at: string
         }
@@ -321,6 +322,7 @@ export interface Database {
           value: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
+          location_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -332,6 +334,7 @@ export interface Database {
           value?: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
+          location_rate?: number | null
           created_at?: string
           updated_at?: string
         }
