@@ -360,10 +360,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         </View>
 
                         <ScrollView style={{ maxHeight: 400 }}>
-                            <View style={{ padding: 24, gap: 24 }}>
+                            <View style={{ padding: 24 }}>
                                 {/* Main Info */}
-                                <View style={{ gap: 16 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <TrendingUp size={20} color="#374151" />
                                         </View>
@@ -375,7 +375,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </View>
                                     </View>
 
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <MapPin size={20} color="#374151" />
                                         </View>
@@ -387,7 +387,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </View>
                                     </View>
 
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
                                         <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
                                             <Calendar size={20} color="#374151" />
                                         </View>
@@ -404,7 +404,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount) && (
                                     <View className="bg-gray-50 rounded-xl p-4">
                                         <Text className="text-sm font-bold text-gray-900 mb-3">Detalhamento Financeiro</Text>
-                                        <View style={{ gap: 8 }}>
+                                        <View>
                                             <View className="flex-row justify-between items-center">
                                                 <Text className="text-gray-600">Valor Bruto</Text>
                                                 <Text className="font-semibold text-gray-900">{formatCurrency(selectedTransaction.amount)}</Text>
@@ -439,10 +439,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {relatedInstallments.length > 0 && (
                                     <View>
                                         <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">Histórico de Parcelas</Text>
-                                        <View style={{ gap: 12 }}>
+                                        <View>
                                             {relatedInstallments.map((inst, index) => (
                                                 <View key={inst.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: inst.id === selectedTransaction?.id ? '#f0fdf4' : '#f9fafb', borderWidth: inst.id === selectedTransaction?.id ? 1 : 0, borderColor: '#bbf7d0' }}>
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
                                                         <View className="w-6 h-6 rounded-full bg-white items-center justify-center border border-gray-200">
                                                             <Text className="text-xs text-gray-500">{index + 1}</Text>
                                                         </View>
