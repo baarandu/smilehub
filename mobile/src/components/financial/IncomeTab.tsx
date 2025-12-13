@@ -407,9 +407,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {/* Financial Breakdown */}
                                 {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount) && (
                                     <View className="bg-gray-50 rounded-xl p-4">
-                                        <Text className="text-sm font-bold text-gray-900 mb-3">
-                                            Detalhamento Financeiro
-                                        </Text>
+                                        <Text className="text-sm font-bold text-gray-900 mb-3">Detalhamento Financeiro</Text>
                                         <View style={{ gap: 8 }}>
                                             <View className="flex-row justify-between items-center">
                                                 <Text className="text-gray-600">Valor Bruto</Text>
@@ -417,25 +415,19 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                             </View>
                                             {selectedTransaction.tax_amount && selectedTransaction.tax_amount > 0 && (
                                                 <View className="flex-row justify-between items-center">
-                                                    <Text className="text-gray-500 text-sm">
-                                                        Imposto ({selectedTransaction.tax_rate || 0}%)
-                                                    </Text>
+                                                    <Text className="text-gray-500 text-sm">Imposto ({selectedTransaction.tax_rate || 0}%)</Text>
                                                     <Text className="text-red-500 text-sm">- {formatCurrency(selectedTransaction.tax_amount)}</Text>
                                                 </View>
                                             )}
                                             {selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0 && (
                                                 <View className="flex-row justify-between items-center">
-                                                    <Text className="text-gray-500 text-sm">
-                                                        Taxa do Cartão ({selectedTransaction.card_fee_rate || 0}%)
-                                                    </Text>
+                                                    <Text className="text-gray-500 text-sm">Taxa do Cartão ({selectedTransaction.card_fee_rate || 0}%)</Text>
                                                     <Text className="text-red-500 text-sm">- {formatCurrency(selectedTransaction.card_fee_amount)}</Text>
                                                 </View>
                                             )}
                                             {(selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0 && (
                                                 <View className="flex-row justify-between items-center">
-                                                    <Text className="text-gray-500 text-sm">
-                                                        Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)
-                                                    </Text>
+                                                    <Text className="text-gray-500 text-sm">Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)</Text>
                                                     <Text className="text-red-500 text-sm">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</Text>
                                                 </View>
                                             )}
@@ -450,9 +442,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {/* Installments / Payment History */}
                                 {relatedInstallments.length > 0 && (
                                     <View>
-                                        <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">
-                                            Histórico de Parcelas
-                                        </Text>
+                                        <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">Histórico de Parcelas</Text>
                                         <View style={{ gap: 12 }}>
                                             {relatedInstallments.map((inst, index) => (
                                                 <View key={inst.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: inst.id === selectedTransaction?.id ? '#f0fdf4' : '#f9fafb', borderWidth: inst.id === selectedTransaction?.id ? 1 : 0, borderColor: '#bbf7d0' }}>
