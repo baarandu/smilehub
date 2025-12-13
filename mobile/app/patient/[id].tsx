@@ -13,7 +13,7 @@ import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModa
 import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
 import { usePatientData } from '../../src/hooks/usePatientData';
-import { ProceduresTab, ExamsTab, PaymentsTab } from '../../src/components/patients/tabs';
+import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
 import * as Linking from 'expo-linking';
 import { Image } from 'react-native';
 
@@ -522,164 +522,24 @@ export default function PatientDetail() {
 
                 {/* Anamnese Tab Content */}
                 {activeTab === 'anamnese' && (
-                    <View className="mx-4 mb-4">
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
-                                <Text className="font-semibold text-gray-900">Anamnese do Paciente</Text>
-                                <TouchableOpacity onPress={handleAddAnamnese} className="bg-teal-500 p-2 rounded-lg">
-                                    <Plus size={16} color="#FFFFFF" />
-                                </TouchableOpacity>
-                            </View>
-                            {anamneses.length > 0 ? (
-                                <View>
-                                    {anamneses.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((anamnese) => (
-                                        <TouchableOpacity
-                                            key={anamnese.id}
-                                            onPress={() => handleViewAnamnese(anamnese)}
-                                            activeOpacity={0.7}
-                                            className="p-4 border-b border-gray-50"
-                                        >
-                                            <View className="flex-row items-center justify-between mb-2">
-                                                <Text className="text-sm text-gray-500">{formatAnamneseDate(anamnese.created_at)}</Text>
-                                                <View className="flex-row gap-2">
-                                                    <TouchableOpacity
-                                                        onPress={(e) => { e.stopPropagation(); handleEditAnamnese(anamnese); }}
-                                                        className="bg-teal-50 p-2 rounded-lg"
-                                                    >
-                                                        <Edit3 size={16} color="#0D9488" />
-                                                    </TouchableOpacity>
-                                                    <TouchableOpacity
-                                                        onPress={(e) => { e.stopPropagation(); handleDeleteAnamnese(anamnese); }}
-                                                        className="bg-red-50 p-2 rounded-lg"
-                                                    >
-                                                        <Trash2 size={16} color="#EF4444" />
-                                                    </TouchableOpacity>
-                                                </View>
-                                            </View>
-                                            <View className="flex-row flex-wrap gap-1">
-                                                {anamnese.medical_treatment && <View className="bg-amber-100 px-2 py-0.5 rounded"><Text className="text-xs text-amber-700">Em tratamento</Text></View>}
-                                                {anamnese.recent_surgery && <View className="bg-purple-100 px-2 py-0.5 rounded"><Text className="text-xs text-purple-700">Cirurgia recente</Text></View>}
-                                                {anamnese.healing_problems && <View className="bg-orange-100 px-2 py-0.5 rounded"><Text className="text-xs text-orange-700">Cicatrização</Text></View>}
-                                                {anamnese.current_medication && <View className="bg-blue-100 px-2 py-0.5 rounded"><Text className="text-xs text-blue-700">Medicação</Text></View>}
-                                                {anamnese.local_anesthesia_history && <View className="bg-teal-100 px-2 py-0.5 rounded"><Text className="text-xs text-teal-700">Anestesia prévia</Text></View>}
-                                                {anamnese.anesthesia_reaction && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Reação anestesia</Text></View>}
-                                                {anamnese.diabetes && <View className="bg-violet-100 px-2 py-0.5 rounded"><Text className="text-xs text-violet-700">Diabetes</Text></View>}
-                                                {anamnese.depression_anxiety_panic && <View className="bg-indigo-100 px-2 py-0.5 rounded"><Text className="text-xs text-indigo-700">Ansiedade/Depressão</Text></View>}
-                                                {anamnese.seizure_epilepsy && <View className="bg-cyan-100 px-2 py-0.5 rounded"><Text className="text-xs text-cyan-700">Epilepsia</Text></View>}
-                                                {anamnese.heart_disease && <View className="bg-rose-100 px-2 py-0.5 rounded"><Text className="text-xs text-rose-700">Cardíaco</Text></View>}
-                                                {anamnese.hypertension && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Hipertensão</Text></View>}
-                                                {anamnese.pacemaker && <View className="bg-slate-100 px-2 py-0.5 rounded"><Text className="text-xs text-slate-700">Marcapasso</Text></View>}
-                                                {anamnese.arthritis && <View className="bg-amber-100 px-2 py-0.5 rounded"><Text className="text-xs text-amber-700">Artrite</Text></View>}
-                                                {anamnese.gastritis_reflux && <View className="bg-lime-100 px-2 py-0.5 rounded"><Text className="text-xs text-lime-700">Gastrite/Refluxo</Text></View>}
-                                                {anamnese.infectious_disease && <View className="bg-yellow-100 px-2 py-0.5 rounded"><Text className="text-xs text-yellow-700">Doença infecciosa</Text></View>}
-                                                {anamnese.pregnant_or_breastfeeding && <View className="bg-pink-100 px-2 py-0.5 rounded"><Text className="text-xs text-pink-700">Gestante/Lactante</Text></View>}
-                                                {anamnese.smoker_or_drinker && <View className="bg-gray-200 px-2 py-0.5 rounded"><Text className="text-xs text-gray-700">Fumante/Álcool</Text></View>}
-                                                {anamnese.fasting && <View className="bg-sky-100 px-2 py-0.5 rounded"><Text className="text-xs text-sky-700">Em jejum</Text></View>}
-                                                {!anamnese.medical_treatment && !anamnese.recent_surgery && !anamnese.healing_problems && !anamnese.current_medication && !anamnese.local_anesthesia_history && !anamnese.anesthesia_reaction && !anamnese.diabetes && !anamnese.depression_anxiety_panic && !anamnese.seizure_epilepsy && !anamnese.heart_disease && !anamnese.hypertension && !anamnese.pacemaker && !anamnese.arthritis && !anamnese.gastritis_reflux && !anamnese.infectious_disease && !anamnese.pregnant_or_breastfeeding && !anamnese.smoker_or_drinker && !anamnese.fasting && (
-                                                    <View className="bg-green-100 px-2 py-0.5 rounded"><Text className="text-xs text-green-700">Sem alertas</Text></View>
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            ) : (
-                                <View className="p-8 items-center">
-                                    <ClipboardList size={40} color="#D1D5DB" />
-                                    <Text className="text-gray-400 mt-4">Nenhuma anamnese registrada</Text>
-                                    <Text className="text-gray-300 text-sm mt-2">Toque no + para adicionar</Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
+                    <AnamneseTab
+                        anamneses={anamneses}
+                        onAdd={handleAddAnamnese}
+                        onEdit={handleEditAnamnese}
+                        onDelete={handleDeleteAnamnese}
+                        onView={handleViewAnamnese}
+                    />
                 )}
 
                 {/* Budgets Tab Content */}
                 {activeTab === 'budgets' && (
-                    <View className="mx-4 mb-4">
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                            <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
-                                <Text className="font-semibold text-gray-900">Orçamentos</Text>
-                                <TouchableOpacity onPress={handleAddBudget} className="bg-teal-500 p-2 rounded-lg">
-                                    <Plus size={16} color="#FFFFFF" />
-                                </TouchableOpacity>
-                            </View>
-                            <View className="px-4 py-2 bg-gray-50 flex-row items-center gap-4 border-b border-gray-100">
-                                <View className="flex-row items-center gap-1">
-                                    <View className="w-3 h-3 rounded bg-yellow-300" />
-                                    <Text className="text-xs text-gray-500">Pendente</Text>
-                                </View>
-                                <View className="flex-row items-center gap-1">
-                                    <View className="w-3 h-3 rounded bg-green-400" />
-                                    <Text className="text-xs text-gray-500">Aprovado</Text>
-                                </View>
-                                <View className="flex-row items-center gap-1">
-                                    <View className="w-3 h-3 rounded bg-blue-400" />
-                                    <Text className="text-xs text-gray-500">Pago</Text>
-                                </View>
-                            </View>
-                            {budgets.length > 0 ? (
-                                <View>
-                                    {budgets.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((budget) => (
-                                        <View key={budget.id} className="p-4 border-b border-gray-50">
-                                            <TouchableOpacity onPress={() => handleViewBudget(budget)} activeOpacity={0.7}>
-                                                <View className="flex-row items-center justify-between mb-3">
-                                                    <Text className="text-sm text-gray-500">{new Date(budget.date + 'T00:00:00').toLocaleDateString('pt-BR')}</Text>
-                                                </View>
-                                                <View className="flex-row flex-wrap gap-2 mb-3">
-                                                    {(() => {
-                                                        try {
-                                                            const parsed = JSON.parse(budget.notes || '{}');
-                                                            if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                                                                return parsed.teeth.map((tooth: ToothEntry, idx: number) => {
-                                                                    const status = tooth.status || 'pending';
-                                                                    const bgColor = status === 'approved' ? 'bg-green-50 border-green-200'
-                                                                        : status === 'paid' ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200';
-                                                                    const titleColor = status === 'approved' ? 'text-green-800'
-                                                                        : status === 'paid' ? 'text-blue-800' : 'text-yellow-800';
-                                                                    const subtitleColor = status === 'approved' ? 'text-green-600'
-                                                                        : status === 'paid' ? 'text-blue-600' : 'text-yellow-600';
-                                                                    return (
-                                                                        <View key={idx} className={`border px-3 py-2 rounded-lg ${bgColor}`}>
-                                                                            <Text className={`font-medium text-sm ${titleColor}`}>{getToothDisplayName(tooth.tooth)}</Text>
-                                                                            <Text className={`text-xs ${subtitleColor}`}>{tooth.treatments.join(', ')}</Text>
-                                                                        </View>
-                                                                    );
-                                                                });
-                                                            }
-                                                        } catch (e) { }
-                                                        return budget.budget_items.map((item, idx) => (
-                                                            <View key={idx} className="bg-gray-100 px-2 py-1 rounded">
-                                                                <Text className="text-xs text-gray-600">{getToothDisplayName(item.tooth)}</Text>
-                                                            </View>
-                                                        ));
-                                                    })()}
-                                                </View>
-                                                <Text className="text-lg font-bold text-teal-600">
-                                                    R$ {budget.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </Text>
-                                            </TouchableOpacity>
-                                            <View className="flex-row gap-2 mt-3 pt-3 border-t border-gray-100">
-                                                <TouchableOpacity onPress={() => handleEditBudget(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-teal-50 py-2 rounded-lg">
-                                                    <Edit3 size={14} color="#0D9488" />
-                                                    <Text className="text-teal-600 text-sm font-medium">Editar</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity onPress={() => handleDeleteBudget(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-red-50 py-2 rounded-lg">
-                                                    <Trash2 size={14} color="#EF4444" />
-                                                    <Text className="text-red-600 text-sm font-medium">Excluir</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <View className="p-8 items-center">
-                                    <Calculator size={40} color="#D1D5DB" />
-                                    <Text className="text-gray-400 mt-4">Nenhum orçamento registrado</Text>
-                                    <Text className="text-gray-300 text-sm mt-2">Toque no + para adicionar</Text>
-                                </View>
-                            )}
-                        </View>
-                    </View>
+                    <BudgetsTab
+                        budgets={budgets}
+                        onAdd={handleAddBudget}
+                        onEdit={handleEditBudget}
+                        onDelete={handleDeleteBudget}
+                        onView={handleViewBudget}
+                    />
                 )}
 
                 {/* Procedures Tab - Using extracted component */}
