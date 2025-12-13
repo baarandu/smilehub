@@ -18,9 +18,6 @@ export function ExamsTab({
     onDelete,
     onPreviewImage,
 }: ExamsTabProps) {
-    // Filter out exams that are procedure attachments (have procedure_id)
-    const standaloneExams = exams.filter(exam => !exam.procedure_id);
-
     return (
         <View className="mx-4 mb-4 gap-4">
             {/* Header */}
@@ -36,13 +33,13 @@ export function ExamsTab({
             </View>
 
             {/* List */}
-            {standaloneExams.length === 0 ? (
+            {exams.length === 0 ? (
                 <View className="bg-white p-8 rounded-xl items-center border border-gray-100 border-dashed">
                     <Upload size={32} color="#D1D5DB" />
                     <Text className="text-gray-400 mt-2">Nenhum exame anexado</Text>
                 </View>
             ) : (
-                standaloneExams.map(exam => (
+                exams.map(exam => (
                     <View key={exam.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
                         {/* Header */}
                         <View className="flex-row justify-between items-start mb-2">
