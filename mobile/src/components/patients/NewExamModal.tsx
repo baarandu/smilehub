@@ -48,6 +48,15 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
 
   const pickImage = async (useCamera: boolean) => {
     try {
+      // Request camera permission if needed
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permissão Negada', 'É necessário permitir o acesso à câmera para tirar fotos.');
+          return;
+        }
+      }
+
       const result = useCamera
         ? await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -68,6 +77,7 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
         setFiles(prev => [...prev, ...newFiles]);
       }
     } catch (error) {
+      console.error('Error picking image:', error);
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
     }
   };
