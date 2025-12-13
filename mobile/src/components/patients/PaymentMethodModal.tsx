@@ -11,7 +11,7 @@ interface PaymentTransaction {
 interface PaymentMethodModalProps {
     visible: boolean;
     onClose: () => void;
-    onConfirm: (method: string, transactions: PaymentTransaction[]) => void;
+    onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string) => void;
     itemName: string;
     value: number;
 }
@@ -24,12 +24,15 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     // Installments data: date (DD/MM/YYYY text) and amount (string text)
     const [installmentItems, setInstallmentItems] = useState<{ id: string; date: string; amount: string }[]>([]);
 
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+
     useEffect(() => {
         if (visible) {
             setSelectedMethod(null);
             setIsInstallments(false);
             setNumInstallments('2');
             setInstallmentItems([]);
+            setSelectedBrand(null);
         }
     }, [visible]);
 
@@ -89,6 +92,10 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     const handleConfirm = () => {
         if (!selectedMethod) return;
+        if ((selectedMethod === 'credit' || selectedMethod === 'debit') && !selectedBrand) {
+            Alert.alert('Selecione a Bandeira', 'Por favor, selecione a bandeira do cartão.');
+            return;
+        }
 
         let transactions: PaymentTransaction[] = [];
 
@@ -120,7 +127,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             }];
         }
 
-        onConfirm(selectedMethod, transactions);
+        onConfirm(selectedMethod, transactions, selectedBrand || undefined);
     };
 
     const methods = [
@@ -131,12 +138,18 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'transfer', label: 'Transf.', icon: Landmark },
     ];
 
+    const brands = [
+        { id: 'visa_master', label: 'Visa/Master' },
+        { id: 'elo', label: 'Elo' },
+        { id: 'other', label: 'Outro' },
+    ];
+
     if (!visible) return null;
 
     return (
         <Modal visible={visible} transparent animationType="fade">
             <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-white rounded-t-3xl h-[85%] flex flex-col">
+                <View className="bg-white rounded-t-3xl h-[90%] flex flex-col">
                     <View className="p-6 border-b border-gray-100 flex-row justify-between items-center bg-white rounded-t-3xl z-10">
                         <Text className="text-xl font-bold text-gray-900">Pagamento</Text>
                         <TouchableOpacity onPress={onClose}>
@@ -160,7 +173,12 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                 {methods.map((method) => (
                                     <TouchableOpacity
                                         key={method.id}
-                                        onPress={() => setSelectedMethod(method.id)}
+                                        onPress={() => {
+                                            setSelectedMethod(method.id);
+                                            if (method.id !== 'credit' && method.id !== 'debit') {
+                                                setSelectedBrand(null);
+                                            }
+                                        }}
                                         className={`items-center p-3 rounded-xl border w-24 ${selectedMethod === method.id
                                             ? 'bg-teal-50 border-teal-500'
                                             : 'border-gray-100 bg-gray-50'
@@ -178,6 +196,28 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
                         {selectedMethod && (
                             <View className="mb-8 animate-fade-in">
+                                {/* Brand Selection */}
+                                {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
+                                    <View className="mb-6">
+                                        <Text className="text-sm font-semibold text-gray-900 mb-3">Bandeira do Cartão</Text>
+                                        <View className="flex-row flex-wrap gap-2">
+                                            {brands.map((brand) => (
+                                                <TouchableOpacity
+                                                    key={brand.id}
+                                                    onPress={() => setSelectedBrand(brand.id)}
+                                                    className={`px-4 py-2 rounded-lg border ${selectedBrand === brand.id
+                                                        ? 'bg-teal-500 border-teal-500'
+                                                        : 'border-gray-200 bg-white'
+                                                        }`}
+                                                >
+                                                    <Text className={`text-sm font-medium ${selectedBrand === brand.id ? 'text-white' : 'text-gray-700'}`}>
+                                                        {brand.label}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+                                )}
                                 <View className="flex-row items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
                                     <View>
                                         <Text className="font-semibold text-gray-900">Parcelar Pagamento?</Text>

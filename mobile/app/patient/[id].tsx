@@ -219,7 +219,7 @@ export default function PatientDetail() {
         setShowPaymentModal(true);
     };
 
-    const handleConfirmPayment = async (method: string, transactions?: { date: string; amount: number; method: string }[]) => {
+    const handleConfirmPayment = async (method: string, transactions?: { date: string; amount: number; method: string }[], brand?: string) => {
         if (!selectedPaymentItem) return;
 
         try {
@@ -244,8 +244,9 @@ export default function PatientDetail() {
                 paymentInstallments: installmentsCount,
                 paymentDate: new Date().toISOString().split('T')[0],
                 location: budgetLocation,
-                // Optionally store detailed history if schema allows, but relying on financial_transactions for that.
-                paymentDetails: transactions
+                // Store detailed history including Brand if present
+                paymentDetails: transactions,
+                paymentBrand: brand
             };
 
             await budgetsService.update(selectedPaymentItem.budgetId, {
@@ -254,7 +255,9 @@ export default function PatientDetail() {
 
             // If we have detailed transactions, create them
             if (transactions && transactions.length > 0) {
-                const descriptionBase = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+                // Format description with Brand if available
+                const brandText = brand ? ` (${brand.toUpperCase()})` : '';
+                const descriptionBase = `${selectedTooth.treatments.join(', ')}${brandText} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
 
                 for (let i = 0; i < transactions.length; i++) {
                     const t = transactions[i];
@@ -274,7 +277,8 @@ export default function PatientDetail() {
             } else {
                 // Fallback (should not happen with new modal)
                 const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
-                const description = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+                const brandText = brand ? ` (${brand.toUpperCase()})` : '';
+                const description = `${selectedTooth.treatments.join(', ')}${brandText} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
 
                 await financialService.create({
                     type: 'income',
