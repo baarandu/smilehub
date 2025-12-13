@@ -12,7 +12,8 @@ export const FACES = [
     { id: 'D', label: 'Distal' },
     { id: 'O', label: 'Oclusal' },
     { id: 'V', label: 'Vestibular' },
-    { id: 'L', label: 'Lingual/Palatina' },
+    { id: 'L', label: 'Lingual' },
+    { id: 'P', label: 'Palatina' },
 ];
 
 // Lista de tratamentos
