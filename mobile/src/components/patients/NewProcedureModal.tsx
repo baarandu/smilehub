@@ -54,24 +54,42 @@ export function NewProcedureModal({
   // File Picker Logic
   const pickImage = async (useCamera: boolean) => {
     try {
-      const result = useCamera
-        ? await ImagePicker.launchCameraAsync({
+      if (useCamera) {
+        // Request camera permission first
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permissão negada', 'É necessário permitir acesso à câmera para tirar fotos.');
+          return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           quality: 0.8,
-        })
-        : await ImagePicker.launchImageLibraryAsync({
+        });
+
+        if (!result.canceled) {
+          const newFiles = result.assets.map(asset => ({
+            uri: asset.uri,
+            name: asset.fileName || `photo_${Date.now()}.jpg`,
+            type: asset.mimeType || 'image/jpeg',
+          }));
+          setFiles(prev => [...prev, ...newFiles]);
+        }
+      } else {
+        const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           quality: 0.8,
           allowsMultipleSelection: true,
         });
 
-      if (!result.canceled) {
-        const newFiles = result.assets.map(asset => ({
-          uri: asset.uri,
-          name: asset.fileName || `photo_${Date.now()}.jpg`,
-          type: asset.mimeType || 'image/jpeg',
-        }));
-        setFiles(prev => [...prev, ...newFiles]);
+        if (!result.canceled) {
+          const newFiles = result.assets.map(asset => ({
+            uri: asset.uri,
+            name: asset.fileName || `photo_${Date.now()}.jpg`,
+            type: asset.mimeType || 'image/jpeg',
+          }));
+          setFiles(prev => [...prev, ...newFiles]);
+        }
       }
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
@@ -99,7 +117,18 @@ export function NewProcedureModal({
   };
 
   const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    Alert.alert(
+      'Excluir Anexo',
+      'Tem certeza que deseja excluir este anexo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => setFiles(prev => prev.filter((_, i) => i !== index)),
+        },
+      ]
+    );
   };
 
   // Budget Integration State
@@ -124,6 +153,9 @@ export function NewProcedureModal({
         });
         setObservations(procedure.description || '');
         setSelectedItemIds([]);
+
+        // Load existing attachments
+        loadExistingAttachments(procedure.id);
       } else {
         // Create mode
         setForm({
@@ -136,9 +168,62 @@ export function NewProcedureModal({
         setObservations('');
         setSelectedItemIds([]);
         setFiles([]);
+        setExistingAttachments([]);
       }
     }
   }, [visible, procedure?.id]);
+
+  // State for existing attachments (already saved in DB)
+  const [existingAttachments, setExistingAttachments] = useState<{ id: string; examId: string; url: string; name: string }[]>([]);
+
+  const loadExistingAttachments = async (procedureId: string) => {
+    try {
+      const allExams = await examsService.getByPatient(patientId);
+      const procedureExams = allExams.filter(e => e.procedure_id === procedureId);
+
+      const attachments = procedureExams.flatMap(exam =>
+        (exam.file_urls || []).map((url, idx) => ({
+          id: `${exam.id}_${idx}`,
+          examId: exam.id,
+          url,
+          name: `Anexo ${idx + 1}`,
+        }))
+      );
+
+      setExistingAttachments(attachments);
+      setFiles([]); // Clear new files
+    } catch (error) {
+      console.error('Error loading attachments:', error);
+    }
+  };
+
+  const removeExistingAttachment = (index: number) => {
+    const attachment = existingAttachments[index];
+    Alert.alert(
+      'Excluir Anexo',
+      'Este anexo será removido permanentemente. Deseja continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Delete the exam record from database
+              await examsService.delete(attachment.examId);
+              // Update local state
+              setExistingAttachments(prev => prev.filter((_, i) => i !== index));
+              // Notify parent to refresh
+              onSuccess();
+            } catch (error) {
+              console.error('Error deleting attachment:', error);
+              Alert.alert('Erro', 'Não foi possível excluir o anexo');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const loadLocations = async () => {
     try {
@@ -253,15 +338,15 @@ export function NewProcedureModal({
     return true;
   };
 
-  const formatDateForDB = (dateStr: string): string | null => {
-    if (!dateStr || dateStr.length < 10) return null;
+  const formatDateForDB = (dateStr: string): string | undefined => {
+    if (!dateStr || dateStr.length < 10) return undefined;
     const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) return undefined;
     const day = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
     const year = parseInt(parts[2], 10);
-    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-    if (!isValidDate(day, month, year)) return null;
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return undefined;
+    if (!isValidDate(day, month, year)) return undefined;
     return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   };
 
@@ -526,7 +611,7 @@ export function NewProcedureModal({
               </View>
 
               <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Anexos ({files.length})</Text>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Anexos ({existingAttachments.length + files.length})</Text>
 
                 {/* Action Buttons */}
                 <View className="flex-row gap-2 mb-4">
@@ -553,9 +638,31 @@ export function NewProcedureModal({
                   </TouchableOpacity>
                 </View>
 
-                {/* File List */}
+                {/* Existing Attachments (Edit Mode) */}
+                {existingAttachments.length > 0 && (
+                  <View className="gap-2 mb-4">
+                    <Text className="text-xs font-medium text-gray-500 uppercase mb-1">Anexos Salvos</Text>
+                    {existingAttachments.map((attachment, index) => (
+                      <View key={attachment.id} className="flex-row items-center bg-green-50 p-3 rounded-xl border border-green-200">
+                        <View className="w-10 h-10 rounded bg-green-100 items-center justify-center mr-3 overflow-hidden">
+                          <ImageIcon size={18} color="#16A34A" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="text-xs font-medium text-gray-900" numberOfLines={1}>{attachment.name}</Text>
+                          <Text className="text-[10px] text-green-600">Salvo no servidor</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => removeExistingAttachment(index)} className="p-2">
+                          <Trash2 size={16} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* New File List */}
                 {files.length > 0 && (
                   <View className="gap-2 mb-4">
+                    {procedure && <Text className="text-xs font-medium text-gray-500 uppercase mb-1">Novos Anexos</Text>}
                     {files.map((file, index) => (
                       <View key={index} className="flex-row items-center bg-white p-3 rounded-xl border border-gray-200">
                         <View className="w-8 h-8 rounded bg-gray-100 items-center justify-center mr-3">

@@ -210,7 +210,7 @@ export default function PatientDetail() {
     const handleDeleteProcedure = (procedure: Procedure) => {
         Alert.alert(
             'Excluir Procedimento',
-            'Tem certeza que deseja excluir este procedimento?',
+            'Tem certeza que deseja excluir este procedimento? Os anexos também serão excluídos.',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
@@ -218,8 +218,15 @@ export default function PatientDetail() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
+                            // First delete any linked exams (attachments)
+                            const linkedExams = exams.filter(e => e.procedure_id === procedure.id);
+                            for (const exam of linkedExams) {
+                                await examsService.delete(exam.id);
+                            }
+                            // Then delete the procedure
                             await proceduresService.delete(procedure.id);
                             loadProcedures();
+                            loadExams(); // Refresh exams list
                         } catch (error) {
                             console.error('Error deleting procedure:', error);
                             Alert.alert('Erro', 'Não foi possível excluir o procedimento');
@@ -868,7 +875,7 @@ export default function PatientDetail() {
                                                             {procedure.payment_method === 'credit' ? 'Crédito' :
                                                                 procedure.payment_method === 'debit' ? 'Débito' :
                                                                     procedure.payment_method === 'cash' ? 'Dinheiro' : procedure.payment_method}
-                                                            {procedure.installments > 1 && ` (${procedure.installments}x)`}
+                                                            {(procedure.installments ?? 0) > 1 && ` (${procedure.installments}x)`}
                                                         </Text>
                                                     </View>
                                                 )}
