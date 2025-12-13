@@ -8,11 +8,15 @@ interface IncomeTabProps {
     loading: boolean;
 }
 
+type IncomeSubTab = 'gross' | 'net';
+
 export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
+    const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
     const incomeTransactions = transactions.filter(t => t.type === 'income');
-    const totalIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalGrossIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalNetIncome = incomeTransactions.reduce((sum, t) => sum + (t.net_amount || t.amount), 0);
 
     const formatCurrency = (value: number) => {
         return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -26,7 +30,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
         .filter(t => t.location)
         .reduce((acc, t) => {
             const loc = t.location!;
-            acc[loc] = (acc[loc] || 0) + t.amount;
+            const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
+            acc[loc] = (acc[loc] || 0) + amount;
             return acc;
         }, {} as Record<string, number>);
 
@@ -37,16 +42,43 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         : [];
 
+    const displayTotal = subTab === 'gross' ? totalGrossIncome : totalNetIncome;
+    const displayLabel = subTab === 'gross' ? 'Receita Bruta' : 'Receita Líquida';
+
     return (
         <View className="flex-1">
-            <ScrollView className="flex-1 px-4 py-4" showsVerticalScrollIndicator={false}>
-                {/* Summary Card and Location breakdown omitted for brevity, keeping existing structure if possible or re-adding */}
+            {/* Sub-tabs */}
+            <View className="flex-row mx-4 mt-4 mb-2 bg-gray-100 rounded-xl p-1">
+                <TouchableOpacity
+                    onPress={() => setSubTab('gross')}
+                    className={`flex-1 py-2 rounded-lg ${subTab === 'gross' ? 'bg-white shadow-sm' : ''}`}
+                >
+                    <Text className={`text-center text-sm font-medium ${subTab === 'gross' ? 'text-green-600' : 'text-gray-500'}`}>
+                        Receita Bruta
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => setSubTab('net')}
+                    className={`flex-1 py-2 rounded-lg ${subTab === 'net' ? 'bg-white shadow-sm' : ''}`}
+                >
+                    <Text className={`text-center text-sm font-medium ${subTab === 'net' ? 'text-green-600' : 'text-gray-500'}`}>
+                        Receita Líquida
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false}>
                 {/* Summary Card */}
                 <View className="bg-white p-4 rounded-xl border border-green-100 mb-6 shadow-sm">
                     <View className="flex-row justify-between items-center">
                         <View>
-                            <Text className="text-gray-500 text-sm">Receitas Totais</Text>
-                            <Text className="text-3xl font-bold text-green-500 mt-1">{formatCurrency(totalIncome)}</Text>
+                            <Text className="text-gray-500 text-sm">{displayLabel}</Text>
+                            <Text className="text-3xl font-bold text-green-500 mt-1">{formatCurrency(displayTotal)}</Text>
+                            {subTab === 'net' && totalGrossIncome !== totalNetIncome && (
+                                <Text className="text-xs text-gray-400 mt-1">
+                                    Deduções: {formatCurrency(totalGrossIncome - totalNetIncome)}
+                                </Text>
+                            )}
                         </View>
                         <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center">
                             <TrendingUp size={24} color="#22C55E" />
@@ -202,7 +234,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     </View>
                                 </View>
                                 <Text className="font-bold text-green-600 text-base whitespace-nowrap">
-                                    + {formatCurrency(transaction.amount)}
+                                    + {formatCurrency(subTab === 'gross' ? transaction.amount : (transaction.net_amount || transaction.amount))}
                                 </Text>
                             </TouchableOpacity>
                         ))
