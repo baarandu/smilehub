@@ -219,7 +219,7 @@ export default function PatientDetail() {
         setShowPaymentModal(true);
     };
 
-    const handleConfirmPayment = async (method: string, installments: number) => {
+    const handleConfirmPayment = async (method: string, transactions?: { date: string; amount: number; method: string }[]) => {
         if (!selectedPaymentItem) return;
 
         try {
@@ -232,32 +232,61 @@ export default function PatientDetail() {
             const budgetLocation = parsed.location || null;
             const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
 
+            // If transactions array provided (new modal style), use it. 
+            // Otherwise fallback to single (though modal now sends array).
+            // Calculate total installments count for metadata
+            const installmentsCount = transactions ? transactions.length : 1;
+
             parsed.teeth[selectedPaymentItem.toothIndex] = {
                 ...selectedTooth,
                 status: 'paid',
                 paymentMethod: method,
-                paymentInstallments: installments,
+                paymentInstallments: installmentsCount,
                 paymentDate: new Date().toISOString().split('T')[0],
-                location: budgetLocation
+                location: budgetLocation,
+                // Optionally store detailed history if schema allows, but relying on financial_transactions for that.
+                paymentDetails: transactions
             };
 
             await budgetsService.update(selectedPaymentItem.budgetId, {
                 notes: JSON.stringify(parsed),
             });
 
-            const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
-            const description = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+            // If we have detailed transactions, create them
+            if (transactions && transactions.length > 0) {
+                const descriptionBase = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
 
-            await financialService.create({
-                type: 'income',
-                amount: itemTotal,
-                description: description,
-                category: 'Procedimento',
-                date: new Date().toISOString().split('T')[0],
-                location: budgetLocation,
-                patient_id: patient?.id,
-                related_entity_id: budget.id
-            });
+                for (let i = 0; i < transactions.length; i++) {
+                    const t = transactions[i];
+                    const suffix = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
+
+                    await financialService.create({
+                        type: 'income',
+                        amount: t.amount,
+                        description: descriptionBase + suffix,
+                        category: 'Procedimento',
+                        date: t.date, // User selected date (YYYY-MM-DD)
+                        location: budgetLocation,
+                        patient_id: patient?.id,
+                        related_entity_id: budget.id
+                    });
+                }
+            } else {
+                // Fallback (should not happen with new modal)
+                const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
+                const description = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
+
+                await financialService.create({
+                    type: 'income',
+                    amount: itemTotal,
+                    description: description,
+                    category: 'Procedimento',
+                    date: new Date().toISOString().split('T')[0],
+                    location: budgetLocation,
+                    patient_id: patient?.id,
+                    related_entity_id: budget.id
+                });
+            }
 
             Alert.alert('Sucesso', 'Pagamento registrado com sucesso!');
             loadBudgets();
