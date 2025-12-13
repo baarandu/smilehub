@@ -38,7 +38,8 @@ export const examsService = {
       .from('exams')
       .select('*')
       .eq('patient_id', patientId)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
     return (data as unknown as Exam[]) || [];
