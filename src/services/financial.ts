@@ -2,10 +2,10 @@ import { supabase } from '@/lib/supabase';
 import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/database';
 
 export const financialService = {
-    async getTransactions(start: Date, end: Date): Promise<FinancialTransaction[]> {
+    async getTransactions(start: Date, end: Date): Promise<any[]> {
         const { data, error } = await supabase
             .from('financial_transactions')
-            .select('*')
+            .select('*, patients(name)')
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
             .order('date', { ascending: false });
@@ -14,7 +14,7 @@ export const financialService = {
         return data || [];
     },
 
-    async create(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
+    async createTransaction(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
         const { data, error } = await supabase
             .from('financial_transactions')
             .insert(transaction)
@@ -25,7 +25,7 @@ export const financialService = {
         return data;
     },
 
-    async delete(id: string): Promise<void> {
+    async deleteTransaction(id: string): Promise<void> {
         const { error } = await supabase
             .from('financial_transactions')
             .delete()

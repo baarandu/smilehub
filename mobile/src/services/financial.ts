@@ -1,12 +1,8 @@
 import { supabase } from '../lib/supabase';
-import type { FinancialTransaction, FinancialTransactionInsert, FinancialTransactionWithPatient } from '../types/database';
+import type { FinancialTransaction, FinancialTransactionInsert, FinancialTransactionUpdate, FinancialTransactionWithPatient } from '../types/database';
 
 export const financialService = {
     async getTransactions(start: Date, end: Date): Promise<FinancialTransactionWithPatient[]> {
-        // Ensure we cover the full day by using simple YYYY-MM-DD comparison
-        // or effectively "Start of Day" to "End of Day" filters.
-        // Best approach for 'date' column (YYYY-MM-DD) is to compare strings.
-
         // Robust way to get YYYY-MM-DD from the local date object passed
         const startDate = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
         const endDate = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
@@ -29,11 +25,21 @@ export const financialService = {
         return data || [];
     },
 
+    async getByRecurrenceId(recurrenceId: string): Promise<FinancialTransaction[]> {
+        const { data, error } = await supabase
+            .from('financial_transactions')
+            .select('*')
+            .eq('recurrence_id', recurrenceId)
+            .order('date', { ascending: true }); // Important order
+
+        if (error) throw error;
+        return data || [];
+    },
+
     async create(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
         console.log('[FinancialService] Creating transaction...', transaction);
 
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('[FinancialService] Current User ID:', user?.id);
 
         if (!user) {
             console.error('[FinancialService] User is null! Authentication missing.');
@@ -41,11 +47,10 @@ export const financialService = {
         }
 
         const payload = { ...transaction, user_id: user.id };
-        console.log('[FinancialService] Insert Payload:', JSON.stringify(payload));
 
         const { data, error } = await supabase
             .from('financial_transactions')
-            .insert(payload)
+            .insert(payload as any)
             .select()
             .single();
 
@@ -54,8 +59,28 @@ export const financialService = {
             throw error;
         }
 
-        console.log('[FinancialService] Transaction created successfully:', data.id);
         return data;
+    },
+
+    async update(id: string, updates: FinancialTransactionUpdate): Promise<FinancialTransaction> {
+        const { data, error } = await supabase
+            .from('financial_transactions')
+            .update(updates as any)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async updateRecurrence(recurrenceId: string, updates: FinancialTransactionUpdate): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .update(updates as any)
+            .eq('recurrence_id', recurrenceId);
+
+        if (error) throw error;
     },
 
     async delete(id: string): Promise<void> {
@@ -63,6 +88,15 @@ export const financialService = {
             .from('financial_transactions')
             .delete()
             .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async deleteRecurrence(recurrenceId: string): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .delete()
+            .eq('recurrence_id', recurrenceId);
 
         if (error) throw error;
     }

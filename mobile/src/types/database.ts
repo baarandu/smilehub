@@ -430,6 +430,7 @@ export interface Database {
           commission_amount: number | null
           location_rate: number | null
           location_amount: number | null
+          recurrence_id: string | null
           created_at: string
           updated_at: string
         }
@@ -453,6 +454,7 @@ export interface Database {
           commission_amount?: number | null
           location_rate?: number | null
           location_amount?: number | null
+          recurrence_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -475,6 +477,7 @@ export interface Database {
           commission_amount?: number | null
           location_rate?: number | null
           location_amount?: number | null
+          recurrence_id?: string | null
           created_at?: string
           updated_at?: string
         }

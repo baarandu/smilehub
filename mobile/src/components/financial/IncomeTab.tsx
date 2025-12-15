@@ -46,6 +46,48 @@ const getPaymentMethod = (description: string): string | null => {
     return m;
 };
 
+// Date Helpers
+const getToday = () => {
+    const today = new Date();
+    return today.toLocaleDateString('pt-BR');
+};
+
+const getWeekRange = () => {
+    const today = new Date();
+    const first = today.getDate() - today.getDay(); // Sunday
+    const last = first + 6; // Saturday
+
+    const start = new Date(today.setDate(first));
+    const end = new Date(today.setDate(last));
+
+    return {
+        start: start.toLocaleDateString('pt-BR'),
+        end: end.toLocaleDateString('pt-BR')
+    };
+};
+
+const getMonthRange = () => {
+    const date = new Date();
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+    return {
+        start: start.toLocaleDateString('pt-BR'),
+        end: end.toLocaleDateString('pt-BR')
+    };
+};
+
+const getYearRange = () => {
+    const date = new Date();
+    const start = new Date(date.getFullYear(), 0, 1);
+    const end = new Date(date.getFullYear(), 11, 31);
+
+    return {
+        start: start.toLocaleDateString('pt-BR'),
+        end: end.toLocaleDateString('pt-BR')
+    };
+};
+
 export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
@@ -739,6 +781,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                     </View>
                 </View>
             </Modal>
+
         </View>
     );
 }

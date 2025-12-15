@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Plus, ChevronDown, Check } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import { budgetsService } from '../../services/budgets';
 import { locationsService, type Location } from '../../services/locations';
 import type { BudgetInsert, BudgetWithItems } from '../../types/database';
 import {
-    FACES,
-    TREATMENTS,
     TREATMENTS_WITH_MATERIAL,
     TREATMENTS_WITH_DESCRIPTION,
     getShortToothId,
-    formatCurrency,
     formatDisplayDate,
     formatDateInput,
     parseBrazilianDate,
@@ -19,6 +16,8 @@ import {
 } from './budgetUtils';
 import { ToothPickerModal } from './ToothPickerModal';
 import { BudgetSummarySection } from './BudgetSummarySection';
+import { BudgetForm } from './budgets/BudgetForm';
+import { BudgetAddItemForm } from './budgets/BudgetAddItemForm';
 
 interface NewBudgetModalProps {
     visible: boolean;
@@ -180,12 +179,6 @@ export function NewBudgetModal({
         return `R$ ${numValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
-    const getCurrentToothTotal = () => {
-        return Object.values(treatmentValues).reduce((sum, val) => {
-            return sum + (parseInt(val || '0', 10) / 100);
-        }, 0);
-    };
-
     const getGrandTotal = () => {
         return teethList.reduce((total, tooth) => {
             const toothTotal = Object.values(tooth.values).reduce((sum, val) => {
@@ -289,6 +282,7 @@ export function NewBudgetModal({
         }
         setDate(formatted);
     };
+
     const handleSave = async () => {
         if (teethList.length === 0) {
             Alert.alert('Atenção', 'Adicione pelo menos um dente ao orçamento');
@@ -364,211 +358,35 @@ export function NewBudgetModal({
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
-                        {/* Date Field & Location */}
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-4 border-b border-gray-50">
-                                <Text className="text-gray-900 font-medium mb-2">Data do Orçamento *</Text>
-                                <TextInput
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
-                                    value={formatDisplayDate(date)}
-                                    onChangeText={handleDateChange}
-                                    placeholder="DD/MM/AAAA"
-                                    placeholderTextColor="#9CA3AF"
-                                    keyboardType="numeric"
-                                    maxLength={10}
-                                />
-                            </View>
+                        <BudgetForm
+                            date={date}
+                            onDateChange={handleDateChange}
+                            location={location}
+                            onLocationChange={setLocation}
+                            locations={locations}
+                            showLocationPicker={showLocationPicker}
+                            setShowLocationPicker={setShowLocationPicker}
+                        />
 
-                            <View className="p-4">
-                                <Text className="text-gray-900 font-medium mb-2">
-                                    Local de Atendimento <Text className="text-red-500">*</Text>
-                                </Text>
-                                {!showLocationPicker ? (
-                                    <TouchableOpacity
-                                        onPress={() => setShowLocationPicker(true)}
-                                        className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
-                                    >
-                                        <Text className={location ? 'text-gray-900' : 'text-gray-400'}>
-                                            {location || 'Selecione o local'}
-                                        </Text>
-                                        <ChevronDown size={20} color="#9CA3AF" />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                                        <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
-                                            <Text className="font-medium text-gray-700">Selecione o local</Text>
-                                            <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
-                                                <X size={20} color="#6B7280" />
-                                            </TouchableOpacity>
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={() => { setLocation(''); setShowLocationPicker(false); }}
-                                            className="p-3 border-b border-gray-100"
-                                        >
-                                            <Text className="text-gray-500">Nenhum local</Text>
-                                        </TouchableOpacity>
-                                        {locations.map((loc, index) => (
-                                            <TouchableOpacity
-                                                key={loc.id}
-                                                onPress={() => {
-                                                    setLocation(loc.name);
-                                                    setShowLocationPicker(false);
-                                                }}
-                                                className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''}`}
-                                            >
-                                                <Text className="font-medium text-gray-900">{loc.name}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
-                        </View>
+                        <BudgetAddItemForm
+                            selectedTooth={selectedTooth}
+                            onLaunchToothPicker={() => setShowToothPicker(true)}
+                            selectedTreatments={selectedTreatments}
+                            onToggleTreatment={toggleTreatment}
+                            showFaces={showFaces}
+                            selectedFaces={selectedFaces}
+                            onToggleFace={toggleFace}
+                            treatmentValues={treatmentValues}
+                            onValueChange={handleTreatmentValueChange}
+                            formatTreatmentValue={formatTreatmentValue}
+                            treatmentMaterials={treatmentMaterials}
+                            onMaterialChange={handleMaterialChange}
+                            itemLocationRate={itemLocationRate}
+                            onItemLocationRateChange={setItemLocationRate}
+                            locationRate={locationRate}
+                            onAddTooth={handleAddTooth}
+                        />
 
-                        {/* Add New Tooth Section */}
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-4 border-b border-gray-100 bg-teal-50">
-                                <Text className="text-teal-800 font-medium">Adicionar Dente ao Orçamento</Text>
-                            </View>
-
-                            {/* Tooth Selection */}
-                            <View className="p-4 border-b border-gray-100">
-                                <Text className="text-gray-700 font-medium mb-2">1. Selecione o Dente *</Text>
-                                <TouchableOpacity
-                                    onPress={() => setShowToothPicker(true)}
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
-                                >
-                                    <Text className={selectedTooth ? 'text-gray-900 font-semibold' : 'text-gray-400'}>
-                                        {selectedTooth ? (selectedTooth.includes('Arcada') ? selectedTooth : `Dente ${selectedTooth}`) : 'Selecionar dente'}
-                                    </Text>
-                                    <ChevronDown size={20} color="#9CA3AF" />
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Treatment Selection - only show after tooth is selected */}
-                            {selectedTooth && (
-                                <View className="p-4 border-b border-gray-100">
-                                    <Text className="text-gray-700 font-medium mb-2">2. Tratamentos para {selectedTooth.includes('Arcada') ? selectedTooth : `o Dente ${selectedTooth}`} *</Text>
-                                    <View className="flex-row flex-wrap gap-2">
-                                        {TREATMENTS.map(treatment => (
-                                            <TouchableOpacity
-                                                key={treatment}
-                                                onPress={() => toggleTreatment(treatment)}
-                                                className={`px-3 py-2 rounded-lg border ${selectedTreatments.includes(treatment)
-                                                    ? 'bg-teal-500 border-teal-500'
-                                                    : 'bg-gray-50 border-gray-200'
-                                                    }`}
-                                            >
-                                                <Text className={
-                                                    selectedTreatments.includes(treatment)
-                                                        ? 'text-white font-medium'
-                                                        : 'text-gray-700'
-                                                }>
-                                                    {treatment}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-
-                            {/* Faces - only show when Restauração is selected */}
-                            {selectedTooth && showFaces && (
-                                <View className="p-4 border-b border-gray-100">
-                                    <Text className="text-gray-700 font-medium mb-2">Faces Afetadas *</Text>
-                                    <View className="flex-row flex-wrap gap-2">
-                                        {FACES.map(face => (
-                                            <TouchableOpacity
-                                                key={face.id}
-                                                onPress={() => toggleFace(face.id)}
-                                                className={`px-3 py-2 rounded-lg border ${selectedFaces.includes(face.id)
-                                                    ? 'bg-teal-500 border-teal-500'
-                                                    : 'bg-white border-gray-200'
-                                                    }`}
-                                            >
-                                                <Text className={
-                                                    selectedFaces.includes(face.id)
-                                                        ? 'text-white font-medium'
-                                                        : 'text-gray-700'
-                                                }>
-                                                    {face.label}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                </View>
-                            )}
-
-                            {/* Values per treatment */}
-                            {selectedTooth && selectedTreatments.length > 0 && (
-                                <View className="p-4 border-b border-gray-100">
-                                    <View className="mb-4">
-                                        <Text className="text-gray-700 font-medium mb-2">Taxa do Procedimento (%)</Text>
-                                        <TextInput
-                                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
-                                            value={itemLocationRate}
-                                            onChangeText={setItemLocationRate}
-                                            placeholder={locationRate ? `${locationRate}% (Padrão)` : "0%"}
-                                            keyboardType="numeric"
-                                        />
-                                    </View>
-
-                                    <Text className="text-gray-700 font-medium mb-2">3. Valores *</Text>
-                                    {selectedTreatments.map(treatment => (
-                                        <View key={treatment} className="mb-3 last:mb-0">
-                                            <Text className="text-gray-600 text-sm mb-1">{treatment}</Text>
-
-                                            {/* Material field */}
-                                            {TREATMENTS_WITH_MATERIAL.includes(treatment) && (
-                                                <TextInput
-                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 mb-2"
-                                                    value={treatmentMaterials[treatment] || ''}
-                                                    onChangeText={(text) => handleMaterialChange(treatment, text)}
-                                                    placeholder={`Material do ${treatment.toLowerCase()}...`}
-                                                    placeholderTextColor="#9CA3AF"
-                                                />
-                                            )}
-
-                                            {/* Description field for 'Outros' */}
-                                            {TREATMENTS_WITH_DESCRIPTION.includes(treatment) && (
-                                                <TextInput
-                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 mb-2"
-                                                    value={treatmentMaterials[treatment] || ''}
-                                                    onChangeText={(text) => handleMaterialChange(treatment, text)}
-                                                    placeholder="Descrição do tratamento..."
-                                                    placeholderTextColor="#9CA3AF"
-                                                />
-                                            )}
-
-                                            <TextInput
-                                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900 font-semibold"
-                                                value={formatTreatmentValue(treatment)}
-                                                onChangeText={(text) => handleTreatmentValueChange(treatment, text)}
-                                                placeholder="R$ 0,00"
-                                                placeholderTextColor="#9CA3AF"
-                                                keyboardType="numeric"
-                                            />
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-
-
-
-                            {/* Add Tooth Button */}
-                            {selectedTooth && selectedTreatments.length > 0 && (
-                                <View className="p-4">
-                                    <TouchableOpacity
-                                        onPress={handleAddTooth}
-                                        className="bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
-                                    >
-                                        <Plus size={18} color="#FFFFFF" />
-                                        <Text className="text-white font-medium">Adicionar {selectedTooth.includes('Arcada') ? selectedTooth : `Dente ${selectedTooth}`} ao Orçamento</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-
-                        {/* Added Teeth List with Breakdown */}
                         <BudgetSummarySection
                             teethList={teethList}
                             onToggleStatus={toggleToothStatus}
