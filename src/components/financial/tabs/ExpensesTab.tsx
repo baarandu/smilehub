@@ -6,7 +6,8 @@ import {
     Search,
     X,
     CreditCard,
-    Filter
+    Filter,
+    Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,7 @@ interface ExpensesTabProps {
 export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
     const [search, setSearch] = useState('');
     const [newExpenseOpen, setNewExpenseOpen] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
 
     const queryClient = useQueryClient();
@@ -148,7 +150,10 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         )}
                     </Button>
 
-                    <Button onClick={() => setNewExpenseOpen(true)} className="bg-red-600 hover:bg-red-700 text-white gap-2">
+                    <Button onClick={() => {
+                        setEditingTransaction(null);
+                        setNewExpenseOpen(true);
+                    }} className="bg-red-600 hover:bg-red-700 text-white gap-2">
                         <Plus className="h-4 w-4" />
                         Nova Despesa
                     </Button>
@@ -202,6 +207,18 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                     onClick={() => setDeleteId(t.id)}
                                 >
                                     <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => {
+                                        setEditingTransaction(t);
+                                        setNewExpenseOpen(true);
+                                    }}
+                                >
+                                    <Pencil className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
@@ -210,12 +227,18 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
             </div>
 
             {/* New Expense Dialog */}
-            <Dialog open={newExpenseOpen} onOpenChange={setNewExpenseOpen}>
+            <Dialog open={newExpenseOpen} onOpenChange={(open) => {
+                if (!open) setEditingTransaction(null);
+                setNewExpenseOpen(open);
+            }}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Nova Despesa</DialogTitle>
+                        <DialogTitle>{editingTransaction ? 'Editar Despesa' : 'Nova Despesa'}</DialogTitle>
                     </DialogHeader>
-                    <NewExpenseForm onSuccess={() => setNewExpenseOpen(false)} />
+                    <NewExpenseForm
+                        onSuccess={() => setNewExpenseOpen(false)}
+                        transactionToEdit={editingTransaction}
+                    />
                 </DialogContent>
             </Dialog>
 

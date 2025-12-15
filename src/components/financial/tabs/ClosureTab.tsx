@@ -134,6 +134,13 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
             return acc;
         }, {} as Record<string, number>);
 
+    const expensesByCategory = expenses.reduce((acc, t) => {
+        const cat = t.category || 'Outros';
+        acc[cat] = (acc[cat] || 0) + t.amount;
+        return acc;
+    }, {} as Record<string, number>);
+
+
     const formatCurrency = (val: number) => {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
@@ -191,7 +198,21 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</div>
-                        <p className="text-xs text-red-600 mt-1">{expenses.length} lançamentos</p>
+
+                        <div className="mt-4 space-y-1">
+                            {Object.entries(expensesByCategory)
+                                .sort(([, a], [, b]) => b - a)
+                                .map(([cat, amount]) => (
+                                    <div key={cat} className="flex justify-between text-xs">
+                                        <span className="text-red-600/80">{cat}</span>
+                                        <span className="font-medium text-red-700">{formatCurrency(amount)}</span>
+                                    </div>
+                                ))
+                            }
+                            {Object.keys(expensesByCategory).length === 0 && (
+                                <p className="text-xs text-red-400">Nenhuma despesa registrada.</p>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 

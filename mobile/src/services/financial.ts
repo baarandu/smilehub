@@ -22,7 +22,7 @@ export const financialService = {
         }
 
         console.log('[FinancialService] Fetched count:', data?.length);
-        return data || [];
+        return (data || []) as unknown as FinancialTransactionWithPatient[];
     },
 
     async getByRecurrenceId(recurrenceId: string): Promise<FinancialTransaction[]> {
@@ -59,7 +59,7 @@ export const financialService = {
             throw error;
         }
 
-        return data;
+        return data as FinancialTransaction;
     },
 
     async update(id: string, updates: FinancialTransactionUpdate): Promise<FinancialTransaction> {
@@ -71,7 +71,7 @@ export const financialService = {
             .single();
 
         if (error) throw error;
-        return data;
+        return data as FinancialTransaction;
     },
 
     async updateRecurrence(recurrenceId: string, updates: FinancialTransactionUpdate): Promise<void> {

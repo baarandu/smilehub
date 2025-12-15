@@ -421,6 +421,8 @@ export interface Database {
           card_fee_amount: number | null
           anticipation_rate: number | null
           anticipation_amount: number | null
+          payment_method: string | null
+          recurrence_id: string | null
           created_at: string
           updated_at: string
         }
@@ -441,6 +443,8 @@ export interface Database {
           card_fee_amount?: number | null
           anticipation_rate?: number | null
           anticipation_amount?: number | null
+          payment_method?: string | null
+          recurrence_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -461,6 +465,8 @@ export interface Database {
           card_fee_amount?: number | null
           anticipation_rate?: number | null
           anticipation_amount?: number | null
+          payment_method?: string | null
+          recurrence_id?: string | null
           created_at?: string
           updated_at?: string
         }

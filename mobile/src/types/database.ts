@@ -431,6 +431,7 @@ export interface Database {
           location_rate: number | null
           location_amount: number | null
           recurrence_id: string | null
+          payment_method: string | null
           created_at: string
           updated_at: string
         }
@@ -455,6 +456,7 @@ export interface Database {
           location_rate?: number | null
           location_amount?: number | null
           recurrence_id?: string | null
+          payment_method?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -478,6 +480,7 @@ export interface Database {
           location_rate?: number | null
           location_amount?: number | null
           recurrence_id?: string | null
+          payment_method?: string | null
           created_at?: string
           updated_at?: string
         }

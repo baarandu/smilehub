@@ -25,11 +25,49 @@ export const financialService = {
         return data;
     },
 
+    async updateTransaction(id: string, updates: Partial<FinancialTransactionInsert>): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .update(updates as any)
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async getByRecurrenceId(recurrenceId: string): Promise<FinancialTransaction[]> {
+        const { data, error } = await supabase
+            .from('financial_transactions')
+            .select('*')
+            .eq('recurrence_id', recurrenceId)
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    async updateRecurrence(recurrenceId: string, updates: any): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .update(updates)
+            .eq('recurrence_id', recurrenceId);
+
+        if (error) throw error;
+    },
+
     async deleteTransaction(id: string): Promise<void> {
         const { error } = await supabase
             .from('financial_transactions')
             .delete()
             .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async deleteRecurrence(recurrenceId: string): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .delete()
+            .eq('recurrence_id', recurrenceId);
 
         if (error) throw error;
     }

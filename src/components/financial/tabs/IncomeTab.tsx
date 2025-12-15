@@ -153,8 +153,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                     <button
                         onClick={() => setSubTab('gross')}
                         className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${subTab === 'gross'
-                                ? 'bg-white text-green-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-white text-green-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Bruta
@@ -162,8 +162,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                     <button
                         onClick={() => setSubTab('net')}
                         className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${subTab === 'net'
-                                ? 'bg-white text-green-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-white text-green-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Líquida
@@ -258,31 +258,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                     </Card>
                 )}
 
-                {/* Fees by Location */}
-                {Object.keys(feesByLocation).length > 0 && (
-                    <Card className="border-red-100 bg-red-50/10">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-medium text-red-900">Taxas a Pagar (Por Local)</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-[180px] w-full pr-4">
-                                <div className="space-y-4">
-                                    {Object.entries(feesByLocation).sort((a, b) => b[1] - a[1]).map(([loc, amount]) => (
-                                        <div key={loc} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-red-50 rounded-md">
-                                                    <MapPin className="h-3.5 w-3.5 text-red-600" />
-                                                </div>
-                                                <span className="text-sm font-medium truncate max-w-[150px]" title={loc}>{loc}</span>
-                                            </div>
-                                            <span className="text-sm font-bold text-red-600">- {formatCurrency(amount)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                )}
+
             </div>
 
             {/* List */}
