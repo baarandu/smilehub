@@ -19,6 +19,7 @@ interface ItemToPay {
   toothIndex: number;
   tooth: ToothEntry;
   budgetDate: string;
+  locationRate?: number;
 }
 
 export function PaymentsTab({ patientId }: PaymentsTabProps) {
@@ -66,7 +67,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               budgetId: budget.id,
               toothIndex: index,
               tooth,
-              budgetDate: budget.date
+              budgetDate: budget.date,
+              locationRate: parsed.locationRate ? parseFloat(parsed.locationRate) : 0
             };
 
             if (tooth.status === 'approved') {
@@ -139,7 +141,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         await financialService.create({
           type: 'income',
           amount: txAmount, // Store GROSS
-          description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)} (${i + 1}/${numTransactions})`,
+          description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
           category: 'Tratamento',
           date: date.toISOString(),
           patient_id: patientId,
@@ -334,6 +336,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           onConfirm={handleConfirmPayment}
           itemName={getToothDisplayName(selectedItem.tooth.tooth)}
           value={getItemValue(selectedItem)}
+          locationRate={selectedItem.locationRate || 0}
         />
       )}
     </div>

@@ -131,47 +131,69 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
         // 2. Card Fee
         let cardFeeRate = 0;
-        if ((selectedMethod === 'credit' || selectedMethod === 'debit') && selectedBrand) {
-            // Find best matching fee
-            const type = selectedMethod; // 'credit' or 'debit'
-            const installments = (type === 'credit' && isInstallments) ? parseInt(numInstallments) : 1;
+        let effectiveInstallments = 1;
 
-            // Strict match first, then fallback? 
-            // Our DB has unique(brand, type, installments).
-            // But user might have set: Visa Credit 1x, Visa Credit 2x..12x.
-            // Or maybe a range? The DB table has exact integer 'installments'.
-            // If user didn't set exact, maybe we shouldn't guess. 
-            // However, typical matrix: 1x, 2-6x, 7-12x. 
-            // If I implemented simpler in UI, here I need to change logic.
-            // For now, let's assume exact match.
+        if ((selectedMethod === 'credit' || selectedMethod === 'debit') && selectedBrand) {
+            const type = selectedMethod;
+            // For credit, we use the selected installments for fee lookup
+            // For debit, always 1
+            effectiveInstallments = (type === 'credit' && isInstallments) ? parseInt(numInstallments) : 1;
+
             const feeConfig = cardFees.find(f =>
                 f.brand === selectedBrand &&
                 f.payment_type === type &&
-                f.installments === installments
+                f.installments === effectiveInstallments
             );
 
             if (feeConfig) {
                 cardFeeRate = feeConfig.rate;
-            } else {
-                // Try to find closest installment rule? (e.g. if I have 2x defined but current is 3x)
-                // Or just 0 if not found.
             }
         }
         const cardFeeAmount = (grossAmount * cardFeeRate) / 100;
 
-        // 3. Anticipation
-        const antRate = isAnticipated ? (parseFloat(anticipationRate.replace(',', '.') || '0')) : 0;
-        // Anticipation is usually on the NET after Card Fee, or on Gross?
-        // Usually: Net = (Gross - CardFee) * (1 - AntRate)
-        // So AntAmount = (Gross - CardFee) * AntRate
-        const amountAfterCardFee = grossAmount - cardFeeAmount;
-        const anticipationAmount = (amountAfterCardFee * antRate) / 100;
+        // 3. Anticipation - New Logic: Credit/Debit are ALWAYS anticipated logic wise (single receipt)
+        // But the user said: "nesse caso, todos os valores de credito e debito sao atecipados automaticamente"
+        // And "o numero de parcelas seria so pra saber a taxa de antecipaçao"
+        // This implies the 'cardFeeRate' IS effectively the anticipation fee (or includes it).
+        // Or is there an EXTRA anticipation fee?
+        // User: "taxa do cartao=5% ... valor bruto - taxa cartao ... taxa procedimento".
+        // Code previously had separate Anticipation Rate. 
+        // If I follow user strictly: "credit card fees I inserted are anticipation fees". 
+        // So I don't need a separate "Anticipation Rate" input anymore for cards.
 
-        // 4. Location Fee
-        const locationAmount = (grossAmount * locationRate) / 100;
+        let antRate = 0;
+        let isAnticipatedLogic = isAnticipated;
+
+        // Force anticipation logic for Card methods as per request
+        if (selectedMethod === 'credit' || selectedMethod === 'debit') {
+            isAnticipatedLogic = true;
+            // The fee is already applied as cardFeeAmount. 
+            // Do we add EXTRA anticipation? No, user implies card fee IS the fee.
+            // So anticipationAmount = 0 (or included in cardFee).
+            // We'll keep anticipationAmount for Manual Anticipation (if toggle enabled for other methods?)
+            // Or just set to 0 for cards.
+        } else {
+            antRate = isAnticipated ? (parseFloat(anticipationRate.replace(',', '.') || '0')) : 0;
+        }
+
+        const anticipationAmount = 0; // Merged into card fee for cards, or 0 if not card? 
+        // Wait, if it's NOT card (e.g. Check/Boleto in future), maybe existing logic applied.
+        // For now, let's assume anticipationAmount is only relevant if manually set and NOT card.
+        // Actually, previous code: (amountAfterCardFee * antRate)
+        // If user says "card fees ARE anticipation fees", then for cards, anticipationAmount is 0 (it's the cardFee).
+
+        // 4. Location Fee - New Logic: Apply on (Gross - CardFee)
+        // User Ex: 100 - 5 = 95. 95 * 20% = 19. Net = 76.
+        // Ensure cardFeeAmount is valid
+        const safeCardFee = isNaN(cardFeeAmount) ? 0 : cardFeeAmount;
+        // Also subtract anticipationAmount if it exists/is relevant (though for cards it's usually 0 as discussed)
+        const safeAnticipation = isNaN(anticipationAmount) ? 0 : anticipationAmount;
+
+        const baseForLocation = grossAmount - safeCardFee - safeAnticipation;
+        const locationAmount = (baseForLocation * locationRate) / 100;
 
         // Net
-        const netAmount = grossAmount - taxAmount - cardFeeAmount - anticipationAmount - locationAmount;
+        const netAmount = grossAmount - taxAmount - safeCardFee - safeAnticipation - locationAmount;
 
         return {
             grossAmount,
@@ -184,7 +206,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             locationRate,
             locationAmount,
             netAmount,
-            isAnticipated
+            isAnticipated: isAnticipatedLogic
         };
     }
 
@@ -202,7 +224,11 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         // If Anticipated, we ignore installments for the Transaction Record (it becomes one single Income today)
         // OR we mark them as paid?
         // User request: "eliminate other installments". This implies single receipt.
-        if (isAnticipated) {
+
+        // Force anticipation logic for cards here too
+        const effectiveIsAnticipated = isAnticipated || selectedMethod === 'credit' || selectedMethod === 'debit';
+
+        if (effectiveIsAnticipated) {
             transactions = [{
                 method: selectedMethod,
                 amount: value, // We save Gross amount in the transaction amount usually? 
@@ -363,7 +389,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                 )}
 
                                 {/* Installments Toggle */}
-                                {(selectedMethod === 'credit') && (
+                                {selectedMethod !== 'debit' && (
                                     <View className="flex-row items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
                                         <View>
                                             <Text className="font-semibold text-gray-900">Parcelar Pagamento?</Text>

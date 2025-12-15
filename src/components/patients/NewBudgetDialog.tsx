@@ -21,12 +21,14 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
 
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [locationRate, setLocationRate] = useState('');
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
     // Reset form when opening
     useEffect(() => {
         if (open) {
             setDate(new Date().toISOString().split('T')[0]);
+            setLocationRate('');
             setTeethList([]);
         }
     }, [open]);
@@ -57,7 +59,10 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
             const total = calculateTotal();
             const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))].join(', ');
 
-            const notesData = JSON.stringify({ teeth: teethList });
+            const notesData = JSON.stringify({
+                teeth: teethList,
+                locationRate: locationRate ? parseFloat(locationRate) : 0
+            });
 
             // Create budget items for relation
             const budgetItems = teethList.map(t => ({
@@ -99,6 +104,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
                     <BudgetForm
                         date={date}
                         setDate={setDate}
+                        locationRate={locationRate}
+                        setLocationRate={setLocationRate}
                         onAddItem={handleAddItem}
                     />
 

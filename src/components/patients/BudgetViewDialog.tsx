@@ -101,11 +101,14 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate }: BudgetView
         }
     };
 
-    const renderItemGroup = (title: string, items: ToothEntry[], colorClass: string) => {
+    const renderItemGroup = (title: string, items: ToothEntry[], colorClass: string, subtext?: string) => {
         if (items.length === 0) return null;
         return (
             <div className="mb-6">
-                <h3 className={`text-sm font-semibold mb-3 ${colorClass}`}>{title}</h3>
+                <div className="flex items-center gap-2 mb-3">
+                    <h3 className={`text-sm font-semibold ${colorClass}`}>{title}</h3>
+                    {subtext && <span className="text-xs text-muted-foreground font-normal">{subtext}</span>}
+                </div>
                 <div className="space-y-3">
                     {items.map((item, idx) => {
                         // Find original index to update correct item
@@ -168,8 +171,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate }: BudgetView
 
                     <Separator className="my-4" />
 
-                    {renderItemGroup("Itens Pendentes", pendingItems, "text-amber-600")}
-                    {renderItemGroup("Itens Aprovados", approvedItems, "text-emerald-600")}
+                    {renderItemGroup("Itens Pendentes", pendingItems, "text-amber-600", "(Clique no item para aprovar)")}
+                    {renderItemGroup("Itens Aprovados", approvedItems, "text-emerald-600", "(Clique no item para desfazer aprovação)")}
                     {renderItemGroup("Itens Pagos", paidItems, "text-blue-600")}
 
                 </ScrollArea>

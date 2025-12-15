@@ -16,6 +16,7 @@ import { usePatientData } from '../../src/hooks/usePatientData';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
 import * as Linking from 'expo-linking';
 import { Image } from 'react-native';
+import ImageViewing from 'react-native-image-viewing';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
@@ -56,6 +57,17 @@ export default function PatientDetail() {
     const [showExamModal, setShowExamModal] = useState(false);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [isImageViewVisible, setIsImageViewVisible] = useState(false);
+
+    // Preview Handler
+    const handlePreviewFile = (url: string) => {
+        if (url.toLowerCase().includes('.pdf')) {
+            Linking.openURL(url);
+        } else {
+            setPreviewImage(url);
+            setIsImageViewVisible(true);
+        }
+    };
 
     // Exam handlers
     const handleDeleteExam = (exam: Exam) => {
@@ -230,12 +242,25 @@ export default function PatientDetail() {
             if (!parsed.teeth) return;
 
             const budgetLocation = parsed.location || null;
-            // Prefer column, fallback to notes
-            const budgetLocationRate = budget.location_rate !== undefined && budget.location_rate !== null
-                ? budget.location_rate
-                : (parsed.locationRate || 0);
-
             const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
+
+            // Determine rate: Item specific > Budget Column > Budget Notes > 0
+            // Determine rate: Item specific > Budget Column > Budget Notes > 0
+            let targetLocationRate = 0;
+
+            // If breakdown is provided (coming from Modal), trust its rate first if reasonable
+            if (breakdown && breakdown.locationRate !== undefined) {
+                targetLocationRate = breakdown.locationRate;
+            } else {
+                // Fallback: Calculate manually
+                if (selectedTooth.locationRate !== undefined && selectedTooth.locationRate !== null) {
+                    targetLocationRate = selectedTooth.locationRate;
+                } else if (budget.location_rate !== undefined && budget.location_rate !== null) {
+                    targetLocationRate = budget.location_rate;
+                } else {
+                    targetLocationRate = parsed.locationRate || 0;
+                }
+            }
 
             // If transactions array provided (new modal style), use it. 
             // Otherwise fallback to single (though modal now sends array).
@@ -284,26 +309,28 @@ export default function PatientDetail() {
                         const ratio = t.amount / breakdown.grossAmount;
 
                         // Calculate location fee
-                        const locationAmount = (t.amount * budgetLocationRate) / 100;
+                        // Use breakdown location amount proportional to this transaction (ratio)
+                        // This ensures we respect the calculation done in the modal (Net base)
+                        const locationAmt = breakdown.locationAmount ? (breakdown.locationAmount * ratio) : ((t.amount * targetLocationRate) / 100);
 
                         deductionPayload = {
-                            net_amount: (breakdown.netAmount * ratio) - locationAmount,
+                            net_amount: (breakdown.netAmount * ratio),
                             tax_rate: breakdown.taxRate,
                             tax_amount: breakdown.taxAmount * ratio,
                             card_fee_rate: breakdown.cardFeeRate,
                             card_fee_amount: breakdown.cardFeeAmount * ratio,
                             anticipation_rate: breakdown.anticipationRate,
                             anticipation_amount: (breakdown.anticipationAmount || 0) * ratio,
-                            location_rate: budgetLocationRate,
-                            location_amount: locationAmount
+                            location_rate: targetLocationRate,
+                            location_amount: locationAmt
                         };
-                    } else if (budgetLocationRate > 0) {
-                        // No breakdown but has location rate
-                        const locationAmount = (t.amount * budgetLocationRate) / 100;
+                    } else if (targetLocationRate > 0) {
+                        // No breakdown but has location rate, fallback to Gross based calc
+                        const locationAmt = (t.amount * targetLocationRate) / 100;
                         deductionPayload = {
-                            net_amount: t.amount - locationAmount,
-                            location_rate: budgetLocationRate,
-                            location_amount: locationAmount
+                            net_amount: t.amount - locationAmt,
+                            location_rate: targetLocationRate,
+                            location_amount: locationAmt
                         };
                     }
 
@@ -324,25 +351,26 @@ export default function PatientDetail() {
                 const itemTotal = Object.values(selectedTooth.values || {}).reduce((acc: number, val: unknown) => acc + (parseInt(val as string) || 0), 0) / 100;
 
                 let deductionPayload: Record<string, any> = {};
-                const locationAmount = (itemTotal * budgetLocationRate) / 100;
+
 
                 if (breakdown) {
                     deductionPayload = {
-                        net_amount: breakdown.netAmount - locationAmount,
+                        net_amount: breakdown.netAmount,
                         tax_rate: breakdown.taxRate,
                         tax_amount: breakdown.taxAmount,
                         card_fee_rate: breakdown.cardFeeRate,
                         card_fee_amount: breakdown.cardFeeAmount,
                         anticipation_rate: breakdown.anticipationRate,
                         anticipation_amount: breakdown.anticipationAmount,
-                        location_rate: budgetLocationRate,
-                        location_amount: locationAmount
+                        location_rate: targetLocationRate,
+                        location_amount: breakdown.locationAmount // Use calculated amount from modal
                     };
-                } else if (budgetLocationRate > 0) {
+                } else if (targetLocationRate > 0) {
+                    const locationAmt = (itemTotal * targetLocationRate) / 100;
                     deductionPayload = {
-                        net_amount: itemTotal - locationAmount,
-                        location_rate: budgetLocationRate,
-                        location_amount: locationAmount
+                        net_amount: itemTotal - locationAmt,
+                        location_rate: targetLocationRate,
+                        location_amount: locationAmt
                     };
                 }
 
@@ -576,7 +604,7 @@ export default function PatientDetail() {
                         onAdd={handleAddProcedure}
                         onEdit={handleEditProcedure}
                         onDelete={handleDeleteProcedure}
-                        onPreviewImage={setPreviewImage}
+                        onPreviewImage={handlePreviewFile}
                     />
                 )}
 
@@ -590,7 +618,7 @@ export default function PatientDetail() {
                         }}
                         onEdit={handleEditExam}
                         onDelete={handleDeleteExam}
-                        onPreviewImage={setPreviewImage}
+                        onPreviewImage={handlePreviewFile}
                     />
                 )}
 
@@ -660,9 +688,14 @@ export default function PatientDetail() {
                 value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
                 locationRate={(() => {
                     if (!selectedPaymentItem) return 0;
-                    const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
 
-                    // Prefer column
+                    // 1. Prefer item specific rate if available
+                    if (selectedPaymentItem.tooth.locationRate !== undefined && selectedPaymentItem.tooth.locationRate !== null) {
+                        return selectedPaymentItem.tooth.locationRate;
+                    }
+
+                    // 2. Fallback to budget global rate
+                    const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
                     if (budget?.location_rate !== undefined && budget?.location_rate !== null) {
                         return budget.location_rate;
                     }
@@ -704,28 +737,13 @@ export default function PatientDetail() {
                 exam={selectedExam}
             />
 
-            {/* Image Preview Modal */}
-            <Modal visible={!!previewImage} transparent animationType="fade" onRequestClose={() => setPreviewImage(null)}>
-                <View style={{ flex: 1, backgroundColor: '#000' }}>
-                    <TouchableOpacity
-                        style={{ position: 'absolute', top: 50, right: 20, zIndex: 10, backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 30 }}
-                        onPress={() => setPreviewImage(null)}
-                    >
-                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} activeOpacity={1} onPress={() => setPreviewImage(null)}>
-                        <ActivityIndicator size="large" color="#fff" style={{ position: 'absolute' }} />
-                        {previewImage && (
-                            <Image
-                                source={{ uri: previewImage }}
-                                style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').height - 100 }}
-                                resizeMode="contain"
-                                onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-                            />
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </Modal>
+            {/* Image Preview Modal with Zoom */}
+            <ImageViewing
+                images={previewImage ? [{ uri: previewImage }] : []}
+                imageIndex={0}
+                visible={isImageViewVisible}
+                onRequestClose={() => setIsImageViewVisible(false)}
+            />
         </SafeAreaView>
     );
 }

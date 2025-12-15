@@ -20,10 +20,12 @@ import {
 interface BudgetFormProps {
     date: string;
     setDate: (date: string) => void;
+    locationRate: string;
+    setLocationRate: (rate: string) => void;
     onAddItem: (item: ToothEntry) => void;
 }
 
-export function BudgetForm({ date, setDate, onAddItem }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAddItem }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -118,14 +120,24 @@ export function BudgetForm({ date, setDate, onAddItem }: BudgetFormProps) {
     return (
         <ScrollArea className="flex-1 p-6 border-r">
             <div className="space-y-6">
-                {/* Date */}
-                <div className="space-y-2">
-                    <Label>Data do Orçamento</Label>
-                    <Input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                    />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label>Data do Orçamento</Label>
+                        <Input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Taxa Clínica (%)</Label>
+                        <Input
+                            type="number"
+                            placeholder="0"
+                            value={locationRate}
+                            onChange={(e) => setLocationRate(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 <Separator />

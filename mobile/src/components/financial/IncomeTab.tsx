@@ -268,15 +268,13 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
             {/* Transaction Details Modal */}
             <Modal visible={!!selectedTransaction} transparent animationType="fade" statusBarTranslucent>
-                <TouchableOpacity
-                    className="flex-1 bg-black/50 justify-center items-center p-4"
-                    activeOpacity={1}
-                    onPress={() => setSelectedTransaction(null)}
-                >
+                <View className="flex-1 justify-center items-center p-4 bg-black/50">
                     <TouchableOpacity
+                        style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
                         activeOpacity={1}
-                        className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl"
-                    >
+                        onPress={() => setSelectedTransaction(null)}
+                    />
+                    <View className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl" style={{ maxHeight: '85%' }}>
                         <View className="bg-teal-500 p-6 pt-8">
                             <View className="flex-row justify-between items-start">
                                 <View>
@@ -359,8 +357,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             })()}
                         </View>
 
-                        <ScrollView style={{ maxHeight: 400 }}>
-                            <View style={{ padding: 24 }}>
+                        <ScrollView>
+                            <View style={{ padding: 24, paddingBottom: 40 }}>
                                 {/* Main Info */}
                                 <View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -429,12 +427,13 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         {(selectedTransaction as any).location_amount && (selectedTransaction as any).location_amount > 0 ? (
                                             <View key="location" style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                                                 <Text style={{ fontSize: 14, color: '#6B7280' }}>
-                                                    Taxa do Procedimento:
+                                                    Taxa do Procedimento ({(selectedTransaction as any).location_rate || 0}%):
                                                 </Text>
                                                 <Text style={{ fontSize: 14, color: '#EF4444', fontWeight: '500' }}>
-                                                    - R$ {formatCurrency((selectedTransaction as any).location_amount)}
+                                                    - {formatCurrency((selectedTransaction as any).location_amount)}
                                                 </Text>
-                                            </View>) : null}
+                                            </View>
+                                        ) : null}
                                         <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 8, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Text style={{ fontWeight: 'bold', color: '#111827' }}>Valor Líquido</Text>
                                             <Text style={{ fontWeight: 'bold', color: '#16a34a' }}>{formatCurrency(selectedTransaction.net_amount || selectedTransaction.amount)}</Text>
@@ -445,15 +444,15 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {/* Installments / Payment History */}
                                 {relatedInstallments.length > 0 && (
                                     <View>
-                                        <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">Histórico de Parcelas</Text>
+                                        <Text className="text-sm font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2 mt-4">Histórico de Parcelas</Text>
                                         <View>
                                             {relatedInstallments.map((inst, index) => (
-                                                <View key={inst.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: inst.id === selectedTransaction?.id ? '#f0fdf4' : '#f9fafb', borderWidth: inst.id === selectedTransaction?.id ? 1 : 0, borderColor: '#bbf7d0' }}>
+                                                <View key={inst.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: inst.id === selectedTransaction?.id ? '#f0fdf4' : '#f9fafb', borderWidth: inst.id === selectedTransaction?.id ? 1 : 0, borderColor: '#bbf7d0', marginBottom: 8 }}>
                                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
                                                         <View className="w-6 h-6 rounded-full bg-white items-center justify-center border border-gray-200">
                                                             <Text className="text-xs text-gray-500">{index + 1}</Text>
                                                         </View>
-                                                        <View>
+                                                        <View className="ml-2">
                                                             <Text className="text-gray-900 font-medium">
                                                                 {formatDate(inst.date)}
                                                             </Text>
@@ -472,8 +471,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 )}
                             </View>
                         </ScrollView>
-                    </TouchableOpacity>
-                </TouchableOpacity>
+                    </View>
+                </View>
             </Modal>
         </View>
     );

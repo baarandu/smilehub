@@ -18,6 +18,8 @@ export interface FinancialBreakdown {
     cardFeeAmount: number;
     anticipationRate: number;
     anticipationAmount: number;
+    locationRate: number;
+    locationAmount: number;
     netAmount: number;
     isAnticipated: boolean;
 }
@@ -28,6 +30,7 @@ interface PaymentMethodDialogProps {
     onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown) => void;
     itemName: string;
     value: number;
+    locationRate?: number;
 }
 
 const PAYMENT_METHODS = [
@@ -46,7 +49,7 @@ const CARD_BRANDS = [
     { id: 'others', label: 'Outras Bandeiras' },
 ];
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0 }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
@@ -126,11 +129,32 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value 
         }
 
         // Anticipation Logic
-        // For now, if anticipated, we just mark it as anticipated. 
-        // Logic for rate can be added if needed.
+        // For cards: automatic anticipation
+        let isAnticipatedLogic = anticipate;
+        if (selectedMethod === 'credit' || selectedMethod === 'debit') {
+            isAnticipatedLogic = true;
+        }
 
-        const netBeforeAnticipation = grossAmount - taxAmount - cardFeeAmount;
-        const netAmount = netBeforeAnticipation - anticipationAmount;
+        // Anticipation Amount (Manual only, for cards assumed 0/included in fee)
+        // User request: card fee is the anticipation fee.
+
+        let realAnticipationAmount = anticipationAmount;
+        if (selectedMethod === 'credit' || selectedMethod === 'debit') {
+            realAnticipationAmount = 0;
+        } else if (anticipate) {
+            // Logic for manual if needed in future
+        }
+
+        // Location Rate Logic: (Gross - CardFee) * Rate
+        // Location Rate Logic: (Gross - CardFee) * Rate
+        const safeCardFee = cardFeeAmount || 0;
+        const safeAnticipation = realAnticipationAmount || 0;
+
+        const baseForLocation = grossAmount - safeCardFee - safeAnticipation;
+        const locationAmount = (baseForLocation * locationRate) / 100;
+
+        const netBeforeAnticipation = grossAmount - taxAmount - safeCardFee - locationAmount;
+        const netAmount = netBeforeAnticipation - safeAnticipation;
 
         return {
             grossAmount,
@@ -139,16 +163,18 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value 
             cardFeeRate,
             cardFeeAmount,
             anticipationRate: anticipate ? anticipationRate : 0,
-            anticipationAmount,
+            anticipationAmount: realAnticipationAmount,
+            locationRate,
+            locationAmount,
             netAmount,
-            isAnticipated: anticipate
+            isAnticipated: isAnticipatedLogic
         };
-    }, [value, taxRate, cardFees, selectedMethod, installments, selectedBrand, anticipate]);
+    }, [value, taxRate, cardFees, selectedMethod, installments, selectedBrand, anticipate, locationRate]);
 
 
     const handleConfirm = () => {
         if (!selectedMethod) return;
-        const numInstallments = selectedMethod === 'credit' ? parseInt(installments) || 1 : 1;
+        const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
         onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown);
         setSelectedMethod(null);
         setInstallments('1');
@@ -231,7 +257,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value 
                                     </Select>
                                 </div>
 
-                                {selectedMethod === 'credit' && (
+                                {selectedMethod !== 'debit' && (
                                     <>
                                         <div className="space-y-2">
                                             <Label>Parcelamento</Label>
@@ -290,6 +316,12 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value 
                                 <div className="flex justify-between text-red-500">
                                     <span>Taxa Cartão ({breakdown.cardFeeRate}%)</span>
                                     <span>- R$ {formatMoney(breakdown.cardFeeAmount)}</span>
+                                </div>
+                            )}
+                            {breakdown.locationAmount > 0 && (
+                                <div className="flex justify-between text-red-500">
+                                    <span>Taxa Procedimento ({breakdown.locationRate}%)</span>
+                                    <span>- R$ {formatMoney(breakdown.locationAmount)}</span>
                                 </div>
                             )}
                             {breakdown.anticipationAmount > 0 && (

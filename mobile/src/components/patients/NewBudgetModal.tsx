@@ -58,6 +58,9 @@ export function NewBudgetModal({
     // List of added teeth with their data
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
+    // Item specific rate
+    const [itemLocationRate, setItemLocationRate] = useState('');
+
     useEffect(() => {
         if (visible) {
             loadLocations();
@@ -127,6 +130,7 @@ export function NewBudgetModal({
         setSelectedTreatments([]);
         setTreatmentValues({});
         setTreatmentMaterials({});
+        setItemLocationRate(''); // Reset for next item
     };
 
     const toggleArch = (arch: string) => {
@@ -251,19 +255,11 @@ export function NewBudgetModal({
             values: { ...treatmentValues },
             materials: { ...treatmentMaterials },
             status: 'pending',
+            locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
         };
 
-        // Check if tooth already exists
-        const existingIndex = teethList.findIndex(t => t.tooth === selectedTooth);
-        if (existingIndex >= 0) {
-            // Update existing
-            const updated = [...teethList];
-            updated[existingIndex] = newEntry;
-            setTeethList(updated);
-        } else {
-            // Add new
-            setTeethList([...teethList, newEntry]);
-        }
+        // Always add as new entry (allow multiple entries per tooth)
+        setTeethList([...teethList, newEntry]);
 
         // Clear fields for next tooth
         resetCurrentTooth();
@@ -505,6 +501,17 @@ export function NewBudgetModal({
                             {/* Values per treatment */}
                             {selectedTooth && selectedTreatments.length > 0 && (
                                 <View className="p-4 border-b border-gray-100">
+                                    <View className="mb-4">
+                                        <Text className="text-gray-700 font-medium mb-2">Taxa do Procedimento (%)</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
+                                            value={itemLocationRate}
+                                            onChangeText={setItemLocationRate}
+                                            placeholder={locationRate ? `${locationRate}% (Padrão)` : "0%"}
+                                            keyboardType="numeric"
+                                        />
+                                    </View>
+
                                     <Text className="text-gray-700 font-medium mb-2">3. Valores *</Text>
                                     {selectedTreatments.map(treatment => (
                                         <View key={treatment} className="mb-3 last:mb-0">
@@ -545,21 +552,7 @@ export function NewBudgetModal({
                                 </View>
                             )}
 
-                            {/* Location Rate Input - only show if location is selected */}
-                            {location && (
-                                <View className="mt-3 p-4 border-b border-gray-100">
-                                    <Text className="text-sm font-medium text-gray-700 mb-1">
-                                        Taxa do Procedimento (%)
-                                    </Text>
-                                    <TextInput
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-900"
-                                        placeholder="0"
-                                        keyboardType="numeric"
-                                        value={locationRate}
-                                        onChangeText={setLocationRate}
-                                    />
-                                </View>
-                            )}
+
 
                             {/* Add Tooth Button */}
                             {selectedTooth && selectedTreatments.length > 0 && (

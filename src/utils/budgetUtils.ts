@@ -51,6 +51,7 @@ export type ToothEntry = {
     location?: string;
     financialBreakdown?: any;
     faces?: string[];
+    materials?: Record<string, string>;
 };
 
 // Helper to get short tooth ID for database (max 10 chars)

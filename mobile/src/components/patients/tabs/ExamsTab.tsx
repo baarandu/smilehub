@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Plus, Upload, Edit3, Trash2 } from 'lucide-react-native';
+import { Plus, Upload, Edit3, Trash2, FileText } from 'lucide-react-native';
 import type { Exam } from '../../../types/database';
 
 interface ExamsTabProps {
@@ -75,7 +75,6 @@ export function ExamsTab({
                             <Text className="text-gray-600 text-sm mb-3">{exam.description}</Text>
                         )}
 
-                        {/* Images */}
                         {exam.file_urls && exam.file_urls.length > 0 && (
                             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                 <View className="flex-row gap-2">
@@ -91,13 +90,22 @@ export function ExamsTab({
                                                 overflow: 'hidden',
                                                 borderWidth: 1,
                                                 borderColor: '#e5e7eb',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
                                             }}
                                         >
-                                            <Image
-                                                source={{ uri: url }}
-                                                style={{ width: 80, height: 80 }}
-                                                resizeMode="cover"
-                                            />
+                                            {url.toLowerCase().includes('.pdf') ? (
+                                                <View className="items-center justify-center">
+                                                    <FileText size={32} color="#6B7280" />
+                                                    <Text className="text-[10px] text-gray-500 font-medium mt-1">PDF</Text>
+                                                </View>
+                                            ) : (
+                                                <Image
+                                                    source={{ uri: url }}
+                                                    style={{ width: 80, height: 80 }}
+                                                    resizeMode="cover"
+                                                />
+                                            )}
                                         </TouchableOpacity>
                                     ))}
                                 </View>

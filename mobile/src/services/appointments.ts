@@ -1,15 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { AppointmentWithPatient, Appointment } from '../types/database';
-
-interface AppointmentInsert {
-  patient_id: string;
-  date: string;
-  time: string;
-  status: string;
-  location?: string | null;
-  notes?: string | null;
-  procedure_name?: string | null;
-}
+import type { AppointmentWithPatient, Appointment, AppointmentInsert } from '../types/database';
 
 export const appointmentsService = {
   async getByDate(date: string): Promise<AppointmentWithPatient[]> {
