@@ -462,7 +462,7 @@ export default function PatientDetail() {
         return (
             <SafeAreaView className="flex-1 bg-gray-50">
                 <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
-                    <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                    <TouchableOpacity onPress={() => router.replace('/patients')} className="mr-4">
                         <ArrowLeft size={24} color="#0D9488" />
                     </TouchableOpacity>
                     <Text className="text-lg font-semibold text-gray-900">Paciente não encontrado</Text>
@@ -475,7 +475,7 @@ export default function PatientDetail() {
         <SafeAreaView className="flex-1 bg-gray-50">
             {/* Header */}
             <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                <TouchableOpacity onPress={() => router.replace('/patients')} className="mr-4">
                     <ArrowLeft size={24} color="#0D9488" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>

@@ -115,13 +115,33 @@ export default function Financial() {
                         <View className="bg-gray-200 rounded-lg p-0.5 flex-row">
                             <TouchableOpacity
                                 onPress={() => setPeriodType('monthly')}
-                                className={`px-3 py-1.5 rounded-md ${periodType === 'monthly' ? 'bg-white shadow-sm' : ''}`}
+                                style={{
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                    backgroundColor: periodType === 'monthly' ? '#FFFFFF' : 'transparent',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: periodType === 'monthly' ? 0.1 : 0,
+                                    shadowRadius: 1,
+                                    elevation: periodType === 'monthly' ? 2 : 0
+                                }}
                             >
                                 <Text className={`text-xs font-medium ${periodType === 'monthly' ? 'text-gray-900' : 'text-gray-500'}`}>Mensal</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={() => setPeriodType('yearly')}
-                                className={`px-3 py-1.5 rounded-md ${periodType === 'yearly' ? 'bg-white shadow-sm' : ''}`}
+                                style={{
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                    backgroundColor: periodType === 'yearly' ? '#FFFFFF' : 'transparent',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: periodType === 'yearly' ? 0.1 : 0,
+                                    shadowRadius: 1,
+                                    elevation: periodType === 'yearly' ? 2 : 0
+                                }}
                             >
                                 <Text className={`text-xs font-medium ${periodType === 'yearly' ? 'text-gray-900' : 'text-gray-500'}`}>Anual</Text>
                             </TouchableOpacity>
@@ -150,23 +170,40 @@ export default function Financial() {
                     </View>
                 </View>
 
-                {/* Custom Tabs */}
                 <View className="flex-row px-4 border-b border-gray-100">
                     <TouchableOpacity
                         onPress={() => setActiveTab('income')}
-                        className={`flex-1 pb-3 items-center border-b-2 ${activeTab === 'income' ? 'border-teal-500' : 'border-transparent'}`}
+                        style={{
+                            flex: 1,
+                            paddingBottom: 12,
+                            alignItems: 'center',
+                            borderBottomWidth: 2,
+                            borderBottomColor: activeTab === 'income' ? '#0D9488' : 'transparent'
+                        }}
                     >
                         <Text className={`font-medium ${activeTab === 'income' ? 'text-teal-600' : 'text-gray-500'}`}>Receitas</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('expenses')}
-                        className={`flex-1 pb-3 items-center border-b-2 ${activeTab === 'expenses' ? 'border-teal-500' : 'border-transparent'}`}
+                        style={{
+                            flex: 1,
+                            paddingBottom: 12,
+                            alignItems: 'center',
+                            borderBottomWidth: 2,
+                            borderBottomColor: activeTab === 'expenses' ? '#0D9488' : 'transparent'
+                        }}
                     >
                         <Text className={`font-medium ${activeTab === 'expenses' ? 'text-teal-600' : 'text-gray-500'}`}>Despesas</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('closure')}
-                        className={`flex-1 pb-3 items-center border-b-2 ${activeTab === 'closure' ? 'border-teal-500' : 'border-transparent'}`}
+                        style={{
+                            flex: 1,
+                            paddingBottom: 12,
+                            alignItems: 'center',
+                            borderBottomWidth: 2,
+                            borderBottomColor: activeTab === 'closure' ? '#0D9488' : 'transparent'
+                        }}
                     >
                         <Text className={`font-medium ${activeTab === 'closure' ? 'text-teal-600' : 'text-gray-500'}`}>Fechamento</Text>
                     </TouchableOpacity>
@@ -174,17 +211,17 @@ export default function Financial() {
             </View>
 
             {/* Content Area */}
-            {loading ? (
-                <View className="flex-1 justify-center items-center">
-                    <ActivityIndicator size="large" color="#0D9488" />
-                </View>
-            ) : (
-                <View className="flex-1">
-                    {activeTab === 'income' && <IncomeTab transactions={transactions} loading={loading} />}
-                    {activeTab === 'expenses' && <ExpensesTab transactions={transactions} loading={loading} />}
-                    {activeTab === 'closure' && <ClosureTab transactions={transactions} loading={loading} />}
-                </View>
-            )}
+            <View className="flex-1 relative">
+                {loading && (
+                    <View className="absolute inset-0 z-50 bg-white/50 justify-center items-center">
+                        <ActivityIndicator size="large" color="#0D9488" />
+                    </View>
+                )}
+
+                {activeTab === 'income' && <IncomeTab transactions={transactions} loading={loading} />}
+                {activeTab === 'expenses' && <ExpensesTab transactions={transactions} loading={loading} />}
+                {activeTab === 'closure' && <ClosureTab transactions={transactions} loading={loading} />}
+            </View>
 
             {/* Pickers */}
             <Modal visible={showMonthPicker} transparent animationType="fade">

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-import { TrendingUp, ArrowUpRight, MapPin, X, Calendar, CreditCard, DollarSign } from 'lucide-react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
+import { TrendingUp, ArrowUpRight, MapPin, X, Calendar, Filter, Check } from 'lucide-react-native';
 import { FinancialTransactionWithPatient } from '../../types/database';
+import { locationsService, Location } from '../../services/locations';
 
 interface IncomeTabProps {
     transactions: FinancialTransactionWithPatient[];
@@ -10,13 +11,155 @@ interface IncomeTabProps {
 
 type IncomeSubTab = 'gross' | 'net';
 
+interface FilterState {
+    patientName: string;
+    startDate: string; // DD/MM/YYYY
+    endDate: string;   // DD/MM/YYYY
+    methods: string[];
+    locations: string[];
+}
+
+const INITIAL_FILTERS: FilterState = {
+    patientName: '',
+    startDate: '',
+    endDate: '',
+    methods: [],
+    locations: []
+};
+
+const COMMON_METHODS = ['Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro'];
+
+const getPaymentMethod = (description: string): string | null => {
+    const methodMatch = description.match(/\((.*?)\)/);
+    if (!methodMatch) return null;
+
+    const rawParts = methodMatch[1].split(' - ');
+    let m = rawParts[0].trim();
+
+    // Normalization
+    if (m.toLowerCase().match(/^(crédito|credit)$/)) return 'Cartão de Crédito';
+    if (m.toLowerCase().match(/^(débito|debit)$/)) return 'Cartão de Débito';
+    if (m.toLowerCase().match(/^(pix)$/)) return 'Pix';
+    if (m.toLowerCase().match(/^(dinheiro|cash)$/)) return 'Dinheiro';
+    if (m.toLowerCase().match(/^(boleto)$/)) return 'Boleto';
+
+    return m;
+};
+
 export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
-    const incomeTransactions = transactions.filter(t => t.type === 'income');
-    const totalGrossIncome = incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const totalNetIncome = incomeTransactions.reduce((sum, t) => sum + (t.net_amount || t.amount), 0);
+    // Filter State
+    const [filterModalVisible, setFilterModalVisible] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<FilterState>(INITIAL_FILTERS);
+    const [tempFilters, setTempFilters] = useState<FilterState>(INITIAL_FILTERS);
+
+    // Locations State
+    const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+
+    React.useEffect(() => {
+        loadLocations();
+    }, []);
+
+    const loadLocations = async () => {
+        try {
+            const data = await locationsService.getAll();
+            setAvailableLocations(data);
+        } catch (error) {
+            console.error('Error loading locations', error);
+        }
+    };
+
+    // Derive unique options for filters
+    const uniqueMethods = useMemo(() => {
+        const methods = new Set<string>(COMMON_METHODS);
+        transactions.forEach(t => {
+            const m = getPaymentMethod(t.description);
+            if (m) methods.add(m);
+        });
+        return Array.from(methods).sort();
+    }, [transactions]);
+
+    const uniqueLocations = useMemo(() => {
+        if (availableLocations.length > 0) {
+            return availableLocations.map(l => l.name).sort();
+        }
+        // Fallback to transactions if API fails or empty
+        return Array.from(new Set(transactions.map(t => t.location).filter(Boolean) as string[])).sort();
+    }, [transactions, availableLocations]);
+
+    // Apply Filters Logic
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            // Filter by Type (always Income)
+            if (t.type !== 'income') return false;
+
+            // 1. Patient Name
+            if (activeFilters.patientName) {
+                const pName = t.patients?.name?.toLowerCase() || '';
+                if (!pName.includes(activeFilters.patientName.toLowerCase())) return false;
+            }
+
+            // 2. Date Range
+            const tDate = new Date(t.date); // assumed YYYY-MM-DD from DB
+            tDate.setHours(0, 0, 0, 0);
+
+            if (activeFilters.startDate) {
+                const [d, m, y] = activeFilters.startDate.split('/');
+                if (d && m && y) {
+                    const start = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                    if (tDate < start) return false;
+                }
+            }
+
+            if (activeFilters.endDate) {
+                const [d, m, y] = activeFilters.endDate.split('/');
+                if (d && m && y) {
+                    const end = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                    if (tDate > end) return false;
+                }
+            }
+
+            // 3. Methods
+            if (activeFilters.methods.length > 0) {
+                const tMethod = getPaymentMethod(t.description) || 'Não informado';
+                if (!activeFilters.methods.includes(tMethod)) return false;
+            }
+
+            // 4. Locations
+            if (activeFilters.locations.length > 0) {
+                if (!t.location || !activeFilters.locations.includes(t.location)) return false;
+            }
+
+            return true;
+        });
+    }, [transactions, activeFilters]);
+
+    // Calculations based on FILTERED transactions
+    const totalGrossIncome = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalNetIncome = filteredTransactions.reduce((sum, t) => sum + (t.net_amount || t.amount), 0);
+
+    const incomeByLocation = filteredTransactions
+        .filter(t => t.location)
+        .reduce((acc, t) => {
+            const loc = t.location!;
+            const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
+            acc[loc] = (acc[loc] || 0) + amount;
+            return acc;
+        }, {} as Record<string, number>);
+
+    // Related installments (needs access to FULL list to find siblings, but only if they match ID)
+    // Actually, related installments should probably still be found even if they are outside the filter range?
+    // Usually YES, users want to see the history. So we keep `transactions` for lookup.
+    const relatedInstallments = selectedTransaction?.related_entity_id
+        ? transactions
+            .filter(t => t.related_entity_id === selectedTransaction.related_entity_id)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        : [];
+
+    const displayTotal = subTab === 'gross' ? totalGrossIncome : totalNetIncome;
+    const displayLabel = subTab === 'gross' ? 'Receita Bruta' : 'Receita Líquida';
 
     const formatCurrency = (value: number) => {
         return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
@@ -26,68 +169,119 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
         return new Date(dateString).toLocaleDateString('pt-BR');
     };
 
-    const incomeByLocation = incomeTransactions
-        .filter(t => t.location)
-        .reduce((acc, t) => {
-            const loc = t.location!;
-            const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
-            acc[loc] = (acc[loc] || 0) + amount;
-            return acc;
-        }, {} as Record<string, number>);
+    const handleDateChange = (text: string, field: 'startDate' | 'endDate') => {
+        // Simple mask DD/MM/YYYY
+        let cleaned = text.replace(/\D/g, '');
+        if (cleaned.length > 8) cleaned = cleaned.slice(0, 8);
 
-    // Filter installments related to the selected transaction (same related_entity_id)
-    const relatedInstallments = selectedTransaction?.related_entity_id
-        ? incomeTransactions
-            .filter(t => t.related_entity_id === selectedTransaction.related_entity_id)
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        : [];
+        let masked = cleaned;
+        if (cleaned.length > 4) {
+            masked = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
+        } else if (cleaned.length > 2) {
+            masked = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+        }
 
-    const displayTotal = subTab === 'gross' ? totalGrossIncome : totalNetIncome;
-    const displayLabel = subTab === 'gross' ? 'Receita Bruta' : 'Receita Líquida';
+        setTempFilters(prev => ({ ...prev, [field]: masked }));
+    };
+
+    const toggleFilterMethod = (method: string) => {
+        setTempFilters(prev => {
+            const exists = prev.methods.includes(method);
+            return {
+                ...prev,
+                methods: exists ? prev.methods.filter(m => m !== method) : [...prev.methods, method]
+            };
+        });
+    };
+
+    const toggleFilterLocation = (loc: string) => {
+        setTempFilters(prev => {
+            const exists = prev.locations.includes(loc);
+            return {
+                ...prev,
+                locations: exists ? prev.locations.filter(l => l !== loc) : [...prev.locations, loc]
+            };
+        });
+    };
+
+    const applyFilters = () => {
+        setActiveFilters(tempFilters);
+        setFilterModalVisible(false);
+    };
+
+    const clearFilters = () => {
+        setTempFilters(INITIAL_FILTERS);
+        setActiveFilters(INITIAL_FILTERS);
+        setFilterModalVisible(false);
+    };
+
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (activeFilters.patientName) count++;
+        if (activeFilters.startDate || activeFilters.endDate) count++;
+        if (activeFilters.methods.length > 0) count++;
+        if (activeFilters.locations.length > 0) count++;
+        return count;
+    }, [activeFilters]);
 
     return (
         <View className="flex-1">
-            {/* Sub-tabs */}
-            <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 16, marginBottom: 8, backgroundColor: '#f3f4f6', borderRadius: 12, padding: 4 }}>
+            {/* Header / Filter Bar */}
+            <View className="flex-row items-center justify-between px-4 mt-4 mb-2">
+                {/* Sub-tabs */}
+                <View className="flex-row bg-gray-100 rounded-lg p-1 flex-1 mr-4">
+                    <TouchableOpacity
+                        onPress={() => setSubTab('gross')}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            alignItems: 'center',
+                            backgroundColor: subTab === 'gross' ? '#FFFFFF' : 'transparent',
+                            shadowColor: subTab === 'gross' ? '#000' : 'transparent',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: subTab === 'gross' ? 0.1 : 0,
+                            shadowRadius: 1,
+                            elevation: subTab === 'gross' ? 2 : 0
+                        }}
+                    >
+                        <Text className={`text-xs font-medium ${subTab === 'gross' ? 'text-green-600' : 'text-gray-500'}`}>Bruta</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => setSubTab('net')}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            alignItems: 'center',
+                            backgroundColor: subTab === 'net' ? '#FFFFFF' : 'transparent',
+                            shadowColor: subTab === 'net' ? '#000' : 'transparent',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: subTab === 'net' ? 0.1 : 0,
+                            shadowRadius: 1,
+                            elevation: subTab === 'net' ? 2 : 0
+                        }}
+                    >
+                        <Text className={`text-xs font-medium ${subTab === 'net' ? 'text-green-600' : 'text-gray-500'}`}>Líquida</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Filter Button */}
                 <TouchableOpacity
-                    onPress={() => setSubTab('gross')}
-                    style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 8,
-                        backgroundColor: subTab === 'gross' ? '#ffffff' : 'transparent',
-                        shadowColor: subTab === 'gross' ? '#000' : 'transparent',
-                        shadowOpacity: subTab === 'gross' ? 0.1 : 0,
-                        shadowRadius: 2,
-                        elevation: subTab === 'gross' ? 2 : 0,
+                    onPress={() => {
+                        setTempFilters(activeFilters); // Load current active into temp
+                        setFilterModalVisible(true);
                     }}
+                    className={`p-2 rounded-lg border ${activeFilterCount > 0 ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}
                 >
-                    <Text style={{
-                        textAlign: 'center',
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: subTab === 'gross' ? '#16a34a' : '#6b7280'
-                    }}>Receita Bruta</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    onPress={() => setSubTab('net')}
-                    style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        borderRadius: 8,
-                        backgroundColor: subTab === 'net' ? '#ffffff' : 'transparent',
-                        shadowColor: subTab === 'net' ? '#000' : 'transparent',
-                        shadowOpacity: subTab === 'net' ? 0.1 : 0,
-                        shadowRadius: 2,
-                        elevation: subTab === 'net' ? 2 : 0,
-                    }}
-                >
-                    <Text style={{
-                        textAlign: 'center',
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: subTab === 'net' ? '#16a34a' : '#6b7280'
-                    }}>Receita Líquida</Text>
+                    <View className="flex-row items-center gap-2">
+                        <Filter size={18} color={activeFilterCount > 0 ? '#16a34a' : '#6b7280'} />
+                        {activeFilterCount > 0 && (
+                            <View className="bg-green-500 rounded-full w-5 h-5 items-center justify-center">
+                                <Text className="text-white text-[10px] font-bold">{activeFilterCount}</Text>
+                            </View>
+                        )}
+                    </View>
                 </TouchableOpacity>
             </View>
 
@@ -96,7 +290,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 <View className="bg-white p-4 rounded-xl border border-green-100 mb-6 shadow-sm">
                     <View className="flex-row justify-between items-center">
                         <View>
-                            <Text className="text-gray-500 text-sm">{displayLabel}</Text>
+                            <Text className="text-gray-500 text-sm">{displayLabel} {activeFilterCount > 0 ? '(Filtrado)' : ''}</Text>
                             <Text className="text-3xl font-bold text-green-500 mt-1">{formatCurrency(displayTotal)}</Text>
                             {subTab === 'net' && totalGrossIncome !== totalNetIncome && (
                                 <Text className="text-xs text-gray-400 mt-1">
@@ -126,14 +320,16 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 )}
 
                 {/* List */}
-                <Text className="text-sm font-semibold text-gray-700 mb-3">Últimas Receitas</Text>
+                <Text className="text-sm font-semibold text-gray-700 mb-3">
+                    Transações ({filteredTransactions.length})
+                </Text>
                 <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-8">
-                    {incomeTransactions.length === 0 ? (
+                    {filteredTransactions.length === 0 ? (
                         <View className="p-8 items-center">
-                            <Text className="text-gray-400 italic">Nenhuma receita no período</Text>
+                            <Text className="text-gray-400 italic">Nenhum resultado encontrado</Text>
                         </View>
                     ) : (
-                        incomeTransactions.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((transaction) => (
+                        filteredTransactions.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
                             <TouchableOpacity
                                 key={transaction.id}
                                 onPress={() => setSelectedTransaction(transaction)}
@@ -153,61 +349,42 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                                 const rawDesc = transaction.description;
                                                 const patientName = transaction.patients?.name || '';
 
-                                                // 1. Extract Installment info (e.g., "(1/2)")
+                                                // 1. Extract Installment info
                                                 const installmentMatch = rawDesc.match(/\(\d+\/\d+\)/);
-                                                const installmentInfo = installmentMatch ? installmentMatch[0].replace(/[()]/g, '') : null; // "1/2"
-
-                                                // 2. Extract Payment Method info (e.g., "(Crédito - VISA_MASTER)")
-                                                // We intentionally look for the FIRST parenthesis group that is NOT the installment one if possible, 
-                                                // but typically method comes before installment in the string construction.
-                                                // Strategy: Clean installment first from string to avoid confusion? 
-                                                // Actually patient/[id].tsx constructs: "Desc (Method) - Tooth - Name (1/2)"
+                                                const installmentInfo = installmentMatch ? installmentMatch[0].replace(/[()]/g, '') : null;
 
                                                 let workingDesc = rawDesc;
                                                 if (installmentMatch) {
                                                     workingDesc = workingDesc.replace(installmentMatch[0], '');
                                                 }
 
-                                                // Now find Method
+                                                // 2. Extract Method
                                                 const methodMatch = workingDesc.match(/\((.*?)\)/);
-                                                const rawPaymentInfo = methodMatch ? methodMatch[1] : null; // "Crédito - VISA_MASTER" or "Dinheiro"
+                                                const rawPaymentInfo = methodMatch ? methodMatch[1] : null;
 
-                                                // Clean method from description
                                                 if (methodMatch) {
                                                     workingDesc = workingDesc.replace(methodMatch[0], '');
                                                 }
 
-                                                // 3. Process Method and Brand
                                                 let displayMethod = 'Não informado';
                                                 let displayBrand = null;
 
                                                 if (rawPaymentInfo) {
                                                     const methodParts = rawPaymentInfo.split(' - ');
                                                     let methodType = methodParts[0];
-
-                                                    // Mapping nicely
                                                     if (methodType.toLowerCase() === 'crédito' || methodType.toLowerCase() === 'credit') methodType = 'Cartão de Crédito';
                                                     if (methodType.toLowerCase() === 'débito' || methodType.toLowerCase() === 'debit') methodType = 'Cartão de Débito';
-
                                                     displayMethod = methodType;
-
                                                     if (methodParts.length > 1) {
-                                                        // Brand exists
-                                                        displayBrand = methodParts[1].replace('_', '/'); // VISA_MASTER -> VISA/MASTER
+                                                        displayBrand = methodParts[1].replace('_', '/');
                                                     }
                                                 }
 
-                                                // 4. Split and Filter Parts
                                                 const parts = workingDesc.split(' - ').map(p => p.trim());
+                                                const filteredParts = parts.filter(p => p && p.toLowerCase() !== patientName.toLowerCase());
 
-                                                const filteredParts = parts.filter(p =>
-                                                    p && p.toLowerCase() !== patientName.toLowerCase()
-                                                );
-
-                                                // 5. Identify Tooth vs Procedure
                                                 let tooth = '';
                                                 let procedure = '';
-
                                                 filteredParts.forEach(part => {
                                                     if (part.toLowerCase().startsWith('dente') || part.toLowerCase().startsWith('arcada')) {
                                                         tooth = part;
@@ -223,22 +400,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
                                                 return (
                                                     <View className="mt-1">
-                                                        <Text className="text-xs text-gray-600 font-medium" numberOfLines={1}>
-                                                            {line2}
-                                                        </Text>
-                                                        <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                            Forma de pagamento: {displayMethod}
-                                                        </Text>
-                                                        {displayBrand && (
-                                                            <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                                Bandeira: {displayBrand}
-                                                            </Text>
-                                                        )}
-                                                        {installmentInfo && (
-                                                            <Text className="text-xs text-gray-500 mt-0.5">
-                                                                Parcela: {installmentInfo}
-                                                            </Text>
-                                                        )}
+                                                        <Text className="text-xs text-gray-600 font-medium" numberOfLines={1}>{line2}</Text>
+                                                        <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>Forma: {displayMethod}</Text>
+                                                        {displayBrand && <Text className="text-xs text-gray-500 mt-0.5">Bandeira: {displayBrand}</Text>}
+                                                        {installmentInfo && <Text className="text-xs text-gray-500 mt-0.5">Parcela: {installmentInfo}</Text>}
                                                     </View>
                                                 );
                                             })()}
@@ -266,7 +431,107 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 </View>
             </ScrollView>
 
-            {/* Transaction Details Modal */}
+            {/* Filter Modal */}
+            <Modal visible={filterModalVisible} animationType="slide" transparent>
+                <View className="flex-1 justify-end bg-black/50">
+                    <View className="bg-white rounded-t-3xl h-[85%]">
+                        <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
+                            <Text className="text-xl font-bold text-gray-800">Filtrar Receitas</Text>
+                            <TouchableOpacity onPress={() => setFilterModalVisible(false)} className="bg-gray-100 p-2 rounded-full">
+                                <X size={20} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView className="flex-1 p-4">
+                            {/* Patient Name */}
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Paciente</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-3 mb-6"
+                                placeholder="Nome do paciente..."
+                                value={tempFilters.patientName}
+                                onChangeText={text => setTempFilters(prev => ({ ...prev, patientName: text }))}
+                            />
+
+                            {/* Date Period */}
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Período</Text>
+                            <View className="flex-row gap-4 mb-6">
+                                <View className="flex-1">
+                                    <Text className="text-xs text-gray-500 mb-1">Início</Text>
+                                    <TextInput
+                                        className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"
+                                        placeholder="DD/MM/AAAA"
+                                        keyboardType="numeric"
+                                        maxLength={10}
+                                        value={tempFilters.startDate}
+                                        onChangeText={text => handleDateChange(text, 'startDate')}
+                                    />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-xs text-gray-500 mb-1">Fim</Text>
+                                    <TextInput
+                                        className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center"
+                                        placeholder="DD/MM/AAAA"
+                                        keyboardType="numeric"
+                                        maxLength={10}
+                                        value={tempFilters.endDate}
+                                        onChangeText={text => handleDateChange(text, 'endDate')}
+                                    />
+                                </View>
+                            </View>
+
+                            {/* Payment Methods */}
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Forma de Pagamento</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-6">
+                                {uniqueMethods.map(method => (
+                                    <TouchableOpacity
+                                        key={method}
+                                        onPress={() => toggleFilterMethod(method)}
+                                        className={`px-3 py-2 rounded-lg border ${tempFilters.methods.includes(method) ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}
+                                    >
+                                        <Text className={`text-xs ${tempFilters.methods.includes(method) ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                                            {method}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Locations */}
+                            <Text className="text-sm font-semibold text-gray-700 mb-2">Local de Atendimento</Text>
+                            <View className="flex-row flex-wrap gap-2 mb-8">
+                                {uniqueLocations.map(loc => (
+                                    <TouchableOpacity
+                                        key={loc}
+                                        onPress={() => toggleFilterLocation(loc)}
+                                        className={`px-3 py-2 rounded-lg border ${tempFilters.locations.includes(loc) ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}
+                                    >
+                                        <Text className={`text-xs ${tempFilters.locations.includes(loc) ? 'text-green-700 font-medium' : 'text-gray-600'}`}>
+                                            {loc}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+
+                        {/* Footer Buttons */}
+                        <View className="p-4 border-t border-gray-100 bg-white safe-area-bottom">
+                            <TouchableOpacity
+                                onPress={applyFilters}
+                                className="bg-green-600 rounded-xl p-4 items-center mb-3"
+                            >
+                                <Text className="text-white font-bold text-base">Aplicar Filtros</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={clearFilters}
+                                className="p-4 items-center"
+                            >
+                                <Text className="text-gray-500 font-medium">Limpar Filtros</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Transaction Details Modal (Existing) */}
             <Modal visible={!!selectedTransaction} transparent animationType="fade" statusBarTranslucent>
                 <View className="flex-1 justify-center items-center p-4 bg-black/50">
                     <TouchableOpacity

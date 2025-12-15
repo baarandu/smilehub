@@ -1,9 +1,10 @@
 import "../global.css";
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Slot } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
-import { useEffect } from "react";
+// import { useEffect } from "react";
 
+/*
 function AuthRedirect() {
     const { session, isLoading } = useAuth();
     const segments = useSegments();
@@ -23,14 +24,15 @@ function AuthRedirect() {
 
     return null;
 }
+*/
 
 export default function RootLayout() {
     return (
         <AuthProvider>
             <Slot />
-            <AuthRedirect />
+            {/* <AuthRedirect /> */}
             <StatusBar style="auto" />
-        </AuthProvider>
+        </AuthProvider >
     );
 }
 
