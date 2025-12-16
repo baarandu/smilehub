@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, History, Clock } from 'lucide-react-native';
+import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, History as HistoryIcon, Clock } from 'lucide-react-native';
 import { financialService } from '../../src/services/financial';
 import { supabase } from '../../src/lib/supabase';
 
@@ -409,7 +409,7 @@ export default function Materials() {
                         onPress={() => setActiveTab('history')}
                         className={`flex-1 py-2 rounded-lg flex-row items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white shadow-sm' : ''}`}
                     >
-                        <History size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
+                        <HistoryIcon size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
                         <Text className={`font-medium ${activeTab === 'history' ? 'text-teal-600' : 'text-gray-600'}`}>
                             Histórico
                         </Text>
@@ -533,7 +533,7 @@ export default function Materials() {
                     </ScrollView>
                 ) : (
                     <View className="flex-1 justify-center items-center opacity-50 gap-4">
-                        <History size={64} color="#9CA3AF" />
+                        <HistoryIcon size={64} color="#9CA3AF" />
                         <Text className="text-gray-400 text-center px-8">
                             Nenhum pedido finalizado ainda.
                         </Text>
