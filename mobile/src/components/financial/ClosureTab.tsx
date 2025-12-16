@@ -154,6 +154,11 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         .filter((t) => t.type === 'income')
         .reduce((sum, t) => sum + (t.card_fee_amount || 0), 0);
 
+    // Calculate total anticipation fees from income transactions
+    const totalAnticipation = filteredTransactions
+        .filter((t) => t.type === 'income')
+        .reduce((sum, t) => sum + ((t as any).anticipation_amount || 0), 0);
+
     // Note: totalNetIncome logic was: reduced (net_amount || amount). 
     // Now we must be careful. If we calculate taxes separately, we shouldn't subtract them twice 
     // if net_amount ALREADY subtracts them.
@@ -191,8 +196,8 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
 
     const totalFees = Object.values(feesByLocation).reduce((sum, v) => sum + v, 0);
 
-    // Net Result
-    const netResult = totalIncome - totalCardFees - totalFees - totalTaxes - totalExpenses;
+    // Net Result - now includes anticipation fees
+    const netResult = totalIncome - totalCardFees - totalAnticipation - totalFees - totalTaxes - totalExpenses;
 
     // Profit Margin
     const profitMargin = totalIncome > 0 ? ((netResult / totalIncome) * 100).toFixed(1) : '0';
@@ -318,6 +323,16 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                             </View>
                             <Text className={totalCardFees > 0 ? "text-red-500 font-medium text-xs" : "text-gray-400 text-xs"}>
                                 {totalCardFees > 0 ? formatCurrency(totalCardFees) : 'R$ 0,00'}
+                            </Text>
+                        </View>
+
+                        {/* Anticipation Fees (Negative) */}
+                        <View className="flex-row justify-between items-center">
+                            <View className="flex-row items-center gap-2 pl-2 border-l-2 border-yellow-100">
+                                <Text className="text-gray-500 text-xs">(-) Taxa de Antecipação</Text>
+                            </View>
+                            <Text className={totalAnticipation > 0 ? "text-yellow-600 font-medium text-xs" : "text-gray-400 text-xs"}>
+                                {totalAnticipation > 0 ? formatCurrency(totalAnticipation) : 'R$ 0,00'}
                             </Text>
                         </View>
 
