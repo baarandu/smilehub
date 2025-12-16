@@ -1,0 +1,230 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Mail, Lock, User, Building2, Stethoscope, ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
+type AccountType = 'solo' | 'clinic';
+
+export default function Signup() {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [accountType, setAccountType] = useState<AccountType>('solo');
+    const [clinicName, setClinicName] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!name || !email || !password || !confirmPassword) {
+            toast.error('Preencha todos os campos');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            toast.error('As senhas não conferem');
+            return;
+        }
+
+        if (password.length < 6) {
+            toast.error('A senha deve ter pelo menos 6 caracteres');
+            return;
+        }
+
+        if (accountType === 'clinic' && !clinicName) {
+            toast.error('Informe o nome da clínica');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: name,
+                        account_type: accountType,
+                        clinic_name: clinicName || undefined,
+                    }
+                }
+            });
+
+            if (error) throw error;
+
+            toast.success('Conta criada! Verifique seu email para confirmar.');
+            navigate('/login');
+        } catch (error: any) {
+            console.error('Signup error:', error);
+            toast.error(error.message || 'Erro ao criar conta');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+                {/* Logo/Header */}
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <span className="text-3xl">🦷</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900">Criar Conta</h1>
+                    <p className="text-gray-500 mt-1">Comece a gerenciar sua clínica</p>
+                </div>
+
+                {/* Form Card */}
+                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                    <form onSubmit={handleSignup} className="space-y-5">
+                        {/* Account Type Selection */}
+                        <div className="space-y-2">
+                            <Label>Tipo de Conta</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'solo'
+                                            ? 'border-teal-500 bg-teal-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    onClick={() => setAccountType('solo')}
+                                >
+                                    <Stethoscope className={`w-6 h-6 ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-600'}`}>
+                                        Dentista Autônomo
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'clinic'
+                                            ? 'border-teal-500 bg-teal-50'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    onClick={() => setAccountType('clinic')}
+                                >
+                                    <Building2 className={`w-6 h-6 ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-600'}`}>
+                                        Clínica
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Clinic Name (conditional) */}
+                        {accountType === 'clinic' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="clinicName">Nome da Clínica</Label>
+                                <div className="relative">
+                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <Input
+                                        id="clinicName"
+                                        type="text"
+                                        placeholder="Ex: Odonto Smile Centro"
+                                        className="pl-10"
+                                        value={clinicName}
+                                        onChange={(e) => setClinicName(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Seu Nome Completo</Label>
+                            <div className="relative">
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input
+                                    id="name"
+                                    type="text"
+                                    placeholder="Dr. João Silva"
+                                    className="pl-10"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="seu@email.com"
+                                    className="pl-10"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Senha</Label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Mínimo 6 caracteres"
+                                    className="pl-10"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input
+                                    id="confirmPassword"
+                                    type="password"
+                                    placeholder="Confirme sua senha"
+                                    className="pl-10"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <>
+                                    Criar Conta
+                                    <ArrowRight className="w-5 h-5 ml-2" />
+                                </>
+                            )}
+                        </Button>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                        <p className="text-gray-500">
+                            Já tem uma conta?{' '}
+                            <Link to="/login" className="text-teal-600 hover:text-teal-700 font-medium">
+                                Fazer login
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <p className="text-center text-gray-400 text-sm mt-6">
+                    © 2024 Smile Care Hub. Todos os direitos reservados.
+                </p>
+            </div>
+        </div>
+    );
+}

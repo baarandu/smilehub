@@ -13,24 +13,29 @@ import Alerts from "./pages/Alerts";
 import Materials from "./pages/Materials";
 import Financial from "./pages/Financial";
 import FinancialSettings from "./pages/FinancialSettings";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => (
-  <AppLayout>
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/pacientes" element={<Patients />} />
-      <Route path="/pacientes/:id" element={<PatientDetail />} />
-      <Route path="/agenda" element={<Agenda />} />
-      <Route path="/alertas" element={<Alerts />} />
-      <Route path="/materiais" element={<Materials />} />
-      <Route path="/financeiro" element={<Financial />} />
-      <Route path="/financeiro/configuracoes" element={<FinancialSettings />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </AppLayout>
+  <Routes>
+    {/* Auth routes (no layout) */}
+    <Route path="/login" element={<Login />} />
+    <Route path="/signup" element={<Signup />} />
+
+    {/* App routes (with layout) */}
+    <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+    <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
+    <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
+    <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
+    <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
+    <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
+    <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
+    <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
 );
 
 const App = () => (
@@ -48,4 +53,5 @@ const App = () => (
 );
 
 export default App;
+
 

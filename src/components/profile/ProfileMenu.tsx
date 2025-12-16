@@ -12,12 +12,24 @@ import { LocationsModal } from './LocationsModal';
 import { CardFeesModal } from './CardFeesModal';
 import { TeamManagementModal } from './TeamManagementModal';
 import { useClinic } from '@/contexts/ClinicContext';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [cardFeesOpen, setCardFeesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   const { isAdmin, clinicName, userName } = useClinic();
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Erro ao sair');
+    }
+  };
 
   return (
     <>
@@ -62,7 +74,10 @@ export function ProfileMenu() {
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="cursor-pointer text-destructive">
+          <DropdownMenuItem
+            className="cursor-pointer text-destructive"
+            onClick={handleLogout}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sair</span>
           </DropdownMenuItem>
