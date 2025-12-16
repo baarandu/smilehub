@@ -163,30 +163,24 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
         let antRate = 0;
         let isAnticipatedLogic = isAnticipated;
+        let anticipationAmount = 0;
 
-        // Force anticipation logic for Card methods as per request
+        // For Card methods, use user-entered anticipation rate if provided
         if (selectedMethod === 'credit' || selectedMethod === 'debit') {
-            isAnticipatedLogic = true;
-            // The fee is already applied as cardFeeAmount. 
-            // Do we add EXTRA anticipation? No, user implies card fee IS the fee.
-            // So anticipationAmount = 0 (or included in cardFee).
-            // We'll keep anticipationAmount for Manual Anticipation (if toggle enabled for other methods?)
-            // Or just set to 0 for cards.
+            isAnticipatedLogic = true; // Cards are always "anticipated" in terms of receiving today
+            antRate = parseFloat(anticipationRate.replace(',', '.') || '0');
+            // Calculate anticipation amount based on gross minus card fee
+            const baseForAnticipation = grossAmount - cardFeeAmount;
+            anticipationAmount = (baseForAnticipation * antRate) / 100;
         } else {
             antRate = isAnticipated ? (parseFloat(anticipationRate.replace(',', '.') || '0')) : 0;
+            const baseForAnticipation = grossAmount - cardFeeAmount;
+            anticipationAmount = (baseForAnticipation * antRate) / 100;
         }
 
-        const anticipationAmount = 0; // Merged into card fee for cards, or 0 if not card? 
-        // Wait, if it's NOT card (e.g. Check/Boleto in future), maybe existing logic applied.
-        // For now, let's assume anticipationAmount is only relevant if manually set and NOT card.
-        // Actually, previous code: (amountAfterCardFee * antRate)
-        // If user says "card fees ARE anticipation fees", then for cards, anticipationAmount is 0 (it's the cardFee).
-
-        // 4. Location Fee - New Logic: Apply on (Gross - CardFee)
-        // User Ex: 100 - 5 = 95. 95 * 20% = 19. Net = 76.
-        // Ensure cardFeeAmount is valid
+        // 4. Location Fee - Apply on (Gross - CardFee - Anticipation)
+        // Ensure values are valid
         const safeCardFee = isNaN(cardFeeAmount) ? 0 : cardFeeAmount;
-        // Also subtract anticipationAmount if it exists/is relevant (though for cards it's usually 0 as discussed)
         const safeAnticipation = isNaN(anticipationAmount) ? 0 : anticipationAmount;
 
         const baseForLocation = grossAmount - safeCardFee - safeAnticipation;
@@ -428,37 +422,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                         </View>
 
                                         {/* Anticipation Toggle (Only if Installments is ON) */}
-                                        <View className="flex-col gap-2 bg-yellow-50 p-3 rounded-xl border border-yellow-100 mt-2">
-                                            <View className="flex-row items-center justify-between">
-                                                <View className="flex-row items-center gap-2">
-                                                    <PiggyBank size={18} color="#D97706" />
-                                                    <View>
-                                                        <Text className="font-semibold text-yellow-900">Antecipar Recebimento?</Text>
-                                                        <Text className="text-xs text-yellow-700">Receber tudo agora (com desconto)</Text>
-                                                    </View>
-                                                </View>
-                                                <Switch
-                                                    value={isAnticipated}
-                                                    onValueChange={setIsAnticipated}
-                                                    trackColor={{ false: '#E5E7EB', true: '#D97706' }}
-                                                />
-                                            </View>
-                                            {isAnticipated && (
-                                                <View className="mt-2 flex-row items-center gap-2 bg-white p-2 rounded-lg border border-yellow-200">
-                                                    <Text className="text-sm font-medium text-yellow-800">Taxa de Antecipação:</Text>
-                                                    <TextInput
-                                                        value={anticipationRate}
-                                                        onChangeText={setAnticipationRate}
-                                                        keyboardType="numeric"
-                                                        placeholder="0.00"
-                                                        className="flex-1 text-right font-bold text-yellow-900"
-                                                    />
-                                                    <Text className="text-yellow-800">%</Text>
-                                                </View>
-                                            )}
-                                        </View>
 
-                                        {/* Installment List (Only show if NOT anticipated, because if anticipated, they don't matter as they are collapsed) */}
+                                        {/* Installment List */}
                                         {!isAnticipated && (
                                             <View className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                                                 <View className="flex-row mb-2 px-1">
@@ -492,6 +457,36 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                                     <Text className={`font-bold ${Math.abs(getTotalPlanned() - value) > 0.05 ? 'text-red-500' : 'text-green-600'}`}>
                                                         R$ {formatCurrency(getTotalPlanned())}
                                                     </Text>
+                                                </View>
+                                            </View>
+                                        )}
+                                    </View>
+                                )}
+
+                                {/* Anticipation Rate Input - Show for Credit/Debit */}
+                                {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
+                                    <View className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+                                        <View className="flex-row items-center gap-2 mb-3">
+                                            <PiggyBank size={20} color="#D97706" />
+                                            <Text className="font-semibold text-yellow-900">Taxa de Antecipação</Text>
+                                        </View>
+                                        <Text className="text-xs text-yellow-700 mb-3">Informe a taxa cobrada pela operadora para antecipar o recebimento do cartão.</Text>
+                                        <View className="flex-row items-center gap-2 bg-white p-3 rounded-lg border border-yellow-200">
+                                            <Percent size={16} color="#D97706" />
+                                            <TextInput
+                                                value={anticipationRate}
+                                                onChangeText={setAnticipationRate}
+                                                keyboardType="numeric"
+                                                placeholder="0,00"
+                                                className="flex-1 text-base font-semibold text-yellow-900"
+                                            />
+                                            <Text className="text-yellow-800 font-medium">%</Text>
+                                        </View>
+                                        {parseFloat(anticipationRate.replace(',', '.') || '0') > 0 && (
+                                            <View className="mt-3 pt-3 border-t border-yellow-200">
+                                                <View className="flex-row justify-between">
+                                                    <Text className="text-sm text-yellow-800">Valor da Antecipação:</Text>
+                                                    <Text className="font-bold text-red-600">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
                                                 </View>
                                             </View>
                                         )}
