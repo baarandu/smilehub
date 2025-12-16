@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Users, Calendar, Bell, TrendingUp, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle } from 'lucide-react-native';
+import { Users, Calendar, Bell, TrendingUp, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle, Users2 } from 'lucide-react-native';
+import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { consultationsService } from '../../src/services/consultations';
@@ -23,11 +24,12 @@ export default function Dashboard() {
     const [recentAlerts, setRecentAlerts] = useState<(PatientAlert | ReturnAlert & { type: 'scheduled' })[]>([]);
 
     const { signOut, user } = useAuth();
-    const { displayName, clinicName } = useClinic();
+    const { displayName, clinicName, isAdmin } = useClinic();
 
     // Profile & Locations modal state
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showLocationsModal, setShowLocationsModal] = useState(false);
+    const [showTeamModal, setShowTeamModal] = useState(false);
     const [locations, setLocations] = useState<Location[]>([]);
     const [editingLocation, setEditingLocation] = useState<Location | null>(null);
     const [locationForm, setLocationForm] = useState({ name: '', address: '' });
@@ -364,6 +366,19 @@ export default function Dashboard() {
                             <Text className="text-gray-700 font-medium">Gerenciar Locais</Text>
                         </TouchableOpacity>
 
+                        {isAdmin && (
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
+                                onPress={() => {
+                                    setShowProfileModal(false);
+                                    setShowTeamModal(true);
+                                }}
+                            >
+                                <Users2 size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Gerenciar Equipe</Text>
+                            </TouchableOpacity>
+                        )}
+
                         <TouchableOpacity
                             className="flex-row items-center gap-4 p-4 bg-red-50 rounded-xl"
                             onPress={handleLogout}
@@ -477,6 +492,12 @@ export default function Dashboard() {
                     )}
                 </SafeAreaView>
             </Modal>
+
+            {/* Team Management Modal */}
+            <TeamManagementModal
+                visible={showTeamModal}
+                onClose={() => setShowTeamModal(false)}
+            />
         </SafeAreaView>
     );
 }
