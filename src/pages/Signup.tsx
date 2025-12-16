@@ -61,7 +61,7 @@ export default function Signup() {
 
             if (error) throw error;
 
-            toast.success('Conta criada! Verifique seu email para confirmar.');
+            toast.success('Cadastro concluído! Sua conta foi criada com sucesso.');
             navigate('/login');
         } catch (error: any) {
             console.error('Signup error:', error);

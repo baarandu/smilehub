@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
             });
             if (error) throw error;
-            Alert.alert('Verifique seu Email', 'Um link de confirmação foi enviado.');
+            Alert.alert('Cadastro Concluído', 'Sua conta foi criada com sucesso!');
         } catch (error: any) {
             console.error(error);
             Alert.alert('Erro no Cadastro', error.message || 'Falha ao cadastrar.');
