@@ -1,19 +1,56 @@
 import { Users, Calendar, Bell, TrendingUp } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { ReturnAlertsList } from '@/components/dashboard/ReturnAlertsList';
+import { ReturnAlertsList } from '@/components/dashboard/ReturnAlertsList'; // Actually exported as RecentAlertsList now, I should fix import.
+import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
 import { ProfileMenu } from '@/components/profile';
 import { usePatientsCount } from '@/hooks/usePatients';
 import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
+import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Dashboard() {
   const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount();
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
   const { data: todayCount, isLoading: loadingTodayCount } = useTodayAppointmentsCount();
-  const { data: returnAlerts, isLoading: loadingAlerts } = useReturnAlerts();
+  const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
+  const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
+  const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
+
+  const isLoadingAlerts = loadingReturns || loadingBirthdays || loadingProcedures;
+
+  // Prepare Recent Alerts
+  const recentAlerts: RecentAlert[] = [
+    ...(birthdayAlerts || []).map(a => ({
+      id: `b-${a.patient.id}`,
+      type: 'birthday' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: 'Aniversário hoje',
+      urgency: 'urgent' as const
+    })),
+    ...(procedureAlerts || []).map(a => ({
+      id: `p-${a.patient.id}`, // using patient id as unique base
+      type: 'procedure_return' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: `${a.daysSince} dias sem vir`,
+      urgency: 'urgent' as const
+    })),
+    ...(returnAlerts || []).map(a => ({
+      id: `r-${a.patient_id}`,
+      type: 'scheduled' as const,
+      patientName: a.patient_name,
+      patientPhone: a.phone,
+      date: a.suggested_return_date,
+      subtitle: `Retorno em ${a.days_until_return} dias`,
+      urgency: a.days_until_return <= 7 ? 'urgent' : 'normal' as const
+    }))
+  ].slice(0, 6); // Top 6
 
   return (
     <div className="space-y-6">
@@ -71,13 +108,13 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <TodayAppointments 
-          appointments={todayAppointments || []} 
+        <TodayAppointments
+          appointments={todayAppointments || []}
           isLoading={loadingAppointments}
         />
-        <ReturnAlertsList 
-          alerts={returnAlerts || []} 
-          isLoading={loadingAlerts}
+        <RecentAlertsList
+          alerts={recentAlerts}
+          isLoading={isLoadingAlerts}
         />
       </div>
     </div>

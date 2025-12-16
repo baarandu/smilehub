@@ -46,11 +46,17 @@ export const financialService = {
             throw new Error('Usuário não autenticado');
         }
 
-        const payload = { ...transaction, user_id: user.id };
+        // Ensure payload matches the Insert type
+        const payload: FinancialTransactionInsert = {
+            ...transaction,
+            user_id: user.id
+        };
 
-        const { data, error } = await supabase
-            .from('financial_transactions')
-            .insert(payload as any)
+        // Casting to any to avoid "Argument of type ... is not assignable to never"
+        // This usually happens if table types are not fully inferred by Supabase client
+        const { data, error } = await (supabase
+            .from('financial_transactions') as any)
+            .insert(payload)
             .select()
             .single();
 
@@ -63,9 +69,9 @@ export const financialService = {
     },
 
     async update(id: string, updates: FinancialTransactionUpdate): Promise<FinancialTransaction> {
-        const { data, error } = await supabase
-            .from('financial_transactions')
-            .update(updates as any)
+        const { data, error } = await (supabase
+            .from('financial_transactions') as any)
+            .update(updates)
             .eq('id', id)
             .select()
             .single();
@@ -75,9 +81,9 @@ export const financialService = {
     },
 
     async updateRecurrence(recurrenceId: string, updates: FinancialTransactionUpdate): Promise<void> {
-        const { error } = await supabase
-            .from('financial_transactions')
-            .update(updates as any)
+        const { error } = await (supabase
+            .from('financial_transactions') as any)
+            .update(updates)
             .eq('recurrence_id', recurrenceId);
 
         if (error) throw error;

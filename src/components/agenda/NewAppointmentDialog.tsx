@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Search, X } from 'lucide-react';
+import { Plus, Search, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,10 @@ export function NewAppointmentDialog({
   patients,
   locations,
   onAdd,
+  onUpdate,
+  appointmentToEdit,
 }: NewAppointmentDialogProps) {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     patientId: '',
     patientName: '',
@@ -40,11 +44,22 @@ export function NewAppointmentDialog({
 
   useEffect(() => {
     if (open) {
-      setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+      if (appointmentToEdit) {
+        setForm({
+          patientId: appointmentToEdit.patient_id,
+          patientName: appointmentToEdit.patients?.name || '',
+          time: appointmentToEdit.time?.slice(0, 5) || '',
+          location: appointmentToEdit.location || '',
+          notes: appointmentToEdit.notes || '',
+          procedure: appointmentToEdit.procedure_name || '',
+        });
+      } else {
+        setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+      }
       setPatientSearch('');
       setShowPatientList(false);
     }
-  }, [open]);
+  }, [open, appointmentToEdit]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -73,25 +88,51 @@ export function NewAppointmentDialog({
   };
 
   const handleSubmit = () => {
-    onAdd(form);
+    if (appointmentToEdit && onUpdate) {
+      onUpdate(appointmentToEdit.id, form);
+    } else {
+      onAdd(form);
+    }
     setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
     setPatientSearch('');
   };
 
+  const handleCreateNew = () => {
+    onOpenChange(true);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
-          <Plus className="w-6 h-6" />
-        </Button>
-      </DialogTrigger>
+      {!appointmentToEdit && (
+        <DialogTrigger asChild>
+          <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
+            <Plus className="w-6 h-6" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Agendar Consulta</DialogTitle>
+          <DialogTitle>{appointmentToEdit ? 'Editar Consulta' : 'Agendar Consulta'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label>Paciente *</Label>
+            <div className="flex justify-between items-center">
+              <Label>Paciente *</Label>
+              {appointmentToEdit && form.patientId && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-teal-600"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(`/pacientes/${form.patientId}`);
+                  }}
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Ver perfil
+                </Button>
+              )}
+            </div>
             {form.patientId ? (
               <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                 <span className="flex-1 font-medium">{form.patientName}</span>
@@ -198,7 +239,7 @@ export function NewAppointmentDialog({
               Cancelar
             </Button>
             <Button className="flex-1" onClick={handleSubmit}>
-              Agendar
+              {appointmentToEdit ? 'Salvar' : 'Agendar'}
             </Button>
           </div>
         </div>

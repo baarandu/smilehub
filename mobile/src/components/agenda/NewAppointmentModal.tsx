@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, ChevronDown } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { X, ChevronDown, User, ExternalLink } from 'lucide-react-native';
 import type { Patient } from '../../types/database';
 import type { Location } from '../../services/locations';
 
@@ -18,6 +19,9 @@ interface NewAppointmentModalProps {
     notes: string;
     procedure?: string;
   }) => Promise<void>;
+  appointmentToEdit?: any; // Using any to avoid importing AppointmentWithPatient mismatch issues if not exported
+  onUpdate?: (id: string, updates: any) => Promise<void>;
+  onDelete?: (id: string) => Promise<void>;
 }
 
 export function NewAppointmentModal({
@@ -27,7 +31,11 @@ export function NewAppointmentModal({
   locations,
   onClose,
   onCreateAppointment,
+  appointmentToEdit,
+  onUpdate,
+  onDelete
 }: NewAppointmentModalProps) {
+  const router = useRouter();
   const [patientSearch, setPatientSearch] = React.useState('');
   const [showLocationPicker, setShowLocationPicker] = React.useState(false);
   const [newAppointment, setNewAppointment] = React.useState({
@@ -38,6 +46,24 @@ export function NewAppointmentModal({
     notes: '',
     procedure: '',
   });
+
+  React.useEffect(() => {
+    if (appointmentToEdit) {
+      setNewAppointment({
+        patientId: appointmentToEdit.patient_id,
+        patientName: appointmentToEdit.patients?.name || '',
+        time: appointmentToEdit.time?.slice(0, 5) || '',
+        location: appointmentToEdit.location || '',
+        notes: appointmentToEdit.notes || '',
+        procedure: appointmentToEdit.procedure_name || '',
+      });
+      setPatientSearch(appointmentToEdit.patients?.name || '');
+    } else {
+      setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+      setPatientSearch('');
+    }
+  }, [appointmentToEdit]);
+
 
   const filteredPatients = patientSearch.length > 0
     ? patients.filter(p =>
@@ -70,16 +96,46 @@ export function NewAppointmentModal({
       return;
     }
 
-    await onCreateAppointment({
-      patientId: newAppointment.patientId,
-      time: newAppointment.time,
-      location: newAppointment.location,
-      notes: newAppointment.notes,
-      procedure: newAppointment.procedure,
-    });
+    if (appointmentToEdit && onUpdate) {
+      await onUpdate(appointmentToEdit.id, {
+        patient_id: newAppointment.patientId,
+        time: newAppointment.time,
+        location: newAppointment.location,
+        notes: newAppointment.notes,
+        procedure_name: newAppointment.procedure,
+        date: appointmentToEdit.date, // Preserve date or allow change? Assuming same date for now or passed elsewhere
+      });
+    } else {
+      await onCreateAppointment({
+        patientId: newAppointment.patientId,
+        time: newAppointment.time,
+        location: newAppointment.location,
+        notes: newAppointment.notes,
+        procedure: newAppointment.procedure,
+      });
+    }
 
-    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
-    setPatientSearch('');
+    // Reset handled by useEffect on prop change, but safe to clear here
+    if (!appointmentToEdit) {
+      setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+      setPatientSearch('');
+    }
+  };
+
+  const handleDelete = () => {
+    if (!onDelete || !appointmentToEdit) return;
+    Alert.alert(
+      'Confirmar exclusão',
+      'Tem certeza que deseja excluir esse agendamento?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: () => onDelete(appointmentToEdit.id)
+        }
+      ]
+    );
   };
 
   const handleClose = () => {
@@ -95,7 +151,9 @@ export function NewAppointmentModal({
           <TouchableOpacity onPress={handleClose}>
             <X size={24} color="#6B7280" />
           </TouchableOpacity>
-          <Text className="text-lg font-semibold text-gray-900">Novo Agendamento</Text>
+          <Text className="text-lg font-semibold text-gray-900">
+            {appointmentToEdit ? 'Editar Agendamento' : 'Novo Agendamento'}
+          </Text>
           <View className="w-6" />
         </View>
 
@@ -109,14 +167,40 @@ export function NewAppointmentModal({
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Paciente *</Text>
             {newAppointment.patientId ? (
-              <View className="bg-teal-50 border border-teal-200 rounded-xl p-4 flex-row items-center justify-between">
-                <Text className="text-teal-800 font-medium">{newAppointment.patientName}</Text>
-                <TouchableOpacity onPress={() => {
-                  setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
-                  setPatientSearch('');
-                }}>
-                  <X size={20} color="#0D9488" />
-                </TouchableOpacity>
+              <View className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-teal-800 font-medium">{newAppointment.patientName}</Text>
+                  <View className="flex-row items-center gap-2">
+                    {appointmentToEdit && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          onClose();
+                          router.push(`/patient/${appointmentToEdit.patient_id}`);
+                        }}
+                        className="bg-white p-2 rounded-full border border-teal-100"
+                      >
+                        <ExternalLink size={16} color="#0D9488" />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => {
+                      setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
+                      setPatientSearch('');
+                    }}>
+                      <X size={20} color="#0D9488" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                {appointmentToEdit && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      onClose();
+                      router.push(`/patient/${appointmentToEdit.patient_id}`);
+                    }}
+                    className="mt-2 flex-row items-center gap-1"
+                  >
+                    <Text className="text-teal-600 text-xs font-medium">Ver perfil do paciente</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
               <View>
@@ -238,9 +322,17 @@ export function NewAppointmentModal({
               <Text className="text-gray-700 font-semibold text-center">Cancelar</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleCreate} className="flex-1 bg-teal-600 py-4 rounded-xl">
-              <Text className="text-white font-semibold text-center">Agendar</Text>
+              <Text className="text-white font-semibold text-center">
+                {appointmentToEdit ? 'Salvar' : 'Agendar'}
+              </Text>
             </TouchableOpacity>
           </View>
+
+          {appointmentToEdit && onDelete && (
+            <TouchableOpacity onPress={handleDelete} className="mt-4 bg-red-50 py-4 rounded-xl">
+              <Text className="text-red-600 font-semibold text-center">Excluir Agendamento</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </SafeAreaView>
     </Modal>

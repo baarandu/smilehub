@@ -118,6 +118,15 @@ export default function Patients() {
         return value;
     };
 
+    const formatCPF = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        return numbers
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+            .replace(/(-\d{2})\d+?$/, '$1');
+    };
+
     const formatDateDisplay = (dateStr: string | null) => {
         if (!dateStr) return null;
         const date = new Date(dateStr);
@@ -310,6 +319,19 @@ export default function Patients() {
                                         maxLength={10}
                                         value={form.birthDate}
                                         onChangeText={(text) => setForm({ ...form, birthDate: formatDateInput(text) })}
+                                    />
+                                </View>
+
+                                <View>
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">CPF</Text>
+                                    <TextInput
+                                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                        placeholder="000.000.000-00"
+                                        placeholderTextColor="#9CA3AF"
+                                        keyboardType="numeric"
+                                        maxLength={14}
+                                        value={form.cpf || ''}
+                                        onChangeText={(text) => setForm({ ...form, cpf: formatCPF(text) })}
                                     />
                                 </View>
 

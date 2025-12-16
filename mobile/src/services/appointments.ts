@@ -80,5 +80,14 @@ export const appointmentsService = {
 
     if (error) throw error;
     return data as Appointment;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('appointments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
   }
 };

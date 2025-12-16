@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Calendar, Plus, MapPin } from 'lucide-react-native';
 import { appointmentsService } from '../../src/services/appointments';
 import { getPatients } from '../../src/services/patients';
@@ -11,6 +11,7 @@ import type { AppointmentWithPatient, Patient } from '../../src/types/database';
 
 export default function Agenda() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -21,6 +22,7 @@ export default function Agenda() {
     const [showModal, setShowModal] = useState(false);
     const [showStatusPicker, setShowStatusPicker] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithPatient | null>(null);
+    const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
 
     useEffect(() => {
         loadAppointments();
@@ -34,6 +36,15 @@ export default function Agenda() {
         loadPatients();
         loadLocations();
     }, []);
+
+    useEffect(() => {
+        if (params.date === 'today') {
+            goToToday();
+            // Optional: reset param to avoid stuck state if they navigate away and back without param?
+            // But usually nice to stay.
+            router.setParams({ date: '' }); // Clear it so subsequent clicks re-trigger if logic depends on change, or just leaves it.
+        }
+    }, [params.date]);
 
     const loadAppointments = async () => {
         try {
@@ -127,12 +138,40 @@ export default function Agenda() {
             });
 
             setShowModal(false);
+            setEditingAppointment(null);
             loadAppointments();
             loadMonthDates();
             Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
         } catch (error) {
             console.error('Error creating appointment:', error);
             Alert.alert('Erro', 'Não foi possível agendar a consulta');
+        }
+    };
+
+    const handleUpdateAppointment = async (id: string, updates: any) => {
+        try {
+            await appointmentsService.update(id, updates);
+            setShowModal(false);
+            setEditingAppointment(null);
+            loadAppointments();
+            Alert.alert('Sucesso', 'Agendamento atualizado com sucesso!');
+        } catch (error) {
+            console.error('Error updating appointment:', error);
+            Alert.alert('Erro', 'Não foi possível atualizar o agendamento');
+        }
+    };
+
+    const handleDeleteAppointment = async (id: string) => {
+        try {
+            await appointmentsService.delete(id);
+            setShowModal(false);
+            setEditingAppointment(null);
+            loadAppointments();
+            loadMonthDates();
+            Alert.alert('Sucesso', 'Agendamento excluído com sucesso!');
+        } catch (error) {
+            console.error('Error deleting appointment:', error);
+            Alert.alert('Erro', 'Não foi possível excluir o agendamento');
         }
     };
 
@@ -187,6 +226,7 @@ export default function Agenda() {
                     <TouchableOpacity
                         onPress={() => {
                             loadLocations();
+                            setEditingAppointment(null);
                             setShowModal(true);
                         }}
                         className="bg-teal-600 w-12 h-12 rounded-full items-center justify-center shadow-lg"
@@ -239,7 +279,10 @@ export default function Agenda() {
                                     key={apt.id}
                                     className="bg-white rounded-xl p-4 border border-gray-100"
                                     activeOpacity={0.7}
-                                    onPress={() => router.push(`/patient/${apt.patient_id}`)}
+                                    onPress={() => {
+                                        setEditingAppointment(apt);
+                                        setShowModal(true);
+                                    }}
                                 >
                                     <View className="flex-row items-center gap-4">
                                         <View className="items-center justify-center">
@@ -295,8 +338,14 @@ export default function Agenda() {
                 selectedDate={selectedDate}
                 patients={patients}
                 locations={locations}
-                onClose={() => setShowModal(false)}
+                onClose={() => {
+                    setShowModal(false);
+                    setEditingAppointment(null);
+                }}
                 onCreateAppointment={handleCreateAppointment}
+                appointmentToEdit={editingAppointment}
+                onUpdate={handleUpdateAppointment}
+                onDelete={handleDeleteAppointment}
             />
 
             {/* Status Picker Modal */}

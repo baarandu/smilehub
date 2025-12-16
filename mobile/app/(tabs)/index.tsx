@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Users, Calendar, Bell, TrendingUp, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Users, Calendar, Bell, TrendingUp, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle } from 'lucide-react-native';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
 import { consultationsService } from '../../src/services/consultations';
+import { alertsService, type Alert as PatientAlert } from '../../src/services/alerts';
+import type { ReturnAlert } from '../../src/types/database';
 import { locationsService, type Location } from '../../src/services/locations';
 import type { AppointmentWithPatient } from '../../src/types/database';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 export default function Dashboard() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [patientsCount, setPatientsCount] = useState(0);
     const [todayCount, setTodayCount] = useState(0);
     const [pendingReturns, setPendingReturns] = useState(0);
     const [todayAppointments, setTodayAppointments] = useState<AppointmentWithPatient[]>([]);
+    const [recentAlerts, setRecentAlerts] = useState<(PatientAlert | ReturnAlert & { type: 'scheduled' })[]>([]);
 
     const { signOut, user } = useAuth();
 
@@ -52,16 +57,31 @@ export default function Dashboard() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returns, appointments] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures] = await Promise.all([
                 patientsService.count(),
                 appointmentsService.countToday(),
                 consultationsService.countPendingReturns(),
-                appointmentsService.getToday()
+                appointmentsService.getToday(),
+                consultationsService.getReturnAlerts(),
+                alertsService.getBirthdayAlerts(),
+                alertsService.getProcedureReminders()
             ]);
             setPatientsCount(patients);
             setTodayCount(today);
-            setPendingReturns(returns);
+            setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
+
+            // Combine and process alerts
+            const combined: any[] = [
+                ...birthdays,
+                ...procedures,
+                ...scheduled.map(s => ({ ...s, type: 'scheduled' }))
+            ];
+
+            // Prioritize: Birthdays > Procedures > Scheduled (soonest)
+            // Just a simple mix for "Recentes" - essentially "Urgent"
+            const limited = combined.slice(0, 6);
+            setRecentAlerts(limited);
         } catch (error: any) {
             console.error('Error loading data:', {
                 message: error?.message,
@@ -188,16 +208,19 @@ export default function Dashboard() {
                         title="Pacientes"
                         value={patientsCount.toString()}
                         icon={<Users size={24} color="#0D9488" />}
+                        onPress={() => router.push('/patients')}
                     />
                     <StatsCard
                         title="Consultas Hoje"
                         value={todayCount.toString()}
                         icon={<Calendar size={24} color="#0D9488" />}
+                        onPress={() => router.push('/agenda?date=today')}
                     />
                     <StatsCard
                         title="Retornos Pendentes"
                         value={pendingReturns.toString()}
                         icon={<Bell size={24} color="#F59E0B" />}
+                        onPress={() => router.push('/alerts')}
                     />
                     <StatsCard
                         title="Taxa de Retorno"
@@ -209,13 +232,13 @@ export default function Dashboard() {
                 </View>
 
                 {/* Agenda Section */}
-                <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8">
                     <View className="flex-row justify-between items-center mb-4">
                         <View className="flex-row items-center gap-2">
                             <Calendar size={20} color="#0D9488" />
                             <Text className="text-lg font-bold text-gray-900">Agenda de Hoje</Text>
                         </View>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => router.push('/agenda')}>
                             <Text className="text-teal-600 font-medium">Ver agenda</Text>
                         </TouchableOpacity>
                     </View>
@@ -246,6 +269,69 @@ export default function Dashboard() {
                                     <ChevronRight size={20} color="#9CA3AF" />
                                 </View>
                             ))}
+                        </View>
+                    )}
+                </View>
+
+                {/* Recent Alerts Section */}
+                <View className="mb-6">
+                    <View className="flex-row justify-between items-center mb-4">
+                        <View className="flex-row items-center gap-2">
+                            <Bell size={20} color="#F59E0B" />
+                            <Text className="text-lg font-bold text-gray-900">Alertas Recentes</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => router.push('/alerts')}>
+                            <Text className="text-teal-600 font-medium">Ver todos</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {recentAlerts.length === 0 ? (
+                        <View className="bg-white p-6 rounded-2xl border border-gray-100 items-center">
+                            <Bell size={32} color="#D1D5DB" />
+                            <Text className="text-gray-400 mt-2">Nenhum alerta recente</Text>
+                        </View>
+                    ) : (
+                        <View className="gap-3">
+                            {recentAlerts.map((alert: any, index) => {
+                                let icon = <Bell size={20} color="#6B7280" />;
+                                let color = "bg-gray-50";
+                                let title = "";
+                                let subtitle = "";
+
+                                if (alert.type === 'birthday') {
+                                    icon = <Gift size={20} color="#EC4899" />;
+                                    color = "bg-pink-50";
+                                    title = `Aniversário de ${alert.patient.name}`;
+                                    subtitle = "Hoje";
+                                } else if (alert.type === 'procedure_return') {
+                                    icon = <Clock size={20} color="#F59E0B" />;
+                                    color = "bg-amber-50";
+                                    title = `Retorno: ${alert.patient.name}`;
+                                    subtitle = `${alert.daysSince} dias sem vir`;
+                                } else if (alert.type === 'scheduled') {
+                                    icon = <AlertTriangle size={20} color="#0D9488" />;
+                                    color = "bg-teal-50";
+                                    title = `Retorno Agendado: ${alert.patient_name}`;
+                                    subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`;
+                                }
+
+                                return (
+                                    <TouchableOpacity
+                                        key={index} // Alerts might not have unique IDs across types safely, index is okay here for display
+                                        className={`flex-row items-center p-3 rounded-xl border border-gray-100 bg-white`}
+                                        onPress={() => router.push('/alerts')}
+                                    >
+                                        <View className={`p-2 rounded-full mr-3 ${color}`}>
+                                            {icon}
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="font-semibold text-gray-900">{title}</Text>
+                                            <Text className="text-gray-500 text-xs">{subtitle}</Text>
+                                        </View>
+                                        <ChevronRight size={16} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     )}
                 </View>
@@ -399,15 +485,20 @@ export default function Dashboard() {
     );
 }
 
-function StatsCard({ title, value, icon, trend, isPositive }: {
+function StatsCard({ title, value, icon, trend, isPositive, onPress }: {
     title: string;
     value: string;
     icon: React.ReactNode;
     trend?: string;
     isPositive?: boolean;
+    onPress?: () => void;
 }) {
     return (
-        <View className="w-[48%] bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        <TouchableOpacity
+            onPress={onPress}
+            activeOpacity={onPress ? 0.7 : 1}
+            className="w-[48%] bg-white p-4 rounded-2xl shadow-sm border border-gray-100"
+        >
             <View className="flex-row justify-between items-start mb-2">
                 <Text className="text-gray-600 text-sm font-medium flex-1">{title}</Text>
                 <View className="bg-teal-50 p-2 rounded-lg">
@@ -420,6 +511,6 @@ function StatsCard({ title, value, icon, trend, isPositive }: {
                     {trend}
                 </Text>
             )}
-        </View>
+        </TouchableOpacity>
     );
 }

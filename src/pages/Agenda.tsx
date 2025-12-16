@@ -147,6 +147,28 @@ export default function Agenda() {
     }
   };
 
+  const handleUpdateAppointment = async (id: string, data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => {
+    try {
+      await appointmentsService.update(id, {
+        patient_id: data.patientId,
+        date: dateString,
+        time: data.time,
+        location: data.location || null,
+        notes: data.notes || null,
+        procedure_name: data.procedure || null,
+      });
+
+      setDialogOpen(false);
+      setEditingAppointment(null);
+      toast.success('Consulta atualizada com sucesso!');
+      loadDayAppointments();
+      loadMonthDates();
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      toast.error('Erro ao atualizar consulta');
+    }
+  };
+
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
@@ -196,11 +218,16 @@ export default function Agenda() {
         </div>
         <NewAppointmentDialog
           open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) setEditingAppointment(null);
+          }}
           patients={patients}
           locations={locations}
           selectedDate={dateString}
           onAdd={handleAddAppointment}
+          onUpdate={handleUpdateAppointment}
+          appointmentToEdit={editingAppointment}
         />
       </div>
 
