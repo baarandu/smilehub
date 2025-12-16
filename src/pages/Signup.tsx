@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 type AccountType = 'solo' | 'clinic';
+type Gender = 'male' | 'female';
 
 export default function Signup() {
     const [name, setName] = useState('');
@@ -15,6 +16,7 @@ export default function Signup() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [accountType, setAccountType] = useState<AccountType>('solo');
+    const [gender, setGender] = useState<Gender>('male');
     const [clinicName, setClinicName] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -52,6 +54,7 @@ export default function Signup() {
                         full_name: name,
                         account_type: accountType,
                         clinic_name: clinicName || undefined,
+                        gender: gender,
                     }
                 }
             });
@@ -90,8 +93,8 @@ export default function Signup() {
                                 <button
                                     type="button"
                                     className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'solo'
-                                            ? 'border-teal-500 bg-teal-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-teal-500 bg-teal-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                     onClick={() => setAccountType('solo')}
                                 >
@@ -103,14 +106,47 @@ export default function Signup() {
                                 <button
                                     type="button"
                                     className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'clinic'
-                                            ? 'border-teal-500 bg-teal-50'
-                                            : 'border-gray-200 hover:border-gray-300'
+                                        ? 'border-teal-500 bg-teal-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                     onClick={() => setAccountType('clinic')}
                                 >
                                     <Building2 className={`w-6 h-6 ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-400'}`} />
                                     <span className={`text-sm font-medium ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-600'}`}>
                                         Clínica
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Gender Selection */}
+                        <div className="space-y-2">
+                            <Label>Sexo</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-colors ${gender === 'male'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    onClick={() => setGender('male')}
+                                >
+                                    <span className="text-xl">👨‍⚕️</span>
+                                    <span className={`text-sm font-medium ${gender === 'male' ? 'text-blue-600' : 'text-gray-600'}`}>
+                                        Masculino
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-colors ${gender === 'female'
+                                        ? 'border-pink-500 bg-pink-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                    onClick={() => setGender('female')}
+                                >
+                                    <span className="text-xl">👩‍⚕️</span>
+                                    <span className={`text-sm font-medium ${gender === 'female' ? 'text-pink-600' : 'text-gray-600'}`}>
+                                        Feminino
                                     </span>
                                 </button>
                             </div>

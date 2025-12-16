@@ -19,7 +19,7 @@ export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [cardFeesOpen, setCardFeesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
-  const { isAdmin, clinicName, userName } = useClinic();
+  const { isAdmin, clinicName, displayName } = useClinic();
 
   const handleLogout = async () => {
     try {
@@ -37,7 +37,7 @@ export function ProfileMenu() {
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-colors">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground">{userName || 'Usuário'}</p>
+              <p className="text-sm font-medium text-foreground">{displayName || 'Usuário'}</p>
               <p className="text-xs text-muted-foreground">{clinicName || 'Minha Clínica'}</p>
             </div>
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">

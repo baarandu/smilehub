@@ -5,6 +5,7 @@ import { useAuth } from '../src/contexts/AuthContext';
 import { Mail, Lock, User as UserIcon, ArrowLeft, Building2, Stethoscope } from 'lucide-react-native';
 
 type AccountType = 'solo' | 'clinic';
+type Gender = 'male' | 'female';
 
 export default function SignUp() {
     const [name, setName] = useState('');
@@ -12,6 +13,7 @@ export default function SignUp() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [accountType, setAccountType] = useState<AccountType>('solo');
+    const [gender, setGender] = useState<Gender>('male');
     const [clinicName, setClinicName] = useState('');
     const [loading, setLoading] = useState(false);
     const { signUp } = useAuth();
@@ -34,7 +36,7 @@ export default function SignUp() {
 
         setLoading(true);
         try {
-            await signUp(email, password, name, accountType, clinicName || undefined);
+            await signUp(email, password, name, accountType, clinicName || undefined, gender);
             router.replace('/login');
         } catch (error) {
             // Handled in context
@@ -104,6 +106,40 @@ export default function SignUp() {
                                     </Text>
                                     <Text className="text-xs text-gray-400 mt-1 text-center">
                                         Múltiplos profissionais
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Gender Selection */}
+                        <View>
+                            <Text className="text-sm font-medium text-gray-700 mb-2">Sexo</Text>
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    className={`flex-1 p-3 rounded-xl border-2 items-center ${gender === 'male'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 bg-gray-50'
+                                        }`}
+                                    onPress={() => setGender('male')}
+                                >
+                                    <Text className="text-xl">👨‍⚕️</Text>
+                                    <Text className={`mt-1 font-medium ${gender === 'male' ? 'text-blue-600' : 'text-gray-500'
+                                        }`}>
+                                        Masculino
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    className={`flex-1 p-3 rounded-xl border-2 items-center ${gender === 'female'
+                                        ? 'border-pink-500 bg-pink-50'
+                                        : 'border-gray-200 bg-gray-50'
+                                        }`}
+                                    onPress={() => setGender('female')}
+                                >
+                                    <Text className="text-xl">👩‍⚕️</Text>
+                                    <Text className={`mt-1 font-medium ${gender === 'female' ? 'text-pink-600' : 'text-gray-500'
+                                        }`}>
+                                        Feminino
                                     </Text>
                                 </TouchableOpacity>
                             </View>

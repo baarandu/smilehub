@@ -8,7 +8,7 @@ type AuthContextType = {
     user: User | null;
     isLoading: boolean;
     signIn: (email: string, password: string) => Promise<void>;
-    signUp: (email: string, password: string, name?: string, accountType?: 'solo' | 'clinic', clinicName?: string) => Promise<void>;
+    signUp: (email: string, password: string, name?: string, accountType?: 'solo' | 'clinic', clinicName?: string, gender?: 'male' | 'female') => Promise<void>;
     signOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
 };
@@ -63,7 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password: string,
         name?: string,
         accountType: 'solo' | 'clinic' = 'solo',
-        clinicName?: string
+        clinicName?: string,
+        gender?: 'male' | 'female'
     ) => {
         setIsLoading(true);
         try {
@@ -75,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         full_name: name,
                         account_type: accountType,
                         clinic_name: clinicName,
+                        gender: gender,
                     }
                 }
             });

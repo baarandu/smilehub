@@ -23,7 +23,7 @@ export default function Dashboard() {
     const [recentAlerts, setRecentAlerts] = useState<(PatientAlert | ReturnAlert & { type: 'scheduled' })[]>([]);
 
     const { signOut, user } = useAuth();
-    const { userName, clinicName } = useClinic();
+    const { displayName, clinicName } = useClinic();
 
     // Profile & Locations modal state
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -195,7 +195,7 @@ export default function Dashboard() {
                         onPress={() => setShowProfileModal(true)}
                     >
                         <View>
-                            <Text className="text-sm font-medium text-gray-900 text-right">{userName || 'Usuário'}</Text>
+                            <Text className="text-sm font-medium text-gray-900 text-right">{displayName || 'Usuário'}</Text>
                             <Text className="text-xs text-gray-500 text-right">{clinicName || 'Minha Clínica'}</Text>
                         </View>
                         <View className="w-10 h-10 bg-teal-600 rounded-full items-center justify-center">
@@ -353,7 +353,7 @@ export default function Dashboard() {
                             <View className="w-16 h-16 bg-teal-600 rounded-full items-center justify-center mb-3">
                                 <User size={32} color="#FFFFFF" />
                             </View>
-                            <Text className="text-xl font-bold text-gray-900">{userName || 'Usuário'}</Text>
+                            <Text className="text-xl font-bold text-gray-900">{displayName || 'Usuário'}</Text>
                             <Text className="text-gray-500">{clinicName || 'Minha Clínica'}</Text>
                         </View>
 

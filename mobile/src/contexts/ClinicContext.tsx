@@ -15,6 +15,8 @@ interface ClinicContextType {
     clinicId: string | null;
     clinicName: string | null;
     userName: string | null;
+    displayName: string | null;
+    gender: 'male' | 'female' | null;
     role: Role | null;
     isAdmin: boolean;
     canEdit: boolean;
@@ -35,6 +37,8 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     const [clinicId, setClinicId] = useState<string | null>(null);
     const [clinicName, setClinicName] = useState<string | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState<string | null>(null);
+    const [gender, setGender] = useState<'male' | 'female' | null>(null);
     const [role, setRole] = useState<Role | null>(null);
     const [members, setMembers] = useState<ClinicMember[]>([]);
     const [loading, setLoading] = useState(true);
@@ -50,14 +54,22 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
             // Get user's profile
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('full_name')
+                .select('full_name, gender')
                 .eq('id', user.id)
                 .single();
 
-            if (profile) {
-                setUserName((profile as any).full_name || user.user_metadata?.full_name || null);
+            const fullName = (profile as any)?.full_name || user.user_metadata?.full_name || null;
+            const userGender = (profile as any)?.gender || user.user_metadata?.gender || null;
+
+            setUserName(fullName);
+            setGender(userGender);
+
+            // Create display name with Dr./Dra. prefix
+            if (fullName) {
+                const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
+                setDisplayName(`${prefix} ${fullName}`);
             } else {
-                setUserName(user.user_metadata?.full_name || null);
+                setDisplayName(null);
             }
 
             const { data: clinicUser } = await supabase
@@ -112,6 +124,8 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         clinicId,
         clinicName,
         userName,
+        displayName,
+        gender,
         role,
         isAdmin: role === 'admin',
         canEdit: role === 'admin' || role === 'editor',
