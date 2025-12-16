@@ -43,7 +43,7 @@ export default function Dashboard() {
                     onPress: async () => {
                         setShowProfileModal(false);
                         await signOut();
-                        // Navigation is handled by _layout's Auth Guard
+                        router.replace('/login');
                     }
                 }
             ]
