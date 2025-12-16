@@ -60,6 +60,10 @@ export default function Materials() {
     const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    // Order Detail Modal State
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
+
     // Helpers
     const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -318,8 +322,15 @@ export default function Materials() {
 
     const OrderCard = ({ order, showDelete = true }: { order: ShoppingOrder; showDelete?: boolean }) => (
         <TouchableOpacity
-            onPress={() => order.status === 'pending' ? handleOpenOrder(order) : undefined}
-            activeOpacity={order.status === 'pending' ? 0.7 : 1}
+            onPress={() => {
+                if (order.status === 'pending') {
+                    handleOpenOrder(order);
+                } else {
+                    setSelectedOrder(order);
+                    setDetailModalVisible(true);
+                }
+            }}
+            activeOpacity={0.7}
             style={styles.orderCard}
         >
             <View style={styles.orderCardHeader}>
@@ -332,8 +343,8 @@ export default function Materials() {
                         {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
                     </Text>
                 </View>
-                {showDelete && order.status === 'pending' && (
-                    <TouchableOpacity onPress={() => handleDeleteOrder(order.id)} style={{ padding: 8 }}>
+                {showDelete && (
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }} style={{ padding: 8 }}>
                         <Trash2 size={18} color="#EF4444" />
                     </TouchableOpacity>
                 )}
@@ -641,6 +652,75 @@ export default function Materials() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Order Detail Modal */}
+            <Modal visible={detailModalVisible} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Detalhes do Pedido</Text>
+                            <TouchableOpacity onPress={() => { setDetailModalVisible(false); setSelectedOrder(null); }} style={styles.modalCloseButton}>
+                                <X size={20} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {selectedOrder && (
+                            <ScrollView style={{ padding: 16 }}>
+                                {/* Order Info */}
+                                <View style={styles.detailSection}>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Data:</Text>
+                                        <Text style={styles.detailValue}>{formatDate(selectedOrder.created_at)}</Text>
+                                    </View>
+                                    {selectedOrder.completed_at && (
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.detailLabel}>Finalizado em:</Text>
+                                            <Text style={[styles.detailValue, { color: '#10b981' }]}>{formatDate(selectedOrder.completed_at)}</Text>
+                                        </View>
+                                    )}
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Total:</Text>
+                                        <Text style={[styles.detailValue, { color: '#0d9488', fontWeight: 'bold', fontSize: 20 }]}>{formatCurrency(selectedOrder.total_amount)}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Items List */}
+                                <Text style={styles.sectionTitle}>Produtos ({selectedOrder.items.length})</Text>
+                                {selectedOrder.items.map((item, index) => (
+                                    <View key={item.id || index} style={styles.detailItemCard}>
+                                        <Text style={styles.detailItemName}>{item.name}</Text>
+                                        <View style={styles.detailItemRow}>
+                                            <View style={styles.detailItemInfo}>
+                                                <Text style={styles.detailItemLabel}>Qtd:</Text>
+                                                <Text style={styles.detailItemValue}>{item.quantity}</Text>
+                                            </View>
+                                            <View style={styles.detailItemInfo}>
+                                                <Text style={styles.detailItemLabel}>Unit:</Text>
+                                                <Text style={styles.detailItemValue}>{formatCurrency(item.unitPrice)}</Text>
+                                            </View>
+                                            <View style={styles.detailItemInfo}>
+                                                <Text style={styles.detailItemLabel}>Total:</Text>
+                                                <Text style={[styles.detailItemValue, { color: '#0d9488', fontWeight: 'bold' }]}>{formatCurrency(item.totalPrice)}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.supplierRow}>
+                                            <Store size={14} color="#6B7280" />
+                                            <Text style={styles.supplierText}>{item.supplier}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+
+                                <TouchableOpacity
+                                    onPress={() => { setDetailModalVisible(false); setSelectedOrder(null); }}
+                                    style={styles.cancelButton}
+                                >
+                                    <Text style={styles.cancelButtonText}>Fechar</Text>
+                                </TouchableOpacity>
+                            </ScrollView>
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -715,6 +795,18 @@ const styles = StyleSheet.create({
     confirmModalText: { color: '#6b7280', textAlign: 'center', marginBottom: 24 },
     confirmButton: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 12 },
     confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: 18 },
-    cancelButton: { padding: 16, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' },
+    cancelButton: { padding: 16, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center', marginTop: 16, marginBottom: 32 },
     cancelButtonText: { color: '#374151', fontWeight: '500' },
+    // Detail Modal Styles
+    detailSection: { backgroundColor: '#f9fafb', padding: 16, borderRadius: 12, marginBottom: 16 },
+    detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    detailLabel: { color: '#6b7280', fontSize: 14 },
+    detailValue: { color: '#111827', fontSize: 16 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 12 },
+    detailItemCard: { backgroundColor: 'white', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 12 },
+    detailItemName: { fontWeight: 'bold', color: '#111827', fontSize: 16, marginBottom: 8 },
+    detailItemRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    detailItemInfo: { alignItems: 'center' },
+    detailItemLabel: { fontSize: 12, color: '#6b7280' },
+    detailItemValue: { fontSize: 14, color: '#111827' },
 });
