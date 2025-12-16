@@ -111,13 +111,6 @@ export default function Financial() {
           <ClosureTab transactions={transactions} loading={loading} />
         </TabsContent>
       </Tabs>
-
-      {/* Click outside to close dropdowns */}
-      {
-        (showMonthPicker || showYearPicker) && (
-          <div className="fixed inset-0 z-40" onClick={closeDropdowns} />
-        )
-      }
     </div >
   );
 }
