@@ -191,16 +191,10 @@ export default function Dashboard() {
                         </Text>
                     </View>
                     <TouchableOpacity
-                        className="flex-row items-center gap-2"
+                        className="w-10 h-10 bg-teal-600 rounded-full items-center justify-center"
                         onPress={() => setShowProfileModal(true)}
                     >
-                        <View>
-                            <Text className="text-sm font-medium text-gray-900 text-right">{displayName || 'Usuário'}</Text>
-                            <Text className="text-xs text-gray-500 text-right">{clinicName || 'Minha Clínica'}</Text>
-                        </View>
-                        <View className="w-10 h-10 bg-teal-600 rounded-full items-center justify-center">
-                            <User size={20} color="#FFFFFF" />
-                        </View>
+                        <User size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
 
