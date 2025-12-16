@@ -409,7 +409,7 @@ export default function Materials() {
                         onPress={() => setActiveTab('history')}
                         className={`flex-1 py-2 rounded-lg flex-row items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white shadow-sm' : ''}`}
                     >
-                        <HistoryIcon size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
+                        <Clock size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
                         <Text className={`font-medium ${activeTab === 'history' ? 'text-teal-600' : 'text-gray-600'}`}>
                             Histórico
                         </Text>
