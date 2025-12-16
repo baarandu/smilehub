@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 
@@ -431,8 +431,8 @@ export default function Materials() {
                       key={order.id}
                       onClick={() => handleOpenOrder(order)}
                       className={`p-4 rounded-lg border cursor-pointer transition-colors ${order.id === currentOrderId
-                          ? 'bg-primary/10 border-primary'
-                          : 'bg-muted/30 border-border hover:bg-muted/50'
+                        ? 'bg-primary/10 border-primary'
+                        : 'bg-muted/30 border-border hover:bg-muted/50'
                         }`}
                     >
                       <div className="flex items-center justify-between">
