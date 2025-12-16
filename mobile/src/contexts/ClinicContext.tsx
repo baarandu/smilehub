@@ -14,6 +14,7 @@ interface ClinicMember {
 interface ClinicContextType {
     clinicId: string | null;
     clinicName: string | null;
+    userName: string | null;
     role: Role | null;
     isAdmin: boolean;
     canEdit: boolean;
@@ -33,6 +34,7 @@ const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 export function ClinicProvider({ children }: { children: React.ReactNode }) {
     const [clinicId, setClinicId] = useState<string | null>(null);
     const [clinicName, setClinicName] = useState<string | null>(null);
+    const [userName, setUserName] = useState<string | null>(null);
     const [role, setRole] = useState<Role | null>(null);
     const [members, setMembers] = useState<ClinicMember[]>([]);
     const [loading, setLoading] = useState(true);
@@ -43,6 +45,19 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
             if (!user) {
                 setLoading(false);
                 return;
+            }
+
+            // Get user's profile
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', user.id)
+                .single();
+
+            if (profile) {
+                setUserName((profile as any).full_name || user.user_metadata?.full_name || null);
+            } else {
+                setUserName(user.user_metadata?.full_name || null);
             }
 
             const { data: clinicUser } = await supabase
@@ -96,6 +111,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     const value: ClinicContextType = {
         clinicId,
         clinicName,
+        userName,
         role,
         isAdmin: role === 'admin',
         canEdit: role === 'admin' || role === 'editor',

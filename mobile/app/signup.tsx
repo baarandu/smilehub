@@ -2,20 +2,23 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Mail, Lock, User as UserIcon, ArrowLeft } from 'lucide-react-native';
+import { Mail, Lock, User as UserIcon, ArrowLeft, Building2, Stethoscope } from 'lucide-react-native';
+
+type AccountType = 'solo' | 'clinic';
 
 export default function SignUp() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [accountType, setAccountType] = useState<AccountType>('solo');
+    const [clinicName, setClinicName] = useState('');
     const [loading, setLoading] = useState(false);
     const { signUp } = useAuth();
     const router = useRouter();
 
     const handleSignUp = async () => {
         if (!name || !email || !password || !confirmPassword) {
-            // Alert or validation message
             return;
         }
 
@@ -24,10 +27,14 @@ export default function SignUp() {
             return;
         }
 
+        if (accountType === 'clinic' && !clinicName) {
+            alert('Por favor, informe o nome da clínica');
+            return;
+        }
+
         setLoading(true);
         try {
-            await signUp(email, password, name);
-            // usually wait for email confirmation or auto login
+            await signUp(email, password, name, accountType, clinicName || undefined);
             router.replace('/login');
         } catch (error) {
             // Handled in context
@@ -50,15 +57,78 @@ export default function SignUp() {
                         </TouchableOpacity>
                     </Link>
 
-                    <View className="mb-10">
+                    <View className="mb-8">
                         <Text className="text-3xl font-bold text-gray-900">Criar Conta</Text>
                         <Text className="text-gray-500 mt-2">Comece a organizar sua clínica hoje</Text>
                     </View>
 
                     <View className="gap-4">
+                        {/* Account Type Selection */}
                         <View>
-                            <Text className="text-sm font-medium text-gray-700 mb-1.5">Nome Completo</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <Text className="text-sm font-medium text-gray-700 mb-2">Tipo de Conta</Text>
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'solo'
+                                            ? 'border-teal-500 bg-teal-50'
+                                            : 'border-gray-200 bg-gray-50'
+                                        }`}
+                                    onPress={() => setAccountType('solo')}
+                                >
+                                    <Stethoscope
+                                        size={28}
+                                        color={accountType === 'solo' ? '#14b8a6' : '#9CA3AF'}
+                                    />
+                                    <Text className={`mt-2 font-medium ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-500'
+                                        }`}>
+                                        Dentista Autônomo
+                                    </Text>
+                                    <Text className="text-xs text-gray-400 mt-1 text-center">
+                                        Consultório individual
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'clinic'
+                                            ? 'border-teal-500 bg-teal-50'
+                                            : 'border-gray-200 bg-gray-50'
+                                        }`}
+                                    onPress={() => setAccountType('clinic')}
+                                >
+                                    <Building2
+                                        size={28}
+                                        color={accountType === 'clinic' ? '#14b8a6' : '#9CA3AF'}
+                                    />
+                                    <Text className={`mt-2 font-medium ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-500'
+                                        }`}>
+                                        Clínica
+                                    </Text>
+                                    <Text className="text-xs text-gray-400 mt-1 text-center">
+                                        Múltiplos profissionais
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Clinic Name (only if clinic selected) */}
+                        {accountType === 'clinic' && (
+                            <View>
+                                <Text className="text-sm font-medium text-gray-700 mb-1.5">Nome da Clínica</Text>
+                                <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
+                                    <Building2 size={20} color="#9CA3AF" />
+                                    <TextInput
+                                        className="flex-1 ml-3 text-gray-900"
+                                        placeholder="Ex: Odonto Smile Centro"
+                                        autoCapitalize="words"
+                                        value={clinicName}
+                                        onChangeText={setClinicName}
+                                    />
+                                </View>
+                            </View>
+                        )}
+
+                        <View>
+                            <Text className="text-sm font-medium text-gray-700 mb-1.5">Seu Nome Completo</Text>
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
                                 <UserIcon size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -72,7 +142,7 @@ export default function SignUp() {
 
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Email</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
                                 <Mail size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -87,7 +157,7 @@ export default function SignUp() {
 
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Senha</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
                                 <Lock size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -101,7 +171,7 @@ export default function SignUp() {
 
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Confirmar Senha</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50">
                                 <Lock size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -130,3 +200,4 @@ export default function SignUp() {
         </KeyboardAvoidingView>
     );
 }
+
