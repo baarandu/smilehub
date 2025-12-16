@@ -21,6 +21,13 @@ export const appointmentsService = {
     return this.getByDate(today);
   },
 
+  async getTomorrow(): Promise<AppointmentWithPatient[]> {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    return this.getByDate(tomorrowStr);
+  },
+
   async countToday(): Promise<number> {
     const today = new Date().toISOString().split('T')[0];
     const { count, error } = await supabase

@@ -5,13 +5,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings } from 'lucide-react-native';
 import { consultationsService } from '../../src/services/consultations';
 import { alertsService, Alert } from '../../src/services/alerts';
-import type { ReturnAlert } from '../../src/types/database';
+import { appointmentsService } from '../../src/services/appointments';
+import type { ReturnAlert, AppointmentWithPatient } from '../../src/types/database';
 
 export default function Alerts() {
     const [loading, setLoading] = useState(true);
     const [scheduledAlerts, setScheduledAlerts] = useState<ReturnAlert[]>([]);
     const [birthdayAlerts, setBirthdayAlerts] = useState<Alert[]>([]);
     const [procedureAlerts, setProcedureAlerts] = useState<Alert[]>([]);
+    const [tomorrowAppointments, setTomorrowAppointments] = useState<AppointmentWithPatient[]>([]);
 
     // Templates State
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -52,15 +54,17 @@ export default function Alerts() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [scheduled, birthdays, procedures] = await Promise.all([
+            const [scheduled, birthdays, procedures, tomorrow] = await Promise.all([
                 consultationsService.getReturnAlerts(),
                 alertsService.getBirthdayAlerts(),
-                alertsService.getProcedureReminders()
+                alertsService.getProcedureReminders(),
+                appointmentsService.getTomorrow()
             ]);
 
             setScheduledAlerts(scheduled.sort((a, b) => a.days_until_return - b.days_until_return));
             setBirthdayAlerts(birthdays);
             setProcedureAlerts(procedures);
+            setTomorrowAppointments(tomorrow);
         } catch (error) {
             console.error('Error loading alerts:', error);
         } finally {
@@ -73,7 +77,7 @@ export default function Alerts() {
         Linking.openURL(`tel:${cleanPhone}`);
     };
 
-    const handleWhatsApp = (phone: string, name: string, type: 'birthday' | 'return' | 'scheduled') => {
+    const handleWhatsApp = (phone: string, name: string, type: 'birthday' | 'return' | 'scheduled' | 'reminder') => {
         const cleanPhone = phone.replace(/\D/g, '');
         let message = '';
 
@@ -81,6 +85,8 @@ export default function Alerts() {
             message = birthdayTemplate.replace('{name}', name);
         } else if (type === 'return') {
             message = returnTemplate.replace('{name}', name);
+        } else if (type === 'reminder') {
+            message = `Olá ${name}! Lembrando que sua consulta está agendada para amanhã. Confirmamos sua presença?`;
         } else {
             message = `Olá ${name}! Estamos entrando em contato para lembrar sobre sua consulta de retorno. Podemos agendar um horário?`;
         }
@@ -122,7 +128,7 @@ export default function Alerts() {
         );
     }
 
-    const hasAnyAlert = scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0;
+    const hasAnyAlert = scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0 || tomorrowAppointments.length > 0;
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
@@ -148,6 +154,44 @@ export default function Alerts() {
                     </View>
                 ) : (
                     <View className="gap-6">
+                        {/* 0. Tomorrow's Appointments */}
+                        {tomorrowAppointments.length > 0 && (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <Bell size={20} color="#0D9488" />
+                                    <Text className="text-lg font-bold text-gray-800">Consultas de Amanhã</Text>
+                                    <View className="bg-teal-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-teal-700">{tomorrowAppointments.length}</Text>
+                                    </View>
+                                </View>
+                                <View className="gap-3">
+                                    {tomorrowAppointments.map((appointment) => (
+                                        <View key={appointment.id} className="bg-teal-50 rounded-xl p-4 border-l-4 border-l-teal-500">
+                                            <View className="flex-row justify-between items-center">
+                                                <View className="flex-row items-center gap-3">
+                                                    <View className="bg-teal-500 px-3 py-1.5 rounded-lg">
+                                                        <Text className="text-white font-bold text-sm">{appointment.time?.slice(0, 5)}</Text>
+                                                    </View>
+                                                    <View>
+                                                        <Text className="font-bold text-gray-900">{appointment.patients?.name}</Text>
+                                                        <Text className="text-gray-500 text-sm">{appointment.patients?.phone}</Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+
+                                            <TouchableOpacity
+                                                className="mt-3 bg-teal-500 rounded-lg py-2 flex-row justify-center items-center gap-2"
+                                                onPress={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
+                                            >
+                                                <MessageCircle size={18} color="white" />
+                                                <Text className="text-white font-medium">Enviar Lembrete</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
                         {/* 1. Birthday Alerts */}
                         {birthdayAlerts.length > 0 && (
                             <View>
