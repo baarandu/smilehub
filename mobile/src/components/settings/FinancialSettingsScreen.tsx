@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { ArrowLeft, Save, Plus, Trash2, CreditCard, Percent, X } from 'lucide-react-native';
+import { ArrowLeft, Save, Plus, Trash2, CreditCard, Percent, X, Tag } from 'lucide-react-native';
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig } from '../../types/database';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,6 +19,11 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     // Card Fees
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
     const [showFeeModal, setShowFeeModal] = useState(false);
+
+    // Card Brands
+    const [cardBrands, setCardBrands] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
+    const [newBrandName, setNewBrandName] = useState('');
+    const [showBrandForm, setShowBrandForm] = useState(false);
 
     // Filters
     const [filterBrand, setFilterBrand] = useState('all');
@@ -45,6 +50,9 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
 
             const fees = await settingsService.getCardFees();
             setCardFees(fees || []);
+
+            const brands = await settingsService.getCardBrands();
+            setCardBrands(brands || []);
         } catch (error) {
             console.error(error);
             Alert.alert('Erro', 'Falha ao carregar configurações');
@@ -178,6 +186,97 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                         </View>
                     </View>
 
+                    {/* Card Brands Management */}
+                    <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+                        <View className="p-5 border-b border-gray-100 flex-row justify-between items-center bg-blue-50">
+                            <View className="flex-row items-center gap-2">
+                                <Tag size={20} color="#1d4ed8" />
+                                <Text className="text-base font-bold text-blue-900">Bandeiras de Cartão</Text>
+                            </View>
+                            <TouchableOpacity
+                                onPress={() => setShowBrandForm(!showBrandForm)}
+                                className="bg-blue-500 p-2 rounded-lg"
+                            >
+                                <Plus size={20} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {showBrandForm && (
+                            <View className="p-4 border-b border-gray-100 bg-blue-50/50">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Nova Bandeira</Text>
+                                <View className="flex-row gap-2">
+                                    <TextInput
+                                        className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-3"
+                                        placeholder="Nome da bandeira"
+                                        value={newBrandName}
+                                        onChangeText={setNewBrandName}
+                                    />
+                                    <TouchableOpacity
+                                        onPress={async () => {
+                                            if (!newBrandName.trim()) {
+                                                Alert.alert('Erro', 'Informe o nome da bandeira');
+                                                return;
+                                            }
+                                            try {
+                                                await settingsService.addCardBrand(newBrandName.trim());
+                                                setNewBrandName('');
+                                                setShowBrandForm(false);
+                                                loadSettings();
+                                                Alert.alert('Sucesso', 'Bandeira adicionada!');
+                                            } catch (error: any) {
+                                                Alert.alert('Erro', error.message || 'Falha ao adicionar');
+                                            }
+                                        }}
+                                        className="bg-blue-500 px-4 rounded-lg justify-center"
+                                    >
+                                        <Text className="text-white font-medium">Adicionar</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+
+                        <View className="p-4">
+                            <View className="flex-row flex-wrap gap-2">
+                                {cardBrands.map(brand => (
+                                    <View
+                                        key={brand.id}
+                                        className="flex-row items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 gap-2"
+                                    >
+                                        <Text className="text-gray-900">{brand.name}</Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                Alert.alert(
+                                                    'Excluir Bandeira',
+                                                    `Deseja remover "${brand.name}"?`,
+                                                    [
+                                                        { text: 'Cancelar' },
+                                                        {
+                                                            text: 'Excluir',
+                                                            style: 'destructive',
+                                                            onPress: async () => {
+                                                                try {
+                                                                    await settingsService.deleteCardBrand(brand.id);
+                                                                    loadSettings();
+                                                                } catch (error) {
+                                                                    Alert.alert('Erro', 'Falha ao excluir');
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                );
+                                            }}
+                                        >
+                                            <X size={16} color="#EF4444" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                            {cardBrands.length === 0 && (
+                                <Text className="text-gray-400 text-center italic">Nenhuma bandeira cadastrada</Text>
+                            )}
+                        </View>
+                    </View>
+
                     {/* Card Fees Settings */}
                     <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-8">
                         <View className="p-5 border-b border-gray-100 flex-row justify-between items-center bg-teal-50">
@@ -202,8 +301,8 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                         key={type}
                                         onPress={() => setFilterType(type as any)}
                                         className={`px-3 py-1.5 rounded-full border ${filterType === type
-                                                ? 'bg-teal-50 border-teal-200'
-                                                : 'bg-white border-gray-200'
+                                            ? 'bg-teal-50 border-teal-200'
+                                            : 'bg-white border-gray-200'
                                             }`}
                                     >
                                         <Text className={`text-xs font-medium capitalize ${filterType === type ? 'text-teal-700' : 'text-gray-600'
@@ -312,24 +411,19 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                             <View className="flex-row gap-4 mb-4">
                                 <View className="flex-1">
                                     <Text className="text-sm font-medium text-gray-700 mb-2">Bandeira</Text>
-                                    <View className="flex-row flex-wrap gap-2">
-                                        {[
-                                            { id: 'visa', label: 'Visa' },
-                                            { id: 'mastercard', label: 'Mastercard' },
-                                            { id: 'elo', label: 'Elo' },
-                                            { id: 'amex', label: 'Amex' },
-                                            { id: 'hipercard', label: 'Hipercard' },
-                                            { id: 'others', label: 'Outras Bandeiras' }
-                                        ].map(b => (
-                                            <TouchableOpacity
-                                                key={b.id}
-                                                onPress={() => setFeeBrand(b.id)}
-                                                className={`px-3 py-2 rounded-lg border ${feeBrand === b.id ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-200'}`}
-                                            >
-                                                <Text className={`capitalize ${feeBrand === b.id ? 'text-white' : 'text-gray-700'}`}>{b.label}</Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                        <View className="flex-row gap-2">
+                                            {cardBrands.map(b => (
+                                                <TouchableOpacity
+                                                    key={b.id}
+                                                    onPress={() => setFeeBrand(b.name.toLowerCase())}
+                                                    className={`px-3 py-2 rounded-lg border ${feeBrand === b.name.toLowerCase() ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-200'}`}
+                                                >
+                                                    <Text className={`${feeBrand === b.name.toLowerCase() ? 'text-white' : 'text-gray-700'}`}>{b.name}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </ScrollView>
                                 </View>
                             </View>
 
