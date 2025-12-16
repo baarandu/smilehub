@@ -23,11 +23,9 @@ interface ShoppingOrder {
     created_at: string;
 }
 
-type TabType = 'pending' | 'history';
-
 export default function Materials() {
     // Tab State
-    const [activeTab, setActiveTab] = useState<TabType>('pending');
+    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
 
     // Orders State
     const [pendingOrders, setPendingOrders] = useState<ShoppingOrder[]>([]);
@@ -65,6 +63,7 @@ export default function Materials() {
     // Load Orders
     const loadOrders = useCallback(async () => {
         try {
+            setLoadingOrders(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -74,34 +73,38 @@ export default function Materials() {
                 .eq('user_id', user.id)
                 .single();
 
-            if (!clinicUser) return;
+            if (!clinicUser) {
+                setLoadingOrders(false);
+                setRefreshing(false);
+                return;
+            }
 
             // Load pending orders
-            const { data: pending, error: pendingError } = await supabase
+            const { data: pending } = await supabase
                 .from('shopping_orders')
                 .select('*')
-                .eq('clinic_id', clinicUser.clinic_id)
+                .eq('clinic_id', (clinicUser as any).clinic_id)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
 
-            if (!pendingError) {
-                setPendingOrders((pending || []).map((o: any) => ({
+            if (pending) {
+                setPendingOrders(pending.map((o: any) => ({
                     ...o,
                     items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
                 })));
             }
 
             // Load completed orders
-            const { data: completed, error: completedError } = await supabase
+            const { data: completed } = await supabase
                 .from('shopping_orders')
                 .select('*')
-                .eq('clinic_id', clinicUser.clinic_id)
+                .eq('clinic_id', (clinicUser as any).clinic_id)
                 .eq('status', 'completed')
                 .order('completed_at', { ascending: false })
                 .limit(50);
 
-            if (!completedError) {
-                setHistoryOrders((completed || []).map((o: any) => ({
+            if (completed) {
+                setHistoryOrders(completed.map((o: any) => ({
                     ...o,
                     items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
                 })));
@@ -190,20 +193,15 @@ export default function Materials() {
             if (!clinicUser) throw new Error('Clinic not found');
 
             if (currentOrderId) {
-                // Update existing order
                 await supabase
                     .from('shopping_orders')
-                    .update({
-                        items: items,
-                        total_amount: currentTotal
-                    } as any)
+                    .update({ items: items, total_amount: currentTotal } as any)
                     .eq('id', currentOrderId);
             } else {
-                // Create new order
                 await supabase
                     .from('shopping_orders')
                     .insert([{
-                        clinic_id: clinicUser.clinic_id,
+                        clinic_id: (clinicUser as any).clinic_id,
                         items: items,
                         total_amount: currentTotal,
                         status: 'pending',
@@ -257,7 +255,6 @@ export default function Materials() {
             const today = new Date();
             const dbDate = today.toISOString().split('T')[0];
 
-            // Detailed Description
             const itemsDesc = items.map(i =>
                 `${i.name} (${i.quantity}x ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
             ).join(' | ');
@@ -273,17 +270,12 @@ export default function Materials() {
                 location: null,
             });
 
-            // Update order status to completed
             if (currentOrderId) {
                 await supabase
                     .from('shopping_orders')
-                    .update({
-                        status: 'completed',
-                        completed_at: new Date().toISOString()
-                    } as any)
+                    .update({ status: 'completed', completed_at: new Date().toISOString() } as any)
                     .eq('id', currentOrderId);
             } else {
-                // Save as completed order
                 const { data: { user } } = await supabase.auth.getUser();
                 const { data: clinicUser } = await supabase
                     .from('clinic_users')
@@ -295,7 +287,7 @@ export default function Materials() {
                     await supabase
                         .from('shopping_orders')
                         .insert([{
-                            clinic_id: clinicUser.clinic_id,
+                            clinic_id: (clinicUser as any).clinic_id,
                             items: items,
                             total_amount: currentTotal,
                             status: 'completed',
@@ -320,10 +312,9 @@ export default function Materials() {
     };
 
     // Render Order Card
-    const renderOrderCard = (order: ShoppingOrder, showDelete: boolean = true) => (
+    const OrderCard = ({ order, showDelete = true }: { order: ShoppingOrder; showDelete?: boolean }) => (
         <TouchableOpacity
-            key={order.id}
-            onPress={() => order.status === 'pending' ? handleOpenOrder(order) : null}
+            onPress={() => order.status === 'pending' ? handleOpenOrder(order) : undefined}
             activeOpacity={order.status === 'pending' ? 0.7 : 1}
             className="bg-white p-4 rounded-xl border border-gray-100 mb-3 shadow-sm"
         >
@@ -370,6 +361,142 @@ export default function Materials() {
             )}
         </TouchableOpacity>
     );
+
+    // Render Pending Tab Content
+    const renderPendingContent = () => {
+        if (items.length > 0) {
+            return (
+                <View className="flex-1">
+                    <View className="px-4 py-2 bg-teal-50 border-b border-teal-100">
+                        <Text className="text-teal-800 font-medium text-center">
+                            {currentOrderId ? 'Editando Pedido' : 'Novo Pedido'} - {items.length} itens
+                        </Text>
+                    </View>
+                    <FlatList
+                        data={items}
+                        keyExtractor={item => item.id}
+                        contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
+                        renderItem={({ item }) => (
+                            <View className="bg-white p-4 rounded-xl border border-gray-100 mb-3 shadow-sm">
+                                <View className="flex-row justify-between items-start mb-2">
+                                    <View className="flex-1">
+                                        <Text className="font-bold text-gray-900 text-lg">{item.name}</Text>
+                                        <View className="flex-row items-center gap-1 mt-1">
+                                            <Store size={14} color="#6B7280" />
+                                            <Text className="text-gray-500 text-sm">{item.supplier}</Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity onPress={() => handleRemoveItem(item.id)} className="p-2 -mr-2">
+                                        <Trash2 size={18} color="#EF4444" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View className="flex-row items-center bg-gray-50 rounded-lg p-2 justify-between">
+                                    <View className="flex-row items-center gap-4">
+                                        <View className="items-center">
+                                            <Text className="text-xs text-gray-500">Qtd</Text>
+                                            <Text className="font-semibold text-gray-900">{item.quantity}</Text>
+                                        </View>
+                                        <Text className="text-gray-300">|</Text>
+                                        <View className="items-center">
+                                            <Text className="text-xs text-gray-500">Unitário</Text>
+                                            <Text className="font-semibold text-gray-900">{formatCurrency(item.unitPrice)}</Text>
+                                        </View>
+                                    </View>
+                                    <View className="items-end">
+                                        <Text className="text-xs text-gray-500">Total</Text>
+                                        <Text className="font-bold text-teal-600 text-base">{formatCurrency(item.totalPrice)}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                    />
+
+                    <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100">
+                        <View className="p-4 flex-row justify-between items-center border-b border-gray-50">
+                            <Text className="text-gray-500 font-medium">Total Previsto</Text>
+                            <Text className="text-2xl font-bold text-gray-900">{formatCurrency(currentTotal)}</Text>
+                        </View>
+                        <View className="p-4 flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={() => setAddItemModalVisible(true)}
+                                className="flex-1 bg-gray-100 rounded-xl p-3 flex-row justify-center items-center gap-2"
+                            >
+                                <Plus size={18} color="#374151" />
+                                <Text className="text-gray-700 font-medium">Adicionar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleSaveOrder}
+                                disabled={loading}
+                                className="flex-1 bg-teal-500 rounded-xl p-3 flex-row justify-center items-center gap-2"
+                            >
+                                <Package size={18} color="white" />
+                                <Text className="text-white font-medium">Salvar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => setCheckoutModalVisible(true)}
+                                className="flex-1 bg-blue-600 rounded-xl p-3 flex-row justify-center items-center gap-2"
+                            >
+                                <ShoppingCart size={18} color="white" />
+                                <Text className="text-white font-medium">Finalizar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            );
+        }
+
+        if (pendingOrders.length > 0) {
+            return (
+                <FlatList
+                    data={pendingOrders}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={{ padding: 16 }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
+                    ListHeaderComponent={() => (
+                        <Text className="text-gray-500 text-sm mb-3">{pendingOrders.length} pedido(s) pendente(s)</Text>
+                    )}
+                    renderItem={({ item }) => <OrderCard order={item} />}
+                />
+            );
+        }
+
+        return (
+            <View className="flex-1 justify-center items-center opacity-50 gap-4">
+                <ClipboardList size={64} color="#9CA3AF" />
+                <Text className="text-gray-400 text-center px-8">
+                    Nenhum pedido pendente.{'\n'}Toque no + para criar uma nova lista.
+                </Text>
+            </View>
+        );
+    };
+
+    // Render History Tab Content
+    const renderHistoryContent = () => {
+        if (historyOrders.length > 0) {
+            return (
+                <FlatList
+                    data={historyOrders}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={{ padding: 16 }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
+                    ListHeaderComponent={() => (
+                        <Text className="text-gray-500 text-sm mb-3">{historyOrders.length} pedido(s) no histórico</Text>
+                    )}
+                    renderItem={({ item }) => <OrderCard order={item} showDelete={false} />}
+                />
+            );
+        }
+
+        return (
+            <View className="flex-1 justify-center items-center opacity-50 gap-4">
+                <Package size={64} color="#9CA3AF" />
+                <Text className="text-gray-400 text-center px-8">
+                    Nenhum pedido finalizado ainda.
+                </Text>
+            </View>
+        );
+    };
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
@@ -421,128 +548,7 @@ export default function Materials() {
                 <View className="flex-1 items-center justify-center">
                     <ActivityIndicator size="large" color="#0D9488" />
                 </View>
-            ) : activeTab === 'pending' ? (
-                /* Pending Tab */
-                items.length > 0 ? (
-                    /* Current List Being Edited */
-                    <View className="flex-1">
-                        <View className="px-4 py-2 bg-teal-50 border-b border-teal-100">
-                            <Text className="text-teal-800 font-medium text-center">
-                                {currentOrderId ? 'Editando Pedido' : 'Novo Pedido'} - {items.length} itens
-                            </Text>
-                        </View>
-                        <FlatList
-                            data={items}
-                            keyExtractor={item => item.id}
-                            contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
-                            renderItem={({ item }) => (
-                                <View className="bg-white p-4 rounded-xl border border-gray-100 mb-3 shadow-sm">
-                                    <View className="flex-row justify-between items-start mb-2">
-                                        <View className="flex-1">
-                                            <Text className="font-bold text-gray-900 text-lg">{item.name}</Text>
-                                            <View className="flex-row items-center gap-1 mt-1">
-                                                <Store size={14} color="#6B7280" />
-                                                <Text className="text-gray-500 text-sm">{item.supplier}</Text>
-                                            </View>
-                                        </View>
-                                        <TouchableOpacity onPress={() => handleRemoveItem(item.id)} className="p-2 -mr-2">
-                                            <Trash2 size={18} color="#EF4444" />
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <View className="flex-row items-center bg-gray-50 rounded-lg p-2 justify-between">
-                                        <View className="flex-row items-center gap-4">
-                                            <View className="items-center">
-                                                <Text className="text-xs text-gray-500">Qtd</Text>
-                                                <Text className="font-semibold text-gray-900">{item.quantity}</Text>
-                                            </View>
-                                            <Text className="text-gray-300">|</Text>
-                                            <View className="items-center">
-                                                <Text className="text-xs text-gray-500">Unitário</Text>
-                                                <Text className="font-semibold text-gray-900">{formatCurrency(item.unitPrice)}</Text>
-                                            </View>
-                                        </View>
-                                        <View className="items-end">
-                                            <Text className="text-xs text-gray-500">Total</Text>
-                                            <Text className="font-bold text-teal-600 text-base">{formatCurrency(item.totalPrice)}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
-                        />
-
-                        {/* Footer Actions */}
-                        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100">
-                            <View className="p-4 flex-row justify-between items-center border-b border-gray-50">
-                                <Text className="text-gray-500 font-medium">Total Previsto</Text>
-                                <Text className="text-2xl font-bold text-gray-900">{formatCurrency(currentTotal)}</Text>
-                            </View>
-                            <View className="p-4 flex-row gap-3">
-                                <TouchableOpacity
-                                    onPress={() => setAddItemModalVisible(true)}
-                                    className="flex-1 bg-gray-100 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                                >
-                                    <Plus size={18} color="#374151" />
-                                    <Text className="text-gray-700 font-medium">Adicionar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={handleSaveOrder}
-                                    disabled={loading}
-                                    className="flex-1 bg-teal-500 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                                >
-                                    <Package size={18} color="white" />
-                                    <Text className="text-white font-medium">Salvar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() => setCheckoutModalVisible(true)}
-                                    className="flex-1 bg-blue-600 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                                >
-                                    <ShoppingCart size={18} color="white" />
-                                    <Text className="text-white font-medium">Finalizar</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-                ) : pendingOrders.length > 0 ? (
-                    /* List of Pending Orders */
-                    <ScrollView
-                        className="flex-1 p-4"
-                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />}
-                    >
-                        <Text className="text-gray-500 text-sm mb-3">{pendingOrders.length} pedido(s) pendente(s)</Text>
-                        {pendingOrders.map(order => renderOrderCard(order))}
-                    </ScrollView>
-                ) : (
-                    /* Empty State */
-                    <View className="flex-1 justify-center items-center opacity-50 gap-4">
-                        <ClipboardList size={64} color="#9CA3AF" />
-                        <Text className="text-gray-400 text-center px-8">
-                            Nenhum pedido pendente.{'\n'}Toque no + para criar uma nova lista.
-                        </Text>
-                    </View>
-                )
-            ) : (
-                /* History Tab */
-                historyOrders.length > 0 ? (
-                    <FlatList
-                        data={historyOrders}
-                        keyExtractor={item => item.id}
-                        contentContainerStyle={{ padding: 16 }}
-                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
-                        ListHeaderComponent={() => (
-                            <Text className="text-gray-500 text-sm mb-3">{historyOrders.length} pedido(s) no histórico</Text>
-                        )}
-                        renderItem={({ item }) => renderOrderCard(item, false)}
-                    />
-                ) : (
-                    <View className="flex-1 justify-center items-center opacity-50 gap-4">
-                        <Package size={64} color="#9CA3AF" />
-                        <Text className="text-gray-400 text-center px-8">
-                            Nenhum pedido finalizado ainda.
-                        </Text>
-                    </View>
-                )
-            )}
+            ) : activeTab === 'pending' ? renderPendingContent() : renderHistoryContent()}
 
             {/* Add Item Modal */}
             <Modal visible={addItemModalVisible} animationType="slide" transparent>
