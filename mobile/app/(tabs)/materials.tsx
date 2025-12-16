@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, History as HistoryIcon, Clock } from 'lucide-react-native';
+import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock } from 'lucide-react-native';
 import { financialService } from '../../src/services/financial';
 import { supabase } from '../../src/lib/supabase';
 
@@ -524,16 +524,19 @@ export default function Materials() {
             ) : (
                 /* History Tab */
                 historyOrders.length > 0 ? (
-                    <ScrollView
-                        className="flex-1 p-4"
-                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0D9488']} />}
-                    >
-                        <Text className="text-gray-500 text-sm mb-3">{historyOrders.length} pedido(s) no histórico</Text>
-                        {historyOrders.map(order => renderOrderCard(order, false))}
-                    </ScrollView>
+                    <FlatList
+                        data={historyOrders}
+                        keyExtractor={item => item.id}
+                        contentContainerStyle={{ padding: 16 }}
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
+                        ListHeaderComponent={() => (
+                            <Text className="text-gray-500 text-sm mb-3">{historyOrders.length} pedido(s) no histórico</Text>
+                        )}
+                        renderItem={({ item }) => renderOrderCard(item, false)}
+                    />
                 ) : (
                     <View className="flex-1 justify-center items-center opacity-50 gap-4">
-                        <HistoryIcon size={64} color="#9CA3AF" />
+                        <Package size={64} color="#9CA3AF" />
                         <Text className="text-gray-400 text-center px-8">
                             Nenhum pedido finalizado ainda.
                         </Text>
