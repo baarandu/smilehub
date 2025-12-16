@@ -205,9 +205,9 @@ export default function Materials() {
             if (!clinicUser) throw new Error('Clinic not found');
 
             if (currentOrderId) {
-                await supabase
-                    .from('shopping_orders')
-                    .update({ items: items, total_amount: currentTotal } as any)
+                await (supabase
+                    .from('shopping_orders') as any)
+                    .update({ items: items, total_amount: currentTotal })
                     .eq('id', currentOrderId);
             } else {
                 await supabase
@@ -280,16 +280,16 @@ export default function Materials() {
             });
 
             if (currentOrderId) {
-                await supabase
-                    .from('shopping_orders')
-                    .update({ status: 'completed', completed_at: new Date().toISOString() } as any)
+                await (supabase
+                    .from('shopping_orders') as any)
+                    .update({ status: 'completed', completed_at: new Date().toISOString() })
                     .eq('id', currentOrderId);
             } else {
                 const { data: { user } } = await supabase.auth.getUser();
                 const { data: clinicUser } = await supabase
                     .from('clinic_users')
                     .select('clinic_id')
-                    .eq('user_id', user?.id)
+                    .eq('user_id', user?.id || '')
                     .single();
 
                 if (clinicUser) {
