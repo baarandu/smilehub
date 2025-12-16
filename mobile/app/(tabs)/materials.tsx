@@ -1,9 +1,21 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, ActivityIndicator, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock } from 'lucide-react-native';
 import { financialService } from '../../src/services/financial';
 import { supabase } from '../../src/lib/supabase';
+
+// Import icons individually to avoid potential bundler issues
+import { Package } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
+import { ShoppingCart } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
+import { ClipboardList } from 'lucide-react-native';
+import { DollarSign } from 'lucide-react-native';
+import { Store } from 'lucide-react-native';
+import { Hash } from 'lucide-react-native';
+import { Clock } from 'lucide-react-native';
 
 interface ShoppingItem {
     id: string;
@@ -159,20 +171,16 @@ export default function Materials() {
 
         setItems(prev => [...prev, newItem]);
         setAddItemModalVisible(false);
-
-        // Reset Form
         setName('');
         setQuantity('');
         setUnitPrice('');
         setSupplier('');
     };
 
-    // Remove Item
     const handleRemoveItem = (id: string) => {
         setItems(prev => prev.filter(i => i.id !== id));
     };
 
-    // Save as pending order
     const handleSaveOrder = async () => {
         if (items.length === 0) {
             Alert.alert('Erro', 'Adicione pelo menos um item.');
@@ -221,13 +229,11 @@ export default function Materials() {
         }
     };
 
-    // Open existing order for editing
     const handleOpenOrder = (order: ShoppingOrder) => {
         setItems(order.items);
         setCurrentOrderId(order.id);
     };
 
-    // Delete order
     const handleDeleteOrder = (orderId: string) => {
         Alert.alert('Excluir Pedido', 'Tem certeza que deseja excluir este pedido?', [
             { text: 'Cancelar' },
@@ -246,7 +252,6 @@ export default function Materials() {
         ]);
     };
 
-    // Confirm Purchase
     const handleConfirmPurchase = async () => {
         if (items.length === 0) return;
 
@@ -311,64 +316,62 @@ export default function Materials() {
         }
     };
 
-    // Render Order Card
     const OrderCard = ({ order, showDelete = true }: { order: ShoppingOrder; showDelete?: boolean }) => (
         <TouchableOpacity
             onPress={() => order.status === 'pending' ? handleOpenOrder(order) : undefined}
             activeOpacity={order.status === 'pending' ? 0.7 : 1}
-            className="bg-white p-4 rounded-xl border border-gray-100 mb-3 shadow-sm"
+            style={styles.orderCard}
         >
-            <View className="flex-row justify-between items-start mb-2">
-                <View className="flex-1">
-                    <View className="flex-row items-center gap-2">
+            <View style={styles.orderCardHeader}>
+                <View style={{ flex: 1 }}>
+                    <View style={styles.orderDateRow}>
                         <Clock size={14} color="#6B7280" />
-                        <Text className="text-gray-500 text-sm">{formatDate(order.created_at)}</Text>
+                        <Text style={styles.orderDate}>{formatDate(order.created_at)}</Text>
                     </View>
-                    <Text className="font-bold text-gray-900 text-lg mt-1">
+                    <Text style={styles.orderItemCount}>
                         {order.items.length} {order.items.length === 1 ? 'item' : 'itens'}
                     </Text>
                 </View>
                 {showDelete && order.status === 'pending' && (
-                    <TouchableOpacity onPress={() => handleDeleteOrder(order.id)} className="p-2 -mr-2">
+                    <TouchableOpacity onPress={() => handleDeleteOrder(order.id)} style={{ padding: 8 }}>
                         <Trash2 size={18} color="#EF4444" />
                     </TouchableOpacity>
                 )}
             </View>
 
-            <View className="flex-row flex-wrap gap-1 mb-2">
+            <View style={styles.orderItemsPreview}>
                 {order.items.slice(0, 3).map(item => (
-                    <View key={item.id} className="bg-gray-100 px-2 py-1 rounded">
-                        <Text className="text-xs text-gray-600">{item.name}</Text>
+                    <View key={item.id} style={styles.itemTag}>
+                        <Text style={styles.itemTagText}>{item.name}</Text>
                     </View>
                 ))}
                 {order.items.length > 3 && (
-                    <View className="bg-gray-100 px-2 py-1 rounded">
-                        <Text className="text-xs text-gray-600">+{order.items.length - 3}</Text>
+                    <View style={styles.itemTag}>
+                        <Text style={styles.itemTagText}>+{order.items.length - 3}</Text>
                     </View>
                 )}
             </View>
 
-            <View className="flex-row justify-between items-center pt-2 border-t border-gray-100">
-                <Text className="text-gray-500 text-sm">Total</Text>
-                <Text className="font-bold text-teal-600 text-lg">{formatCurrency(order.total_amount)}</Text>
+            <View style={styles.orderTotalRow}>
+                <Text style={styles.orderTotalLabel}>Total</Text>
+                <Text style={styles.orderTotalValue}>{formatCurrency(order.total_amount)}</Text>
             </View>
 
             {order.status === 'completed' && order.completed_at && (
-                <View className="flex-row items-center gap-1 mt-2 pt-2 border-t border-gray-100">
+                <View style={styles.completedRow}>
                     <Check size={14} color="#10B981" />
-                    <Text className="text-green-600 text-xs">Finalizado em {formatDate(order.completed_at)}</Text>
+                    <Text style={styles.completedText}>Finalizado em {formatDate(order.completed_at)}</Text>
                 </View>
             )}
         </TouchableOpacity>
     );
 
-    // Render Pending Tab Content
     const renderPendingContent = () => {
         if (items.length > 0) {
             return (
-                <View className="flex-1">
-                    <View className="px-4 py-2 bg-teal-50 border-b border-teal-100">
-                        <Text className="text-teal-800 font-medium text-center">
+                <View style={{ flex: 1 }}>
+                    <View style={styles.editingBanner}>
+                        <Text style={styles.editingBannerText}>
                             {currentOrderId ? 'Editando Pedido' : 'Novo Pedido'} - {items.length} itens
                         </Text>
                     </View>
@@ -377,68 +380,57 @@ export default function Materials() {
                         keyExtractor={item => item.id}
                         contentContainerStyle={{ padding: 16, paddingBottom: 180 }}
                         renderItem={({ item }) => (
-                            <View className="bg-white p-4 rounded-xl border border-gray-100 mb-3 shadow-sm">
-                                <View className="flex-row justify-between items-start mb-2">
-                                    <View className="flex-1">
-                                        <Text className="font-bold text-gray-900 text-lg">{item.name}</Text>
-                                        <View className="flex-row items-center gap-1 mt-1">
+                            <View style={styles.itemCard}>
+                                <View style={styles.itemCardHeader}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.itemName}>{item.name}</Text>
+                                        <View style={styles.supplierRow}>
                                             <Store size={14} color="#6B7280" />
-                                            <Text className="text-gray-500 text-sm">{item.supplier}</Text>
+                                            <Text style={styles.supplierText}>{item.supplier}</Text>
                                         </View>
                                     </View>
-                                    <TouchableOpacity onPress={() => handleRemoveItem(item.id)} className="p-2 -mr-2">
+                                    <TouchableOpacity onPress={() => handleRemoveItem(item.id)} style={{ padding: 8 }}>
                                         <Trash2 size={18} color="#EF4444" />
                                     </TouchableOpacity>
                                 </View>
 
-                                <View className="flex-row items-center bg-gray-50 rounded-lg p-2 justify-between">
-                                    <View className="flex-row items-center gap-4">
-                                        <View className="items-center">
-                                            <Text className="text-xs text-gray-500">Qtd</Text>
-                                            <Text className="font-semibold text-gray-900">{item.quantity}</Text>
-                                        </View>
-                                        <Text className="text-gray-300">|</Text>
-                                        <View className="items-center">
-                                            <Text className="text-xs text-gray-500">Unitário</Text>
-                                            <Text className="font-semibold text-gray-900">{formatCurrency(item.unitPrice)}</Text>
-                                        </View>
+                                <View style={styles.itemDetailsRow}>
+                                    <View style={styles.itemDetail}>
+                                        <Text style={styles.itemDetailLabel}>Qtd</Text>
+                                        <Text style={styles.itemDetailValue}>{item.quantity}</Text>
                                     </View>
-                                    <View className="items-end">
-                                        <Text className="text-xs text-gray-500">Total</Text>
-                                        <Text className="font-bold text-teal-600 text-base">{formatCurrency(item.totalPrice)}</Text>
+                                    <Text style={{ color: '#d1d5db' }}>|</Text>
+                                    <View style={styles.itemDetail}>
+                                        <Text style={styles.itemDetailLabel}>Unitário</Text>
+                                        <Text style={styles.itemDetailValue}>{formatCurrency(item.unitPrice)}</Text>
+                                    </View>
+                                    <View style={{ flex: 1 }} />
+                                    <View style={{ alignItems: 'flex-end' }}>
+                                        <Text style={styles.itemDetailLabel}>Total</Text>
+                                        <Text style={styles.itemTotal}>{formatCurrency(item.totalPrice)}</Text>
                                     </View>
                                 </View>
                             </View>
                         )}
                     />
 
-                    <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100">
-                        <View className="p-4 flex-row justify-between items-center border-b border-gray-50">
-                            <Text className="text-gray-500 font-medium">Total Previsto</Text>
-                            <Text className="text-2xl font-bold text-gray-900">{formatCurrency(currentTotal)}</Text>
+                    <View style={styles.footer}>
+                        <View style={styles.footerTotalRow}>
+                            <Text style={styles.footerTotalLabel}>Total Previsto</Text>
+                            <Text style={styles.footerTotalValue}>{formatCurrency(currentTotal)}</Text>
                         </View>
-                        <View className="p-4 flex-row gap-3">
-                            <TouchableOpacity
-                                onPress={() => setAddItemModalVisible(true)}
-                                className="flex-1 bg-gray-100 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                            >
+                        <View style={styles.footerButtons}>
+                            <TouchableOpacity onPress={() => setAddItemModalVisible(true)} style={styles.footerButtonSecondary}>
                                 <Plus size={18} color="#374151" />
-                                <Text className="text-gray-700 font-medium">Adicionar</Text>
+                                <Text style={styles.footerButtonSecondaryText}>Adicionar</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={handleSaveOrder}
-                                disabled={loading}
-                                className="flex-1 bg-teal-500 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                            >
+                            <TouchableOpacity onPress={handleSaveOrder} style={styles.footerButtonTeal}>
                                 <Package size={18} color="white" />
-                                <Text className="text-white font-medium">Salvar</Text>
+                                <Text style={styles.footerButtonText}>Salvar</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => setCheckoutModalVisible(true)}
-                                className="flex-1 bg-blue-600 rounded-xl p-3 flex-row justify-center items-center gap-2"
-                            >
+                            <TouchableOpacity onPress={() => setCheckoutModalVisible(true)} style={styles.footerButtonBlue}>
                                 <ShoppingCart size={18} color="white" />
-                                <Text className="text-white font-medium">Finalizar</Text>
+                                <Text style={styles.footerButtonText}>Finalizar</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -454,7 +446,7 @@ export default function Materials() {
                     contentContainerStyle={{ padding: 16 }}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
                     ListHeaderComponent={() => (
-                        <Text className="text-gray-500 text-sm mb-3">{pendingOrders.length} pedido(s) pendente(s)</Text>
+                        <Text style={styles.listHeaderText}>{pendingOrders.length} pedido(s) pendente(s)</Text>
                     )}
                     renderItem={({ item }) => <OrderCard order={item} />}
                 />
@@ -462,16 +454,15 @@ export default function Materials() {
         }
 
         return (
-            <View className="flex-1 justify-center items-center opacity-50 gap-4">
+            <View style={styles.emptyState}>
                 <ClipboardList size={64} color="#9CA3AF" />
-                <Text className="text-gray-400 text-center px-8">
+                <Text style={styles.emptyStateText}>
                     Nenhum pedido pendente.{'\n'}Toque no + para criar uma nova lista.
                 </Text>
             </View>
         );
     };
 
-    // Render History Tab Content
     const renderHistoryContent = () => {
         if (historyOrders.length > 0) {
             return (
@@ -481,7 +472,7 @@ export default function Materials() {
                     contentContainerStyle={{ padding: 16 }}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
                     ListHeaderComponent={() => (
-                        <Text className="text-gray-500 text-sm mb-3">{historyOrders.length} pedido(s) no histórico</Text>
+                        <Text style={styles.listHeaderText}>{historyOrders.length} pedido(s) no histórico</Text>
                     )}
                     renderItem={({ item }) => <OrderCard order={item} showDelete={false} />}
                 />
@@ -489,9 +480,9 @@ export default function Materials() {
         }
 
         return (
-            <View className="flex-1 justify-center items-center opacity-50 gap-4">
+            <View style={styles.emptyState}>
                 <Package size={64} color="#9CA3AF" />
-                <Text className="text-gray-400 text-center px-8">
+                <Text style={styles.emptyStateText}>
                     Nenhum pedido finalizado ainda.
                 </Text>
             </View>
@@ -499,13 +490,13 @@ export default function Materials() {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-50">
-            {/* Main Header */}
-            <View className="px-4 py-4 bg-white border-b border-gray-100">
-                <View className="flex-row justify-between items-center mb-4">
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <View style={styles.headerTop}>
                     <View>
-                        <Text className="text-2xl font-bold text-gray-900">Materiais</Text>
-                        <Text className="text-gray-500 text-xs">Gerencie suas listas de compras.</Text>
+                        <Text style={styles.headerTitle}>Materiais</Text>
+                        <Text style={styles.headerSubtitle}>Gerencie suas listas de compras.</Text>
                     </View>
                     {activeTab === 'pending' && (
                         <TouchableOpacity
@@ -514,7 +505,7 @@ export default function Materials() {
                                 setCurrentOrderId(null);
                                 setAddItemModalVisible(true);
                             }}
-                            className="bg-teal-500 p-3 rounded-xl shadow-sm"
+                            style={styles.addButton}
                         >
                             <Plus size={24} color="white" />
                         </TouchableOpacity>
@@ -522,22 +513,22 @@ export default function Materials() {
                 </View>
 
                 {/* Tabs */}
-                <View className="flex-row bg-gray-100 p-1 rounded-xl">
+                <View style={styles.tabContainer}>
                     <TouchableOpacity
                         onPress={() => setActiveTab('pending')}
-                        className={`flex-1 py-2 rounded-lg flex-row items-center justify-center gap-2 ${activeTab === 'pending' ? 'bg-white shadow-sm' : ''}`}
+                        style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
                     >
                         <ClipboardList size={18} color={activeTab === 'pending' ? '#0D9488' : '#6B7280'} />
-                        <Text className={`font-medium ${activeTab === 'pending' ? 'text-teal-600' : 'text-gray-600'}`}>
+                        <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
                             Novos Pedidos
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('history')}
-                        className={`flex-1 py-2 rounded-lg flex-row items-center justify-center gap-2 ${activeTab === 'history' ? 'bg-white shadow-sm' : ''}`}
+                        style={[styles.tab, activeTab === 'history' && styles.tabActive]}
                     >
                         <Clock size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
-                        <Text className={`font-medium ${activeTab === 'history' ? 'text-teal-600' : 'text-gray-600'}`}>
+                        <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
                             Histórico
                         </Text>
                     </TouchableOpacity>
@@ -545,86 +536,73 @@ export default function Materials() {
             </View>
 
             {loadingOrders ? (
-                <View className="flex-1 items-center justify-center">
+                <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#0D9488" />
                 </View>
             ) : activeTab === 'pending' ? renderPendingContent() : renderHistoryContent()}
 
             {/* Add Item Modal */}
             <Modal visible={addItemModalVisible} animationType="slide" transparent>
-                <View className="flex-1 justify-end bg-black/50">
-                    <View className="bg-white rounded-t-3xl h-[85%]">
-                        <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
-                            <Text className="text-xl font-bold text-gray-900">Novo Material</Text>
-                            <TouchableOpacity onPress={() => setAddItemModalVisible(false)} className="bg-gray-100 p-2 rounded-full">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Novo Material</Text>
+                            <TouchableOpacity onPress={() => setAddItemModalVisible(false)} style={styles.modalCloseButton}>
                                 <X size={20} color="#374151" />
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView className="p-4">
-                            <Text className="label mb-2 font-semibold text-gray-700">Nome do Produto</Text>
+                        <ScrollView style={{ padding: 16 }}>
+                            <Text style={styles.inputLabel}>Nome do Produto</Text>
                             <TextInput
-                                className="input bg-gray-50 border border-gray-200 rounded-xl p-3 mb-4 text-base"
+                                style={styles.input}
                                 placeholder="Ex: Resina A2"
                                 value={name}
                                 onChangeText={setName}
                                 autoFocus
                             />
 
-                            <View className="flex-row gap-4 mb-4">
-                                <View className="flex-1">
-                                    <Text className="label mb-2 font-semibold text-gray-700">Quantidade</Text>
-                                    <View className="relative">
-                                        <Hash size={18} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: 14 }} />
-                                        <TextInput
-                                            className="input bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-base"
-                                            placeholder="0"
-                                            keyboardType="numeric"
-                                            value={quantity}
-                                            onChangeText={setQuantity}
-                                        />
-                                    </View>
+                            <View style={styles.inputRow}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.inputLabel}>Quantidade</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="0"
+                                        keyboardType="numeric"
+                                        value={quantity}
+                                        onChangeText={setQuantity}
+                                    />
                                 </View>
-                                <View className="flex-1">
-                                    <Text className="label mb-2 font-semibold text-gray-700">Valor Unitário</Text>
-                                    <View className="relative">
-                                        <DollarSign size={18} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: 14 }} />
-                                        <TextInput
-                                            className="input bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-base"
-                                            placeholder="R$ 0,00"
-                                            keyboardType="numeric"
-                                            value={unitPrice}
-                                            onChangeText={handleUnitValueChange}
-                                        />
-                                    </View>
+                                <View style={{ flex: 1, marginLeft: 16 }}>
+                                    <Text style={styles.inputLabel}>Valor Unitário</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="R$ 0,00"
+                                        keyboardType="numeric"
+                                        value={unitPrice}
+                                        onChangeText={handleUnitValueChange}
+                                    />
                                 </View>
                             </View>
 
-                            {/* Auto Calculated Total Display */}
-                            <View className="bg-blue-50 p-3 rounded-xl mb-4 flex-row justify-between items-center border border-blue-100">
-                                <Text className="text-blue-700 font-medium">Valor Total do Item</Text>
-                                <Text className="text-blue-800 font-bold text-lg">
+                            <View style={styles.totalPreview}>
+                                <Text style={styles.totalPreviewLabel}>Valor Total do Item</Text>
+                                <Text style={styles.totalPreviewValue}>
                                     {formatCurrency((parseInt(quantity) || 0) * (getNumericValue(unitPrice) || 0))}
                                 </Text>
                             </View>
 
-                            <Text className="label mb-2 font-semibold text-gray-700">Fornecedor</Text>
-                            <View className="relative mb-6">
-                                <Store size={18} color="#9CA3AF" style={{ position: 'absolute', left: 12, top: 14 }} />
-                                <TextInput
-                                    className="input bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-3 py-3 text-base"
-                                    placeholder="Ex: Dental Cremer"
-                                    value={supplier}
-                                    onChangeText={setSupplier}
-                                />
-                            </View>
+                            <Text style={styles.inputLabel}>Fornecedor</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Ex: Dental Cremer"
+                                value={supplier}
+                                onChangeText={setSupplier}
+                            />
 
-                            <TouchableOpacity
-                                onPress={handleAddItem}
-                                className="bg-teal-600 p-4 rounded-xl flex-row justify-center items-center gap-2"
-                            >
+                            <TouchableOpacity onPress={handleAddItem} style={styles.addItemButton}>
                                 <Plus size={20} color="white" />
-                                <Text className="text-white font-bold text-lg">Adicionar à Lista</Text>
+                                <Text style={styles.addItemButtonText}>Adicionar à Lista</Text>
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
@@ -633,38 +611,110 @@ export default function Materials() {
 
             {/* Confirm Checkout Modal */}
             <Modal visible={checkoutModalVisible} transparent animationType="fade">
-                <View className="flex-1 justify-center items-center bg-black/50 p-4">
-                    <View className="bg-white rounded-2xl p-6 w-full max-w-sm">
-                        <Text className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmar Compra</Text>
-                        <Text className="text-gray-500 text-center mb-6">
-                            Deseja lançar uma despesa de <Text className="font-bold text-gray-900">{formatCurrency(currentTotal)}</Text> referente a {items.length} itens?
+                <View style={styles.confirmModalOverlay}>
+                    <View style={styles.confirmModalContent}>
+                        <Text style={styles.confirmModalTitle}>Confirmar Compra</Text>
+                        <Text style={styles.confirmModalText}>
+                            Deseja lançar uma despesa de {formatCurrency(currentTotal)} referente a {items.length} itens?
                         </Text>
 
-                        <View className="gap-3">
-                            <TouchableOpacity
-                                onPress={handleConfirmPurchase}
-                                disabled={loading}
-                                className={`p-4 rounded-xl flex-row justify-center items-center gap-2 ${loading ? 'bg-green-400' : 'bg-green-600'}`}
-                            >
-                                {loading ? <ActivityIndicator color="white" /> : (
-                                    <>
-                                        <Check size={20} color="white" />
-                                        <Text className="text-white font-bold text-lg">Confirmar Lançamento</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={handleConfirmPurchase}
+                            disabled={loading}
+                            style={[styles.confirmButton, loading && { opacity: 0.7 }]}
+                        >
+                            {loading ? <ActivityIndicator color="white" /> : (
+                                <>
+                                    <Check size={20} color="white" />
+                                    <Text style={styles.confirmButtonText}>Confirmar Lançamento</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
 
-                            <TouchableOpacity
-                                onPress={() => setCheckoutModalVisible(false)}
-                                disabled={loading}
-                                className="p-4 rounded-xl bg-gray-100 items-center"
-                            >
-                                <Text className="text-gray-700 font-medium">Cancelar</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            onPress={() => setCheckoutModalVisible(false)}
+                            disabled={loading}
+                            style={styles.cancelButton}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancelar</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
         </SafeAreaView>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#f9fafb' },
+    header: { paddingHorizontal: 16, paddingVertical: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#111827' },
+    headerSubtitle: { fontSize: 12, color: '#6b7280' },
+    addButton: { backgroundColor: '#0d9488', padding: 12, borderRadius: 12 },
+    tabContainer: { flexDirection: 'row', backgroundColor: '#f3f4f6', padding: 4, borderRadius: 12 },
+    tab: { flex: 1, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    tabActive: { backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+    tabText: { fontWeight: '500', color: '#6b7280' },
+    tabTextActive: { color: '#0d9488' },
+    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', opacity: 0.5, gap: 16 },
+    emptyStateText: { color: '#9ca3af', textAlign: 'center', paddingHorizontal: 32 },
+    listHeaderText: { color: '#6b7280', fontSize: 14, marginBottom: 12 },
+    orderCard: { backgroundColor: 'white', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#f3f4f6', marginBottom: 12 },
+    orderCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+    orderDateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    orderDate: { color: '#6b7280', fontSize: 14 },
+    orderItemCount: { fontWeight: 'bold', color: '#111827', fontSize: 18, marginTop: 4 },
+    orderItemsPreview: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 8 },
+    itemTag: { backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+    itemTagText: { fontSize: 12, color: '#4b5563' },
+    orderTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+    orderTotalLabel: { color: '#6b7280', fontSize: 14 },
+    orderTotalValue: { fontWeight: 'bold', color: '#0d9488', fontSize: 18 },
+    completedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+    completedText: { color: '#10b981', fontSize: 12 },
+    editingBanner: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#f0fdfa', borderBottomWidth: 1, borderBottomColor: '#99f6e4' },
+    editingBannerText: { color: '#115e59', fontWeight: '500', textAlign: 'center' },
+    itemCard: { backgroundColor: 'white', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#f3f4f6', marginBottom: 12 },
+    itemCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+    itemName: { fontWeight: 'bold', color: '#111827', fontSize: 18 },
+    supplierRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+    supplierText: { color: '#6b7280', fontSize: 14 },
+    itemDetailsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 8, padding: 8, gap: 16 },
+    itemDetail: { alignItems: 'center' },
+    itemDetailLabel: { fontSize: 12, color: '#6b7280' },
+    itemDetailValue: { fontWeight: '600', color: '#111827' },
+    itemTotal: { fontWeight: 'bold', color: '#0d9488', fontSize: 16 },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+    footerTotalRow: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
+    footerTotalLabel: { color: '#6b7280', fontWeight: '500' },
+    footerTotalValue: { fontSize: 24, fontWeight: 'bold', color: '#111827' },
+    footerButtons: { padding: 16, flexDirection: 'row', gap: 12 },
+    footerButtonSecondary: { flex: 1, backgroundColor: '#f3f4f6', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    footerButtonSecondaryText: { color: '#374151', fontWeight: '500' },
+    footerButtonTeal: { flex: 1, backgroundColor: '#0d9488', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    footerButtonBlue: { flex: 1, backgroundColor: '#2563eb', borderRadius: 12, padding: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    footerButtonText: { color: 'white', fontWeight: '500' },
+    modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+    modalContent: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
+    modalCloseButton: { backgroundColor: '#f3f4f6', padding: 8, borderRadius: 999 },
+    inputLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+    input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 12, fontSize: 16, marginBottom: 16 },
+    inputRow: { flexDirection: 'row', marginBottom: 16 },
+    totalPreview: { backgroundColor: '#eff6ff', padding: 12, borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#dbeafe', marginBottom: 16 },
+    totalPreviewLabel: { color: '#1d4ed8', fontWeight: '500' },
+    totalPreviewValue: { color: '#1e40af', fontWeight: 'bold', fontSize: 18 },
+    addItemButton: { backgroundColor: '#0d9488', padding: 16, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 32 },
+    addItemButtonText: { color: 'white', fontWeight: 'bold', fontSize: 18 },
+    confirmModalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16 },
+    confirmModalContent: { backgroundColor: 'white', borderRadius: 16, padding: 24, width: '100%', maxWidth: 340 },
+    confirmModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827', marginBottom: 8, textAlign: 'center' },
+    confirmModalText: { color: '#6b7280', textAlign: 'center', marginBottom: 24 },
+    confirmButton: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 12 },
+    confirmButtonText: { color: 'white', fontWeight: 'bold', fontSize: 18 },
+    cancelButton: { padding: 16, borderRadius: 12, backgroundColor: '#f3f4f6', alignItems: 'center' },
+    cancelButtonText: { color: '#374151', fontWeight: '500' },
+});
