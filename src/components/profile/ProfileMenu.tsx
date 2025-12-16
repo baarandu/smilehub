@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Key, MapPin, LogOut, CreditCard } from 'lucide-react';
+import { User, Key, MapPin, LogOut, CreditCard, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,10 +10,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { LocationsModal } from './LocationsModal';
 import { CardFeesModal } from './CardFeesModal';
+import { TeamManagementModal } from './TeamManagementModal';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [cardFeesOpen, setCardFeesOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
+  const { isAdmin, clinicName } = useClinic();
 
   return (
     <>
@@ -22,7 +26,7 @@ export function ProfileMenu() {
           <button className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-colors">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-foreground">Dr. Usuário</p>
-              <p className="text-xs text-muted-foreground">Dentista</p>
+              <p className="text-xs text-muted-foreground">{clinicName || 'Dentista'}</p>
             </div>
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <User className="w-5 h-5 text-primary-foreground" />
@@ -48,6 +52,15 @@ export function ProfileMenu() {
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Gerenciar Cartões</span>
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={() => setTeamOpen(true)}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              <span>Gerenciar Equipe</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem className="cursor-pointer text-destructive">
             <LogOut className="mr-2 h-4 w-4" />
@@ -58,8 +71,10 @@ export function ProfileMenu() {
 
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
       <CardFeesModal open={cardFeesOpen} onOpenChange={setCardFeesOpen} />
+      <TeamManagementModal open={teamOpen} onOpenChange={setTeamOpen} />
     </>
   );
 }
+
 
 

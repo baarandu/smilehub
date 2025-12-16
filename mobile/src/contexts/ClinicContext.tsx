@@ -1,0 +1,120 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+type Role = 'admin' | 'editor' | 'viewer';
+
+interface ClinicMember {
+    id: string;
+    user_id: string;
+    email: string;
+    role: Role;
+    created_at: string;
+}
+
+interface ClinicContextType {
+    clinicId: string | null;
+    clinicName: string | null;
+    role: Role | null;
+    isAdmin: boolean;
+    canEdit: boolean;
+    loading: boolean;
+    members: ClinicMember[];
+    refetch: () => Promise<void>;
+}
+
+interface ClinicUserRow {
+    clinic_id: string;
+    role: string;
+    clinics: { name: string } | null;
+}
+
+const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
+
+export function ClinicProvider({ children }: { children: React.ReactNode }) {
+    const [clinicId, setClinicId] = useState<string | null>(null);
+    const [clinicName, setClinicName] = useState<string | null>(null);
+    const [role, setRole] = useState<Role | null>(null);
+    const [members, setMembers] = useState<ClinicMember[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchClinicData = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+
+            const { data: clinicUser } = await supabase
+                .from('clinic_users')
+                .select(`
+          clinic_id,
+          role,
+          clinics (name)
+        `)
+                .eq('user_id', user.id)
+                .single();
+
+            const typedClinicUser = clinicUser as unknown as ClinicUserRow | null;
+
+            if (typedClinicUser) {
+                setClinicId(typedClinicUser.clinic_id);
+                setClinicName(typedClinicUser.clinics?.name || null);
+                setRole(typedClinicUser.role as Role);
+
+                if (typedClinicUser.role === 'admin') {
+                    const { data: membersData } = await supabase
+                        .from('clinic_users')
+                        .select('id, user_id, role, created_at')
+                        .eq('clinic_id', typedClinicUser.clinic_id);
+
+                    if (membersData) {
+                        setMembers((membersData as any[]).map(m => ({
+                            ...m,
+                            email: m.user_id,
+                        })) as ClinicMember[]);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching clinic data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchClinicData();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+            fetchClinicData();
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const value: ClinicContextType = {
+        clinicId,
+        clinicName,
+        role,
+        isAdmin: role === 'admin',
+        canEdit: role === 'admin' || role === 'editor',
+        loading,
+        members,
+        refetch: fetchClinicData,
+    };
+
+    return (
+        <ClinicContext.Provider value={value}>
+            {children}
+        </ClinicContext.Provider>
+    );
+}
+
+export function useClinic() {
+    const context = useContext(ClinicContext);
+    if (!context) {
+        throw new Error('useClinic must be used within a ClinicProvider');
+    }
+    return context;
+}
