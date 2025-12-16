@@ -48,7 +48,7 @@ export default function SignUp() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 bg-white"
         >
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
                 <View className="p-8 pt-12">
 
                     <Link href="/login" asChild>
@@ -69,8 +69,8 @@ export default function SignUp() {
                             <View className="flex-row gap-3">
                                 <TouchableOpacity
                                     className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'solo'
-                                            ? 'border-teal-500 bg-teal-50'
-                                            : 'border-gray-200 bg-gray-50'
+                                        ? 'border-teal-500 bg-teal-50'
+                                        : 'border-gray-200 bg-gray-50'
                                         }`}
                                     onPress={() => setAccountType('solo')}
                                 >
@@ -89,8 +89,8 @@ export default function SignUp() {
 
                                 <TouchableOpacity
                                     className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'clinic'
-                                            ? 'border-teal-500 bg-teal-50'
-                                            : 'border-gray-200 bg-gray-50'
+                                        ? 'border-teal-500 bg-teal-50'
+                                        : 'border-gray-200 bg-gray-50'
                                         }`}
                                     onPress={() => setAccountType('clinic')}
                                 >

@@ -29,7 +29,7 @@ export default function Login() {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1 bg-white"
         >
-            <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+            <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} keyboardShouldPersistTaps="handled">
                 <View className="p-8">
                     {/* Logo / Header */}
                     <View className="items-center mb-10">
