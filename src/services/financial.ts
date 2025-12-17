@@ -25,6 +25,30 @@ export const financialService = {
         return data;
     },
 
+    async createExpense(expense: {
+        amount: number;
+        description: string;
+        category: string;
+        date: string;
+        location?: string | null;
+    }): Promise<FinancialTransaction> {
+        const { data, error } = await supabase
+            .from('financial_transactions')
+            .insert({
+                type: 'expense',
+                amount: expense.amount,
+                description: expense.description,
+                category: expense.category,
+                date: expense.date,
+                location: expense.location || null,
+            } as any)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
     async updateTransaction(id: string, updates: Partial<FinancialTransactionInsert>): Promise<void> {
         const { error } = await supabase
             .from('financial_transactions')
