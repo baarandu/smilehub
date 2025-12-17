@@ -95,7 +95,7 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="budgets" className="mt-6">
-          <BudgetsTab patientId={patient.id} />
+          <BudgetsTab patientId={patient.id} patientName={patient.name} />
         </TabsContent>
 
         <TabsContent value="procedures" className="mt-6">

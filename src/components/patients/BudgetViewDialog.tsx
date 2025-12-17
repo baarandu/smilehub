@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2 } from 'lucide-react';
+import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
 import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { generateBudgetPDF } from '@/utils/pdfGenerator';
 import type { BudgetWithItems, BudgetUpdate, BudgetItemUpdate } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,9 +16,10 @@ interface BudgetViewDialogProps {
     open: boolean;
     onClose: () => void;
     onUpdate: () => void;
+    patientName?: string;
 }
 
-export function BudgetViewDialog({ budget, open, onClose, onUpdate }: BudgetViewDialogProps) {
+export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const [updating, setUpdating] = useState(false);
 
@@ -57,6 +59,20 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate }: BudgetView
             toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir orçamento" });
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleExportPDF = () => {
+        try {
+            generateBudgetPDF({
+                budget,
+                patientName: patientName || 'Paciente',
+                clinicName: 'Smile Care Hub',
+            });
+            toast({ title: "Sucesso", description: "PDF gerado com sucesso!" });
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            toast({ variant: "destructive", title: "Erro", description: "Falha ao gerar PDF" });
         }
     };
 
@@ -183,6 +199,10 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate }: BudgetView
                         Excluir
                     </Button>
                     <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleExportPDF}>
+                            <FileDown className="w-4 h-4 mr-2" />
+                            Gerar PDF
+                        </Button>
                         <Button variant="outline" onClick={onClose}>Fechar</Button>
                     </div>
                 </DialogFooter>
