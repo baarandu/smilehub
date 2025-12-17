@@ -5,7 +5,9 @@ import {
     Filter,
     ArrowUpRight,
     Search,
-    X
+    X,
+    Calendar,
+    Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +53,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [patientFilter, setPatientFilter] = useState('');
     const [methodFilter, setMethodFilter] = useState('all');
     const [locationFilter, setLocationFilter] = useState('all');
+    const [startDateFilter, setStartDateFilter] = useState('');
+    const [endDateFilter, setEndDateFilter] = useState('');
+
+    // Detail modal state
+    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
 
     // Load Locations
     const { data: locations = [] } = useQuery({
@@ -108,9 +116,23 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 if (t.location !== locationFilter) return false;
             }
 
+            // Date Range Filter
+            if (startDateFilter || endDateFilter) {
+                const tDate = new Date(t.date);
+                if (startDateFilter) {
+                    const start = new Date(startDateFilter);
+                    if (tDate < start) return false;
+                }
+                if (endDateFilter) {
+                    const end = new Date(endDateFilter);
+                    end.setHours(23, 59, 59, 999);
+                    if (tDate > end) return false;
+                }
+            }
+
             return true;
         });
-    }, [transactions, patientFilter, methodFilter, locationFilter]);
+    }, [transactions, patientFilter, methodFilter, locationFilter, startDateFilter, endDateFilter]);
 
     // Calculations
     const totalGrossIncome = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -143,7 +165,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    const activeFilterCount = (patientFilter ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0);
+    const activeFilterCount = (patientFilter ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0) + (startDateFilter || endDateFilter ? 1 : 0);
+
+    const handleCardClick = (transaction: Transaction) => {
+        setSelectedTransaction(transaction);
+        setDetailModalOpen(true);
+    };
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -272,7 +299,11 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         </div>
                     ) : (
                         filteredTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
-                            <div key={t.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                            <div
+                                key={t.id}
+                                className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
+                                onClick={() => handleCardClick(t)}
+                            >
                                 <div className="flex items-start gap-4">
                                     <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                         <ArrowUpRight className="h-5 w-5 text-green-600" />
@@ -290,15 +321,18 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-right">
-                                    <span className="block font-bold text-green-600">
-                                        + {formatCurrency(subTab === 'gross' ? t.amount : (t.net_amount || t.amount))}
-                                    </span>
-                                    {t.type === 'income' && subTab === 'net' && t.amount !== (t.net_amount || t.amount) && (
-                                        <span className="text-xs text-slate-400 line-through">
-                                            {formatCurrency(t.amount)}
+                                <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                        <span className="block font-bold text-green-600">
+                                            + {formatCurrency(subTab === 'gross' ? t.amount : (t.net_amount || t.amount))}
                                         </span>
-                                    )}
+                                        {t.type === 'income' && subTab === 'net' && t.amount !== (t.net_amount || t.amount) && (
+                                            <span className="text-xs text-slate-400 line-through">
+                                                {formatCurrency(t.amount)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <Eye className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                             </div>
                         ))
@@ -313,6 +347,31 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         <DialogTitle>Filtrar Receitas</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                        {/* Date Range Filter */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                Período
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="date"
+                                    value={startDateFilter}
+                                    onChange={(e) => setStartDateFilter(e.target.value)}
+                                    placeholder="Data início"
+                                    className="flex-1"
+                                />
+                                <span className="text-muted-foreground">até</span>
+                                <Input
+                                    type="date"
+                                    value={endDateFilter}
+                                    onChange={(e) => setEndDateFilter(e.target.value)}
+                                    placeholder="Data fim"
+                                    className="flex-1"
+                                />
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Forma de Pagamento</label>
                             <Select value={methodFilter} onValueChange={setMethodFilter}>
@@ -348,6 +407,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             setMethodFilter('all');
                             setLocationFilter('all');
                             setPatientFilter('');
+                            setStartDateFilter('');
+                            setEndDateFilter('');
                             setFilterOpen(false);
                         }}>
                             Limpar
@@ -355,6 +416,77 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         <Button onClick={() => setFilterOpen(false)}>
                             Aplicar
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Transaction Detail Modal */}
+            <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Detalhes da Receita</DialogTitle>
+                    </DialogHeader>
+                    {selectedTransaction && (
+                        <div className="space-y-4 py-4">
+                            {/* Patient Info */}
+                            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                                <p className="text-sm text-muted-foreground">Paciente</p>
+                                <p className="text-lg font-bold text-foreground">{selectedTransaction.patients?.name || 'Não identificado'}</p>
+                            </div>
+
+                            {/* Amount Info */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-4 rounded-lg">
+                                    <p className="text-sm text-muted-foreground">Valor Bruto</p>
+                                    <p className="text-xl font-bold text-green-600">{formatCurrency(selectedTransaction.amount)}</p>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-lg">
+                                    <p className="text-sm text-muted-foreground">Valor Líquido</p>
+                                    <p className="text-xl font-bold text-green-600">{formatCurrency(selectedTransaction.net_amount || selectedTransaction.amount)}</p>
+                                </div>
+                            </div>
+
+                            {/* Details */}
+                            <div className="space-y-3">
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-muted-foreground">Data</span>
+                                    <span className="font-medium">{new Date(selectedTransaction.date).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-muted-foreground">Descrição</span>
+                                    <span className="font-medium text-right max-w-[250px]">{selectedTransaction.description}</span>
+                                </div>
+                                {selectedTransaction.location && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Local</span>
+                                        <Badge variant="secondary" className="bg-teal-50 text-teal-700">
+                                            {selectedTransaction.location}
+                                        </Badge>
+                                    </div>
+                                )}
+                                {selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0 && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Taxa de Cartão</span>
+                                        <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.card_fee_amount)}</span>
+                                    </div>
+                                )}
+                                {(selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0 && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Taxa de Antecipação</span>
+                                        <span className="font-medium text-yellow-600">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</span>
+                                    </div>
+                                )}
+                                {selectedTransaction.location_amount && selectedTransaction.location_amount > 0 && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Taxa do Procedimento</span>
+                                        <span className="font-medium text-orange-500">- {formatCurrency(selectedTransaction.location_amount)}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    <div className="flex justify-end">
+                        <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
