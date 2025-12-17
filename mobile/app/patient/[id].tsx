@@ -716,6 +716,7 @@ export default function PatientDetail() {
                 budget={viewBudget}
                 onClose={() => { setShowBudgetViewModal(false); setViewBudget(null); }}
                 onUpdate={loadBudgets}
+                patientName={patient.name}
             />
 
             <NewProcedureModal

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, CheckCircle, Clock, CreditCard } from 'lucide-react-native';
+import { X, CheckCircle, Clock, CreditCard, FileDown } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
+import { profileService } from '../../services/profile';
+import { generateBudgetPDF } from '../../utils/pdfGenerator';
 import type { BudgetWithItems } from '../../types/database';
 
 interface BudgetViewModalProps {
@@ -11,12 +13,14 @@ interface BudgetViewModalProps {
     budget: BudgetWithItems | null;
     onClose: () => void;
     onUpdate: () => void;
+    patientName?: string;
 }
 
-export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetViewModalProps) {
+export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientName }: BudgetViewModalProps) {
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
     const [budgetLocation, setBudgetLocation] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     useEffect(() => {
         if (budget?.notes) {
@@ -100,6 +104,27 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
         return date.toLocaleDateString('pt-BR');
     };
 
+    const handleExportPDF = async () => {
+        if (!budget) return;
+
+        try {
+            setGeneratingPdf(true);
+            const clinicInfo = await profileService.getClinicInfo();
+
+            await generateBudgetPDF({
+                budget,
+                patientName: patientName || 'Paciente',
+                clinicName: clinicInfo.clinicName,
+                dentistName: clinicInfo.dentistName,
+            });
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            Alert.alert('Erro', 'Não foi possível gerar o PDF');
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
     const grandTotal = teethList.reduce((sum, t) => sum + getToothTotal(t), 0);
 
     const insets = useSafeAreaInsets();
@@ -144,6 +169,22 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate }: BudgetVi
                             R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </Text>
                     </View>
+
+                    {/* Generate PDF Button */}
+                    <TouchableOpacity
+                        onPress={handleExportPDF}
+                        disabled={generatingPdf}
+                        className="bg-white border border-teal-500 rounded-xl p-4 mb-4 flex-row items-center justify-center"
+                    >
+                        {generatingPdf ? (
+                            <ActivityIndicator color="#0d9488" />
+                        ) : (
+                            <>
+                                <FileDown size={20} color="#0d9488" />
+                                <Text className="text-teal-600 font-medium ml-2">Gerar PDF</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
 
                     {/* Pending Items */}
                     {pendingItems.length > 0 && (

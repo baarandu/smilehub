@@ -70,6 +70,11 @@ export const formatCurrency = (text: string): string => {
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+// Format money value for display
+export const formatMoney = (value: number): string => {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
 // Format date for display
 export const formatDisplayDate = (dateStr: string): string => {
     if (dateStr.includes('-')) {
