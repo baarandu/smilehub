@@ -15,9 +15,24 @@ export const examsService = {
   },
 
   async create(exam: ExamInsert): Promise<Exam> {
+    // Get user's clinic_id
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data: clinicUser, error: clinicError } = await supabase
+      .from('clinic_users')
+      .select('clinic_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (clinicError || !clinicUser) throw new Error('Clinic not found');
+
     const { data, error } = await supabase
       .from('exams')
-      .insert(exam as any)
+      .insert({
+        ...exam,
+        clinic_id: clinicUser.clinic_id,
+      } as any)
       .select()
       .single();
 
