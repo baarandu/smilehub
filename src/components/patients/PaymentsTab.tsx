@@ -138,7 +138,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           date.setMonth(date.getMonth() + i);
         }
 
-        await financialService.create({
+        await financialService.createTransaction({
           type: 'income',
           amount: txAmount, // Store GROSS
           description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
@@ -154,7 +154,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           card_fee_amount: cardFeeAmountPerTx,
           anticipation_rate: breakdown?.anticipationRate,
           anticipation_amount: anticipationAmountPerTx
-        });
+        } as any);
       }
 
       // Update item status
