@@ -27,12 +27,18 @@ export const examsService = {
 
     if (clinicError || !clinicUser) throw new Error('Clinic not found');
 
+    // Ensure required fields are populated
+    const examData = {
+      ...exam,
+      clinic_id: clinicUser.clinic_id,
+      // Add required fields if missing (table requires title, date, name, order_date as NOT NULL)
+      title: (exam as any).title || (exam as any).name || 'Exame',
+      date: (exam as any).date || (exam as any).order_date || new Date().toISOString().split('T')[0],
+    };
+
     const { data, error } = await supabase
       .from('exams')
-      .insert({
-        ...exam,
-        clinic_id: clinicUser.clinic_id,
-      } as any)
+      .insert(examData as any)
       .select()
       .single();
 
