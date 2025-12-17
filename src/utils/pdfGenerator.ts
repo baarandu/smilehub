@@ -35,7 +35,7 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        doc.text(`Responsável: ${dentistName}`, margin, y);
+        doc.text(dentistName, margin, y);
         doc.setTextColor(0, 0, 0);
         y += 6;
     }
@@ -141,29 +141,7 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
         }
         doc.text(displayTreatments, margin + 60, y);
 
-        doc.text(`R$ ${formatMoney(itemValue)}`, pageWidth - margin - 30, y);
-
-        // Status badge
-        const status = tooth.status || 'pending';
-        const statusLabels: Record<string, string> = {
-            pending: 'Pendente',
-            approved: 'Aprovado',
-            paid: 'Pago',
-        };
-        const statusColors: Record<string, [number, number, number]> = {
-            pending: [245, 158, 11], // amber
-            approved: [16, 185, 129], // emerald
-            paid: [59, 130, 246], // blue
-        };
-
-        const statusLabel = statusLabels[status] || status;
-        const [r, g, b] = statusColors[status] || [156, 163, 175];
-
-        doc.setTextColor(r, g, b);
-        doc.setFont('helvetica', 'bold');
-        doc.text(statusLabel, pageWidth - margin - 2, y, { align: 'right' });
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'normal');
+        doc.text(`R$ ${formatMoney(itemValue)}`, pageWidth - margin - 2, y, { align: 'right' });
 
         y += 8;
     });

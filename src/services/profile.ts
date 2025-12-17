@@ -42,20 +42,29 @@ export const profileService = {
         }
 
         // Get clinic name from clinic_users -> clinics
-        const { data: clinicUser, error: clinicError } = await supabase
+        const { data: clinicUser } = await supabase
             .from('clinic_users')
             .select('clinic_id, clinics(name)')
             .eq('user_id', user.id)
             .single();
 
-        // Get dentist name from profiles
+        // Get dentist name and gender from profiles
         const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name')
+            .select('full_name, gender')
             .eq('id', user.id)
             .single();
 
-        const dentistName = profile?.full_name || null;
+        const rawName = profile?.full_name || null;
+        const gender = (profile as any)?.gender || null;
+
+        // Format dentist name with Dr./Dra. prefix
+        let dentistName: string | null = null;
+        if (rawName) {
+            const prefix = gender === 'female' ? 'Dra.' : 'Dr.';
+            dentistName = `${prefix} ${rawName}`;
+        }
+
         let clinicName = (clinicUser?.clinics as any)?.name || null;
 
         // If no clinic name or it's the default, use dentist name
