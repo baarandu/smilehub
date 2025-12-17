@@ -6,27 +6,61 @@ interface BudgetPDFData {
     budget: BudgetWithItems;
     patientName: string;
     clinicName?: string;
-    dentistName?: string | null; // Shown below clinic name if different
+    dentistName?: string | null;
+    logoUrl?: string | null;
     clinicAddress?: string;
     clinicPhone?: string;
 }
 
-export function generateBudgetPDF(data: BudgetPDFData): void {
-    const { budget, patientName, clinicName, dentistName, clinicAddress, clinicPhone } = data;
+// Helper function to load image as base64
+async function loadImageAsBase64(url: string): Promise<string | null> {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    } catch (error) {
+        console.error('Error loading logo:', error);
+        return null;
+    }
+}
+
+export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
+    const { budget, patientName, clinicName, dentistName, logoUrl, clinicAddress, clinicPhone } = data;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     let y = 20;
+    let textStartX = margin;
 
     // Parse teeth from notes
     const parsedNotes = JSON.parse(budget.notes || '{}');
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
-    // Header - Clinic Name
+    // Load and add logo if available
+    if (logoUrl) {
+        try {
+            const logoBase64 = await loadImageAsBase64(logoUrl);
+            if (logoBase64) {
+                const logoWidth = 30;
+                const logoHeight = 30;
+                doc.addImage(logoBase64, 'PNG', margin, y - 5, logoWidth, logoHeight);
+                textStartX = margin + logoWidth + 10; // Offset text to right of logo
+            }
+        } catch (error) {
+            console.error('Error adding logo to PDF:', error);
+        }
+    }
+
+    // Header - Clinic Name (to the right of logo if present)
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text(clinicName || 'Clínica Odontológica', margin, y);
+    doc.text(clinicName || 'Clínica Odontológica', textStartX, y);
 
     y += 8;
 
@@ -35,7 +69,7 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(80, 80, 80);
-        doc.text(dentistName, margin, y);
+        doc.text(dentistName, textStartX, y);
         doc.setTextColor(0, 0, 0);
         y += 6;
     }
@@ -43,12 +77,17 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     if (clinicAddress) {
-        doc.text(clinicAddress, margin, y);
+        doc.text(clinicAddress, textStartX, y);
         y += 5;
     }
     if (clinicPhone) {
-        doc.text(`Tel: ${clinicPhone}`, margin, y);
+        doc.text(`Tel: ${clinicPhone}`, textStartX, y);
         y += 5;
+    }
+
+    // Ensure minimum header height if logo is present
+    if (logoUrl) {
+        y = Math.max(y, 50);
     }
 
     // Divider

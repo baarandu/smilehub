@@ -8,6 +8,7 @@ interface BudgetPDFData {
     patientName: string;
     clinicName?: string;
     dentistName?: string | null;
+    logoUrl?: string | null;
 }
 
 function formatDisplayDate(dateStr: string): string {
@@ -17,7 +18,7 @@ function formatDisplayDate(dateStr: string): string {
 }
 
 export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
-    const { budget, patientName, clinicName, dentistName } = data;
+    const { budget, patientName, clinicName, dentistName, logoUrl } = data;
 
     // Parse teeth from notes
     const parsedNotes = JSON.parse(budget.notes || '{}');
@@ -123,8 +124,13 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
 </head>
 <body>
     <div class="header">
-        <div class="clinic-name">${clinicName || 'Clínica Odontológica'}</div>
-        ${dentistName ? `<div class="dentist-name">${dentistName}</div>` : ''}
+        <div style="display: flex; align-items: center; gap: 15px;">
+            ${logoUrl ? `<img src="${logoUrl}" style="width: 60px; height: 60px; object-fit: contain;" />` : ''}
+            <div>
+                <div class="clinic-name">${clinicName || 'Clínica Odontológica'}</div>
+                ${dentistName ? `<div class="dentist-name">${dentistName}</div>` : ''}
+            </div>
+        </div>
     </div>
 
     <div class="title">ORÇAMENTO ODONTOLÓGICO</div>

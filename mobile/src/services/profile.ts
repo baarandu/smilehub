@@ -4,6 +4,7 @@ export interface ClinicInfo {
     clinicName: string;
     dentistName: string | null;
     isClinic: boolean;
+    logoUrl: string | null;
 }
 
 export const profileService = {
@@ -13,14 +14,15 @@ export const profileService = {
             return {
                 clinicName: 'Clínica Odontológica',
                 dentistName: null,
-                isClinic: false
+                isClinic: false,
+                logoUrl: null
             };
         }
 
-        // Get clinic name from clinic_users -> clinics
+        // Get clinic info including logo
         const { data: clinicUser } = await supabase
             .from('clinic_users')
-            .select('clinic_id, clinics(name)')
+            .select('clinic_id, clinics(id, name, logo_url)')
             .eq('user_id', user.id)
             .single();
 
@@ -41,7 +43,9 @@ export const profileService = {
             dentistName = `${prefix} ${rawName}`;
         }
 
-        let clinicName = (clinicUser?.clinics as any)?.name || null;
+        const clinic = (clinicUser?.clinics as any);
+        let clinicName = clinic?.name || null;
+        const logoUrl = clinic?.logo_url || null;
 
         // If no clinic name or it's the default, use dentist name
         if (!clinicName || clinicName === 'Minha Clínica') {
@@ -54,7 +58,8 @@ export const profileService = {
         return {
             clinicName,
             dentistName: isClinic ? dentistName : null,
-            isClinic
+            isClinic,
+            logoUrl
         };
     }
 };

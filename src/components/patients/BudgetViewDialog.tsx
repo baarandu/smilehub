@@ -68,11 +68,12 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
             // Fetch clinic info
             const clinicInfo = await profileService.getClinicInfo();
 
-            generateBudgetPDF({
+            await generateBudgetPDF({
                 budget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
+                logoUrl: clinicInfo.logoUrl,
             });
             toast({ title: "Sucesso", description: "PDF gerado com sucesso!" });
         } catch (error) {

@@ -116,6 +116,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
+                logoUrl: clinicInfo.logoUrl,
             });
         } catch (error) {
             console.error('Error generating PDF:', error);
