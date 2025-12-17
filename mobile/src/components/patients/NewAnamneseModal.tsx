@@ -83,12 +83,15 @@ export function NewAnamneseModal({
         currentMedication: false,
         currentMedicationDetails: '',
         localAnesthesiaHistory: false,
+        localAnesthesiaHistoryDetails: '',
         anesthesiaReaction: false,
         anesthesiaReactionDetails: '',
         pregnantOrBreastfeeding: false,
+        pregnantOrBreastfeedingDetails: '',
         smokerOrDrinker: false,
         smokerOrDrinkerDetails: '',
         fasting: false,
+        fastingDetails: '',
         diabetes: false,
         diabetesDetails: '',
         depressionAnxietyPanic: false,
@@ -98,11 +101,15 @@ export function NewAnamneseModal({
         heartDisease: false,
         heartDiseaseDetails: '',
         hypertension: false,
+        hypertensionDetails: '',
         pacemaker: false,
+        pacemakerDetails: '',
         infectiousDisease: false,
         infectiousDiseaseDetails: '',
         arthritis: false,
+        arthritisDetails: '',
         gastritisReflux: false,
+        gastritisRefluxDetails: '',
         notes: '',
     });
 
@@ -120,12 +127,15 @@ export function NewAnamneseModal({
                     currentMedication: anamnese.current_medication,
                     currentMedicationDetails: anamnese.current_medication_details || '',
                     localAnesthesiaHistory: anamnese.local_anesthesia_history,
+                    localAnesthesiaHistoryDetails: (anamnese as any).local_anesthesia_history_details || '',
                     anesthesiaReaction: anamnese.anesthesia_reaction,
                     anesthesiaReactionDetails: anamnese.anesthesia_reaction_details || '',
                     pregnantOrBreastfeeding: anamnese.pregnant_or_breastfeeding,
+                    pregnantOrBreastfeedingDetails: (anamnese as any).pregnant_or_breastfeeding_details || '',
                     smokerOrDrinker: anamnese.smoker_or_drinker,
                     smokerOrDrinkerDetails: anamnese.smoker_or_drinker_details || '',
                     fasting: anamnese.fasting,
+                    fastingDetails: (anamnese as any).fasting_details || '',
                     diabetes: anamnese.diabetes,
                     diabetesDetails: anamnese.diabetes_details || '',
                     depressionAnxietyPanic: anamnese.depression_anxiety_panic,
@@ -135,11 +145,15 @@ export function NewAnamneseModal({
                     heartDisease: anamnese.heart_disease,
                     heartDiseaseDetails: anamnese.heart_disease_details || '',
                     hypertension: anamnese.hypertension,
+                    hypertensionDetails: (anamnese as any).hypertension_details || '',
                     pacemaker: anamnese.pacemaker,
+                    pacemakerDetails: (anamnese as any).pacemaker_details || '',
                     infectiousDisease: anamnese.infectious_disease,
                     infectiousDiseaseDetails: anamnese.infectious_disease_details || '',
                     arthritis: anamnese.arthritis,
+                    arthritisDetails: (anamnese as any).arthritis_details || '',
                     gastritisReflux: anamnese.gastritis_reflux,
+                    gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
                     notes: anamnese.notes || '',
                 });
             } else {
@@ -154,12 +168,15 @@ export function NewAnamneseModal({
                     currentMedication: false,
                     currentMedicationDetails: '',
                     localAnesthesiaHistory: false,
+                    localAnesthesiaHistoryDetails: '',
                     anesthesiaReaction: false,
                     anesthesiaReactionDetails: '',
                     pregnantOrBreastfeeding: false,
+                    pregnantOrBreastfeedingDetails: '',
                     smokerOrDrinker: false,
                     smokerOrDrinkerDetails: '',
                     fasting: false,
+                    fastingDetails: '',
                     diabetes: false,
                     diabetesDetails: '',
                     depressionAnxietyPanic: false,
@@ -169,11 +186,15 @@ export function NewAnamneseModal({
                     heartDisease: false,
                     heartDiseaseDetails: '',
                     hypertension: false,
+                    hypertensionDetails: '',
                     pacemaker: false,
+                    pacemakerDetails: '',
                     infectiousDisease: false,
                     infectiousDiseaseDetails: '',
                     arthritis: false,
+                    arthritisDetails: '',
                     gastritisReflux: false,
+                    gastritisRefluxDetails: '',
                     notes: '',
                 });
             }
@@ -196,12 +217,15 @@ export function NewAnamneseModal({
                 current_medication: form.currentMedication,
                 current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
                 local_anesthesia_history: form.localAnesthesiaHistory,
+                local_anesthesia_history_details: form.localAnesthesiaHistory ? form.localAnesthesiaHistoryDetails || null : null,
                 anesthesia_reaction: form.anesthesiaReaction,
                 anesthesia_reaction_details: form.anesthesiaReaction ? form.anesthesiaReactionDetails || null : null,
                 pregnant_or_breastfeeding: form.pregnantOrBreastfeeding,
+                pregnant_or_breastfeeding_details: form.pregnantOrBreastfeeding ? form.pregnantOrBreastfeedingDetails || null : null,
                 smoker_or_drinker: form.smokerOrDrinker,
                 smoker_or_drinker_details: form.smokerOrDrinker ? form.smokerOrDrinkerDetails || null : null,
                 fasting: form.fasting,
+                fasting_details: form.fasting ? form.fastingDetails || null : null,
                 diabetes: form.diabetes,
                 diabetes_details: form.diabetes ? form.diabetesDetails || null : null,
                 depression_anxiety_panic: form.depressionAnxietyPanic,
@@ -211,13 +235,17 @@ export function NewAnamneseModal({
                 heart_disease: form.heartDisease,
                 heart_disease_details: form.heartDisease ? form.heartDiseaseDetails || null : null,
                 hypertension: form.hypertension,
+                hypertension_details: form.hypertension ? form.hypertensionDetails || null : null,
                 pacemaker: form.pacemaker,
+                pacemaker_details: form.pacemaker ? form.pacemakerDetails || null : null,
                 infectious_disease: form.infectiousDisease,
                 infectious_disease_details: form.infectiousDisease ? form.infectiousDiseaseDetails || null : null,
                 arthritis: form.arthritis,
+                arthritis_details: form.arthritis ? form.arthritisDetails || null : null,
                 gastritis_reflux: form.gastritisReflux,
+                gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
                 notes: form.notes || null,
-            };
+            } as any;
 
             if (anamnese) {
                 await anamnesesService.update(anamnese.id, anamneseData);
@@ -336,7 +364,9 @@ export function NewAnamneseModal({
                             label="Já foi submetido a procedimento sob anestesia local?"
                             value={form.localAnesthesiaHistory}
                             onValueChange={(v) => setForm({ ...form, localAnesthesiaHistory: v })}
-                            showDetails={false}
+                            details={form.localAnesthesiaHistoryDetails}
+                            onDetailsChange={(t) => setForm({ ...form, localAnesthesiaHistoryDetails: t })}
+                            detailsPlaceholder="Qual procedimento?"
                         />
 
                         {form.localAnesthesiaHistory && (
@@ -393,28 +423,36 @@ export function NewAnamneseModal({
                             label="Tem hipertensão?"
                             value={form.hypertension}
                             onValueChange={(v) => setForm({ ...form, hypertension: v })}
-                            showDetails={false}
+                            details={form.hypertensionDetails}
+                            onDetailsChange={(t) => setForm({ ...form, hypertensionDetails: t })}
+                            detailsPlaceholder="Tratamento?"
                         />
 
                         <QuestionField
                             label="Tem marca-passo?"
                             value={form.pacemaker}
                             onValueChange={(v) => setForm({ ...form, pacemaker: v })}
-                            showDetails={false}
+                            details={form.pacemakerDetails}
+                            onDetailsChange={(t) => setForm({ ...form, pacemakerDetails: t })}
+                            detailsPlaceholder="Modelo/tipo?"
                         />
 
                         <QuestionField
                             label="Tem artrite?"
                             value={form.arthritis}
                             onValueChange={(v) => setForm({ ...form, arthritis: v })}
-                            showDetails={false}
+                            details={form.arthritisDetails}
+                            onDetailsChange={(t) => setForm({ ...form, arthritisDetails: t })}
+                            detailsPlaceholder="Qual tipo?"
                         />
 
                         <QuestionField
                             label="Tem gastrite ou refluxo?"
                             value={form.gastritisReflux}
                             onValueChange={(v) => setForm({ ...form, gastritisReflux: v })}
-                            showDetails={false}
+                            details={form.gastritisRefluxDetails}
+                            onDetailsChange={(t) => setForm({ ...form, gastritisRefluxDetails: t })}
+                            detailsPlaceholder="Tratamento?"
                         />
 
                         <QuestionField
@@ -433,7 +471,9 @@ export function NewAnamneseModal({
                             label="Está grávida ou amamentando?"
                             value={form.pregnantOrBreastfeeding}
                             onValueChange={(v) => setForm({ ...form, pregnantOrBreastfeeding: v })}
-                            showDetails={false}
+                            details={form.pregnantOrBreastfeedingDetails}
+                            onDetailsChange={(t) => setForm({ ...form, pregnantOrBreastfeedingDetails: t })}
+                            detailsPlaceholder="Período de gestação?"
                         />
 
                         <QuestionField
@@ -449,7 +489,9 @@ export function NewAnamneseModal({
                             label="Está de jejum?"
                             value={form.fasting}
                             onValueChange={(v) => setForm({ ...form, fasting: v })}
-                            showDetails={false}
+                            details={form.fastingDetails}
+                            onDetailsChange={(t) => setForm({ ...form, fastingDetails: t })}
+                            detailsPlaceholder="Há quanto tempo?"
                         />
 
                         {/* Notes */}
