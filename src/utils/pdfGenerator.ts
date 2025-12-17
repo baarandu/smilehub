@@ -77,9 +77,9 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
 
     // Treatment Title
     doc.setFont('helvetica', 'bold');
-    doc.text('Tratamento:', margin, y);
+    doc.text('Tratamento Proposto:', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(budget.treatment || 'Tratamento Odontológico', margin + 32, y);
+    doc.text(budget.treatment || 'Tratamento Odontológico', margin + 48, y);
     y += 15;
 
     // Divider
