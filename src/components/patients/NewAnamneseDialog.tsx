@@ -93,12 +93,15 @@ export function NewAnamneseDialog({
     currentMedication: false,
     currentMedicationDetails: '',
     localAnesthesiaHistory: false,
+    localAnesthesiaHistoryDetails: '',
     anesthesiaReaction: false,
     anesthesiaReactionDetails: '',
     pregnantOrBreastfeeding: false,
+    pregnantOrBreastfeedingDetails: '',
     smokerOrDrinker: false,
     smokerOrDrinkerDetails: '',
     fasting: false,
+    fastingDetails: '',
     diabetes: false,
     diabetesDetails: '',
     depressionAnxietyPanic: false,
@@ -108,11 +111,15 @@ export function NewAnamneseDialog({
     heartDisease: false,
     heartDiseaseDetails: '',
     hypertension: false,
+    hypertensionDetails: '',
     pacemaker: false,
+    pacemakerDetails: '',
     infectiousDisease: false,
     infectiousDiseaseDetails: '',
     arthritis: false,
+    arthritisDetails: '',
     gastritisReflux: false,
+    gastritisRefluxDetails: '',
     notes: '',
   });
 
@@ -130,12 +137,15 @@ export function NewAnamneseDialog({
           currentMedication: anamnese.current_medication,
           currentMedicationDetails: anamnese.current_medication_details || '',
           localAnesthesiaHistory: anamnese.local_anesthesia_history,
+          localAnesthesiaHistoryDetails: (anamnese as any).local_anesthesia_history_details || '',
           anesthesiaReaction: anamnese.anesthesia_reaction,
           anesthesiaReactionDetails: anamnese.anesthesia_reaction_details || '',
           pregnantOrBreastfeeding: anamnese.pregnant_or_breastfeeding,
+          pregnantOrBreastfeedingDetails: (anamnese as any).pregnant_or_breastfeeding_details || '',
           smokerOrDrinker: anamnese.smoker_or_drinker,
           smokerOrDrinkerDetails: anamnese.smoker_or_drinker_details || '',
           fasting: anamnese.fasting,
+          fastingDetails: (anamnese as any).fasting_details || '',
           diabetes: anamnese.diabetes,
           diabetesDetails: anamnese.diabetes_details || '',
           depressionAnxietyPanic: anamnese.depression_anxiety_panic,
@@ -145,11 +155,15 @@ export function NewAnamneseDialog({
           heartDisease: anamnese.heart_disease,
           heartDiseaseDetails: anamnese.heart_disease_details || '',
           hypertension: anamnese.hypertension,
+          hypertensionDetails: (anamnese as any).hypertension_details || '',
           pacemaker: anamnese.pacemaker,
+          pacemakerDetails: (anamnese as any).pacemaker_details || '',
           infectiousDisease: anamnese.infectious_disease,
           infectiousDiseaseDetails: anamnese.infectious_disease_details || '',
           arthritis: anamnese.arthritis,
+          arthritisDetails: (anamnese as any).arthritis_details || '',
           gastritisReflux: anamnese.gastritis_reflux,
+          gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
           notes: anamnese.notes || '',
         });
       } else {
@@ -164,12 +178,15 @@ export function NewAnamneseDialog({
           currentMedication: false,
           currentMedicationDetails: '',
           localAnesthesiaHistory: false,
+          localAnesthesiaHistoryDetails: '',
           anesthesiaReaction: false,
           anesthesiaReactionDetails: '',
           pregnantOrBreastfeeding: false,
+          pregnantOrBreastfeedingDetails: '',
           smokerOrDrinker: false,
           smokerOrDrinkerDetails: '',
           fasting: false,
+          fastingDetails: '',
           diabetes: false,
           diabetesDetails: '',
           depressionAnxietyPanic: false,
@@ -179,11 +196,15 @@ export function NewAnamneseDialog({
           heartDisease: false,
           heartDiseaseDetails: '',
           hypertension: false,
+          hypertensionDetails: '',
           pacemaker: false,
+          pacemakerDetails: '',
           infectiousDisease: false,
           infectiousDiseaseDetails: '',
           arthritis: false,
+          arthritisDetails: '',
           gastritisReflux: false,
+          gastritisRefluxDetails: '',
           notes: '',
         });
       }
@@ -206,12 +227,15 @@ export function NewAnamneseDialog({
         current_medication: form.currentMedication,
         current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
         local_anesthesia_history: form.localAnesthesiaHistory,
+        local_anesthesia_history_details: form.localAnesthesiaHistory ? form.localAnesthesiaHistoryDetails || null : null,
         anesthesia_reaction: form.anesthesiaReaction,
         anesthesia_reaction_details: form.anesthesiaReaction ? form.anesthesiaReactionDetails || null : null,
         pregnant_or_breastfeeding: form.pregnantOrBreastfeeding,
+        pregnant_or_breastfeeding_details: form.pregnantOrBreastfeeding ? form.pregnantOrBreastfeedingDetails || null : null,
         smoker_or_drinker: form.smokerOrDrinker,
         smoker_or_drinker_details: form.smokerOrDrinker ? form.smokerOrDrinkerDetails || null : null,
         fasting: form.fasting,
+        fasting_details: form.fasting ? form.fastingDetails || null : null,
         diabetes: form.diabetes,
         diabetes_details: form.diabetes ? form.diabetesDetails || null : null,
         depression_anxiety_panic: form.depressionAnxietyPanic,
@@ -221,11 +245,15 @@ export function NewAnamneseDialog({
         heart_disease: form.heartDisease,
         heart_disease_details: form.heartDisease ? form.heartDiseaseDetails || null : null,
         hypertension: form.hypertension,
+        hypertension_details: form.hypertension ? form.hypertensionDetails || null : null,
         pacemaker: form.pacemaker,
+        pacemaker_details: form.pacemaker ? form.pacemakerDetails || null : null,
         infectious_disease: form.infectiousDisease,
         infectious_disease_details: form.infectiousDisease ? form.infectiousDiseaseDetails || null : null,
         arthritis: form.arthritis,
+        arthritis_details: form.arthritis ? form.arthritisDetails || null : null,
         gastritis_reflux: form.gastritisReflux,
+        gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
         notes: form.notes || null,
       };
 
@@ -309,7 +337,8 @@ export function NewAnamneseDialog({
               label="Tem histórico de anestesia local?"
               value={form.localAnesthesiaHistory}
               onValueChange={(value) => setForm({ ...form, localAnesthesiaHistory: value })}
-              showDetails={false}
+              details={form.localAnesthesiaHistoryDetails}
+              onDetailsChange={(text) => setForm({ ...form, localAnesthesiaHistoryDetails: text })}
             />
 
             {/* Reação à Anestesia */}
@@ -326,7 +355,8 @@ export function NewAnamneseDialog({
               label="Está gestante ou amamentando?"
               value={form.pregnantOrBreastfeeding}
               onValueChange={(value) => setForm({ ...form, pregnantOrBreastfeeding: value })}
-              showDetails={false}
+              details={form.pregnantOrBreastfeedingDetails}
+              onDetailsChange={(text) => setForm({ ...form, pregnantOrBreastfeedingDetails: text })}
             />
 
             {/* Fumante ou Bebe */}
@@ -343,7 +373,8 @@ export function NewAnamneseDialog({
               label="Está em jejum?"
               value={form.fasting}
               onValueChange={(value) => setForm({ ...form, fasting: value })}
-              showDetails={false}
+              details={form.fastingDetails}
+              onDetailsChange={(text) => setForm({ ...form, fastingDetails: text })}
             />
 
             {/* Diabetes */}
@@ -387,7 +418,8 @@ export function NewAnamneseDialog({
               label="Tem hipertensão?"
               value={form.hypertension}
               onValueChange={(value) => setForm({ ...form, hypertension: value })}
-              showDetails={false}
+              details={form.hypertensionDetails}
+              onDetailsChange={(text) => setForm({ ...form, hypertensionDetails: text })}
             />
 
             {/* Marca-passo */}
@@ -395,7 +427,8 @@ export function NewAnamneseDialog({
               label="Tem marca-passo?"
               value={form.pacemaker}
               onValueChange={(value) => setForm({ ...form, pacemaker: value })}
-              showDetails={false}
+              details={form.pacemakerDetails}
+              onDetailsChange={(text) => setForm({ ...form, pacemakerDetails: text })}
             />
 
             {/* Doença Infecciosa */}
@@ -412,7 +445,8 @@ export function NewAnamneseDialog({
               label="Tem artrite?"
               value={form.arthritis}
               onValueChange={(value) => setForm({ ...form, arthritis: value })}
-              showDetails={false}
+              details={form.arthritisDetails}
+              onDetailsChange={(text) => setForm({ ...form, arthritisDetails: text })}
             />
 
             {/* Gastrite ou Refluxo */}
@@ -420,7 +454,8 @@ export function NewAnamneseDialog({
               label="Tem gastrite ou refluxo?"
               value={form.gastritisReflux}
               onValueChange={(value) => setForm({ ...form, gastritisReflux: value })}
-              showDetails={false}
+              details={form.gastritisRefluxDetails}
+              onDetailsChange={(text) => setForm({ ...form, gastritisRefluxDetails: text })}
             />
 
             <Separator />
