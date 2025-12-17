@@ -168,23 +168,6 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
         doc.text('Este orçamento tem validade de 30 dias.', margin, y);
         y += 5;
         doc.text('Os valores podem sofrer alterações após este período.', margin, y);
-
-        // Signature lines
-        y += 25;
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'normal');
-
-        const lineWidth = 70;
-        const leftLineX = margin + 20;
-        const rightLineX = pageWidth - margin - 90;
-
-        doc.line(leftLineX, y, leftLineX + lineWidth, y);
-        doc.line(rightLineX, y, rightLineX + lineWidth, y);
-
-        y += 5;
-        doc.setFontSize(9);
-        doc.text('Assinatura do Profissional', leftLineX + lineWidth / 2, y, { align: 'center' });
-        doc.text('Assinatura do Paciente', rightLineX + lineWidth / 2, y, { align: 'center' });
     }
 
     // Save the PDF
