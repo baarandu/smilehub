@@ -13,13 +13,33 @@ interface BudgetPDFData {
 }
 
 // Helper function to load image as base64
-async function loadImageAsBase64(url: string): Promise<string | null> {
+async function loadImageAsBase64(url: string): Promise<{ data: string; format: string } | null> {
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) {
+            console.error('Failed to fetch logo:', response.status);
+            return null;
+        }
         const blob = await response.blob();
+
+        // Detect format from MIME type
+        let format = 'PNG';
+        if (blob.type.includes('jpeg') || blob.type.includes('jpg')) {
+            format = 'JPEG';
+        } else if (blob.type.includes('webp')) {
+            format = 'WEBP';
+        }
+
         return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
+            reader.onloadend = () => {
+                const result = reader.result as string;
+                if (result) {
+                    resolve({ data: result, format });
+                } else {
+                    resolve(null);
+                }
+            };
             reader.onerror = () => resolve(null);
             reader.readAsDataURL(blob);
         });
@@ -45,12 +65,16 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
     // Load and add logo if available
     if (logoUrl) {
         try {
-            const logoBase64 = await loadImageAsBase64(logoUrl);
-            if (logoBase64) {
+            console.log('Loading logo from:', logoUrl);
+            const logoData = await loadImageAsBase64(logoUrl);
+            if (logoData) {
                 const logoWidth = 30;
                 const logoHeight = 30;
-                doc.addImage(logoBase64, 'PNG', margin, y - 5, logoWidth, logoHeight);
-                textStartX = margin + logoWidth + 10; // Offset text to right of logo
+                doc.addImage(logoData.data, logoData.format, margin, y - 5, logoWidth, logoHeight);
+                textStartX = margin + logoWidth + 10;
+                console.log('Logo added successfully');
+            } else {
+                console.warn('Logo data is null');
             }
         } catch (error) {
             console.error('Error adding logo to PDF:', error);
