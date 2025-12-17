@@ -143,3 +143,4 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
 }
 
 
+

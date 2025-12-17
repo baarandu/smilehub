@@ -6,12 +6,13 @@ interface BudgetPDFData {
     budget: BudgetWithItems;
     patientName: string;
     clinicName?: string;
+    dentistName?: string | null; // Shown below clinic name if different
     clinicAddress?: string;
     clinicPhone?: string;
 }
 
 export function generateBudgetPDF(data: BudgetPDFData): void {
-    const { budget, patientName, clinicName, clinicAddress, clinicPhone } = data;
+    const { budget, patientName, clinicName, dentistName, clinicAddress, clinicPhone } = data;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -22,12 +23,23 @@ export function generateBudgetPDF(data: BudgetPDFData): void {
     const parsedNotes = JSON.parse(budget.notes || '{}');
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
-    // Header - Clinic Info
+    // Header - Clinic Name
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text(clinicName || 'Clínica Odontológica', margin, y);
 
     y += 8;
+
+    // Dentist Name (if clinic has a different dentist)
+    if (dentistName) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Responsável: ${dentistName}`, margin, y);
+        doc.setTextColor(0, 0, 0);
+        y += 6;
+    }
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     if (clinicAddress) {

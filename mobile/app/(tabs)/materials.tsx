@@ -810,3 +810,4 @@ const styles = StyleSheet.create({
     detailItemLabel: { fontSize: 12, color: '#6b7280' },
     detailItemValue: { fontSize: 14, color: '#111827' },
 });
+

@@ -35,3 +35,4 @@ INSERT INTO appointments (patient_id, date, time, status, notes) VALUES
   ('11111111-1111-1111-1111-111111111111', CURRENT_DATE + INTERVAL '1 day', '11:00', 'scheduled', 'Aplicação de flúor');
 
 
+

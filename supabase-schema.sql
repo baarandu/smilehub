@@ -139,3 +139,4 @@ SELECT id, CURRENT_DATE, '15:30', 'scheduled', 'Clareamento dental'
 FROM patients WHERE name = 'Lucia Fernandes';
 
 
+

@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
+import { profileService } from '@/services/profile';
 import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 import { generateBudgetPDF } from '@/utils/pdfGenerator';
 import type { BudgetWithItems, BudgetUpdate, BudgetItemUpdate } from '@/types/database';
@@ -62,12 +63,16 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
         }
     };
 
-    const handleExportPDF = () => {
+    const handleExportPDF = async () => {
         try {
+            // Fetch clinic info
+            const clinicInfo = await profileService.getClinicInfo();
+
             generateBudgetPDF({
                 budget,
                 patientName: patientName || 'Paciente',
-                clinicName: 'Smile Care Hub',
+                clinicName: clinicInfo.clinicName,
+                dentistName: clinicInfo.dentistName,
             });
             toast({ title: "Sucesso", description: "PDF gerado com sucesso!" });
         } catch (error) {

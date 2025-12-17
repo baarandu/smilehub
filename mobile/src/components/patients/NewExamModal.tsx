@@ -340,3 +340,4 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
     </Modal>
   );
 }
+

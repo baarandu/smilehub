@@ -126,3 +126,4 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
     );
 }
 
+
