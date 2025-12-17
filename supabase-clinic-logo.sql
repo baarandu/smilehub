@@ -37,7 +37,22 @@ CREATE POLICY "Public can view clinic logos" ON storage.objects
     FOR SELECT TO public
     USING (bucket_id = 'clinic-logos');
 
--- 4. Verify
+-- 4. Add RLS policy for updating clinics (for logo)
+DROP POLICY IF EXISTS "Users can update their clinic" ON clinics;
+CREATE POLICY "Users can update their clinic" ON clinics
+    FOR UPDATE TO authenticated
+    USING (
+        id IN (
+            SELECT clinic_id FROM clinic_users WHERE user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        id IN (
+            SELECT clinic_id FROM clinic_users WHERE user_id = auth.uid()
+        )
+    );
+
+-- 5. Verify
 SELECT column_name, data_type 
 FROM information_schema.columns 
 WHERE table_name = 'clinics' AND column_name = 'logo_url';

@@ -45,12 +45,30 @@ export const profileService = {
             };
         }
 
-        // Get clinic info including logo
+        // Get clinic_id from clinic_users
         const { data: clinicUser } = await supabase
             .from('clinic_users')
-            .select('clinic_id, clinics(id, name, logo_url)')
+            .select('clinic_id')
             .eq('user_id', user.id)
             .single();
+
+        const clinicId = clinicUser?.clinic_id || null;
+
+        // Get clinic details directly
+        let clinicName: string | null = null;
+        let logoUrl: string | null = null;
+
+        if (clinicId) {
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('id, name, logo_url')
+                .eq('id', clinicId)
+                .single();
+
+            clinicName = clinic?.name || null;
+            logoUrl = clinic?.logo_url || null;
+            console.log('Clinic fetched:', { clinicName, logoUrl });
+        }
 
         // Get dentist name and gender from profiles
         const { data: profile } = await supabase
@@ -68,11 +86,6 @@ export const profileService = {
             const prefix = gender === 'female' ? 'Dra.' : 'Dr.';
             dentistName = `${prefix} ${rawName}`;
         }
-
-        const clinic = (clinicUser?.clinics as any);
-        let clinicName = clinic?.name || null;
-        const logoUrl = clinic?.logo_url || null;
-        const clinicId = clinic?.id || clinicUser?.clinic_id || null;
 
         // If no clinic name or it's the default, use dentist name
         if (!clinicName || clinicName === 'Minha Clínica') {
@@ -126,13 +139,21 @@ export const profileService = {
             .getPublicUrl(fileName);
 
         const logoUrl = urlData.publicUrl;
+        console.log('Logo uploaded, URL:', logoUrl);
+        console.log('Updating clinic:', clinicId);
 
         // Update clinic with logo URL
-        await supabase
+        const { error: updateError } = await supabase
             .from('clinics')
             .update({ logo_url: logoUrl })
             .eq('id', clinicId);
 
+        if (updateError) {
+            console.error('Error updating clinic with logo:', updateError);
+            throw updateError;
+        }
+
+        console.log('Clinic updated successfully with logo');
         return logoUrl;
     },
 

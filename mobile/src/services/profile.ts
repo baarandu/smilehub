@@ -19,12 +19,29 @@ export const profileService = {
             };
         }
 
-        // Get clinic info including logo
+        // Get clinic_id from clinic_users
         const { data: clinicUser } = await supabase
             .from('clinic_users')
-            .select('clinic_id, clinics(id, name, logo_url)')
+            .select('clinic_id')
             .eq('user_id', user.id)
             .single();
+
+        const clinicId = clinicUser?.clinic_id || null;
+
+        // Get clinic details directly
+        let clinicName: string | null = null;
+        let logoUrl: string | null = null;
+
+        if (clinicId) {
+            const { data: clinic } = await supabase
+                .from('clinics')
+                .select('id, name, logo_url')
+                .eq('id', clinicId)
+                .single();
+
+            clinicName = clinic?.name || null;
+            logoUrl = clinic?.logo_url || null;
+        }
 
         // Get dentist name and gender from profiles
         const { data: profile } = await supabase
@@ -43,10 +60,6 @@ export const profileService = {
             dentistName = `${prefix} ${rawName}`;
         }
 
-        const clinic = (clinicUser?.clinics as any);
-        let clinicName = clinic?.name || null;
-        const logoUrl = clinic?.logo_url || null;
-
         // If no clinic name or it's the default, use dentist name
         if (!clinicName || clinicName === 'Minha Clínica') {
             clinicName = dentistName || 'Clínica Odontológica';
@@ -63,3 +76,4 @@ export const profileService = {
         };
     }
 };
+

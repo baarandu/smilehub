@@ -67,6 +67,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
         try {
             // Fetch clinic info
             const clinicInfo = await profileService.getClinicInfo();
+            console.log('Clinic Info:', clinicInfo);
 
             await generateBudgetPDF({
                 budget,
