@@ -24,18 +24,22 @@ export default function Alerts() {
   // Template State
   const [birthdayTemplate, setBirthdayTemplate] = useState('');
   const [returnTemplate, setReturnTemplate] = useState('');
+  const [confirmationTemplate, setConfirmationTemplate] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
     const loadedReturn = localStorage.getItem('returnTemplate');
+    const loadedConfirmation = localStorage.getItem('confirmationTemplate');
     setBirthdayTemplate(loadedBirthday || "Parabéns {name}! 🎉\n\nNós do Smile Care Hub desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.");
     setReturnTemplate(loadedReturn || "Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?");
+    setConfirmationTemplate(loadedConfirmation || "Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.");
   }, []);
 
   const saveTemplates = () => {
     localStorage.setItem('birthdayTemplate', birthdayTemplate);
     localStorage.setItem('returnTemplate', returnTemplate);
+    localStorage.setItem('confirmationTemplate', confirmationTemplate);
     setShowSettings(false);
   };
 
@@ -48,8 +52,8 @@ export default function Alerts() {
     } else if (type === 'return') {
       message = returnTemplate.replace('{name}', name);
     } else {
-      // Reminder for tomorrow
-      message = `Olá ${name}! Lembrando que sua consulta está agendada para amanhã. Confirmamos sua presença?`;
+      // Confirmation for tomorrow's appointments
+      message = confirmationTemplate.replace('{name}', name);
     }
 
     const encoded = encodeURIComponent(message);
@@ -81,13 +85,13 @@ export default function Alerts() {
             <DialogHeader>
               <DialogTitle>Modelos de Mensagem</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto">
               <div className="space-y-2">
                 <Label>Mensagem de Aniversário</Label>
                 <Textarea
                   value={birthdayTemplate}
                   onChange={(e) => setBirthdayTemplate(e.target.value)}
-                  rows={4}
+                  rows={3}
                   placeholder="Use {name} para o nome do paciente"
                 />
                 <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
@@ -97,10 +101,20 @@ export default function Alerts() {
                 <Textarea
                   value={returnTemplate}
                   onChange={(e) => setReturnTemplate(e.target.value)}
-                  rows={4}
+                  rows={3}
                   placeholder="Use {name} para o nome do paciente"
                 />
                 <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Mensagem de Confirmação de Consulta</Label>
+                <Textarea
+                  value={confirmationTemplate}
+                  onChange={(e) => setConfirmationTemplate(e.target.value)}
+                  rows={3}
+                  placeholder="Use {name} para o nome do paciente"
+                />
+                <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
               </div>
             </div>
             <DialogFooter>
@@ -188,40 +202,48 @@ export default function Alerts() {
         )}
       </div>
 
-      {/* Tomorrow's Appointments (Existing) */}
+      {/* Tomorrow's Appointments - Confirmação de Consulta */}
       <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-        <div className="p-5 border-b border-border bg-teal-50/30">
+        <div className="p-5 border-b border-border bg-teal-50/50">
           <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
-            <Bell className="w-5 h-5 text-primary" />
-            Consultas de Amanhã
+            <Bell className="w-5 h-5 text-teal-500" />
+            Confirmar Consultas de Amanhã
           </h3>
-          {/* ... existing logic ... */}
           <p className="text-sm text-muted-foreground mt-1">
-            {loadingTomorrow ? '...' : `${tomorrowAppointments?.length || 0} consulta(s) agendada(s)`}
+            {loadingTomorrow ? '...' : `${tomorrowAppointments?.length || 0} consulta(s) para confirmar`}
           </p>
         </div>
-        {/* Simplified rendering for brevity, keeping original logic structure */}
-        <div className="divide-y divide-border">
-          {tomorrowAppointments?.map((appointment) => (
-            <div key={appointment.id} className="p-4 flex items-center justify-between hover:bg-muted/30">
-              <div className="flex gap-4">
-                <span className="font-bold text-primary">{appointment.time.slice(0, 5)}</span>
-                <span>{appointment.patients?.name}</span>
+        {!loadingTomorrow && tomorrowAppointments?.length === 0 ? (
+          <div className="p-6 text-center text-muted-foreground">
+            <p>Nenhuma consulta agendada para amanhã.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {tomorrowAppointments?.map((appointment) => (
+              <div key={appointment.id} className="p-4 hover:bg-teal-50/30 transition-colors">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-teal-500 text-white px-3 py-1.5 rounded-lg font-bold text-sm">
+                      {appointment.time.slice(0, 5)}
+                    </div>
+                    <div>
+                      <p className="font-medium">{appointment.patients?.name}</p>
+                      <p className="text-sm text-muted-foreground">{appointment.patients?.phone}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-teal-500 hover:bg-teal-600 border-teal-600 gap-2 text-white"
+                    onClick={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Confirmar
+                  </Button>
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Lembrar
-              </Button>
-            </div>
-          ))}
-          {!loadingTomorrow && tomorrowAppointments?.length === 0 && (
-            <div className="p-6 text-center text-muted-foreground">Nenhuma consulta.</div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Pending Returns (Scheduled) */}

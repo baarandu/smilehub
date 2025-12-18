@@ -84,7 +84,7 @@ export function NewExamDialog({
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
+
     // Configurar accept baseado no tipo
     if (fileInputRef.current) {
       if (type === 'photo') {
@@ -108,25 +108,24 @@ export function NewExamDialog({
 
   const uploadFile = async (file: File): Promise<string> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${patientId}/${Date.now()}.${fileExt}`;
-    const filePath = `exams/${fileName}`;
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('patient-documents')
-      .upload(filePath, file);
+      .from('exams')
+      .upload(fileName, file);
 
     if (uploadError) throw uploadError;
 
     const { data } = supabase.storage
-      .from('patient-documents')
-      .getPublicUrl(filePath);
+      .from('exams')
+      .getPublicUrl(fileName);
 
     return data.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!form.name || !form.orderDate) {
       toast.error('Nome e data do pedido são obrigatórios');
       return;
@@ -162,7 +161,7 @@ export function NewExamDialog({
         });
         toast.success('Exame registrado com sucesso!');
       }
-      
+
       onOpenChange(false);
       resetForm();
     } catch (error) {
@@ -175,7 +174,7 @@ export function NewExamDialog({
 
   const handleDelete = async () => {
     if (!exam) return;
-    
+
     try {
       await deleteExam.mutateAsync(exam.id);
       toast.success('Exame excluído com sucesso!');
@@ -282,7 +281,7 @@ export function NewExamDialog({
                     accept={fileType === 'photo' ? 'image/*' : '.pdf,.doc,.docx,image/*'}
                     className="hidden"
                   />
-                  
+
                   {previewUrl && (
                     <div className="flex justify-center">
                       <img
@@ -319,7 +318,7 @@ export function NewExamDialog({
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
-                  
+
                   {selectedFile && (
                     <p className="text-sm text-muted-foreground">
                       {selectedFile.name}
@@ -349,9 +348,9 @@ export function NewExamDialog({
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                className="flex-1" 
+              <Button
+                type="submit"
+                className="flex-1"
                 disabled={uploading || createExam.isPending || updateExam.isPending}
               >
                 {(uploading || createExam.isPending || updateExam.isPending) ? (

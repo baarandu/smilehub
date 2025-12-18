@@ -19,9 +19,11 @@ export default function Alerts() {
     const [showTemplatesModal, setShowTemplatesModal] = useState(false);
     const [birthdayTemplate, setBirthdayTemplate] = useState('');
     const [returnTemplate, setReturnTemplate] = useState('');
+    const [confirmationTemplate, setConfirmationTemplate] = useState('');
 
     const DEFAULT_BIRTHDAY_MSG = `Parabéns {name}! 🎉\n\nNós do Smile Care Hub desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
     const DEFAULT_RETURN_MSG = `Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?`;
+    const DEFAULT_CONFIRMATION_MSG = `Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.`;
 
     useEffect(() => {
         loadData();
@@ -32,8 +34,10 @@ export default function Alerts() {
         try {
             const storedBirthday = await AsyncStorage.getItem('TEMPLATE_BIRTHDAY');
             const storedReturn = await AsyncStorage.getItem('TEMPLATE_RETURN');
+            const storedConfirmation = await AsyncStorage.getItem('TEMPLATE_CONFIRMATION');
             setBirthdayTemplate(storedBirthday || DEFAULT_BIRTHDAY_MSG);
             setReturnTemplate(storedReturn || DEFAULT_RETURN_MSG);
+            setConfirmationTemplate(storedConfirmation || DEFAULT_CONFIRMATION_MSG);
         } catch (error) {
             console.error('Error loading templates:', error);
         }
@@ -43,6 +47,7 @@ export default function Alerts() {
         try {
             await AsyncStorage.setItem('TEMPLATE_BIRTHDAY', birthdayTemplate);
             await AsyncStorage.setItem('TEMPLATE_RETURN', returnTemplate);
+            await AsyncStorage.setItem('TEMPLATE_CONFIRMATION', confirmationTemplate);
             setShowTemplatesModal(false);
             RNAlert.alert('Sucesso', 'Mensagens salvas com sucesso!');
         } catch (error) {
@@ -86,7 +91,7 @@ export default function Alerts() {
         } else if (type === 'return') {
             message = returnTemplate.replace('{name}', name);
         } else if (type === 'reminder') {
-            message = `Olá ${name}! Lembrando que sua consulta está agendada para amanhã. Confirmamos sua presença?`;
+            message = confirmationTemplate.replace('{name}', name);
         } else {
             message = `Olá ${name}! Estamos entrando em contato para lembrar sobre sua consulta de retorno. Podemos agendar um horário?`;
         }
@@ -154,12 +159,12 @@ export default function Alerts() {
                     </View>
                 ) : (
                     <View className="gap-6">
-                        {/* 0. Tomorrow's Appointments */}
+                        {/* 0. Tomorrow's Appointments - Confirmação */}
                         {tomorrowAppointments.length > 0 && (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
                                     <Bell size={20} color="#0D9488" />
-                                    <Text className="text-lg font-bold text-gray-800">Consultas de Amanhã</Text>
+                                    <Text className="text-lg font-bold text-gray-800">Confirmar Consultas de Amanhã</Text>
                                     <View className="bg-teal-100 px-2 py-0.5 rounded-full ml-auto">
                                         <Text className="text-xs font-bold text-teal-700">{tomorrowAppointments.length}</Text>
                                     </View>
@@ -184,7 +189,7 @@ export default function Alerts() {
                                                 onPress={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
                                             >
                                                 <MessageCircle size={18} color="white" />
-                                                <Text className="text-white font-medium">Enviar Lembrete</Text>
+                                                <Text className="text-white font-medium">Confirmar via WhatsApp</Text>
                                             </TouchableOpacity>
                                         </View>
                                     ))}
@@ -361,12 +366,27 @@ export default function Alerts() {
                             </Text>
                             <Text className="text-xs text-gray-500 mb-2">Use {'{name}'} para inserir o nome do paciente.</Text>
                             <TextInput
-                                className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900 h-40 text-top"
+                                className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900 h-32 text-top"
                                 multiline
                                 textAlignVertical="top"
                                 value={returnTemplate}
                                 onChangeText={setReturnTemplate}
                                 placeholder="Digite a mensagem de retorno..."
+                            />
+                        </View>
+
+                        <View className="mb-6">
+                            <Text className="text-sm font-bold text-gray-900 mb-2 flex-row items-center gap-2">
+                                <Bell size={16} color="#0D9488" /> Mensagem de Confirmação de Consulta
+                            </Text>
+                            <Text className="text-xs text-gray-500 mb-2">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</Text>
+                            <TextInput
+                                className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900 h-32 text-top"
+                                multiline
+                                textAlignVertical="top"
+                                value={confirmationTemplate}
+                                onChangeText={setConfirmationTemplate}
+                                placeholder="Digite a mensagem de confirmação..."
                             />
                         </View>
                     </ScrollView>
