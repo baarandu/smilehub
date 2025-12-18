@@ -1,4 +1,4 @@
-import { Phone, Mail, Calendar as CalendarIcon, Clock, Edit } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
@@ -64,6 +64,9 @@ export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
 
   const badges = getBadges();
 
+  const sanitizedPhone = patient.phone?.replace(/\D/g, '');
+  const whatsappUrl = sanitizedPhone ? `https://wa.me/55${sanitizedPhone}` : '#';
+
   return (
     <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-start gap-6">
@@ -86,10 +89,15 @@ export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
             </Button>
           </div>
           <div className="grid sm:grid-cols-2 gap-3 mt-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Phone className="w-4 h-4" />
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-500" />
               <span className="text-sm">{patient.phone}</span>
-            </div>
+            </a>
             {patient.email && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="w-4 h-4" />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Phone, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Plus, Calculator, CreditCard } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Plus, Calculator, CreditCard } from 'lucide-react-native';
 import { deletePatient } from '../../src/services/patients';
 import { anamnesesService } from '../../src/services/anamneses';
 import { proceduresService } from '../../src/services/procedures';
@@ -426,6 +426,12 @@ export default function PatientDetail() {
         return age;
     };
 
+    const handleWhatsApp = () => {
+        if (!patient?.phone) return;
+        const sanitizedPhone = patient.phone.replace(/\D/g, '');
+        Linking.openURL(`https://wa.me/55${sanitizedPhone}`);
+    };
+
     const handleDelete = () => {
         if (!patient) return;
         Alert.alert('Excluir Paciente', `Tem certeza que deseja excluir ${patient.name}? Esta ação não pode ser desfeita.`, [
@@ -501,10 +507,10 @@ export default function PatientDetail() {
                     </View>
 
                     <View className="mt-4 gap-3">
-                        <View className="flex-row items-center gap-3">
-                            <Phone size={16} color="#0D9488" />
+                        <TouchableOpacity onPress={handleWhatsApp} className="flex-row items-center gap-3">
+                            <MessageCircle size={16} color="#10B981" />
                             <Text className="text-gray-700">{patient.phone}</Text>
-                        </View>
+                        </TouchableOpacity>
                         {patient.email && (
                             <View className="flex-row items-center gap-3">
                                 <Mail size={16} color="#0D9488" />
