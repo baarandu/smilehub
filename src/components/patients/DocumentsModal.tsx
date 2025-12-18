@@ -107,7 +107,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             if (!user) throw new Error('Não autenticado');
 
             const fileExt = file.name.split('.').pop();
-            const fileName = `letterhead_${user.id}.${fileExt}`;
+            const timestamp = Date.now();
+            const fileName = `letterhead_${user.id}_${timestamp}.${fileExt}`;
 
             // Upload to storage
             const { error: uploadError } = await supabase.storage
@@ -116,23 +117,25 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
             if (uploadError) throw uploadError;
 
-            // Get public URL
+            // Get public URL with cache buster
             const { data: { publicUrl } } = supabase.storage
                 .from('clinic-assets')
                 .getPublicUrl(fileName);
+
+            const urlWithCacheBuster = `${publicUrl}?t=${timestamp}`;
 
             // Update clinic_settings
             const { error: upsertError } = await supabase
                 .from('clinic_settings')
                 .upsert({
                     user_id: user.id,
-                    letterhead_url: publicUrl,
+                    letterhead_url: urlWithCacheBuster,
                     updated_at: new Date().toISOString()
                 } as any, { onConflict: 'user_id' });
 
             if (upsertError) throw upsertError;
 
-            setLetterheadUrl(publicUrl);
+            setLetterheadUrl(urlWithCacheBuster);
             toast({ title: 'Papel timbrado atualizado!' });
         } catch (error) {
             console.error('Error uploading letterhead:', error);
