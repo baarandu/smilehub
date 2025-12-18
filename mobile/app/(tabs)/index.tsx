@@ -546,7 +546,7 @@ export default function Dashboard() {
                                         key={budget.id}
                                         onPress={() => {
                                             setShowBudgetsModal(false);
-                                            router.push(`/patients/${budget.patient_id}`);
+                                            router.push(`/patient/${budget.patient_id}`);
                                         }}
                                         className="bg-white p-4 rounded-xl border border-gray-100"
                                     >
