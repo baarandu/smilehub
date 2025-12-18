@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { settingsService } from "@/services/settings";
 import { profileService } from "@/services/profile";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, Upload, Image as ImageIcon, X, Tag, ArrowLeft } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, X, Tag, ArrowLeft } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -26,10 +26,7 @@ export default function FinancialSettings() {
     const [newTaxRate, setNewTaxRate] = useState('');
     const [showTaxForm, setShowTaxForm] = useState(false);
 
-    // Logo state
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [uploadingLogo, setUploadingLogo] = useState(false);
-    const logoInputRef = useRef<HTMLInputElement>(null);
+
 
     // New Fee State
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -68,9 +65,7 @@ export default function FinancialSettings() {
             const loadedTaxes = await settingsService.getTaxes();
             setTaxes(loadedTaxes || []);
 
-            // Load logo
-            const clinicInfo = await profileService.getClinicInfo();
-            setLogoUrl(clinicInfo.logoUrl);
+
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as configurações." });
@@ -79,50 +74,7 @@ export default function FinancialSettings() {
         }
     };
 
-    const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            toast({ variant: "destructive", title: "Erro", description: "Por favor, selecione uma imagem." });
-            return;
-        }
-
-        // Validate file size (max 2MB)
-        if (file.size > 2 * 1024 * 1024) {
-            toast({ variant: "destructive", title: "Erro", description: "A imagem deve ter no máximo 2MB." });
-            return;
-        }
-
-        setUploadingLogo(true);
-        try {
-            const url = await profileService.uploadLogo(file);
-            setLogoUrl(url);
-            toast({ title: "Sucesso", description: "Logo atualizado com sucesso!" });
-        } catch (error) {
-            console.error('Error uploading logo:', error);
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível fazer upload do logo." });
-        } finally {
-            setUploadingLogo(false);
-            if (logoInputRef.current) {
-                logoInputRef.current.value = '';
-            }
-        }
-    };
-
-    const handleRemoveLogo = async () => {
-        if (!confirm('Tem certeza que deseja remover o logo?')) return;
-
-        try {
-            await profileService.removeLogo();
-            setLogoUrl(null);
-            toast({ title: "Removido", description: "Logo removido com sucesso." });
-        } catch (error) {
-            console.error('Error removing logo:', error);
-            toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o logo." });
-        }
-    };
 
     const handleAddTax = async () => {
         if (!newTaxName.trim() || !newTaxRate) {
@@ -236,67 +188,7 @@ export default function FinancialSettings() {
                 <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
             </div>
 
-            {/* Logo Upload Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Logo da Clínica</CardTitle>
-                    <CardDescription>Faça upload do logotipo para aparecer nos orçamentos em PDF.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-6">
-                        <div className="flex-shrink-0">
-                            {logoUrl ? (
-                                <div className="relative">
-                                    <img
-                                        src={logoUrl}
-                                        alt="Logo da clínica"
-                                        className="w-24 h-24 object-contain border rounded-lg bg-white"
-                                    />
-                                    <button
-                                        onClick={handleRemoveLogo}
-                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                                    <ImageIcon className="w-8 h-8 text-gray-400" />
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex-1">
-                            <input
-                                ref={logoInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleLogoUpload}
-                                className="hidden"
-                            />
-                            <Button
-                                variant="outline"
-                                onClick={() => logoInputRef.current?.click()}
-                                disabled={uploadingLogo}
-                            >
-                                {uploadingLogo ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Enviando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="w-4 h-4 mr-2" />
-                                        {logoUrl ? 'Alterar Logo' : 'Fazer Upload'}
-                                    </>
-                                )}
-                            </Button>
-                            <p className="text-sm text-muted-foreground mt-2">
-                                Formatos: PNG, JPG, WEBP. Tamanho máximo: 2MB.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+
 
             {/* Tax Configuration Section - Multiple Taxes */}
             <Card>

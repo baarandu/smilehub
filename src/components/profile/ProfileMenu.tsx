@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Key, MapPin, LogOut, CreditCard, Users } from 'lucide-react';
+import { User, Key, MapPin, LogOut, CreditCard, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
 import { LocationsModal } from './LocationsModal';
 import { CardFeesModal } from './CardFeesModal';
 import { TeamManagementModal } from './TeamManagementModal';
+import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
   const [cardFeesOpen, setCardFeesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const { isAdmin, clinicName, displayName } = useClinic();
 
   const handleLogout = async () => {
@@ -46,6 +48,13 @@ export function ProfileMenu() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setProfileOpen(true)}
+          >
+            <Building2 className="mr-2 h-4 w-4" />
+            <span>Minha Clínica</span>
+          </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
             <Key className="mr-2 h-4 w-4" />
             <span>Alterar Senha</span>
@@ -87,6 +96,7 @@ export function ProfileMenu() {
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
       <CardFeesModal open={cardFeesOpen} onOpenChange={setCardFeesOpen} />
       <TeamManagementModal open={teamOpen} onOpenChange={setTeamOpen} />
+      <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />
     </>
   );
 }
