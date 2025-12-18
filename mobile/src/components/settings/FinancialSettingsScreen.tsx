@@ -13,8 +13,11 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Tech Tax
-    const [taxRate, setTaxRate] = useState('');
+    // Multiple Taxes State
+    const [taxes, setTaxes] = useState<{ id: string; name: string; rate: number }[]>([]);
+    const [newTaxName, setNewTaxName] = useState('');
+    const [newTaxRate, setNewTaxRate] = useState('');
+    const [showTaxForm, setShowTaxForm] = useState(false);
 
     // Card Fees
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
@@ -35,6 +38,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     const [feeType, setFeeType] = useState<'credit' | 'debit'>('credit');
     const [feeInstallments, setFeeInstallments] = useState('1');
     const [feeRate, setFeeRate] = useState('');
+    const [feeAnticipationRate, setFeeAnticipationRate] = useState('');
 
     useEffect(() => {
         loadSettings();
@@ -43,16 +47,16 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     const loadSettings = async () => {
         try {
             setLoading(true);
-            const settings = await settingsService.getFinancialSettings();
-            if (settings) {
-                setTaxRate(settings.tax_rate?.toString() || '0');
-            }
 
             const fees = await settingsService.getCardFees();
             setCardFees(fees || []);
 
             const brands = await settingsService.getCardBrands();
             setCardBrands(brands || []);
+
+            // Load taxes
+            const loadedTaxes = await settingsService.getTaxes();
+            setTaxes(loadedTaxes || []);
         } catch (error) {
             console.error(error);
             Alert.alert('Erro', 'Falha ao carregar configurações');
@@ -61,17 +65,41 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
         }
     };
 
-    const handleSaveTax = async () => {
+    const handleAddTax = async () => {
+        if (!newTaxName.trim() || !newTaxRate) {
+            Alert.alert('Erro', 'Informe o nome e a taxa do imposto.');
+            return;
+        }
+        setSaving(true);
         try {
-            setSaving(true);
-            const rate = parseFloat(taxRate.replace(',', '.') || '0');
-            await settingsService.updateTaxRate(rate);
-            Alert.alert('Sucesso', 'Taxa de imposto atualizada!');
+            await settingsService.saveTax({ name: newTaxName.trim(), rate: parseFloat(newTaxRate.replace(',', '.')) || 0 });
+            Alert.alert('Sucesso', 'Imposto adicionado!');
+            setNewTaxName('');
+            setNewTaxRate('');
+            setShowTaxForm(false);
+            loadSettings();
         } catch (error) {
-            Alert.alert('Erro', 'Falha ao salvar taxa');
+            console.error(error);
+            Alert.alert('Erro', 'Falha ao salvar imposto');
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleDeleteTax = (id: string) => {
+        Alert.alert('Excluir', 'Remover este imposto?', [
+            { text: 'Cancelar' },
+            {
+                text: 'Excluir', style: 'destructive', onPress: async () => {
+                    try {
+                        await settingsService.deleteTax(id);
+                        loadSettings();
+                    } catch (error) {
+                        Alert.alert('Erro', 'Falha ao excluir imposto');
+                    }
+                }
+            }
+        ]);
     };
 
     const handleSaveFee = async () => {
@@ -83,6 +111,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
 
             setSaving(true);
             const rate = parseFloat(feeRate.replace(',', '.'));
+            const anticipationRate = feeAnticipationRate ? parseFloat(feeAnticipationRate.replace(',', '.')) : null;
             const installments = parseInt(feeInstallments);
 
             // Force installments to 1 for debit to ensure consistency
@@ -93,6 +122,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                 payment_type: feeType,
                 installments: finalInstallments,
                 rate,
+                anticipation_rate: anticipationRate,
                 id: editingFee?.id // Pass ID if editing to help debugging, though upsert uses unique keys
             });
 
@@ -129,12 +159,14 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
             setFeeType(fee.payment_type as 'credit' | 'debit');
             setFeeInstallments(fee.installments.toString());
             setFeeRate(fee.rate.toString());
+            setFeeAnticipationRate(fee.anticipation_rate?.toString() || '');
         } else {
             setEditingFee(null);
             setFeeBrand('visa');
             setFeeType('credit');
             setFeeInstallments('1');
             setFeeRate('');
+            setFeeAnticipationRate('');
         }
         setShowFeeModal(true);
     };
@@ -155,38 +187,81 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
             ) : (
                 <ScrollView className="flex-1 p-4">
 
-                    {/* Tax Settings */}
-                    <View className="bg-white p-5 rounded-xl border border-gray-100 mb-6">
-                        <View className="flex-row items-center gap-2 mb-4">
-                            <Percent size={20} color="#0D9488" />
-                            <Text className="text-base font-bold text-gray-900">Impostos (Nota Fiscal)</Text>
-                        </View>
-                        <Text className="text-gray-500 text-sm mb-3">
-                            Defina a porcentagem média de imposto paga sobre o faturamento bruto.
-                        </Text>
-                        <View className="flex-row items-center gap-3">
-                            <View className="flex-1 bg-gray-50 border border-gray-200 rounded-lg flex-row items-center px-3">
-                                <TextInput
-                                    className="flex-1 py-3 text-gray-900 font-semibold text-lg"
-                                    value={taxRate}
-                                    onChangeText={setTaxRate}
-                                    keyboardType="numeric"
-                                    placeholder="0.00"
-                                />
-                                <Text className="text-gray-500 font-bold">%</Text>
+                    {/* Tax Settings - Multiple Taxes */}
+                    <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
+                        <View className="p-5 border-b border-gray-100 flex-row justify-between items-center">
+                            <View className="flex-row items-center gap-2">
+                                <Percent size={20} color="#0D9488" />
+                                <Text className="text-base font-bold text-gray-900">Impostos</Text>
                             </View>
                             <TouchableOpacity
-                                onPress={handleSaveTax}
-                                disabled={saving}
-                                className="bg-teal-500 p-3 rounded-lg flex-row items-center gap-2"
+                                onPress={() => setShowTaxForm(!showTaxForm)}
+                                className="bg-teal-500 p-2 rounded-lg"
                             >
-                                <Save size={20} color="white" />
-                                <Text className="text-white font-medium">Salvar</Text>
+                                <Plus size={20} color="white" />
                             </TouchableOpacity>
                         </View>
-                    </View>
 
-                    {/* Card Brands Management */}
+                        {/* Add Tax Form */}
+                        {showTaxForm && (
+                            <View className="p-4 border-b border-gray-100 bg-teal-50">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Novo Imposto</Text>
+                                <View className="flex-row gap-2 mb-3">
+                                    <TextInput
+                                        className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-3"
+                                        placeholder="Nome (ex: ISS, IRPJ)"
+                                        value={newTaxName}
+                                        onChangeText={setNewTaxName}
+                                    />
+                                    <View className="w-24 bg-white border border-gray-200 rounded-lg flex-row items-center px-2">
+                                        <TextInput
+                                            className="flex-1 py-3 text-center"
+                                            placeholder="0.00"
+                                            value={newTaxRate}
+                                            onChangeText={setNewTaxRate}
+                                            keyboardType="numeric"
+                                        />
+                                        <Text className="text-gray-500">%</Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={handleAddTax}
+                                    disabled={saving}
+                                    className="bg-teal-500 rounded-lg py-3 items-center"
+                                >
+                                    {saving ? (
+                                        <ActivityIndicator color="white" />
+                                    ) : (
+                                        <Text className="text-white font-medium">Adicionar Imposto</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* Taxes List */}
+                        {taxes.length === 0 ? (
+                            <View className="p-6 items-center">
+                                <Text className="text-gray-400">Nenhum imposto configurado</Text>
+                            </View>
+                        ) : (
+                            <View className="p-4">
+                                {taxes.map(tax => (
+                                    <View key={tax.id} className="flex-row items-center justify-between py-3 border-b border-gray-100">
+                                        <View className="flex-row items-center gap-3">
+                                            <Text className="font-medium text-gray-800">{tax.name}</Text>
+                                            <Text className="text-red-600 font-semibold">{tax.rate}%</Text>
+                                        </View>
+                                        <TouchableOpacity onPress={() => handleDeleteTax(tax.id)}>
+                                            <Trash2 size={18} color="#ef4444" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                                <View className="flex-row justify-end pt-3">
+                                    <Text className="text-gray-500">Total: <Text className="font-bold text-red-600">{taxes.reduce((sum, t) => sum + t.rate, 0).toFixed(2)}%</Text></Text>
+                                </View>
+                            </View>
+                        )}
+                    </View>
                     <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
                         <View className="p-5 border-b border-gray-100 flex-row justify-between items-center bg-blue-50">
                             <View className="flex-row items-center gap-2">
@@ -485,8 +560,8 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                 )}
                             </View>
 
-                            <View className="mb-6">
-                                <Text className="text-sm font-medium text-gray-700 mb-2">Taxa (%)</Text>
+                            <View className="mb-4">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Taxa Normal (%)</Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-lg font-bold text-gray-900"
                                     value={feeRate}
@@ -494,6 +569,19 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                     keyboardType="numeric"
                                     placeholder="0.00"
                                 />
+                                <Text className="text-xs text-gray-500 mt-1">Taxa para receber no prazo padrão</Text>
+                            </View>
+
+                            <View className="mb-6">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Taxa de Antecipação (%)</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-amber-200 rounded-lg px-3 py-3 text-lg font-bold text-gray-900"
+                                    value={feeAnticipationRate}
+                                    onChangeText={setFeeAnticipationRate}
+                                    keyboardType="numeric"
+                                    placeholder="0.00"
+                                />
+                                <Text className="text-xs text-gray-500 mt-1">Taxa para antecipar o recebimento</Text>
                             </View>
 
                             <TouchableOpacity

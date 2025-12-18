@@ -7,7 +7,10 @@ import {
     X,
     CreditCard,
     Filter,
-    Pencil
+    Pencil,
+    Receipt,
+    MapPin,
+    Percent
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,9 +109,35 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
         });
     }, [transactions, search, locationFilter, categoryFilter]);
 
+    // Calculate automatic deductions from income transactions
+    const automaticDeductions = useMemo(() => {
+        const income = transactions.filter(t => t.type === 'income');
+
+        const cardFees = income.reduce((sum, t) => sum + (t.card_fee_amount || 0), 0);
+        const taxes = income.reduce((sum, t) => sum + (t.tax_amount || 0), 0);
+        const locationFees = income.reduce((sum, t) => sum + (t.location_amount || 0), 0);
+
+        // Location breakdown
+        const locationBreakdown: Record<string, number> = {};
+        income.forEach(t => {
+            if (t.location && t.location_amount && t.location_amount > 0) {
+                locationBreakdown[t.location] = (locationBreakdown[t.location] || 0) + t.location_amount;
+            }
+        });
+
+        return {
+            cardFees,
+            taxes,
+            locationFees,
+            locationBreakdown,
+            total: cardFees + taxes + locationFees
+        };
+    }, [transactions]);
+
     const activeFilterCount = (locationFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0);
 
-    const totalExpenses = filtered.reduce((sum, t) => sum + t.amount, 0);
+    const totalManualExpenses = filtered.reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = totalManualExpenses + automaticDeductions.total;
 
     const formatCurrency = (val: number) => {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -160,16 +189,94 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                 </div>
             </div>
 
-            {/* Summary Card */}
-            <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm flex items-center justify-between sm:max-w-md">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Despesas</p>
-                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+            {/* Summary Cards */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Despesas Manuais</p>
+                        <p className="text-2xl font-bold text-red-600">{formatCurrency(totalManualExpenses)}</p>
+                    </div>
+                    <div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <TrendingDown className="h-5 w-5 text-red-600" />
+                    </div>
                 </div>
-                <div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center">
-                    <TrendingDown className="h-5 w-5 text-red-600" />
+
+                <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Descontos Automáticos</p>
+                        <p className="text-2xl font-bold text-orange-600">{formatCurrency(automaticDeductions.total)}</p>
+                    </div>
+                    <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Percent className="h-5 w-5 text-orange-600" />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-red-200 p-4 shadow-sm flex items-center justify-between sm:col-span-2 lg:col-span-1">
+                    <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Despesas</p>
+                        <p className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</p>
+                    </div>
+                    <div className="h-10 w-10 bg-red-200 rounded-lg flex items-center justify-center">
+                        <Receipt className="h-5 w-5 text-red-700" />
+                    </div>
                 </div>
             </div>
+
+            {/* Automatic Deductions Section */}
+            {automaticDeductions.total > 0 && (
+                <div className="bg-orange-50/50 rounded-xl border border-orange-100 p-4">
+                    <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                        <Percent className="h-4 w-4" />
+                        Descontos Automáticos (Taxas e Impostos)
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {automaticDeductions.cardFees > 0 && (
+                            <div className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <CreditCard className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Taxa de Cartão</p>
+                                        <p className="text-xs text-muted-foreground">Débito/Crédito</p>
+                                    </div>
+                                </div>
+                                <span className="font-bold text-red-600">- {formatCurrency(automaticDeductions.cardFees)}</span>
+                            </div>
+                        )}
+
+                        {automaticDeductions.taxes > 0 && (
+                            <div className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <Receipt className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Impostos</p>
+                                        <p className="text-xs text-muted-foreground">Retenção na fonte</p>
+                                    </div>
+                                </div>
+                                <span className="font-bold text-red-600">- {formatCurrency(automaticDeductions.taxes)}</span>
+                            </div>
+                        )}
+
+                        {Object.entries(automaticDeductions.locationBreakdown).map(([location, amount]) => (
+                            <div key={location} className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-8 w-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                                        <MapPin className="h-4 w-4 text-teal-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-foreground">Taxa do Local</p>
+                                        <p className="text-xs text-muted-foreground">{location}</p>
+                                    </div>
+                                </div>
+                                <span className="font-bold text-red-600">- {formatCurrency(amount)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* List */}
             <div className="bg-white rounded-lg border divide-y">

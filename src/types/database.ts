@@ -476,6 +476,7 @@ export interface Database {
           id: string
           user_id: string
           tax_rate: number | null
+          anticipation_rate: number | null
           created_at: string
           updated_at: string
         }
@@ -483,6 +484,7 @@ export interface Database {
           id?: string
           user_id: string
           tax_rate?: number | null
+          anticipation_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -490,6 +492,7 @@ export interface Database {
           id?: string
           user_id?: string
           tax_rate?: number | null
+          anticipation_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -502,6 +505,7 @@ export interface Database {
           payment_type: string
           installments: number
           rate: number
+          anticipation_rate: number | null
           created_at: string
         }
         Insert: {
@@ -511,6 +515,7 @@ export interface Database {
           payment_type: string
           installments?: number
           rate: number
+          anticipation_rate?: number | null
           created_at?: string
         }
         Update: {
@@ -519,6 +524,30 @@ export interface Database {
           brand?: string
           payment_type?: string
           installments?: number
+          rate?: number
+          anticipation_rate?: number | null
+          created_at?: string
+        }
+      },
+      tax_config: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          rate: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          rate: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
           rate?: number
           created_at?: string
         }
@@ -580,6 +609,10 @@ export type FinancialSettingsUpdate = Database['public']['Tables']['financial_se
 export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
 export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
 export type CardFeeConfigUpdate = Database['public']['Tables']['card_fee_config']['Update']
+
+export type TaxConfig = Database['public']['Tables']['tax_config']['Row']
+export type TaxConfigInsert = Database['public']['Tables']['tax_config']['Insert']
+export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update']
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]

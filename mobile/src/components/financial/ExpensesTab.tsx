@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { TrendingDown, ArrowDownRight, MapPin, Filter, X } from 'lucide-react-native';
+import { TrendingDown, ArrowDownRight, MapPin, Filter, X, CreditCard, Receipt, Percent } from 'lucide-react-native';
 import { FinancialTransaction } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
 import { useState, useMemo, useEffect } from 'react';
@@ -50,6 +50,31 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
 
     // Derived Data
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    const incomeTransactions = transactions.filter(t => t.type === 'income');
+
+    // Calculate automatic deductions from income transactions
+    const automaticDeductions = useMemo(() => {
+        const cardFees = incomeTransactions.reduce((sum, t) => sum + ((t as any).card_fee_amount || 0), 0);
+        const taxes = incomeTransactions.reduce((sum, t) => sum + ((t as any).tax_amount || 0), 0);
+        const locationFees = incomeTransactions.reduce((sum, t) => sum + ((t as any).location_amount || 0), 0);
+
+        // Location breakdown
+        const locationBreakdown: Record<string, number> = {};
+        incomeTransactions.forEach(t => {
+            const locAmount = (t as any).location_amount || 0;
+            if (t.location && locAmount > 0) {
+                locationBreakdown[t.location] = (locationBreakdown[t.location] || 0) + locAmount;
+            }
+        });
+
+        return {
+            cardFees,
+            taxes,
+            locationFees,
+            locationBreakdown,
+            total: cardFees + taxes + locationFees
+        };
+    }, [incomeTransactions]);
 
     const uniqueCategories = useMemo(() => {
         const categories = new Set<string>();
@@ -109,7 +134,8 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
         });
     }, [expenseTransactions, activeFilters]);
 
-    const totalExpenses = filteredExpenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalManualExpenses = filteredExpenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = totalManualExpenses + automaticDeductions.total;
 
     const activeFilterCount = (activeFilters.description ? 1 : 0) +
         (activeFilters.startDate || activeFilters.endDate ? 1 : 0) +
@@ -194,18 +220,84 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
             </View>
 
             <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false}>
-                {/* Summary Card */}
-                <View className="bg-white p-4 rounded-xl border border-red-100 mb-6 shadow-sm">
+                {/* Summary Cards */}
+                <View className="flex-row gap-3 mb-4">
+                    <View className="flex-1 bg-white p-3 rounded-xl border border-red-100">
+                        <Text className="text-gray-500 text-xs">Manuais</Text>
+                        <Text className="text-xl font-bold text-red-500 mt-1">{formatCurrency(totalManualExpenses)}</Text>
+                    </View>
+                    <View className="flex-1 bg-white p-3 rounded-xl border border-orange-100">
+                        <Text className="text-gray-500 text-xs">Automáticas</Text>
+                        <Text className="text-xl font-bold text-orange-500 mt-1">{formatCurrency(automaticDeductions.total)}</Text>
+                    </View>
+                </View>
+
+                <View className="bg-white p-4 rounded-xl border border-red-200 mb-6 shadow-sm">
                     <View className="flex-row justify-between items-center">
                         <View>
-                            <Text className="text-gray-500 text-sm">Despesas Totais</Text>
-                            <Text className="text-3xl font-bold text-red-500 mt-1">{formatCurrency(totalExpenses)}</Text>
+                            <Text className="text-gray-500 text-sm">Total de Despesas</Text>
+                            <Text className="text-3xl font-bold text-red-600 mt-1">{formatCurrency(totalExpenses)}</Text>
                         </View>
                         <View className="w-12 h-12 bg-red-100 rounded-xl items-center justify-center">
-                            <TrendingDown size={24} color="#EF4444" />
+                            <TrendingDown size={24} color="#DC2626" />
                         </View>
                     </View>
                 </View>
+
+                {/* Automatic Deductions Section */}
+                {automaticDeductions.total > 0 && (
+                    <View className="mb-6">
+                        <Text className="text-sm font-semibold text-orange-700 mb-3 flex-row items-center">
+                            Descontos Automáticos (Taxas e Impostos)
+                        </Text>
+                        <View className="gap-2">
+                            {automaticDeductions.cardFees > 0 && (
+                                <View className="bg-white p-3 rounded-xl border border-orange-100 flex-row items-center justify-between">
+                                    <View className="flex-row items-center gap-3">
+                                        <View className="w-10 h-10 bg-blue-100 rounded-lg items-center justify-center">
+                                            <CreditCard size={18} color="#2563EB" />
+                                        </View>
+                                        <View>
+                                            <Text className="font-medium text-gray-900">Taxa de Cartão</Text>
+                                            <Text className="text-xs text-gray-500">Débito/Crédito</Text>
+                                        </View>
+                                    </View>
+                                    <Text className="font-bold text-red-600">- {formatCurrency(automaticDeductions.cardFees)}</Text>
+                                </View>
+                            )}
+
+                            {automaticDeductions.taxes > 0 && (
+                                <View className="bg-white p-3 rounded-xl border border-orange-100 flex-row items-center justify-between">
+                                    <View className="flex-row items-center gap-3">
+                                        <View className="w-10 h-10 bg-purple-100 rounded-lg items-center justify-center">
+                                            <Receipt size={18} color="#7C3AED" />
+                                        </View>
+                                        <View>
+                                            <Text className="font-medium text-gray-900">Impostos</Text>
+                                            <Text className="text-xs text-gray-500">Retenção na fonte</Text>
+                                        </View>
+                                    </View>
+                                    <Text className="font-bold text-red-600">- {formatCurrency(automaticDeductions.taxes)}</Text>
+                                </View>
+                            )}
+
+                            {Object.entries(automaticDeductions.locationBreakdown).map(([location, amount]) => (
+                                <View key={location} className="bg-white p-3 rounded-xl border border-orange-100 flex-row items-center justify-between">
+                                    <View className="flex-row items-center gap-3">
+                                        <View className="w-10 h-10 bg-teal-100 rounded-lg items-center justify-center">
+                                            <MapPin size={18} color="#0D9488" />
+                                        </View>
+                                        <View>
+                                            <Text className="font-medium text-gray-900">Taxa do Local</Text>
+                                            <Text className="text-xs text-gray-500">{location}</Text>
+                                        </View>
+                                    </View>
+                                    <Text className="font-bold text-red-600">- {formatCurrency(amount)}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
 
                 {/* Breakdown by Category (if useful) or Location logic similar to income */}
                 {Object.keys(expensesByCategory).length > 0 && (

@@ -37,7 +37,25 @@ export const settingsService = {
         }
     },
 
-    // Card Fees
+    async updateAnticipationRate(rate: number): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const existing = await this.getFinancialSettings();
+
+        if (existing) {
+            const { error } = await (supabase
+                .from('financial_settings') as any)
+                .update({ anticipation_rate: rate, updated_at: new Date().toISOString() })
+                .eq('id', existing.id);
+            if (error) throw error;
+        } else {
+            const { error } = await (supabase
+                .from('financial_settings') as any)
+                .insert({ user_id: user.id, anticipation_rate: rate });
+            if (error) throw error;
+        }
+    },
     async getCardFees(): Promise<CardFeeConfig[]> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
@@ -141,6 +159,41 @@ export const settingsService = {
     async deleteCardBrand(id: string): Promise<void> {
         const { error } = await supabase
             .from('card_brands')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    // Tax Configuration - Multiple Taxes
+    async getTaxes(): Promise<{ id: string; name: string; rate: number }[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data, error } = await (supabase
+            .from('tax_config') as any)
+            .select('*')
+            .eq('user_id', user.id)
+            .order('name');
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return (data || []) as { id: string; name: string; rate: number }[];
+    },
+
+    async saveTax(tax: { name: string; rate: number }): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await (supabase
+            .from('tax_config') as any)
+            .insert({ user_id: user.id, name: tax.name, rate: tax.rate });
+
+        if (error) throw error;
+    },
+
+    async deleteTax(id: string): Promise<void> {
+        const { error } = await (supabase
+            .from('tax_config') as any)
             .delete()
             .eq('id', id);
 

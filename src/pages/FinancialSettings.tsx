@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,16 +9,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { settingsService } from "@/services/settings";
 import { profileService } from "@/services/profile";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, Upload, Image as ImageIcon, X, Tag } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, Upload, Image as ImageIcon, X, Tag, ArrowLeft } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function FinancialSettings() {
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [savingTax, setSavingTax] = useState(false);
-    const [taxRate, setTaxRate] = useState('');
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+
+    // Multiple Taxes State
+    const [taxes, setTaxes] = useState<{ id: string; name: string; rate: number }[]>([]);
+    const [newTaxName, setNewTaxName] = useState('');
+    const [newTaxRate, setNewTaxRate] = useState('');
+    const [showTaxForm, setShowTaxForm] = useState(false);
 
     // Logo state
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -30,7 +37,8 @@ export default function FinancialSettings() {
         brand: 'visa',
         payment_type: 'credit',
         installments: '1',
-        rate: ''
+        rate: '',
+        anticipation_rate: ''
     });
 
     // Card Brands State
@@ -49,16 +57,16 @@ export default function FinancialSettings() {
     const loadData = async () => {
         setLoading(true);
         try {
-            const settings = await settingsService.getFinancialSettings();
-            if (settings) {
-                setTaxRate(settings.tax_rate?.toString() || '0');
-            }
             const fees = await settingsService.getCardFees();
             setCardFees(fees || []);
 
             // Load card brands
             const brands = await settingsService.getCardBrands();
             setCardBrands(brands || []);
+
+            // Load taxes
+            const loadedTaxes = await settingsService.getTaxes();
+            setTaxes(loadedTaxes || []);
 
             // Load logo
             const clinicInfo = await profileService.getClinicInfo();
@@ -116,16 +124,36 @@ export default function FinancialSettings() {
         }
     };
 
-    const handleSaveTax = async () => {
+    const handleAddTax = async () => {
+        if (!newTaxName.trim() || !newTaxRate) {
+            toast({ variant: "destructive", title: "Erro", description: "Informe o nome e a taxa do imposto." });
+            return;
+        }
         setSavingTax(true);
         try {
-            await settingsService.updateTaxRate(parseFloat(taxRate) || 0);
-            toast({ title: "Sucesso", description: "Taxa de imposto atualizada." });
+            await settingsService.saveTax({ name: newTaxName.trim(), rate: parseFloat(newTaxRate) || 0 });
+            toast({ title: "Sucesso", description: "Imposto adicionado!" });
+            setNewTaxName('');
+            setNewTaxRate('');
+            setShowTaxForm(false);
+            loadData();
         } catch (error) {
             console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar taxa." });
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar imposto." });
         } finally {
             setSavingTax(false);
+        }
+    };
+
+    const handleDeleteTax = async (id: string) => {
+        if (!confirm('Remover este imposto?')) return;
+        try {
+            await settingsService.deleteTax(id);
+            toast({ title: "Removido", description: "Imposto removido." });
+            loadData();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao remover imposto." });
         }
     };
 
@@ -135,7 +163,8 @@ export default function FinancialSettings() {
                 brand: newFee.brand,
                 payment_type: newFee.payment_type,
                 installments: parseInt(newFee.installments),
-                rate: parseFloat(newFee.rate) || 0
+                rate: parseFloat(newFee.rate) || 0,
+                anticipation_rate: newFee.anticipation_rate ? parseFloat(newFee.anticipation_rate) : null
             });
             toast({ title: "Sucesso", description: "Regra de taxa adicionada." });
             setIsAddOpen(false);
@@ -200,7 +229,12 @@ export default function FinancialSettings() {
 
     return (
         <div className="container mx-auto p-6 space-y-6 max-w-4xl">
-            <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
+            <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/financeiro')}>
+                    <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
+            </div>
 
             {/* Logo Upload Section */}
             <Card>
@@ -264,29 +298,70 @@ export default function FinancialSettings() {
                 </CardContent>
             </Card>
 
-            {/* Tax Rate Section */}
+            {/* Tax Configuration Section - Multiple Taxes */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Impostos Globais</CardTitle>
-                    <CardDescription>Defina a porcentagem de imposto que incide sobre todas as transações.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-end gap-4 max-w-md">
-                        <div className="space-y-2 flex-1">
-                            <Label htmlFor="tax_rate">Taxa de Imposto (%)</Label>
-                            <Input
-                                id="tax_rate"
-                                type="number"
-                                value={taxRate}
-                                onChange={e => setTaxRate(e.target.value)}
-                                placeholder="ex: 6.00"
-                            />
-                        </div>
-                        <Button onClick={handleSaveTax} disabled={savingTax}>
-                            {savingTax ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                            Salvar
-                        </Button>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Impostos</CardTitle>
+                        <CardDescription>Configure os impostos que incidem sobre as transações.</CardDescription>
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => setShowTaxForm(!showTaxForm)}>
+                        <Plus className="w-4 h-4 mr-1" /> Adicionar
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Add Tax Form */}
+                    {showTaxForm && (
+                        <div className="flex gap-3 p-4 bg-gray-50 rounded-lg border">
+                            <div className="flex-1">
+                                <Label>Nome do Imposto</Label>
+                                <Input
+                                    placeholder="ex: ISS, IRPJ, etc"
+                                    value={newTaxName}
+                                    onChange={e => setNewTaxName(e.target.value)}
+                                />
+                            </div>
+                            <div className="w-32">
+                                <Label>Taxa (%)</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="ex: 5.0"
+                                    value={newTaxRate}
+                                    onChange={e => setNewTaxRate(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-end">
+                                <Button onClick={handleAddTax} disabled={savingTax}>
+                                    {savingTax ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                                    Salvar
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Taxes List */}
+                    {taxes.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
+                            Nenhum imposto configurado. Clique em "Adicionar" para criar.
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {taxes.map(tax => (
+                                <div key={tax.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                                    <div className="flex items-center gap-3">
+                                        <span className="font-medium">{tax.name}</span>
+                                        <span className="text-red-600 font-semibold">{tax.rate}%</span>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteTax(tax.id)}>
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                    </Button>
+                                </div>
+                            ))}
+                            <div className="flex justify-end pt-2 border-t text-sm text-muted-foreground">
+                                <span>Total: <strong className="text-red-600">{taxes.reduce((sum, t) => sum + t.rate, 0).toFixed(2)}%</strong></span>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -406,13 +481,24 @@ export default function FinancialSettings() {
                                     </div>
                                 )}
                                 <div className="space-y-2">
-                                    <Label>Taxa (%)</Label>
+                                    <Label>Taxa Normal (%)</Label>
                                     <Input
                                         type="number"
                                         value={newFee.rate}
                                         onChange={e => setNewFee({ ...newFee, rate: e.target.value })}
                                         placeholder="ex: 3.5"
                                     />
+                                    <p className="text-xs text-muted-foreground">Taxa para receber no prazo padrão</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Taxa de Antecipação (%)</Label>
+                                    <Input
+                                        type="number"
+                                        value={newFee.anticipation_rate}
+                                        onChange={e => setNewFee({ ...newFee, anticipation_rate: e.target.value })}
+                                        placeholder="ex: 5.0"
+                                    />
+                                    <p className="text-xs text-muted-foreground">Taxa para antecipar o recebimento</p>
                                 </div>
                                 <Button className="w-full mt-4" onClick={handleAddFee}>Salvar Regra</Button>
                             </div>
@@ -472,7 +558,8 @@ export default function FinancialSettings() {
                                     <TableHead>Bandeira</TableHead>
                                     <TableHead>Tipo</TableHead>
                                     <TableHead>Parcelas</TableHead>
-                                    <TableHead>Taxa</TableHead>
+                                    <TableHead>Taxa Normal</TableHead>
+                                    <TableHead>Taxa Antecipação</TableHead>
                                     <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -483,6 +570,7 @@ export default function FinancialSettings() {
                                         <TableCell>{fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}</TableCell>
                                         <TableCell>{fee.installments}x</TableCell>
                                         <TableCell className="font-medium text-red-600">{fee.rate}%</TableCell>
+                                        <TableCell className="font-medium text-amber-600">{fee.anticipation_rate ? `${fee.anticipation_rate}%` : '-'}</TableCell>
                                         <TableCell>
                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteFee(fee.id)}>
                                                 <Trash2 className="w-4 h-4 text-red-500" />

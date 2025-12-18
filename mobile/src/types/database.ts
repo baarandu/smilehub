@@ -489,21 +489,24 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          tax_rate: number
+          tax_rate: number | null
+          anticipation_rate: number | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          tax_rate?: number
+          tax_rate?: number | null
+          anticipation_rate?: number | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          tax_rate?: number
+          tax_rate?: number | null
+          anticipation_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -516,6 +519,7 @@ export interface Database {
           payment_type: string
           installments: number
           rate: number
+          anticipation_rate: number | null
           created_at: string
         }
         Insert: {
@@ -525,6 +529,7 @@ export interface Database {
           payment_type: string
           installments?: number
           rate: number
+          anticipation_rate?: number | null
           created_at?: string
         }
         Update: {
@@ -533,6 +538,30 @@ export interface Database {
           brand?: string
           payment_type?: string
           installments?: number
+          rate?: number
+          anticipation_rate?: number | null
+          created_at?: string
+        }
+      },
+      tax_config: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          rate: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          rate: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
           rate?: number
           created_at?: string
         }

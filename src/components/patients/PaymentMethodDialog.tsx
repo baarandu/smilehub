@@ -105,23 +105,33 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
             // Adjust installments for lookup: debit is always 1
             const lookupInstallments = selectedMethod === 'debit' ? 1 : numInstallments;
 
-            const feeConfig = cardFees.find(f =>
+            let feeConfig = cardFees.find(f =>
                 f.brand === selectedBrand &&
                 f.payment_type === selectedMethod &&
                 f.installments === lookupInstallments
             );
 
-            if (feeConfig) {
-                cardFeeRate = feeConfig.rate;
-            } else {
-                // Fallback: try 'others' brand if no specific brand config found
-                const otherConfig = cardFees.find(f =>
+            // Fallback: try 'others' brand if no specific brand config found
+            if (!feeConfig) {
+                feeConfig = cardFees.find(f =>
                     f.brand === 'others' &&
                     f.payment_type === selectedMethod &&
                     f.installments === lookupInstallments
                 );
-                if (otherConfig) {
-                    cardFeeRate = otherConfig.rate;
+            }
+
+            if (feeConfig) {
+                // If user wants to anticipate and there's an anticipation rate, use it
+                // Otherwise use the normal rate
+                if (anticipate && feeConfig.anticipation_rate) {
+                    cardFeeRate = feeConfig.anticipation_rate;
+                } else {
+                    cardFeeRate = feeConfig.rate;
+                }
+
+                // Store the anticipation rate if available (for display purposes)
+                if (feeConfig.anticipation_rate) {
+                    anticipationRate = feeConfig.anticipation_rate;
                 }
             }
 
@@ -129,32 +139,18 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
         }
 
         // Anticipation Logic
-        // For cards: automatic anticipation
         let isAnticipatedLogic = anticipate;
         if (selectedMethod === 'credit' || selectedMethod === 'debit') {
-            isAnticipatedLogic = true;
+            isAnticipatedLogic = selectedMethod === 'debit' || anticipate;
         }
 
-        // Anticipation Amount (Manual only, for cards assumed 0/included in fee)
-        // User request: card fee is the anticipation fee.
-
-        let realAnticipationAmount = anticipationAmount;
-        if (selectedMethod === 'credit' || selectedMethod === 'debit') {
-            realAnticipationAmount = 0;
-        } else if (anticipate) {
-            // Logic for manual if needed in future
-        }
-
-        // Location Rate Logic: (Gross - CardFee) * Rate
         // Location Rate Logic: (Gross - CardFee) * Rate
         const safeCardFee = cardFeeAmount || 0;
-        const safeAnticipation = realAnticipationAmount || 0;
 
-        const baseForLocation = grossAmount - safeCardFee - safeAnticipation;
+        const baseForLocation = grossAmount - safeCardFee;
         const locationAmount = (baseForLocation * locationRate) / 100;
 
-        const netBeforeAnticipation = grossAmount - taxAmount - safeCardFee - locationAmount;
-        const netAmount = netBeforeAnticipation - safeAnticipation;
+        const netAmount = grossAmount - taxAmount - safeCardFee - locationAmount;
 
         return {
             grossAmount,
@@ -163,7 +159,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
             cardFeeRate,
             cardFeeAmount,
             anticipationRate: anticipate ? anticipationRate : 0,
-            anticipationAmount: realAnticipationAmount,
+            anticipationAmount: 0, // Anticipation is now absorbed into cardFeeRate when anticipate=true
             locationRate,
             locationAmount,
             netAmount,
