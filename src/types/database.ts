@@ -658,3 +658,28 @@ export type PatientFormData = {
   medicalHistory: string
   notes: string
 }
+
+// Document Templates
+export type DocumentTemplate = {
+  id: string
+  user_id: string
+  name: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export type DocumentTemplateInsert = {
+  id?: string
+  user_id: string
+  name: string
+  content: string
+  created_at?: string
+  updated_at?: string
+}
+
+export type DocumentTemplateUpdate = {
+  name?: string
+  content?: string
+  updated_at?: string
+}

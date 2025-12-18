@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react';
-import { Users } from 'lucide-react';
+import { Users, FileText } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
+import { DocumentsModal } from '@/components/patients/DocumentsModal';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import type { PatientFormData } from '@/types/database';
 
 export default function Patients() {
   const [search, setSearch] = useState('');
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const { data: patients, isLoading } = usePatients();
   const createPatient = useCreatePatient();
 
@@ -39,8 +42,17 @@ export default function Patients() {
             {isLoading ? '...' : `${patients?.length || 0} pacientes cadastrados`}
           </p>
         </div>
-        <NewPatientDialog onAdd={handleAddPatient} isLoading={createPatient.isPending} />
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowDocumentsModal(true)}>
+            <FileText className="w-4 h-4 mr-2" />
+            Documentos
+          </Button>
+          <NewPatientDialog onAdd={handleAddPatient} isLoading={createPatient.isPending} />
+        </div>
       </div>
+
+      {/* Documents Modal */}
+      <DocumentsModal open={showDocumentsModal} onClose={() => setShowDocumentsModal(false)} />
 
       {/* Search */}
       <PatientSearch value={search} onChange={setSearch} />
