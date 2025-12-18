@@ -281,9 +281,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         ${backgroundStyle}
                     }
                     .document-content {
-                        background: rgba(255, 255, 255, 0.85);
                         padding: 30px;
-                        border-radius: 5px;
                     }
                     h1 { text-align: center; margin-bottom: 30px; font-size: 20px; font-weight: bold; }
                     .content { white-space: pre-wrap; text-align: justify; font-size: 14px; }
