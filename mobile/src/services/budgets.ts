@@ -92,4 +92,32 @@ export const budgetsService = {
     async updateStatus(id: string, status: Budget['status']): Promise<Budget> {
         return this.update(id, { status });
     },
+
+    async getAllPending(): Promise<(BudgetWithItems & { patient_name: string })[]> {
+        const { data, error } = await supabase
+            .from('budgets')
+            .select(`
+                *,
+                budget_items (*),
+                patients (name)
+            `)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []).map((b: any) => ({
+            ...b,
+            patient_name: b.patients?.name || 'Paciente'
+        })) as (BudgetWithItems & { patient_name: string })[];
+    },
+
+    async getPendingCount(): Promise<number> {
+        const { count, error } = await supabase
+            .from('budgets')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending');
+
+        if (error) throw error;
+        return count || 0;
+    }
 };

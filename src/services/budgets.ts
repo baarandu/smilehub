@@ -20,7 +20,7 @@ export const budgetsService = {
         // Create budget first
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert(budget)
+            .insert(budget as any)
             .select()
             .single();
 
@@ -29,20 +29,20 @@ export const budgetsService = {
 
         // Create budget items
         if (items.length > 0) {
-            const itemsWithBudgetId: BudgetItemInsert[] = items.map(item => ({
+            const itemsWithBudgetId = items.map(item => ({
                 ...item,
-                budget_id: budgetData.id,
+                budget_id: (budgetData as any).id,
             }));
 
             const { error: itemsError } = await supabase
                 .from('budget_items')
-                .insert(itemsWithBudgetId);
+                .insert(itemsWithBudgetId as any);
 
             if (itemsError) throw itemsError;
         }
 
         // Return full budget with items
-        return this.getById(budgetData.id);
+        return this.getById((budgetData as any).id);
     },
 
     async getById(id: string): Promise<BudgetWithItems> {
@@ -63,7 +63,8 @@ export const budgetsService = {
     async update(id: string, budget: BudgetUpdate): Promise<Budget> {
         const { data, error } = await supabase
             .from('budgets')
-            .update(budget)
+            // @ts-ignore: Supabase types mismatch workaround
+            .update(budget as any)
             .eq('id', id)
             .select()
             .single();
