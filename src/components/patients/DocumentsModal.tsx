@@ -252,9 +252,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const patient = patients.find(p => p.id === selectedPatientId);
 
-        // Create letterhead HTML if available
-        const letterheadHtml = letterheadUrl
-            ? `<div class="letterhead"><img src="${letterheadUrl}" alt="Papel Timbrado" /></div>`
+        // Create background style if letterhead is available
+        const backgroundStyle = letterheadUrl
+            ? `background-image: url('${letterheadUrl}'); background-size: cover; background-position: center; background-repeat: no-repeat;`
             : '';
 
         const html = `
@@ -264,39 +264,48 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 <meta charset="UTF-8">
                 <title>${selectedTemplate?.name}</title>
                 <style>
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
                     body {
                         font-family: Arial, sans-serif;
-                        padding: 20px 40px;
-                        line-height: 1.6;
-                        max-width: 800px;
-                        margin: 0 auto;
+                        padding: 60px 50px;
+                        line-height: 1.8;
+                        margin: 0;
+                        min-height: 100vh;
+                        box-sizing: border-box;
+                        ${backgroundStyle}
                     }
-                    .letterhead {
-                        text-align: center;
-                        margin-bottom: 30px;
+                    .document-content {
+                        background: rgba(255, 255, 255, 0.85);
+                        padding: 30px;
+                        border-radius: 5px;
                     }
-                    .letterhead img {
-                        max-width: 100%;
-                        max-height: 150px;
-                        object-fit: contain;
-                    }
-                    h1 { text-align: center; margin-bottom: 30px; font-size: 18px; }
-                    .content { white-space: pre-wrap; text-align: justify; }
-                    .signature { margin-top: 60px; text-align: center; }
+                    h1 { text-align: center; margin-bottom: 30px; font-size: 20px; font-weight: bold; }
+                    .content { white-space: pre-wrap; text-align: justify; font-size: 14px; }
+                    .signature { margin-top: 80px; text-align: center; }
                     .signature-line { 
                         border-top: 1px solid #000; 
                         width: 300px; 
                         margin: 0 auto 10px;
                         padding-top: 10px;
                     }
+                    @media print {
+                        body {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }
                 </style>
             </head>
             <body>
-                ${letterheadHtml}
-                <h1>${selectedTemplate?.name}</h1>
-                <div class="content">${previewContent}</div>
-                <div class="signature">
-                    <div class="signature-line">${patient?.name}</div>
+                <div class="document-content">
+                    <h1>${selectedTemplate?.name}</h1>
+                    <div class="content">${previewContent}</div>
+                    <div class="signature">
+                        <div class="signature-line">${patient?.name}</div>
+                    </div>
                 </div>
             </body>
             </html>
