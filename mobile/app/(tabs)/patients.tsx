@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X } from 'lucide-react-native';
+import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, LayoutGrid, LayoutList } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
+import { DocumentsModal } from '../../components/DocumentsModal';
 import type { Patient, PatientFormData } from '../../src/types/database';
 
 const emptyForm: PatientFormData = {
@@ -34,6 +35,8 @@ export default function Patients() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+    const [view, setView] = useState<'list' | 'grid'>('list');
     const [form, setForm] = useState<PatientFormData>(emptyForm);
     const [saving, setSaving] = useState(false);
 
@@ -184,12 +187,30 @@ export default function Patients() {
                             {patients.length} pacientes cadastrados
                         </Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => setShowModal(true)}
-                        className="bg-teal-500 p-3 rounded-xl"
-                    >
-                        <UserPlus size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    <View className="flex-row gap-2">
+                        <TouchableOpacity
+                            onPress={() => setShowDocumentsModal(true)}
+                            className="w-10 h-10 bg-teal-50 items-center justify-center rounded-xl"
+                        >
+                            <FileText size={20} color="#0D9488" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setView(view === 'list' ? 'grid' : 'list')}
+                            className="w-10 h-10 bg-gray-50 items-center justify-center rounded-xl"
+                        >
+                            {view === 'list' ? (
+                                <LayoutGrid size={20} color="#6B7280" />
+                            ) : (
+                                <LayoutList size={20} color="#6B7280" />
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setShowModal(true)}
+                            className="bg-teal-500 p-3 rounded-xl"
+                        >
+                            <UserPlus size={20} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Search */}
@@ -355,6 +376,11 @@ export default function Patients() {
                     </KeyboardAvoidingView>
                 </SafeAreaView>
             </Modal>
+
+            <DocumentsModal
+                visible={showDocumentsModal}
+                onClose={() => setShowDocumentsModal(false)}
+            />
         </SafeAreaView>
     );
 }

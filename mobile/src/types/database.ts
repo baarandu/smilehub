@@ -565,6 +565,55 @@ export interface Database {
           rate?: number
           created_at?: string
         }
+      },
+      document_templates: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      clinic_settings: {
+        Row: {
+          id: string
+          user_id: string
+          letterhead_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          letterhead_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          letterhead_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     Views: {
@@ -617,6 +666,12 @@ export type FinancialTransactionUpdate = Database['public']['Tables']['financial
 export type Exam = Database['public']['Tables']['exams']['Row']
 export type ExamInsert = Database['public']['Tables']['exams']['Insert']
 export type ExamUpdate = Database['public']['Tables']['exams']['Update']
+
+export type DocumentTemplate = Database['public']['Tables']['document_templates']['Row']
+export type DocumentTemplateInsert = Database['public']['Tables']['document_templates']['Insert']
+export type DocumentTemplateUpdate = Database['public']['Tables']['document_templates']['Update']
+
+export type ClinicSettings = Database['public']['Tables']['clinic_settings']['Row']
 
 export type FinancialTransactionWithPatient = FinancialTransaction & {
   patients: Pick<Patient, 'name'> | null

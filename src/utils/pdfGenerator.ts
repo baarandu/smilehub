@@ -56,84 +56,76 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 20;
-    let y = 10;
+    let y = 30; // Increased initial y to avoid top letterhead area
     let textStartX = margin;
 
     // Parse teeth from notes
     const parsedNotes = JSON.parse(budget.notes || '{}');
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
-    // Add letterhead at top if available (full width)
-    if (letterheadUrl) {
-        try {
-            const letterheadData = await loadImageAsBase64(letterheadUrl);
-            if (letterheadData) {
-                const letterheadWidth = pageWidth - (margin * 2);
-                const letterheadHeight = 30; // Fixed height for letterhead
-                doc.addImage(letterheadData.data, letterheadData.format, margin, y, letterheadWidth, letterheadHeight);
-                y += letterheadHeight + 10;
+    // Helper to add background to current page
+    const addBackground = async () => {
+        if (letterheadUrl) {
+            try {
+                const letterheadData = await loadImageAsBase64(letterheadUrl);
+                if (letterheadData) {
+                    doc.addImage(letterheadData.data, letterheadData.format, 0, 0, pageWidth, pageHeight);
+                }
+            } catch (error) {
+                console.error('Error adding letterhead to PDF:', error);
             }
-        } catch (error) {
-            console.error('Error adding letterhead to PDF:', error);
         }
-    }
+    };
 
-    // Load and add logo if available (when no letterhead)
+    // Add background to the first page
+    await addBackground();
+
+    // Load and add logo if available (only if no letterhead)
     if (logoUrl && !letterheadUrl) {
         try {
-            console.log('Loading logo from:', logoUrl);
             const logoData = await loadImageAsBase64(logoUrl);
             if (logoData) {
                 const logoWidth = 30;
                 const logoHeight = 30;
                 doc.addImage(logoData.data, logoData.format, margin, y, logoWidth, logoHeight);
                 textStartX = margin + logoWidth + 10;
-                console.log('Logo added successfully');
-            } else {
-                console.warn('Logo data is null');
             }
         } catch (error) {
             console.error('Error adding logo to PDF:', error);
         }
     }
 
-    // Reset y position for header text when letterhead is present
-    if (letterheadUrl) {
-        textStartX = margin;
-    }
+    // Header - Clinic Name (skip if letterhead present as it likely contains it)
+    if (!letterheadUrl) {
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text(clinicName || 'Clínica Odontológica', textStartX, y);
+        y += 8;
 
-    // Header - Clinic Name (to the right of logo if present)
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(clinicName || 'Clínica Odontológica', textStartX, y);
+        if (dentistName) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(80, 80, 80);
+            doc.text(dentistName, textStartX, y);
+            doc.setTextColor(0, 0, 0);
+            y += 6;
+        }
 
-    y += 8;
-
-    // Dentist Name (if clinic has a different dentist)
-    if (dentistName) {
-        doc.setFontSize(11);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(80, 80, 80);
-        doc.text(dentistName, textStartX, y);
-        doc.setTextColor(0, 0, 0);
-        y += 6;
-    }
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (clinicAddress) {
-        doc.text(clinicAddress, textStartX, y);
-        y += 5;
-    }
-    if (clinicPhone) {
-        doc.text(`Tel: ${clinicPhone}`, textStartX, y);
-        y += 5;
-    }
-
-    // Ensure minimum header height if logo is present
-    if (logoUrl) {
-        y = Math.max(y, 50);
+        if (clinicAddress) {
+            doc.text(clinicAddress, textStartX, y);
+            y += 5;
+        }
+        if (clinicPhone) {
+            doc.text(`Tel: ${clinicPhone}`, textStartX, y);
+            y += 5;
+        }
+    } else {
+        // If letterhead is present, we start directly with the budget info but lower down
+        y = 50;
     }
 
     // Divider
@@ -175,8 +167,6 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.text('ITENS DO ORÇAMENTO', margin, y);
-    y += 10;
-
     // Table Header
     doc.setFillColor(240, 240, 240);
     doc.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
@@ -190,12 +180,13 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
     // Items
     doc.setFont('helvetica', 'normal');
     let totalValue = 0;
-
-    teeth.forEach((tooth, index) => {
+    let index = 0;
+    for (const tooth of teeth) {
         // Check if we need a new page
         if (y > 260) {
             doc.addPage();
-            y = 20;
+            await addBackground();
+            y = 40; // Higher margin on new pages as well
         }
 
         const toothName = getToothDisplayName(tooth.tooth);
@@ -229,7 +220,8 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
         doc.text(`R$ ${formatMoney(itemValue)}`, pageWidth - margin - 2, y, { align: 'right' });
 
         y += 8;
-    });
+        index++;
+    }
 
     // Total
     y += 5;

@@ -9,7 +9,7 @@ import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
 import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Settings, Upload, X, Image } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Settings, Upload, X, Image, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DocumentsModalProps {
@@ -150,9 +150,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            await supabase
-                .from('clinic_settings')
-                .update({ letterhead_url: null } as any)
+            await (supabase
+                .from('clinic_settings') as any)
+                .update({ letterhead_url: null })
                 .eq('user_id', user.id);
 
             setLetterheadUrl(null);
@@ -255,9 +255,11 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const patient = patients.find(p => p.id === selectedPatientId);
 
-        // Create background style if letterhead is available
-        const backgroundStyle = letterheadUrl
-            ? `background-image: url('${letterheadUrl}'); background-size: contain; background-position: top center; background-repeat: no-repeat;`
+        // Create background html if letterhead is available
+        const backgroundHtml = letterheadUrl
+            ? `<div style="position: fixed; top: 0; left: 0; right: 0; margin-left: auto; margin-right: auto; width: 210mm; height: 297mm; z-index: -1;">
+                 <img src="${letterheadUrl}" style="width: 100%; height: 100%; object-fit: fill; border: none; padding: 0; margin: 0; display: block;" />
+               </div>`
             : '';
 
         const html = `
@@ -271,20 +273,39 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         size: A4;
                         margin: 0;
                     }
+                    html, body {
+                        margin: 0;
+                        padding: 0;
+                        width: 100%;
+                    }
                     body {
                         font-family: Arial, sans-serif;
-                        padding: 60px 50px;
-                        line-height: 1.8;
-                        margin: 0;
-                        min-height: 100vh;
+                        min-height: 297mm;
                         box-sizing: border-box;
-                        ${backgroundStyle}
+                        background: transparent !important;
+                        -webkit-print-color-adjust: exact;
+                        color-adjust: exact;
+                        display: flex;
+                        justify-content: center;
+                        align-items: flex-start;
+                    }
+                    .document-wrapper {
+                        width: 210mm;
+                        padding: 60mm 20mm 30mm;
+                        box-sizing: border-box;
+                        margin: 0 auto;
                     }
                     .document-content {
-                        padding: 30px;
+                        width: 100%;
                     }
-                    h1 { text-align: center; margin-bottom: 30px; font-size: 20px; font-weight: bold; }
-                    .content { white-space: pre-wrap; text-align: justify; font-size: 14px; }
+                    h1 { text-align: center; margin-bottom: 25px; font-size: 18pt; font-weight: bold; text-transform: uppercase; }
+                    .content { 
+                        white-space: pre-wrap; 
+                        text-align: justify; 
+                        font-size: 12pt; 
+                        line-height: 1.6;
+                        color: #000;
+                    }
                     .signature { margin-top: 80px; text-align: center; }
                     .signature-line { 
                         border-top: 1px solid #000; 
@@ -301,11 +322,14 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 </style>
             </head>
             <body>
-                <div class="document-content">
-                    <h1>${selectedTemplate?.name}</h1>
-                    <div class="content">${previewContent}</div>
-                    <div class="signature">
-                        <div class="signature-line">${patient?.name}</div>
+                ${backgroundHtml}
+                <div class="document-wrapper">
+                    <div class="document-content">
+                        <h1>${selectedTemplate?.name}</h1>
+                        <div class="content">${previewContent}</div>
+                        <div class="signature">
+                            <div class="signature-line">${patient?.name}</div>
+                        </div>
                     </div>
                 </div>
             </body>
@@ -317,6 +341,33 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             printWindow.document.write(html);
             printWindow.document.close();
             printWindow.print();
+        }
+    };
+
+    const [isSavingExam, setIsSavingExam] = useState(false);
+
+    const handleSaveToExams = async () => {
+        if (!previewContent || !selectedPatientId || !selectedTemplate) {
+            toast({ title: 'Dados insuficientes', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            setIsSavingExam(true);
+            const patient = patients.find(p => p.id === selectedPatientId);
+            await documentTemplatesService.saveAsExam(
+                selectedPatientId,
+                patient?.name || 'Paciente',
+                selectedTemplate.name,
+                previewContent,
+                letterheadUrl
+            );
+            toast({ title: 'Documento salvo nos exames do paciente!' });
+        } catch (error) {
+            console.error('Error saving to exams:', error);
+            toast({ title: 'Erro ao salvar documento', variant: 'destructive' });
+        } finally {
+            setIsSavingExam(false);
         }
     };
 
@@ -577,6 +628,14 @@ Nesta data {{data}}, declaro que...`}
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={goBack}>
                                 Voltar
+                            </Button>
+                            <Button onClick={handleSaveToExams} disabled={!previewContent || isSavingExam} variant="outline">
+                                {isSavingExam ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Save className="w-4 h-4 mr-2" />
+                                )}
+                                Salvar em Exames
                             </Button>
                             <Button onClick={handleDownloadPDF} disabled={!previewContent}>
                                 <FileDown className="w-4 h-4 mr-2" />

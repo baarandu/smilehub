@@ -126,6 +126,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
+                letterheadUrl: clinicInfo.letterheadUrl,
             });
 
             setPreviewHtml(html);
@@ -152,6 +153,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
+                letterheadUrl: clinicInfo.letterheadUrl,
             });
 
             await sharePDF(uri);

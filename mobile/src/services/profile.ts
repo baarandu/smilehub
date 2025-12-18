@@ -5,6 +5,7 @@ export interface ClinicInfo {
     dentistName: string | null;
     isClinic: boolean;
     logoUrl: string | null;
+    letterheadUrl: string | null;
 }
 
 export const profileService = {
@@ -15,13 +16,14 @@ export const profileService = {
                 clinicName: 'Clínica Odontológica',
                 dentistName: null,
                 isClinic: false,
-                logoUrl: null
+                logoUrl: null,
+                letterheadUrl: null
             };
         }
 
         // Get clinic_id from clinic_users
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
             .select('clinic_id')
             .eq('user_id', user.id)
             .single();
@@ -33,24 +35,37 @@ export const profileService = {
         let logoUrl: string | null = null;
 
         if (clinicId) {
-            const { data: clinic } = await supabase
-                .from('clinics')
+            const { data: clinic } = await (supabase
+                .from('clinics') as any)
                 .select('id, name, logo_url')
                 .eq('id', clinicId)
                 .single();
 
             clinicName = clinic?.name || null;
-            logoUrl = clinic?.logo_url || null;
+            logoUrl = (clinic as any)?.logo_url || null;
         }
 
+        // Get letterhead from clinic_settings
+        const { data: settings, error: settingsError } = await (supabase
+            .from('clinic_settings') as any)
+            .select('letterhead_url')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+        if (settingsError && settingsError.code !== 'PGRST116') {
+            console.error('Error fetching clinic settings:', settingsError);
+        }
+
+        const letterheadUrl = settings?.letterhead_url || null;
+
         // Get dentist name and gender from profiles
-        const { data: profile } = await supabase
-            .from('profiles')
+        const { data: profile } = await (supabase
+            .from('profiles') as any)
             .select('full_name, gender')
             .eq('id', user.id)
             .single();
 
-        const rawName = profile?.full_name || null;
+        const rawName = (profile as any)?.full_name || null;
         const gender = (profile as any)?.gender || null;
 
         // Format dentist name with Dr./Dra. prefix
@@ -72,7 +87,8 @@ export const profileService = {
             clinicName,
             dentistName: isClinic ? dentistName : null,
             isClinic,
-            logoUrl
+            logoUrl,
+            letterheadUrl
         };
     }
 };
