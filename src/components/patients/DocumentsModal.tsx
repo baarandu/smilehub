@@ -257,7 +257,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         // Create background style if letterhead is available
         const backgroundStyle = letterheadUrl
-            ? `background-image: url('${letterheadUrl}'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;`
+            ? `background-image: url('${letterheadUrl}'); background-size: contain; background-position: top center; background-repeat: no-repeat;`
             : '';
 
         const html = `
