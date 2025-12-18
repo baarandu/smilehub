@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Users, Calendar, Bell, FileText, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle, Users2 } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
@@ -11,63 +11,87 @@ import { alertsService, type Alert as PatientAlert } from '../../src/services/al
 import { budgetsService } from '../../src/services/budgets';
 import type { ReturnAlert, BudgetWithItems } from '../../src/types/database';
 import { locationsService, type Location } from '../../src/services/locations';
-import type { AppointmentWithPatient } from '../../src/types/database';
-import { useAuth } from '../../src/contexts/AuthContext';
-import { useClinic } from '../../src/contexts/ClinicContext';
+import { remindersService } from '../../src/services/reminders';
 
-type PendingBudget = BudgetWithItems & { patient_name: string };
+// ... (existing helper types)
+import { useAuth } from '../../src/contexts/AuthContext';
+import { supabase } from '../../src/lib/supabase';
 
 export default function Dashboard() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [patientsCount, setPatientsCount] = useState(0);
+    const [activeReminders, setActiveReminders] = useState(0);
     const [todayCount, setTodayCount] = useState(0);
     const [pendingReturns, setPendingReturns] = useState(0);
-    const [todayAppointments, setTodayAppointments] = useState<AppointmentWithPatient[]>([]);
-    const [recentAlerts, setRecentAlerts] = useState<(PatientAlert | ReturnAlert & { type: 'scheduled' })[]>([]);
-
-    const { signOut, user } = useAuth();
-    const { displayName, clinicName, isAdmin } = useClinic();
-
-    // Profile & Locations modal state
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const [showLocationsModal, setShowLocationsModal] = useState(false);
-    const [showTeamModal, setShowTeamModal] = useState(false);
-    const [locations, setLocations] = useState<Location[]>([]);
-    const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-    const [locationForm, setLocationForm] = useState({ name: '', address: '' });
-    const [showLocationForm, setShowLocationForm] = useState(false);
-
-    // Pending Budgets State
+    const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
     const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
+    const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
 
-    const handleLogout = () => {
-        Alert.alert(
-            'Sair do App',
-            'Tem certeza que deseja sair?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Sair',
-                    style: 'destructive',
-                    onPress: async () => {
-                        setShowProfileModal(false);
-                        await signOut();
-                        router.replace('/login');
-                    }
-                }
-            ]
-        );
-    };
+    // Profile & Settings
+    const [showProfileModal, setShowProfileModal] = useState(false);
+    const [displayName, setDisplayName] = useState('');
+    const [clinicName, setClinicName] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [showTeamModal, setShowTeamModal] = useState(false);
+
+    // Locations
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [showLocationsModal, setShowLocationsModal] = useState(false);
+    const [showLocationForm, setShowLocationForm] = useState(false);
+    const [locationForm, setLocationForm] = useState({ name: '', address: '' });
+    const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+
+    // Auth & Profile Loading
+    const { session, signOut } = useAuth();
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (session?.user) {
+            loadProfile();
+        }
+    }, [session]);
 
+    useFocusEffect(
+        useCallback(() => {
+            if (session?.user) {
+                loadData();
+            }
+        }, [session])
+    );
+
+    const loadProfile = async () => {
+        try {
+            if (!session?.user) return;
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile) {
+                const p = profile as any;
+                setDisplayName(p.full_name || 'Usuário');
+                setClinicName(p.clinic_name || 'Minha Clínica');
+                setIsAdmin(p.role === 'admin' || p.role === 'owner');
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+            router.replace('/(auth)/login');
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+
+    // ...
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount, remindersCount] = await Promise.all([
                 patientsService.count(),
                 appointmentsService.countToday(),
                 consultationsService.countPendingReturns(),
@@ -75,9 +99,19 @@ export default function Dashboard() {
                 consultationsService.getReturnAlerts(),
                 alertsService.getBirthdayAlerts(),
                 alertsService.getProcedureReminders(),
-                budgetsService.getPendingCount()
+                budgetsService.getPendingCount(),
+                remindersService.getActiveCount()
             ]);
             setPatientsCount(patients);
+            setActiveReminders(remindersCount);
+            setTodayCount(today);
+            setPendingReturns(returnsCount);
+            setTodayAppointments(appointments);
+            setPendingBudgetsCount(budgetsCount);
+            // ...
+
+            // ...
+            // ...
             setTodayCount(today);
             setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
@@ -211,10 +245,10 @@ export default function Dashboard() {
                 {/* Stats Grid */}
                 <View className="flex-row flex-wrap justify-between gap-y-4 mb-6">
                     <StatsCard
-                        title="Pacientes"
-                        value={patientsCount.toString()}
-                        icon={<Users size={24} color="#0D9488" />}
-                        onPress={() => router.push('/patients')}
+                        title="Lembretes Ativos"
+                        value={activeReminders.toString()}
+                        icon={<Bell size={24} color="#0D9488" />}
+                        onPress={() => router.push('/alerts')}
                     />
                     <StatsCard
                         title="Consultas Hoje"

@@ -1,10 +1,10 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  Bell, 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  Bell,
   Menu,
   X,
   Stethoscope,
@@ -30,6 +30,21 @@ const navItems = [
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+
+  useState(() => {
+    const loadCount = async () => {
+      try {
+        const { remindersService } = await import('@/services/reminders');
+        const count = await remindersService.getActiveCount();
+        setActiveRemindersCount(count);
+      } catch (e) { console.error(e); }
+    };
+    loadCount();
+    // Poll every minute or listen to custom event if better reliability needed
+    const interval = setInterval(loadCount, 60000);
+    return () => clearInterval(interval);
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +101,12 @@ export function AppLayout({ children }: AppLayoutProps) {
                 )}
               >
                 <item.icon className={cn("w-5 h-5", isActive && "text-primary")} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.label === 'Alertas' && activeRemindersCount > 0 && (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse">
+                    {activeRemindersCount > 9 ? '9+' : activeRemindersCount}
+                  </span>
+                )}
               </NavLink>
             );
           })}

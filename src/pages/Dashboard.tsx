@@ -27,13 +27,17 @@ type PendingBudget = BudgetWithItems & { patient_name: string };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount();
+  // const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount(); // Removing patients stats
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
   const { data: todayCount, isLoading: loadingTodayCount } = useTodayAppointmentsCount();
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
+
+  // Reminders Count
+  const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+  const [loadingReminders, setLoadingReminders] = useState(true);
 
   // Pending Budgets State
   const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
@@ -42,8 +46,25 @@ export default function Dashboard() {
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
 
   useEffect(() => {
-    loadPendingBudgets();
+    loadDashboardData();
   }, []);
+
+  const loadDashboardData = async () => {
+    // Parallel loading
+    loadPendingBudgets();
+
+    // Load Reminders
+    try {
+      // Dynamic import to avoid circular dependencies if any, though likely safe to import normally
+      const { remindersService } = await import('@/services/reminders');
+      const count = await remindersService.getActiveCount();
+      setActiveRemindersCount(count);
+    } catch (err) {
+      console.error("Failed to load reminders count", err);
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
 
   const loadPendingBudgets = async () => {
     try {
@@ -109,15 +130,17 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {loadingPatients ? (
+        {loadingReminders ? (
           <Skeleton className="h-32 rounded-xl" />
         ) : (
-          <StatsCard
-            title="Pacientes"
-            value={patientsCount || 0}
-            icon={<Users className="w-6 h-6" />}
-            variant="primary"
-          />
+          <div onClick={() => navigate('/alertas')} className="cursor-pointer">
+            <StatsCard
+              title="Lembretes Ativos"
+              value={activeRemindersCount}
+              icon={<Bell className="w-6 h-6" />}
+              variant="primary" // Keeping primary color but changing icon/title
+            />
+          </div>
         )}
         {loadingTodayCount ? (
           <Skeleton className="h-32 rounded-xl" />

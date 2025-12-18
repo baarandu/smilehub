@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings } from 'lucide-react';
+import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
+import { remindersService, Reminder } from '@/services/reminders';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function Alerts() {
   // Get tomorrow's date
@@ -27,6 +31,13 @@ export default function Alerts() {
   const [confirmationTemplate, setConfirmationTemplate] = useState('');
   const [showSettings, setShowSettings] = useState(false);
 
+  // Reminders State
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loadingReminders, setLoadingReminders] = useState(true);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [reminderForm, setReminderForm] = useState({ title: '', description: '' });
+
   useEffect(() => {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
     const loadedReturn = localStorage.getItem('returnTemplate');
@@ -34,7 +45,80 @@ export default function Alerts() {
     setBirthdayTemplate(loadedBirthday || "Parabéns {name}! 🎉\n\nNós do Smile Care Hub desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.");
     setReturnTemplate(loadedReturn || "Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?");
     setConfirmationTemplate(loadedConfirmation || "Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.");
+
+    loadReminders();
   }, []);
+
+  const loadReminders = async () => {
+    try {
+      setLoadingReminders(true);
+      const data = await remindersService.getAll();
+      setReminders(data);
+    } catch (error) {
+      console.error('Error loading reminders:', error);
+      toast.error('Erro ao carregar lembretes');
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
+
+  const handleCreateReminder = async () => {
+    if (!reminderForm.title.trim()) {
+      toast.error('O título é obrigatório');
+      return;
+    }
+
+    try {
+      if (editingReminder) {
+        await remindersService.update(editingReminder.id, reminderForm);
+        toast.success('Lembrete atualizado!');
+      } else {
+        await remindersService.create({
+          title: reminderForm.title,
+          description: reminderForm.description,
+          is_active: true
+        });
+        toast.success('Lembrete criado!');
+      }
+      setShowReminderDialog(false);
+      setReminderForm({ title: '', description: '' });
+      setEditingReminder(null);
+      loadReminders();
+    } catch (error) {
+      console.error(error);
+      toast.error('Houve um erro ao salvar o lembrete');
+    }
+  };
+
+  const handleDeleteReminder = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este lembrete?')) return;
+    try {
+      await remindersService.delete(id);
+      toast.success('Lembrete excluído');
+      loadReminders();
+    } catch (error) {
+      console.error(error);
+      toast.error('Erro ao excluir');
+    }
+  };
+
+  const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    try {
+      // Optimistic update
+      setReminders(reminders.map(r => r.id === id ? { ...r, is_active: !currentStatus } : r));
+      await remindersService.update(id, { is_active: !currentStatus });
+    } catch (error) {
+      // Revert on error
+      loadReminders();
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const openEdit = (reminder: Reminder) => {
+    setEditingReminder(reminder);
+    setReminderForm({ title: reminder.title, description: reminder.description || '' });
+    setShowReminderDialog(true);
+  };
 
   const saveTemplates = () => {
     localStorage.setItem('birthdayTemplate', birthdayTemplate);
@@ -72,57 +156,170 @@ export default function Alerts() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Alertas e Lembretes</h1>
-          <p className="text-muted-foreground mt-1">Gerencie retornos e lembretes de consultas</p>
+          <p className="text-muted-foreground mt-1">Gerencie lembretes internos e retornos de pacientes</p>
         </div>
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Settings className="w-4 h-4" />
-              Configurar Mensagens
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Modelos de Mensagem</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto">
-              <div className="space-y-2">
-                <Label>Mensagem de Aniversário</Label>
-                <Textarea
-                  value={birthdayTemplate}
-                  onChange={(e) => setBirthdayTemplate(e.target.value)}
-                  rows={3}
-                  placeholder="Use {name} para o nome do paciente"
-                />
-                <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+        <div className="flex gap-2">
+          <Dialog open={showReminderDialog} onOpenChange={(open) => {
+            setShowReminderDialog(open);
+            if (!open) {
+              setEditingReminder(null);
+              setReminderForm({ title: '', description: '' });
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button className="bg-teal-600 hover:bg-teal-700 gap-2">
+                <Plus className="w-4 h-4" />
+                Novo Lembrete
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingReminder ? 'Editar Lembrete' : 'Novo Lembrete'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    placeholder="Ex: Enviar exame para laboratório"
+                    value={reminderForm.title}
+                    onChange={e => setReminderForm({ ...reminderForm, title: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição (Opcional)</Label>
+                  <Textarea
+                    placeholder="Detalhes adicionais..."
+                    value={reminderForm.description}
+                    onChange={e => setReminderForm({ ...reminderForm, description: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Mensagem de Retorno (6 meses)</Label>
-                <Textarea
-                  value={returnTemplate}
-                  onChange={(e) => setReturnTemplate(e.target.value)}
-                  rows={3}
-                  placeholder="Use {name} para o nome do paciente"
-                />
-                <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+              <DialogFooter>
+                <Button onClick={handleCreateReminder}>Salvar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showSettings} onOpenChange={setShowSettings}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Settings className="w-4 h-4" />
+                Configurar Mensagens
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Modelos de Mensagem</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto">
+                <div className="space-y-2">
+                  <Label>Mensagem de Aniversário</Label>
+                  <Textarea
+                    value={birthdayTemplate}
+                    onChange={(e) => setBirthdayTemplate(e.target.value)}
+                    rows={3}
+                    placeholder="Use {name} para o nome do paciente"
+                  />
+                  <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Mensagem de Retorno (6 meses)</Label>
+                  <Textarea
+                    value={returnTemplate}
+                    onChange={(e) => setReturnTemplate(e.target.value)}
+                    rows={3}
+                    placeholder="Use {name} para o nome do paciente"
+                  />
+                  <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Mensagem de Confirmação de Consulta</Label>
+                  <Textarea
+                    value={confirmationTemplate}
+                    onChange={(e) => setConfirmationTemplate(e.target.value)}
+                    rows={3}
+                    placeholder="Use {name} para o nome do paciente"
+                  />
+                  <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Mensagem de Confirmação de Consulta</Label>
-                <Textarea
-                  value={confirmationTemplate}
-                  onChange={(e) => setConfirmationTemplate(e.target.value)}
-                  rows={3}
-                  placeholder="Use {name} para o nome do paciente"
-                />
-                <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={saveTemplates}>Salvar Alterações</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button onClick={saveTemplates}>Salvar Alterações</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Reminders Section */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Bell className="w-5 h-5 text-teal-600" />
+          Meus Lembretes
+        </h2>
+        {loadingReminders ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reminders.length === 0 ? (
+              <div className="col-span-full p-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <p className="text-muted-foreground">Você não possui lembretes cadastrados.</p>
+                <Button variant="link" onClick={() => setShowReminderDialog(true)}>Criar o primeiro</Button>
+              </div>
+            ) : (
+              reminders.map(reminder => (
+                <div key={reminder.id} className={cn(
+                  "group relative p-4 rounded-xl border transition-all duration-200",
+                  reminder.is_active
+                    ? "bg-white border-teal-100 shadow-sm hover:shadow-md hover:border-teal-200"
+                    : "bg-gray-50 border-gray-200 opacity-75"
+                )}>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className={cn("font-medium break-words pr-8", reminder.is_active ? "text-slate-900" : "text-gray-500 line-through")}>
+                      {reminder.title}
+                    </h3>
+                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(reminder)}>
+                        <Edit2 className="w-4 h-4 text-blue-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteReminder(reminder.id)}>
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {reminder.description && (
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-3 break-words">
+                      {reminder.description}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100/50">
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(reminder.created_at).toLocaleDateString()}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`rem-${reminder.id}`} className="text-xs cursor-pointer">
+                        {reminder.is_active ? 'Ativo' : 'Concluído'}
+                      </Label>
+                      <Switch
+                        id={`rem-${reminder.id}`}
+                        checked={reminder.is_active}
+                        onCheckedChange={() => handleToggleActive(reminder.id, reminder.is_active)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      <hr className="border-gray-200" />
 
       {/* Birthdays */}
       <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
@@ -137,7 +334,7 @@ export default function Alerts() {
         </div>
         {!loadingBirthdays && birthdayAlerts?.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
-            <p>Nenhum aniversariante hoje.</p>
+            <p>Nenhuma aniversariante hoje.</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
@@ -284,4 +481,3 @@ export default function Alerts() {
     </div>
   );
 }
-
