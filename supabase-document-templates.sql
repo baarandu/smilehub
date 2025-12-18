@@ -33,9 +33,18 @@ CREATE POLICY "Users can delete own templates"
 -- Index for faster queries
 CREATE INDEX idx_document_templates_user_id ON document_templates(user_id);
 
+-- Add letterhead_url to clinic_settings (if column doesn't exist)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'clinic_settings' AND column_name = 'letterhead_url') THEN
+        ALTER TABLE clinic_settings ADD COLUMN letterhead_url TEXT;
+    END IF;
+END $$;
+
 -- Variables available in templates:
 -- {{nome}} - Patient name
 -- {{cpf}} - Patient CPF
 -- {{data_nascimento}} - Patient date of birth
 -- {{data}} - Document date (selected by user)
--- {{clinica}} - Clinic name
+

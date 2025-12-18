@@ -83,6 +83,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
+                letterheadUrl: clinicInfo.letterheadUrl,
             });
 
             setPdfPreviewUrl(blobUrl);

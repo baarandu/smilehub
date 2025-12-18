@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
+import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Settings, Upload, X, Image } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DocumentsModalProps {
@@ -16,13 +17,14 @@ interface DocumentsModalProps {
     onClose: () => void;
 }
 
-type View = 'list' | 'create' | 'edit' | 'generate';
+type View = 'list' | 'create' | 'edit' | 'generate' | 'settings';
 
 export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const { toast } = useToast();
     const [view, setView] = useState<View>('list');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Templates
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
@@ -38,10 +40,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [previewContent, setPreviewContent] = useState('');
 
+    // Letterhead
+    const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
+    const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
+
     useEffect(() => {
         if (open) {
             loadTemplates();
             loadPatients();
+            loadLetterhead();
         }
     }, [open]);
 
@@ -63,6 +70,92 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);
+        }
+    };
+
+    const loadLetterhead = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data } = await supabase
+                .from('clinic_settings')
+                .select('letterhead_url')
+                .eq('user_id', user.id)
+                .single();
+
+            if (data && (data as any).letterhead_url) {
+                setLetterheadUrl((data as any).letterhead_url);
+            }
+        } catch (error) {
+            // Settings might not exist yet
+        }
+    };
+
+    const handleUploadLetterhead = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast({ title: 'Apenas imagens são aceitas', variant: 'destructive' });
+            return;
+        }
+
+        try {
+            setUploadingLetterhead(true);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Não autenticado');
+
+            const fileExt = file.name.split('.').pop();
+            const fileName = `letterhead_${user.id}.${fileExt}`;
+
+            // Upload to storage
+            const { error: uploadError } = await supabase.storage
+                .from('clinic-assets')
+                .upload(fileName, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('clinic-assets')
+                .getPublicUrl(fileName);
+
+            // Update clinic_settings
+            const { error: upsertError } = await supabase
+                .from('clinic_settings')
+                .upsert({
+                    user_id: user.id,
+                    letterhead_url: publicUrl,
+                    updated_at: new Date().toISOString()
+                } as any, { onConflict: 'user_id' });
+
+            if (upsertError) throw upsertError;
+
+            setLetterheadUrl(publicUrl);
+            toast({ title: 'Papel timbrado atualizado!' });
+        } catch (error) {
+            console.error('Error uploading letterhead:', error);
+            toast({ title: 'Erro ao fazer upload', variant: 'destructive' });
+        } finally {
+            setUploadingLetterhead(false);
+        }
+    };
+
+    const handleRemoveLetterhead = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            await supabase
+                .from('clinic_settings')
+                .update({ letterhead_url: null } as any)
+                .eq('user_id', user.id);
+
+            setLetterheadUrl(null);
+            toast({ title: 'Papel timbrado removido' });
+        } catch (error) {
+            toast({ title: 'Erro ao remover', variant: 'destructive' });
         }
     };
 
@@ -157,8 +250,13 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             return;
         }
 
-        // Create printable HTML
         const patient = patients.find(p => p.id === selectedPatientId);
+
+        // Create letterhead HTML if available
+        const letterheadHtml = letterheadUrl
+            ? `<div class="letterhead"><img src="${letterheadUrl}" alt="Papel Timbrado" /></div>`
+            : '';
+
         const html = `
             <!DOCTYPE html>
             <html>
@@ -168,12 +266,21 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 <style>
                     body {
                         font-family: Arial, sans-serif;
-                        padding: 40px;
+                        padding: 20px 40px;
                         line-height: 1.6;
                         max-width: 800px;
                         margin: 0 auto;
                     }
-                    h1 { text-align: center; margin-bottom: 30px; }
+                    .letterhead {
+                        text-align: center;
+                        margin-bottom: 30px;
+                    }
+                    .letterhead img {
+                        max-width: 100%;
+                        max-height: 150px;
+                        object-fit: contain;
+                    }
+                    h1 { text-align: center; margin-bottom: 30px; font-size: 18px; }
                     .content { white-space: pre-wrap; text-align: justify; }
                     .signature { margin-top: 60px; text-align: center; }
                     .signature-line { 
@@ -185,6 +292,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 </style>
             </head>
             <body>
+                ${letterheadHtml}
                 <h1>${selectedTemplate?.name}</h1>
                 <div class="content">${previewContent}</div>
                 <div class="signature">
@@ -194,7 +302,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             </html>
         `;
 
-        // Open in new window for printing
         const printWindow = window.open('', '_blank');
         if (printWindow) {
             printWindow.document.write(html);
@@ -223,6 +330,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         {view === 'create' && 'Novo Modelo'}
                         {view === 'edit' && 'Editar Modelo'}
                         {view === 'generate' && `Gerar: ${selectedTemplate?.name}`}
+                        {view === 'settings' && 'Configurações'}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -231,18 +339,24 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <p className="text-sm text-muted-foreground">
-                                Crie modelos de documentos que podem ser preenchidos automaticamente com dados do paciente.
+                                Crie modelos de documentos preenchidos automaticamente.
                             </p>
-                            <Button onClick={handleCreate} size="sm">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Novo Modelo
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setView('settings')}>
+                                    <Settings className="w-4 h-4 mr-2" />
+                                    Papel Timbrado
+                                </Button>
+                                <Button onClick={handleCreate} size="sm">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Novo Modelo
+                                </Button>
+                            </div>
                         </div>
 
                         <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
                             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <div>
-                                <strong>Variáveis disponíveis:</strong> Use {'{{nome}}'}, {'{{cpf}}'}, {'{{data_nascimento}}'}, {'{{data}}'} no texto do modelo.
+                                <strong>Variáveis:</strong> {'{{nome}}'}, {'{{cpf}}'}, {'{{data_nascimento}}'}, {'{{data}}'}
                             </div>
                         </div>
 
@@ -296,6 +410,77 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Settings View - Letterhead Upload */}
+                {view === 'settings' && (
+                    <div className="space-y-6">
+                        <div>
+                            <Label className="text-base font-semibold">Papel Timbrado</Label>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Faça upload de uma imagem que será incluída no topo de todos os documentos gerados.
+                            </p>
+                        </div>
+
+                        {letterheadUrl ? (
+                            <div className="space-y-4">
+                                <div className="border rounded-lg p-4 bg-gray-50">
+                                    <img
+                                        src={letterheadUrl}
+                                        alt="Papel Timbrado"
+                                        className="max-h-32 mx-auto object-contain"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={uploadingLetterhead}
+                                    >
+                                        <Upload className="w-4 h-4 mr-2" />
+                                        Alterar Imagem
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleRemoveLetterhead}
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Remover
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {uploadingLetterhead ? (
+                                    <Loader2 className="w-10 h-10 mx-auto text-teal-600 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Image className="w-10 h-10 mx-auto text-gray-400" />
+                                        <p className="mt-2 text-sm text-gray-600">Clique para fazer upload</p>
+                                        <p className="text-xs text-gray-400">PNG, JPG (recomendado: 800x150px)</p>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleUploadLetterhead}
+                            className="hidden"
+                        />
+
+                        <div className="flex justify-end">
+                            <Button variant="outline" onClick={goBack}>
+                                Voltar
+                            </Button>
+                        </div>
                     </div>
                 )}
 
@@ -364,9 +549,15 @@ Nesta data {{data}}, declaro que...`}
                             </div>
                         </div>
 
+                        {letterheadUrl && (
+                            <div className="border rounded-lg p-2 bg-gray-50">
+                                <img src={letterheadUrl} alt="Timbrado" className="max-h-16 mx-auto object-contain" />
+                            </div>
+                        )}
+
                         <div>
                             <Label>Prévia do Documento</Label>
-                            <div className="border rounded-lg p-4 min-h-[250px] bg-white whitespace-pre-wrap text-sm">
+                            <div className="border rounded-lg p-4 min-h-[200px] bg-white whitespace-pre-wrap text-sm">
                                 {previewContent || (
                                     <span className="text-gray-400">Selecione um paciente para ver a prévia</span>
                                 )}
@@ -388,3 +579,4 @@ Nesta data {{data}}, declaro que...`}
         </Dialog>
     );
 }
+

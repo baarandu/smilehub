@@ -11,6 +11,7 @@ export interface ClinicInfo {
     dentistName: string | null;
     isClinic: boolean;
     logoUrl: string | null;
+    letterheadUrl: string | null;
     clinicId: string | null;
 }
 
@@ -41,6 +42,7 @@ export const profileService = {
                 dentistName: null,
                 isClinic: false,
                 logoUrl: null,
+                letterheadUrl: null,
                 clinicId: null
             };
         }
@@ -95,11 +97,25 @@ export const profileService = {
         // Check if it's a clinic (clinic name differs from dentist name)
         const isClinic = clinicName !== dentistName && !!dentistName;
 
+        // Get letterhead from clinic_settings
+        let letterheadUrl: string | null = null;
+        try {
+            const { data: settings } = await supabase
+                .from('clinic_settings')
+                .select('letterhead_url')
+                .eq('user_id', user.id)
+                .single();
+            letterheadUrl = (settings as any)?.letterhead_url || null;
+        } catch {
+            // Settings might not exist
+        }
+
         return {
             clinicName,
             dentistName: isClinic ? dentistName : null,
             isClinic,
             logoUrl,
+            letterheadUrl,
             clinicId
         };
     },

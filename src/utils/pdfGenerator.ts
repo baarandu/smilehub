@@ -8,6 +8,7 @@ interface BudgetPDFData {
     clinicName?: string;
     dentistName?: string | null;
     logoUrl?: string | null;
+    letterheadUrl?: string | null;
     clinicAddress?: string;
     clinicPhone?: string;
 }
@@ -17,7 +18,7 @@ async function loadImageAsBase64(url: string): Promise<{ data: string; format: s
     try {
         const response = await fetch(url, { mode: 'cors' });
         if (!response.ok) {
-            console.error('Failed to fetch logo:', response.status);
+            console.error('Failed to fetch image:', response.status);
             return null;
         }
         const blob = await response.blob();
@@ -44,34 +45,49 @@ async function loadImageAsBase64(url: string): Promise<{ data: string; format: s
             reader.readAsDataURL(blob);
         });
     } catch (error) {
-        console.error('Error loading logo:', error);
+        console.error('Error loading image:', error);
         return null;
     }
 }
 
 // Core function that builds the PDF document
 async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
-    const { budget, patientName, clinicName, dentistName, logoUrl, clinicAddress, clinicPhone } = data;
+    const { budget, patientName, clinicName, dentistName, logoUrl, letterheadUrl, clinicAddress, clinicPhone } = data;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
-    let y = 20;
+    let y = 10;
     let textStartX = margin;
 
     // Parse teeth from notes
     const parsedNotes = JSON.parse(budget.notes || '{}');
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
-    // Load and add logo if available
-    if (logoUrl) {
+    // Add letterhead at top if available (full width)
+    if (letterheadUrl) {
+        try {
+            const letterheadData = await loadImageAsBase64(letterheadUrl);
+            if (letterheadData) {
+                const letterheadWidth = pageWidth - (margin * 2);
+                const letterheadHeight = 30; // Fixed height for letterhead
+                doc.addImage(letterheadData.data, letterheadData.format, margin, y, letterheadWidth, letterheadHeight);
+                y += letterheadHeight + 10;
+            }
+        } catch (error) {
+            console.error('Error adding letterhead to PDF:', error);
+        }
+    }
+
+    // Load and add logo if available (when no letterhead)
+    if (logoUrl && !letterheadUrl) {
         try {
             console.log('Loading logo from:', logoUrl);
             const logoData = await loadImageAsBase64(logoUrl);
             if (logoData) {
                 const logoWidth = 30;
                 const logoHeight = 30;
-                doc.addImage(logoData.data, logoData.format, margin, y - 5, logoWidth, logoHeight);
+                doc.addImage(logoData.data, logoData.format, margin, y, logoWidth, logoHeight);
                 textStartX = margin + logoWidth + 10;
                 console.log('Logo added successfully');
             } else {
@@ -80,6 +96,11 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
         } catch (error) {
             console.error('Error adding logo to PDF:', error);
         }
+    }
+
+    // Reset y position for header text when letterhead is present
+    if (letterheadUrl) {
+        textStartX = margin;
     }
 
     // Header - Clinic Name (to the right of logo if present)
