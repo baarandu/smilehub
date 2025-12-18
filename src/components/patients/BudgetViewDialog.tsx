@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown } from 'lucide-react';
+import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown, Eye } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
 import { profileService } from '@/services/profile';
 import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
-import { generateBudgetPDF } from '@/utils/pdfGenerator';
+import { generateBudgetPDFPreview, downloadPDFFromBlob } from '@/utils/pdfGenerator';
+import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
 import type { BudgetWithItems, BudgetUpdate, BudgetItemUpdate } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +24,11 @@ interface BudgetViewDialogProps {
 export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const [updating, setUpdating] = useState(false);
+
+    // PDF Preview state
+    const [showPdfPreview, setShowPdfPreview] = useState(false);
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     if (!budget) return null;
 
@@ -65,21 +71,42 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
 
     const handleExportPDF = async () => {
         try {
+            setGeneratingPdf(true);
+            setShowPdfPreview(true);
+
             // Fetch clinic info
             const clinicInfo = await profileService.getClinicInfo();
-            console.log('Clinic Info:', clinicInfo);
 
-            await generateBudgetPDF({
+            const blobUrl = await generateBudgetPDFPreview({
                 budget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
             });
-            toast({ title: "Sucesso", description: "PDF gerado com sucesso!" });
+
+            setPdfPreviewUrl(blobUrl);
         } catch (error) {
             console.error('Erro ao gerar PDF:', error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao gerar PDF" });
+            setShowPdfPreview(false);
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
+    const handleDownloadPDF = () => {
+        if (pdfPreviewUrl) {
+            downloadPDFFromBlob(pdfPreviewUrl, patientName || 'Paciente');
+            toast({ title: "Sucesso", description: "PDF baixado com sucesso!" });
+        }
+    };
+
+    const handleClosePdfPreview = () => {
+        setShowPdfPreview(false);
+        if (pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+            setPdfPreviewUrl(null);
         }
     };
 
@@ -206,14 +233,24 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
                         Excluir
                     </Button>
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleExportPDF}>
-                            <FileDown className="w-4 h-4 mr-2" />
-                            Gerar PDF
+                        <Button variant="outline" onClick={handleExportPDF} disabled={generatingPdf}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Visualizar PDF
                         </Button>
                         <Button variant="outline" onClick={onClose}>Fechar</Button>
                     </div>
                 </DialogFooter>
             </DialogContent>
+
+            {/* PDF Preview Dialog */}
+            <PdfPreviewDialog
+                open={showPdfPreview}
+                onClose={handleClosePdfPreview}
+                pdfUrl={pdfPreviewUrl}
+                onDownload={handleDownloadPDF}
+                loading={generatingPdf}
+                title="Pré-visualização do Orçamento"
+            />
         </Dialog>
     );
 }

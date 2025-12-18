@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, CheckCircle, Clock, CreditCard, FileDown } from 'lucide-react-native';
+import { X, CheckCircle, Clock, CreditCard, Eye } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
 import { profileService } from '../../services/profile';
-import { generateBudgetPDF } from '../../utils/pdfGenerator';
+import { generateBudgetPDFFile, generateBudgetPDFHtml, sharePDF } from '../../utils/pdfGenerator';
+import { PdfPreviewModal } from '../common/PdfPreviewModal';
 import type { BudgetWithItems } from '../../types/database';
 
 interface BudgetViewModalProps {
@@ -21,6 +22,11 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
     const [budgetLocation, setBudgetLocation] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+
+    // PDF Preview state
+    const [showPdfPreview, setShowPdfPreview] = useState(false);
+    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+    const [loadingPreview, setLoadingPreview] = useState(false);
 
     useEffect(() => {
         if (budget?.notes) {
@@ -104,20 +110,53 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
         return date.toLocaleDateString('pt-BR');
     };
 
+    // Show preview modal with HTML content
     const handleExportPDF = async () => {
         if (!budget) return;
 
         try {
-            setGeneratingPdf(true);
+            setLoadingPreview(true);
+            setShowPdfPreview(true);
+
             const clinicInfo = await profileService.getClinicInfo();
 
-            await generateBudgetPDF({
+            const html = generateBudgetPDFHtml({
                 budget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
             });
+
+            setPreviewHtml(html);
+        } catch (error) {
+            console.error('Error generating preview:', error);
+            Alert.alert('Erro', 'Não foi possível gerar a pré-visualização');
+            setShowPdfPreview(false);
+        } finally {
+            setLoadingPreview(false);
+        }
+    };
+
+    // Actually generate and share the PDF
+    const handleSharePDF = async () => {
+        if (!budget) return;
+
+        try {
+            setGeneratingPdf(true);
+            const clinicInfo = await profileService.getClinicInfo();
+
+            const uri = await generateBudgetPDFFile({
+                budget,
+                patientName: patientName || 'Paciente',
+                clinicName: clinicInfo.clinicName,
+                dentistName: clinicInfo.dentistName,
+                logoUrl: clinicInfo.logoUrl,
+            });
+
+            await sharePDF(uri);
+            setShowPdfPreview(false);
+            setPreviewHtml(null);
         } catch (error) {
             console.error('Error generating PDF:', error);
             Alert.alert('Erro', 'Não foi possível gerar o PDF');
@@ -181,8 +220,8 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             <ActivityIndicator color="#0d9488" />
                         ) : (
                             <>
-                                <FileDown size={20} color="#0d9488" />
-                                <Text className="text-teal-600 font-medium ml-2">Gerar PDF</Text>
+                                <Eye size={20} color="#0d9488" />
+                                <Text className="text-teal-600 font-medium ml-2">Visualizar PDF</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -293,6 +332,18 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                     <View className="h-8" />
                 </ScrollView>
             </View>
+
+            {/* PDF Preview Modal */}
+            <PdfPreviewModal
+                visible={showPdfPreview}
+                onClose={() => {
+                    setShowPdfPreview(false);
+                    setPreviewHtml(null);
+                }}
+                onShare={handleSharePDF}
+                loading={loadingPreview || generatingPdf}
+                htmlContent={previewHtml}
+            />
         </Modal>
     );
 }

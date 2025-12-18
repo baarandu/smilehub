@@ -49,7 +49,8 @@ async function loadImageAsBase64(url: string): Promise<{ data: string; format: s
     }
 }
 
-export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
+// Core function that builds the PDF document
+async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
     const { budget, patientName, clinicName, dentistName, logoUrl, clinicAddress, clinicPhone } = data;
 
     const doc = new jsPDF();
@@ -233,7 +234,30 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
         doc.text('Os valores podem sofrer alterações após este período.', margin, y);
     }
 
-    // Save the PDF
-    const filename = `orcamento_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    return doc;
+}
+
+// Generate PDF and return blob URL for preview
+export async function generateBudgetPDFPreview(data: BudgetPDFData): Promise<string> {
+    const doc = await buildPDFDocument(data);
+    const blob = doc.output('blob');
+    return URL.createObjectURL(blob);
+}
+
+// Generate PDF and download
+export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
+    const doc = await buildPDFDocument(data);
+    const filename = `orcamento_${data.patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
 }
+
+// Download from existing blob URL
+export function downloadPDFFromBlob(blobUrl: string, patientName: string): void {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = `orcamento_${patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+

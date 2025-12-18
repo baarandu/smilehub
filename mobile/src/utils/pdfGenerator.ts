@@ -17,7 +17,8 @@ function formatDisplayDate(dateStr: string): string {
     return date.toLocaleDateString('pt-BR');
 }
 
-export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
+// Generate HTML string for preview
+export function generateBudgetPDFHtml(data: BudgetPDFData): string {
     const { budget, patientName, clinicName, dentistName, logoUrl } = data;
 
     // Parse teeth from notes
@@ -42,7 +43,7 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
         `;
     }).join('');
 
-    const html = `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -169,11 +170,17 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
 </body>
 </html>
     `;
+}
 
-    // Generate PDF
+// Generate PDF file and return URI (without sharing)
+export async function generateBudgetPDFFile(data: BudgetPDFData): Promise<string> {
+    const html = generateBudgetPDFHtml(data);
     const { uri } = await Print.printToFileAsync({ html });
+    return uri;
+}
 
-    // Share
+// Share an existing PDF file
+export async function sharePDF(uri: string): Promise<void> {
     if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
             mimeType: 'application/pdf',
@@ -182,3 +189,10 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
         });
     }
 }
+
+// Legacy function: Generate PDF and share directly (for backwards compatibility)
+export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
+    const uri = await generateBudgetPDFFile(data);
+    await sharePDF(uri);
+}
+

@@ -71,5 +71,79 @@ export const settingsService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    // Card Brands
+    async getCardBrands(): Promise<{ id: string; name: string; is_default: boolean }[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // Get clinic_id
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        const defaultBrands = [
+            { id: 'visa', name: 'Visa', is_default: true },
+            { id: 'mastercard', name: 'Mastercard', is_default: true },
+            { id: 'elo', name: 'Elo', is_default: true },
+            { id: 'amex', name: 'Amex', is_default: true },
+            { id: 'hipercard', name: 'Hipercard', is_default: true },
+            { id: 'others', name: 'Outras Bandeiras', is_default: true },
+        ];
+
+        if (!clinicUser) {
+            return defaultBrands;
+        }
+
+        const { data, error } = await (supabase
+            .from('card_brands') as any)
+            .select('*')
+            .eq('clinic_id', clinicUser.clinic_id)
+            .order('name');
+
+        if (error) {
+            console.log('card_brands table not found, using defaults');
+            return defaultBrands;
+        }
+
+        if (!data || data.length === 0) {
+            return defaultBrands;
+        }
+
+        return data as { id: string; name: string; is_default: boolean }[];
+    },
+
+    async addCardBrand(name: string): Promise<{ id: string; name: string; is_default: boolean }> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser) throw new Error('Clinic not found');
+
+        const { data, error } = await (supabase
+            .from('card_brands') as any)
+            .insert({ clinic_id: clinicUser.clinic_id, name, is_default: false })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async deleteCardBrand(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('card_brands')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     }
 };

@@ -8,18 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { settingsService } from "@/services/settings";
 import { profileService } from "@/services/profile";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, Upload, Image as ImageIcon, X, Tag } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-const CARD_BRANDS = [
-    { id: 'visa', label: 'Visa' },
-    { id: 'mastercard', label: 'Mastercard' },
-    { id: 'elo', label: 'Elo' },
-    { id: 'hipercard', label: 'Hipercard' },
-    { id: 'amex', label: 'Amex' },
-    { id: 'others', label: 'Outras Bandeiras' },
-];
 
 export default function FinancialSettings() {
     const { toast } = useToast();
@@ -42,6 +33,15 @@ export default function FinancialSettings() {
         rate: ''
     });
 
+    // Card Brands State
+    const [cardBrands, setCardBrands] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
+    const [newBrandName, setNewBrandName] = useState('');
+    const [showBrandForm, setShowBrandForm] = useState(false);
+
+    // Card Fee Filters
+    const [filterBrand, setFilterBrand] = useState('all');
+    const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
+
     useEffect(() => {
         loadData();
     }, []);
@@ -55,6 +55,10 @@ export default function FinancialSettings() {
             }
             const fees = await settingsService.getCardFees();
             setCardFees(fees || []);
+
+            // Load card brands
+            const brands = await settingsService.getCardBrands();
+            setCardBrands(brands || []);
 
             // Load logo
             const clinicInfo = await profileService.getClinicInfo();
@@ -154,6 +158,42 @@ export default function FinancialSettings() {
         }
     };
 
+    const handleAddBrand = async () => {
+        if (!newBrandName.trim()) {
+            toast({ variant: "destructive", title: "Erro", description: "Informe o nome da bandeira." });
+            return;
+        }
+        try {
+            await settingsService.addCardBrand(newBrandName.trim());
+            toast({ title: "Sucesso", description: "Bandeira adicionada!" });
+            setNewBrandName('');
+            setShowBrandForm(false);
+            loadData();
+        } catch (error: any) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: error.message || "Falha ao adicionar bandeira." });
+        }
+    };
+
+    const handleDeleteBrand = async (id: string, name: string) => {
+        if (!confirm(`Tem certeza que deseja remover "${name}"?`)) return;
+        try {
+            await settingsService.deleteCardBrand(id);
+            toast({ title: "Removido", description: "Bandeira removida com sucesso." });
+            loadData();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: "Erro ao remover bandeira." });
+        }
+    };
+
+    // Filtered card fees
+    const filteredCardFees = cardFees.filter(fee => {
+        if (filterBrand !== 'all' && fee.brand !== filterBrand) return false;
+        if (filterType !== 'all' && fee.payment_type !== filterType) return false;
+        return true;
+    }).sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments);
+
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-teal-600" /></div>;
     }
@@ -250,6 +290,63 @@ export default function FinancialSettings() {
                 </CardContent>
             </Card>
 
+            {/* Card Brands Management Section */}
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between bg-blue-50 rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                        <Tag className="w-5 h-5 text-blue-700" />
+                        <div>
+                            <CardTitle className="text-blue-900">Bandeiras de Cartão</CardTitle>
+                            <CardDescription>Gerencie as bandeiras de cartão aceitas.</CardDescription>
+                        </div>
+                    </div>
+                    <Button
+                        variant={showBrandForm ? "secondary" : "default"}
+                        size="sm"
+                        className={showBrandForm ? "" : "bg-blue-600 hover:bg-blue-700"}
+                        onClick={() => setShowBrandForm(!showBrandForm)}
+                    >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Adicionar
+                    </Button>
+                </CardHeader>
+                <CardContent className="pt-4">
+                    {showBrandForm && (
+                        <div className="flex gap-2 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Input
+                                placeholder="Nome da bandeira"
+                                value={newBrandName}
+                                onChange={e => setNewBrandName(e.target.value)}
+                                className="flex-1"
+                            />
+                            <Button onClick={handleAddBrand}>Adicionar</Button>
+                            <Button variant="ghost" onClick={() => { setShowBrandForm(false); setNewBrandName(''); }}>
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                        {cardBrands.map(brand => (
+                            <div
+                                key={brand.id}
+                                className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5"
+                            >
+                                <span className="text-sm text-gray-700">{brand.name}</span>
+                                <button
+                                    onClick={() => handleDeleteBrand(brand.id, brand.name)}
+                                    className="text-red-500 hover:text-red-700 ml-1"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ))}
+                        {cardBrands.length === 0 && (
+                            <p className="text-muted-foreground italic">Nenhuma bandeira cadastrada</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Card Fees Section */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -289,8 +386,8 @@ export default function FinancialSettings() {
                                     <Select value={newFee.brand} onValueChange={v => setNewFee({ ...newFee, brand: v })}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            {CARD_BRANDS.map(b => (
-                                                <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+                                            {cardBrands.map(b => (
+                                                <SelectItem key={b.id} value={b.name.toLowerCase()}>{b.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -322,10 +419,51 @@ export default function FinancialSettings() {
                         </DialogContent>
                     </Dialog>
                 </CardHeader>
-                <CardContent>
-                    {cardFees.length === 0 ? (
+                <CardContent className="space-y-4">
+                    {/* Filters */}
+                    <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                        {/* Type Filter */}
+                        <div className="flex gap-2 flex-wrap">
+                            {(['all', 'credit', 'debit'] as const).map(type => (
+                                <Button
+                                    key={type}
+                                    variant={filterType === type ? "default" : "outline"}
+                                    size="sm"
+                                    className={filterType === type ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                    onClick={() => setFilterType(type)}
+                                >
+                                    {type === 'all' ? 'Todos' : type === 'credit' ? 'Crédito' : 'Débito'}
+                                </Button>
+                            ))}
+                        </div>
+                        {/* Brand Filter */}
+                        <div className="flex gap-2 flex-wrap">
+                            <Button
+                                variant={filterBrand === 'all' ? "default" : "outline"}
+                                size="sm"
+                                className={filterBrand === 'all' ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                onClick={() => setFilterBrand('all')}
+                            >
+                                Todas Bandeiras
+                            </Button>
+                            {Array.from(new Set(cardFees.map(f => f.brand))).sort().map(brand => (
+                                <Button
+                                    key={brand}
+                                    variant={filterBrand === brand ? "default" : "outline"}
+                                    size="sm"
+                                    className={filterBrand === brand ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                    onClick={() => setFilterBrand(brand)}
+                                >
+                                    {brand === 'others' ? 'Outras' : brand}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    {filteredCardFees.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
-                            Nenhuma taxa configurada
+                            {cardFees.length === 0 ? 'Nenhuma taxa configurada' : 'Nenhuma taxa encontrada com os filtros selecionados'}
                         </div>
                     ) : (
                         <Table>
@@ -339,7 +477,7 @@ export default function FinancialSettings() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {cardFees.map(fee => (
+                                {filteredCardFees.map(fee => (
                                     <TableRow key={fee.id}>
                                         <TableCell className="capitalize">{fee.brand === 'others' ? 'Outros' : fee.brand}</TableCell>
                                         <TableCell>{fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}</TableCell>
