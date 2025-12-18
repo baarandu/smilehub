@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
-import { formatMoney, getToothDisplayName, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { formatMoney, getToothDisplayName, formatDisplayDate, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
 import { PaymentMethodDialog } from './PaymentMethodDialog';
 import { financialService } from '@/services/financial';
@@ -168,9 +168,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       };
 
       // Check overall status
-      const hasApproved = teeth.some(t => t.status === 'approved' || t.status === 'paid');
-      const allApproved = teeth.every(t => t.status === 'approved' || t.status === 'paid');
-      const newBudgetStatus = allApproved ? 'approved' : (hasApproved ? 'approved' : 'pending');
+      const newBudgetStatus = calculateBudgetStatus(teeth);
 
       const updatedNotes = JSON.stringify({ ...parsed, teeth });
 

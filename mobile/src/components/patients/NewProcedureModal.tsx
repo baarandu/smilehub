@@ -7,7 +7,7 @@ import { examsService } from '../../services/exams';
 import { locationsService, type Location } from '../../services/locations';
 import { budgetsService } from '../../services/budgets';
 import type { ProcedureInsert, Procedure } from '../../types/database';
-import { getToothDisplayName, type ToothEntry } from './budgetUtils';
+import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 
 // Components
 import { ProcedureForm } from './procedures/ProcedureForm';
@@ -351,7 +351,11 @@ export function NewProcedureModal({
                 });
 
                 if (modified) {
-                  await budgetsService.update(budgetId, { notes: JSON.stringify(parsed) });
+                  const newStatusCol = calculateBudgetStatus(parsed.teeth);
+                  await budgetsService.update(budgetId, {
+                    notes: JSON.stringify(parsed),
+                    status: newStatusCol
+                  });
                 }
               }
             } catch (err) {

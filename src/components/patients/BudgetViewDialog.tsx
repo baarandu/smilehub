@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown, Eye } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
 import { profileService } from '@/services/profile';
-import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry, calculateBudgetStatus } from '@/utils/budgetUtils';
 import { generateBudgetPDFPreview, downloadPDFFromBlob } from '@/utils/pdfGenerator';
 import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
 import type { BudgetWithItems, BudgetUpdate, BudgetItemUpdate } from '@/types/database';
@@ -134,10 +134,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
         try {
             const updatedNotes = JSON.stringify({ ...parsedNotes, teeth: newTeeth });
 
-            // Check overall status
-            const hasApproved = newTeeth.some(t => t.status === 'approved' || t.status === 'paid');
-            const allApproved = newTeeth.every(t => t.status === 'approved' || t.status === 'paid');
-            const newBudgetStatus = allApproved ? 'approved' : (hasApproved ? 'approved' : 'pending');
+            // Check overall status using helper
+            const newBudgetStatus = calculateBudgetStatus(newTeeth);
 
             await budgetsService.update(budget.id, {
                 notes: updatedNotes,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { budgetsService } from '../../src/services/budgets';
 import { financialService } from '../../src/services/financial';
 import { examsService } from '../../src/services/exams';
 import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal } from '../../src/components/patients';
-import { type ToothEntry, calculateToothTotal, getToothDisplayName } from '../../src/components/patients/budgetUtils';
+import { type ToothEntry, calculateToothTotal, getToothDisplayName, calculateBudgetStatus } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
 import { usePatientData } from '../../src/hooks/usePatientData';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
@@ -21,7 +21,7 @@ import ImageViewing from 'react-native-image-viewing';
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
 export default function PatientDetail() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
     const router = useRouter();
 
     // Use custom hook for all patient data
@@ -40,7 +40,14 @@ export default function PatientDetail() {
     } = usePatientData(id);
 
     // UI State
-    const [activeTab, setActiveTab] = useState<TabType>('anamnese');
+    const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) || 'anamnese');
+
+    // Sync state if URL param changes
+    useEffect(() => {
+        if (tab && tab !== activeTab) {
+            setActiveTab(tab as TabType);
+        }
+    }, [tab]);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
     const [showAnamneseSummaryModal, setShowAnamneseSummaryModal] = useState(false);
@@ -279,8 +286,11 @@ export default function PatientDetail() {
                 financialBreakdown: breakdown
             };
 
+            const newBudgetStatus = calculateBudgetStatus(parsed.teeth);
+
             await budgetsService.update(selectedPaymentItem.budgetId, {
                 notes: JSON.stringify(parsed),
+                status: newBudgetStatus,
             });
 
             const methodLabels: Record<string, string> = {

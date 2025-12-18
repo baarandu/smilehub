@@ -24,7 +24,7 @@ import { useCreateProcedure, useUpdateProcedure, useDeleteProcedure } from '@/ho
 import { locationsService, type Location } from '@/services/locations';
 import { budgetsService } from '@/services/budgets';
 import { toast } from 'sonner';
-import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import type { Procedure } from '@/types/database';
 
 // Components
@@ -303,7 +303,11 @@ export function NewProcedureDialog({
                 });
 
                 if (modified) {
-                  await budgetsService.update(budgetId, { notes: JSON.stringify(parsed) });
+                  const newStatus = calculateBudgetStatus(parsed.teeth);
+                  await budgetsService.update(budgetId, {
+                    notes: JSON.stringify(parsed),
+                    status: newStatus
+                  });
                 }
               }
             } catch (err) {

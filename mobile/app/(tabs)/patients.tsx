@@ -2,10 +2,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, LayoutGrid, LayoutList } from 'lucide-react-native';
+import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
+import { budgetsService } from '../../src/services/budgets';
 import { DocumentsModal } from '../../components/DocumentsModal';
-import type { Patient, PatientFormData } from '../../src/types/database';
+import type { Patient, PatientFormData, BudgetWithItems } from '../../src/types/database';
+
+type PendingBudget = BudgetWithItems & { patient_name: string };
 
 const emptyForm: PatientFormData = {
     name: '',
@@ -36,18 +39,23 @@ export default function Patients() {
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [showDocumentsModal, setShowDocumentsModal] = useState(false);
-    const [view, setView] = useState<'list' | 'grid'>('list');
+    const [showBudgetsModal, setShowBudgetsModal] = useState(false);
+    const [pendingBudgets, setPendingBudgets] = useState<PendingBudget[]>([]);
+    const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
     const [form, setForm] = useState<PatientFormData>(emptyForm);
     const [saving, setSaving] = useState(false);
+    const [syncingBudgets, setSyncingBudgets] = useState(false);
 
     useEffect(() => {
         loadPatients();
+        loadPendingBudgets();
     }, []);
 
-    // Recarrega pacientes quando a tela recebe foco (voltando do detalhe)
+    // Recarrega dados quando a tela recebe foco
     useFocusEffect(
         useCallback(() => {
             loadPatients();
+            loadPendingBudgets();
         }, [])
     );
 
@@ -60,6 +68,33 @@ export default function Patients() {
             console.error('Error loading patients:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadPendingBudgets = async () => {
+        try {
+            const [count, budgets] = await Promise.all([
+                budgetsService.getPendingCount(),
+                budgetsService.getAllPending()
+            ]);
+            setPendingBudgetsCount(count);
+            setPendingBudgets(budgets);
+        } catch (error) {
+            console.error('Error loading pending budgets:', error);
+        }
+    };
+
+    const handleSyncBudgets = async () => {
+        try {
+            setSyncingBudgets(true);
+            await budgetsService.reconcileAllStatuses();
+            await loadPendingBudgets();
+            Alert.alert('Sucesso', 'Lista de orçamentos sincronizada!');
+        } catch (error) {
+            console.error('Error syncing budgets:', error);
+            Alert.alert('Erro', 'Erro ao sincronizar orçamentos');
+        } finally {
+            setSyncingBudgets(false);
         }
     };
 
@@ -195,13 +230,14 @@ export default function Patients() {
                             <FileText size={20} color="#0D9488" />
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={() => setView(view === 'list' ? 'grid' : 'list')}
-                            className="w-10 h-10 bg-gray-50 items-center justify-center rounded-xl"
+                            onPress={() => setShowBudgetsModal(true)}
+                            className="w-10 h-10 bg-orange-50 items-center justify-center rounded-xl relative"
                         >
-                            {view === 'list' ? (
-                                <LayoutGrid size={20} color="#6B7280" />
-                            ) : (
-                                <LayoutList size={20} color="#6B7280" />
+                            <FileClock size={20} color="#F59E0B" />
+                            {pendingBudgetsCount > 0 && (
+                                <View className="absolute -top-1 -right-1 bg-orange-500 rounded-full w-5 h-5 items-center justify-center border-2 border-white">
+                                    <Text className="text-white text-[10px] font-bold">{pendingBudgetsCount}</Text>
+                                </View>
                             )}
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -374,6 +410,74 @@ export default function Patients() {
                             <View className="h-8" />
                         </ScrollView>
                     </KeyboardAvoidingView>
+                </SafeAreaView>
+            </Modal>
+
+            {/* Pending Budgets Modal */}
+            <Modal visible={showBudgetsModal} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView className="flex-1 bg-gray-50">
+                    <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
+                        <TouchableOpacity onPress={() => setShowBudgetsModal(false)}>
+                            <X size={24} color="#6B7280" />
+                        </TouchableOpacity>
+                        <Text className="text-lg font-semibold text-gray-900">
+                            Orçamentos Pendentes ({pendingBudgetsCount})
+                        </Text>
+                        <TouchableOpacity
+                            onPress={handleSyncBudgets}
+                            disabled={syncingBudgets}
+                            className="w-10 h-10 items-center justify-center rounded-xl"
+                        >
+                            <RotateCw size={20} color={syncingBudgets ? "#9CA3AF" : "#0D9488"} className={syncingBudgets ? "animate-spin" : ""} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView className="flex-1 px-4 py-4">
+                        {pendingBudgets.length === 0 ? (
+                            <View className="py-12 items-center">
+                                <FileText size={48} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-4">Nenhum orçamento pendente</Text>
+                            </View>
+                        ) : (
+                            <View className="gap-3">
+                                {pendingBudgets.map((budget) => (
+                                    <TouchableOpacity
+                                        key={budget.id}
+                                        onPress={() => {
+                                            setShowBudgetsModal(false);
+                                            router.push(`/patient/${budget.patient_id}?tab=budgets`);
+                                        }}
+                                        className="bg-white p-4 rounded-xl border border-gray-100"
+                                    >
+                                        <View className="flex-row justify-between items-start mb-2">
+                                            <View className="flex-1">
+                                                <Text className="font-semibold text-gray-900">{budget.patient_name}</Text>
+                                                <Text className="text-sm text-gray-500">{budget.treatment}</Text>
+                                            </View>
+                                            <Text className="text-lg font-bold text-teal-600">
+                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budget.value)}
+                                            </Text>
+                                        </View>
+                                        <View className="flex-row justify-between items-center">
+                                            <Text className="text-gray-400 text-xs">
+                                                Criado em {new Date(budget.created_at).toLocaleDateString('pt-BR')}
+                                            </Text>
+                                            <View className="bg-amber-100 px-2 py-1 rounded-full">
+                                                <Text className="text-amber-700 text-xs font-medium">Pendente</Text>
+                                            </View>
+                                        </View>
+                                        {budget.budget_items && budget.budget_items.length > 0 && (
+                                            <View className="mt-2 pt-2 border-t border-gray-100">
+                                                <Text className="text-gray-500 text-xs">
+                                                    {budget.budget_items.length} procedimento(s) incluído(s)
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                    </ScrollView>
                 </SafeAreaView>
             </Modal>
 

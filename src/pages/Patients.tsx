@@ -1,19 +1,36 @@
-import { useState, useMemo } from 'react';
-import { Users, FileText } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Users, FileText, FileClock } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
 import { DocumentsModal } from '@/components/patients/DocumentsModal';
+import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { budgetsService } from '@/services/budgets';
 import type { PatientFormData } from '@/types/database';
 
 export default function Patients() {
   const [search, setSearch] = useState('');
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
+  const [showBudgetsModal, setShowBudgetsModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const { data: patients, isLoading } = usePatients();
   const createPatient = useCreatePatient();
+
+  useEffect(() => {
+    loadPendingCount();
+  }, []);
+
+  const loadPendingCount = async () => {
+    try {
+      const count = await budgetsService.getPendingCount();
+      setPendingCount(count);
+    } catch (error) {
+      console.error('Error loading pending count:', error);
+    }
+  };
 
   const filteredPatients = useMemo(() => {
     if (!patients) return [];
@@ -43,6 +60,19 @@ export default function Patients() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowBudgetsModal(true)}
+            className="relative"
+          >
+            <FileClock className="w-4 h-4 mr-2 text-amber-500" />
+            Orçamentos Pendentes
+            {pendingCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-background min-w-[20px] h-[20px] flex items-center justify-center">
+                {pendingCount}
+              </span>
+            )}
+          </Button>
           <Button variant="outline" onClick={() => setShowDocumentsModal(true)}>
             <FileText className="w-4 h-4 mr-2" />
             Documentos
@@ -51,8 +81,15 @@ export default function Patients() {
         </div>
       </div>
 
-      {/* Documents Modal */}
+      {/* Modals */}
       <DocumentsModal open={showDocumentsModal} onClose={() => setShowDocumentsModal(false)} />
+      <PendingBudgetsDialog
+        open={showBudgetsModal}
+        onClose={() => {
+          setShowBudgetsModal(false);
+          loadPendingCount();
+        }}
+      />
 
       {/* Search */}
       <PatientSearch value={search} onChange={setSearch} />

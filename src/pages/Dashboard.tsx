@@ -90,7 +90,7 @@ export default function Dashboard() {
       patientPhone: a.phone,
       date: a.suggested_return_date,
       subtitle: `Retorno em ${a.days_until_return} dias`,
-      urgency: a.days_until_return <= 7 ? 'urgent' : 'normal' as const
+      urgency: (a.days_until_return <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal'
     }))
   ].slice(0, 6); // Top 6
 
@@ -186,7 +186,7 @@ export default function Dashboard() {
                   key={budget.id}
                   onClick={() => {
                     setShowBudgetsModal(false);
-                    navigate(`/pacientes/${budget.patient_id}`);
+                    navigate(`/pacientes/${budget.patient_id}?tab=budgets`);
                   }}
                   className="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
                 >

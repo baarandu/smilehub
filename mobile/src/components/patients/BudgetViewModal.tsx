@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, CheckCircle, Clock, CreditCard, Eye } from 'lucide-react-native';
-import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, type ToothEntry } from './budgetUtils';
+import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
 import { profileService } from '../../services/profile';
 import { generateBudgetPDFFile, generateBudgetPDFHtml, sharePDF } from '../../utils/pdfGenerator';
@@ -89,8 +89,10 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
         try {
             setSaving(true);
+            const newStatusCol = calculateBudgetStatus(updatedList as ToothEntry[]);
             await budgetsService.update(budget.id, {
                 notes: JSON.stringify({ teeth: updatedList, location: budgetLocation }),
+                status: newStatusCol
             });
             onUpdate();
         } catch (error) {

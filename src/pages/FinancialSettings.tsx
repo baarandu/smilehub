@@ -354,7 +354,7 @@ export default function FinancialSettings() {
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             {cardBrands.map(b => (
-                                                <SelectItem key={b.id} value={b.name.toLowerCase()}>{b.name}</SelectItem>
+                                                <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>

@@ -52,7 +52,7 @@ export const profileService = {
             .from('clinic_users')
             .select('clinic_id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle() as any;
 
         const clinicId = clinicUser?.clinic_id || null;
 
@@ -65,11 +65,13 @@ export const profileService = {
                 .from('clinics')
                 .select('id, name, logo_url')
                 .eq('id', clinicId)
-                .single();
+                .maybeSingle() as any;
 
-            clinicName = clinic?.name || null;
-            logoUrl = clinic?.logo_url || null;
-            console.log('Clinic fetched:', { clinicName, logoUrl });
+            if (clinic) {
+                clinicName = clinic.name;
+                logoUrl = clinic.logo_url;
+                console.log('Clinic fetched:', { clinicName, logoUrl });
+            }
         }
 
         // Get dentist name and gender from profiles
@@ -77,10 +79,10 @@ export const profileService = {
             .from('profiles')
             .select('full_name, gender')
             .eq('id', user.id)
-            .single();
+            .maybeSingle() as any;
 
         const rawName = profile?.full_name || null;
-        const gender = (profile as any)?.gender || null;
+        const gender = profile?.gender || null;
 
         // Format dentist name with Dr./Dra. prefix
         let dentistName: string | null = null;
@@ -104,8 +106,8 @@ export const profileService = {
                 .from('clinic_settings')
                 .select('letterhead_url')
                 .eq('user_id', user.id)
-                .single();
-            letterheadUrl = (settings as any)?.letterhead_url || null;
+                .maybeSingle() as any;
+            letterheadUrl = settings?.letterhead_url || null;
         } catch {
             // Settings might not exist
         }
@@ -134,7 +136,7 @@ export const profileService = {
             .from('clinic_users')
             .select('clinic_id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle() as any;
 
         if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
 
@@ -158,9 +160,8 @@ export const profileService = {
         console.log('Logo uploaded, URL:', logoUrl);
         console.log('Updating clinic:', clinicId);
 
-        // Update clinic with logo URL
-        const { error: updateError } = await supabase
-            .from('clinics')
+        const { error: updateError } = await (supabase
+            .from('clinics') as any)
             .update({ logo_url: logoUrl })
             .eq('id', clinicId);
 
@@ -181,15 +182,35 @@ export const profileService = {
             .from('clinic_users')
             .select('clinic_id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle() as any;
 
         if (!clinicUser?.clinic_id) return;
 
         // Update clinic to remove logo URL
-        await supabase
-            .from('clinics')
+        await (supabase
+            .from('clinics') as any)
             .update({ logo_url: null })
             .eq('id', clinicUser.clinic_id);
+    },
+
+    async updateClinicName(name: string): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .maybeSingle() as any;
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const { error } = await (supabase
+            .from('clinics') as any)
+            .update({ name })
+            .eq('id', clinicUser.clinic_id);
+
+        if (error) throw error;
     }
 };
 

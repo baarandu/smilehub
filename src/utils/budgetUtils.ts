@@ -121,3 +121,16 @@ export const getToothDisplayName = (tooth: string, includePrefix = true): string
     }
     return includePrefix ? `Dente ${tooth}` : tooth;
 };
+
+// Calculate overall budget status based on items
+export const calculateBudgetStatus = (teeth: ToothEntry[]): 'pending' | 'approved' | 'completed' => {
+    if (teeth.length === 0) return 'pending';
+
+    const allPaid = teeth.every(t => t.status === 'paid' || t.status === 'completed');
+    if (allPaid) return 'completed';
+
+    const hasApprovedOrPaid = teeth.some(t => t.status === 'approved' || t.status === 'paid' || t.status === 'completed');
+    if (hasApprovedOrPaid) return 'approved';
+
+    return 'pending';
+};

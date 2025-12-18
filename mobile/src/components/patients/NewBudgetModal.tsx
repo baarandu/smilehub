@@ -12,6 +12,7 @@ import {
     formatDisplayDate,
     formatDateInput,
     parseBrazilianDate,
+    calculateBudgetStatus,
     type ToothEntry,
 } from './budgetUtils';
 import { ToothPickerModal } from './ToothPickerModal';
@@ -320,6 +321,7 @@ export function NewBudgetModal({
                 value: getGrandTotal(),
                 notes: notesData,
                 location_rate: locationRate ? parseFloat(locationRate) : 0,
+                status: calculateBudgetStatus(teethList),
             };
 
             if (budget) {

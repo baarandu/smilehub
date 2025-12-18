@@ -60,15 +60,37 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
     const [taxRate, setTaxRate] = useState(0);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 
+    // Build available brands from settings
+    const availableBrands = useMemo(() => {
+        if (cardFees.length === 0) return CARD_BRANDS;
+
+        // Get unique brand names from settings - exactly as entered
+        const uniqueNames = Array.from(new Set(cardFees.map(f => f.brand.trim())));
+
+        return uniqueNames.map(name => ({
+            id: name,
+            // Capitalize first letter of each word/segment (handles "visa/mastercard" -> "Visa/Mastercard")
+            label: name.replace(/\b\w/g, l => l.toUpperCase())
+        })).sort((a, b) => a.label.localeCompare(b.label));
+    }, [cardFees]);
+
     useEffect(() => {
         if (open) {
             loadSettings();
             setAnticipate(false);
             setInstallments('1');
+            // Set initial brand to the first available one
             setSelectedBrand('visa');
             setSelectedMethod(null);
         }
     }, [open]);
+
+    // Update initial brand when availableBrands changes
+    useEffect(() => {
+        if (availableBrands.length > 0 && !availableBrands.find(b => b.id === selectedBrand)) {
+            setSelectedBrand(availableBrands[0].id);
+        }
+    }, [availableBrands, selectedBrand]);
 
     const loadSettings = async () => {
         setLoading(true);
@@ -106,15 +128,15 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
             const lookupInstallments = selectedMethod === 'debit' ? 1 : numInstallments;
 
             let feeConfig = cardFees.find(f =>
-                f.brand === selectedBrand &&
+                f.brand.toLowerCase() === selectedBrand.toLowerCase() &&
                 f.payment_type === selectedMethod &&
                 f.installments === lookupInstallments
             );
 
-            // Fallback: try 'others' brand if no specific brand config found
+            // Fallback: try 'others' or 'outras bandeiras' brand if no specific brand config found
             if (!feeConfig) {
                 feeConfig = cardFees.find(f =>
-                    f.brand === 'others' &&
+                    (f.brand.toLowerCase() === 'others' || f.brand.toLowerCase() === 'outras bandeiras' || f.brand.toLowerCase() === 'outros') &&
                     f.payment_type === selectedMethod &&
                     f.installments === lookupInstallments
                 );
@@ -246,7 +268,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {CARD_BRANDS.map(brand => (
+                                            {availableBrands.map(brand => (
                                                 <SelectItem key={brand.id} value={brand.id}>{brand.label}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -254,45 +276,43 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                                 </div>
 
                                 {selectedMethod !== 'debit' && (
-                                    <>
-                                        <div className="space-y-2">
-                                            <Label>Parcelamento</Label>
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={12}
-                                                    value={installments}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 12)) {
-                                                            setInstallments(val);
-                                                        }
-                                                    }}
-                                                    className="w-24 text-center font-semibold"
-                                                />
-                                                <div className="flex-1 flex items-center text-sm text-muted-foreground bg-gray-50 px-3 rounded-md border">
-                                                    {parseInt(installments) > 1
-                                                        ? `${installments}x de R$ ${formatMoney(installmentValue)}`
-                                                        : 'À vista'
+                                    <div className="space-y-2">
+                                        <Label>Parcelamento</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                max={12}
+                                                value={installments}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 12)) {
+                                                        setInstallments(val);
                                                     }
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                            <div className="flex flex-col">
-                                                <Label className="text-indigo-900 cursor-pointer" htmlFor="antecipar">Antecipar Recebimento</Label>
-                                                <span className="text-xs text-indigo-600">Receber tudo agora (taxa extra pode aplicar)</span>
-                                            </div>
-                                            <Switch
-                                                id="antecipar"
-                                                checked={anticipate}
-                                                onCheckedChange={setAnticipate}
+                                                }}
+                                                className="w-24 text-center font-semibold"
                                             />
+                                            <div className="flex-1 flex items-center text-sm text-muted-foreground bg-gray-50 px-3 rounded-md border">
+                                                {parseInt(installments) > 1
+                                                    ? `${installments}x de R$ ${formatMoney(installmentValue)}`
+                                                    : 'À vista'
+                                                }
+                                            </div>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
+
+                                <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                    <div className="flex flex-col">
+                                        <Label className="text-indigo-900 cursor-pointer" htmlFor="antecipar">Antecipar Recebimento</Label>
+                                        <span className="text-xs text-indigo-600">Receber tudo agora (taxa extra pode aplicar)</span>
+                                    </div>
+                                    <Switch
+                                        id="antecipar"
+                                        checked={anticipate}
+                                        onCheckedChange={setAnticipate}
+                                    />
+                                </div>
                             </div>
                         )}
 

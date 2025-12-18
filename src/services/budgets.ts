@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
+import { calculateBudgetStatus } from '@/utils/budgetUtils';
 
 export const budgetsService = {
     async getByPatient(patientId: string): Promise<BudgetWithItems[]> {
@@ -119,5 +120,29 @@ export const budgetsService = {
 
         if (error) throw error;
         return count || 0;
+    },
+
+    async reconcileAllStatuses(): Promise<void> {
+        const { data, error } = await supabase
+            .from('budgets')
+            .select('id, notes, status');
+
+        if (error) throw error;
+        const budgets = (data || []) as any[];
+
+        for (const budget of budgets) {
+            if (!budget.notes) continue;
+            try {
+                const parsed = JSON.parse(budget.notes);
+                if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                    const calculatedStatus = calculateBudgetStatus(parsed.teeth);
+                    if (calculatedStatus !== budget.status) {
+                        await this.update(budget.id, { status: calculatedStatus });
+                    }
+                }
+            } catch (e) {
+                console.error(`Error reconciling budget ${budget.id}`, e);
+            }
+        }
     }
 };

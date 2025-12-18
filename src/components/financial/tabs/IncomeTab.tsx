@@ -464,19 +464,19 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </Badge>
                                     </div>
                                 )}
-                                {selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0 && (
+                                {selectedTransaction.card_fee_amount !== null && selectedTransaction.card_fee_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Taxa de Cartão</span>
                                         <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.card_fee_amount)}</span>
                                     </div>
                                 )}
-                                {(selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0 && (
+                                {(selectedTransaction as any).anticipation_amount !== undefined && (selectedTransaction as any).anticipation_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Taxa de Antecipação</span>
                                         <span className="font-medium text-yellow-600">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</span>
                                     </div>
                                 )}
-                                {selectedTransaction.location_amount && selectedTransaction.location_amount > 0 && (
+                                {selectedTransaction.location_amount !== undefined && selectedTransaction.location_amount !== null && selectedTransaction.location_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Taxa do Procedimento</span>
                                         <span className="font-medium text-orange-500">- {formatCurrency(selectedTransaction.location_amount)}</span>

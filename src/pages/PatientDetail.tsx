@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, FileText, CreditCard, Hospital, ClipboardList, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,8 +18,23 @@ import {
 export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'anamnese');
+
+  // Sync state if URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value });
+  };
 
   if (isLoading) {
     return (
@@ -66,7 +81,7 @@ export default function PatientDetail() {
       />
 
       {/* Tabs */}
-      <Tabs defaultValue="anamnese" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="anamnese" className="gap-2">
             <ClipboardList className="w-4 h-4" />

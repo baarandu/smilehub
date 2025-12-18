@@ -49,7 +49,6 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     // Anticipation State
     const [isAnticipated, setIsAnticipated] = useState(false);
-    const [anticipationRate, setAnticipationRate] = useState('');
 
     useEffect(() => {
         if (visible) {
@@ -81,7 +80,6 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         setInstallmentItems([]);
         setSelectedBrand(null);
         setIsAnticipated(false);
-        setAnticipationRate('');
     };
 
     // ... (keep installment generation logic same) ...
@@ -137,7 +135,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             const type = selectedMethod;
             // For credit, we use the selected installments for fee lookup
             // For debit, always 1
-            effectiveInstallments = (type === 'credit' && isInstallments) ? parseInt(numInstallments) : 1;
+            effectiveInstallments = (type === 'credit' && isInstallments) ? (parseInt(numInstallments) || 1) : 1;
 
             const feeConfig = cardFees.find(f =>
                 f.brand === selectedBrand &&
@@ -146,48 +144,31 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             );
 
             if (feeConfig) {
-                cardFeeRate = feeConfig.rate;
+                // If user wants to anticipate and there's an anticipation rate, use it
+                // Otherwise use the normal rate
+                if (isAnticipated && feeConfig.anticipation_rate !== null && feeConfig.anticipation_rate !== undefined) {
+                    cardFeeRate = feeConfig.anticipation_rate;
+                } else {
+                    cardFeeRate = feeConfig.rate;
+                }
             }
         }
         const cardFeeAmount = (grossAmount * cardFeeRate) / 100;
 
-        // 3. Anticipation - New Logic: Credit/Debit are ALWAYS anticipated logic wise (single receipt)
-        // But the user said: "nesse caso, todos os valores de credito e debito sao atecipados automaticamente"
-        // And "o numero de parcelas seria so pra saber a taxa de antecipaçao"
-        // This implies the 'cardFeeRate' IS effectively the anticipation fee (or includes it).
-        // Or is there an EXTRA anticipation fee?
-        // User: "taxa do cartao=5% ... valor bruto - taxa cartao ... taxa procedimento".
-        // Code previously had separate Anticipation Rate. 
-        // If I follow user strictly: "credit card fees I inserted are anticipation fees". 
-        // So I don't need a separate "Anticipation Rate" input anymore for cards.
+        // 3. Anticipation Logic
+        // In the new logic, anticipation is absorbed into cardFeeRate if isAnticipated is true
+        // For Debit, it's always anticipated logic-wise (single receipt)
+        const isAnticipatedLogic = isAnticipated || selectedMethod === 'debit';
 
-        let antRate = 0;
-        let isAnticipatedLogic = isAnticipated;
-        let anticipationAmount = 0;
-
-        // For Card methods, use user-entered anticipation rate if provided
-        if (selectedMethod === 'credit' || selectedMethod === 'debit') {
-            isAnticipatedLogic = true; // Cards are always "anticipated" in terms of receiving today
-            antRate = parseFloat(anticipationRate.replace(',', '.') || '0');
-            // Calculate anticipation amount based on gross minus card fee
-            const baseForAnticipation = grossAmount - cardFeeAmount;
-            anticipationAmount = (baseForAnticipation * antRate) / 100;
-        } else {
-            antRate = isAnticipated ? (parseFloat(anticipationRate.replace(',', '.') || '0')) : 0;
-            const baseForAnticipation = grossAmount - cardFeeAmount;
-            anticipationAmount = (baseForAnticipation * antRate) / 100;
-        }
-
-        // 4. Location Fee - Apply on (Gross - CardFee - Anticipation)
+        // 4. Location Fee - Apply on (Gross - CardFee)
         // Ensure values are valid
         const safeCardFee = isNaN(cardFeeAmount) ? 0 : cardFeeAmount;
-        const safeAnticipation = isNaN(anticipationAmount) ? 0 : anticipationAmount;
 
-        const baseForLocation = grossAmount - safeCardFee - safeAnticipation;
+        const baseForLocation = grossAmount - safeCardFee;
         const locationAmount = (baseForLocation * locationRate) / 100;
 
         // Net
-        const netAmount = grossAmount - taxAmount - safeCardFee - safeAnticipation - locationAmount;
+        const netAmount = grossAmount - taxAmount - safeCardFee - locationAmount;
 
         return {
             grossAmount,
@@ -195,8 +176,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             taxAmount,
             cardFeeRate,
             cardFeeAmount,
-            anticipationRate: antRate,
-            anticipationAmount,
+            anticipationRate: isAnticipated ? cardFeeRate : 0,
+            anticipationAmount: 0, // Absorbed into cardFeeAmount
             locationRate,
             locationAmount,
             netAmount,
@@ -263,7 +244,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'transfer', label: 'Transf.', icon: Landmark },
     ];
 
-    const brands = [
+    const allBrands = [
         { id: 'visa', label: 'Visa' },
         { id: 'mastercard', label: 'Mastercard' },
         { id: 'elo', label: 'Elo' },
@@ -271,6 +252,26 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'hipercard', label: 'Hipercard' },
         { id: 'others', label: 'Outros' }
     ];
+
+    const availableBrands = React.useMemo(() => {
+        if (cardFees.length === 0) return allBrands;
+
+        // Get unique brand names from settings - exactly as entered
+        const uniqueNames = Array.from(new Set(cardFees.map(f => f.brand.trim())));
+
+        return uniqueNames.map(name => ({
+            id: name,
+            // Capitalize first letter of each word/segment (handles "visa/mastercard" -> "Visa/Mastercard")
+            label: name.replace(/\b\w/g, l => l.toUpperCase())
+        })).sort((a, b) => a.label.localeCompare(b.label));
+    }, [cardFees]);
+
+
+    useEffect(() => {
+        if (availableBrands.length > 0 && (!selectedBrand || !availableBrands.find(b => b.id === selectedBrand))) {
+            setSelectedBrand(availableBrands[0].id);
+        }
+    }, [availableBrands, selectedBrand]);
 
     if (!visible) return null;
 
@@ -364,7 +365,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     <View className="mb-6">
                                         <Text className="text-sm font-semibold text-gray-900 mb-3">Bandeira do Cartão</Text>
                                         <View className="flex-row flex-wrap gap-2">
-                                            {brands.map((brand) => (
+                                            {availableBrands.map((brand) => (
                                                 <TouchableOpacity
                                                     key={brand.id}
                                                     onPress={() => setSelectedBrand(brand.id)}
@@ -463,33 +464,21 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     </View>
                                 )}
 
-                                {/* Anticipation Rate Input - Show for Credit/Debit */}
+                                {/* Anticipation Toggle */}
                                 {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
-                                    <View className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-100">
-                                        <View className="flex-row items-center gap-2 mb-3">
-                                            <PiggyBank size={20} color="#D97706" />
-                                            <Text className="font-semibold text-yellow-900">Taxa de Antecipação</Text>
-                                        </View>
-                                        <Text className="text-xs text-yellow-700 mb-3">Informe a taxa cobrada pela operadora para antecipar o recebimento do cartão.</Text>
-                                        <View className="flex-row items-center gap-2 bg-white p-3 rounded-lg border border-yellow-200">
-                                            <Percent size={16} color="#D97706" />
-                                            <TextInput
-                                                value={anticipationRate}
-                                                onChangeText={setAnticipationRate}
-                                                keyboardType="numeric"
-                                                placeholder="0,00"
-                                                className="flex-1 text-base font-semibold text-yellow-900"
-                                            />
-                                            <Text className="text-yellow-800 font-medium">%</Text>
-                                        </View>
-                                        {parseFloat(anticipationRate.replace(',', '.') || '0') > 0 && (
-                                            <View className="mt-3 pt-3 border-t border-yellow-200">
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-sm text-yellow-800">Valor da Antecipação:</Text>
-                                                    <Text className="font-bold text-red-600">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
-                                                </View>
+                                    <View className="mb-6 bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex-row items-center justify-between">
+                                        <View className="flex-1 mr-4">
+                                            <View className="flex-row items-center gap-2 mb-1">
+                                                <PiggyBank size={20} color="#4F46E5" />
+                                                <Text className="font-semibold text-indigo-900">Antecipar Recebimento?</Text>
                                             </View>
-                                        )}
+                                            <Text className="text-xs text-indigo-700">Receber o valor total hoje (taxa de antecipação será aplicada conforme configuração).</Text>
+                                        </View>
+                                        <Switch
+                                            value={isAnticipated}
+                                            onValueChange={setIsAnticipated}
+                                            trackColor={{ false: '#E5E7EB', true: '#4F46E5' }}
+                                        />
                                     </View>
                                 )}
                             </View>

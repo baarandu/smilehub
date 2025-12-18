@@ -706,7 +706,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 </View>
 
                                 {/* Financial Breakdown */}
-                                {selectedTransaction && (selectedTransaction.tax_amount || selectedTransaction.card_fee_amount || (selectedTransaction as any).anticipation_amount || (selectedTransaction as any).location_amount) && (
+                                {selectedTransaction && (
+                                    (selectedTransaction.tax_amount && selectedTransaction.tax_amount > 0) ||
+                                    (selectedTransaction.card_fee_amount && selectedTransaction.card_fee_amount > 0) ||
+                                    ((selectedTransaction as any).anticipation_amount && (selectedTransaction as any).anticipation_amount > 0) ||
+                                    ((selectedTransaction as any).location_amount && (selectedTransaction as any).location_amount > 0)
+                                ) ? (
                                     <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
                                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 12 }}>Detalhamento Financeiro</Text>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -746,7 +751,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                             <Text style={{ fontWeight: 'bold', color: '#16a34a' }}>{formatCurrency(selectedTransaction.net_amount || selectedTransaction.amount)}</Text>
                                         </View>
                                     </View>
-                                )}
+                                ) : null}
 
                                 {/* Installments / Payment History */}
                                 {relatedInstallments.length > 0 && (

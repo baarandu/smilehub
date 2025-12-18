@@ -40,8 +40,6 @@ export default function Dashboard() {
 
     // Pending Budgets State
     const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
-    const [pendingBudgets, setPendingBudgets] = useState<PendingBudget[]>([]);
-    const [showBudgetsModal, setShowBudgetsModal] = useState(false);
 
     const handleLogout = () => {
         Alert.alert(
@@ -64,38 +62,26 @@ export default function Dashboard() {
 
     useEffect(() => {
         loadData();
-        loadPendingBudgets();
     }, []);
-
-    const loadPendingBudgets = async () => {
-        try {
-            const [count, budgets] = await Promise.all([
-                budgetsService.getPendingCount(),
-                budgetsService.getAllPending()
-            ]);
-            setPendingBudgetsCount(count);
-            setPendingBudgets(budgets);
-        } catch (error) {
-            console.error('Error loading pending budgets:', error);
-        }
-    };
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount] = await Promise.all([
                 patientsService.count(),
                 appointmentsService.countToday(),
                 consultationsService.countPendingReturns(),
                 appointmentsService.getToday(),
                 consultationsService.getReturnAlerts(),
                 alertsService.getBirthdayAlerts(),
-                alertsService.getProcedureReminders()
+                alertsService.getProcedureReminders(),
+                budgetsService.getPendingCount()
             ]);
             setPatientsCount(patients);
             setTodayCount(today);
             setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
+            setPendingBudgetsCount(budgetsCount);
 
             // Combine and process alerts
             const combined: any[] = [
@@ -246,7 +232,7 @@ export default function Dashboard() {
                         title="Orçamentos Pendentes"
                         value={pendingBudgetsCount.toString()}
                         icon={<FileText size={24} color="#0D9488" />}
-                        onPress={() => setShowBudgetsModal(true)}
+                        onPress={() => router.push('/patients')}
                     />
                 </View>
 
@@ -520,67 +506,6 @@ export default function Dashboard() {
                 onClose={() => setShowTeamModal(false)}
             />
 
-            {/* Pending Budgets Modal */}
-            <Modal visible={showBudgetsModal} animationType="slide" presentationStyle="pageSheet">
-                <SafeAreaView className="flex-1 bg-gray-50">
-                    <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
-                        <TouchableOpacity onPress={() => setShowBudgetsModal(false)}>
-                            <X size={24} color="#6B7280" />
-                        </TouchableOpacity>
-                        <Text className="text-lg font-semibold text-gray-900">
-                            Orçamentos Pendentes ({pendingBudgetsCount})
-                        </Text>
-                        <View className="w-6" />
-                    </View>
-
-                    <ScrollView className="flex-1 px-4 py-4">
-                        {pendingBudgets.length === 0 ? (
-                            <View className="py-12 items-center">
-                                <FileText size={48} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum orçamento pendente</Text>
-                            </View>
-                        ) : (
-                            <View className="gap-3">
-                                {pendingBudgets.map((budget) => (
-                                    <TouchableOpacity
-                                        key={budget.id}
-                                        onPress={() => {
-                                            setShowBudgetsModal(false);
-                                            router.push(`/patient/${budget.patient_id}`);
-                                        }}
-                                        className="bg-white p-4 rounded-xl border border-gray-100"
-                                    >
-                                        <View className="flex-row justify-between items-start mb-2">
-                                            <View className="flex-1">
-                                                <Text className="font-semibold text-gray-900">{budget.patient_name}</Text>
-                                                <Text className="text-sm text-gray-500">{budget.treatment}</Text>
-                                            </View>
-                                            <Text className="text-lg font-bold text-teal-600">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budget.value)}
-                                            </Text>
-                                        </View>
-                                        <View className="flex-row justify-between items-center">
-                                            <Text className="text-gray-400 text-xs">
-                                                Criado em {new Date(budget.created_at).toLocaleDateString('pt-BR')}
-                                            </Text>
-                                            <View className="bg-amber-100 px-2 py-1 rounded-full">
-                                                <Text className="text-amber-700 text-xs font-medium">Pendente</Text>
-                                            </View>
-                                        </View>
-                                        {budget.budget_items && budget.budget_items.length > 0 && (
-                                            <View className="mt-2 pt-2 border-t border-gray-100">
-                                                <Text className="text-gray-500 text-xs">
-                                                    {budget.budget_items.length} procedimento(s) incluído(s)
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-                    </ScrollView>
-                </SafeAreaView>
-            </Modal>
         </SafeAreaView>
     );
 }
