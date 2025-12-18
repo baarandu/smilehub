@@ -125,6 +125,18 @@ export default function Agenda() {
         notes: string;
         procedure?: string;
     }) => {
+        // Check for time conflict
+        const timeConflict = appointments.find(
+            apt => apt.time?.slice(0, 5) === appointment.time.slice(0, 5)
+        );
+        if (timeConflict) {
+            Alert.alert(
+                'Horário Ocupado',
+                `Já existe uma consulta agendada às ${appointment.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`
+            );
+            return;
+        }
+
         try {
             const dateStr = selectedDate.toISOString().split('T')[0];
             await appointmentsService.create({
@@ -149,6 +161,20 @@ export default function Agenda() {
     };
 
     const handleUpdateAppointment = async (id: string, updates: any) => {
+        // Check for time conflict (exclude current appointment)
+        if (updates.time) {
+            const timeConflict = appointments.find(
+                apt => apt.id !== id && apt.time?.slice(0, 5) === updates.time.slice(0, 5)
+            );
+            if (timeConflict) {
+                Alert.alert(
+                    'Horário Ocupado',
+                    `Já existe uma consulta agendada às ${updates.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`
+                );
+                return;
+            }
+        }
+
         try {
             await appointmentsService.update(id, updates);
             setShowModal(false);
@@ -186,13 +212,11 @@ export default function Agenda() {
         rescheduled: { label: 'Remarcado', bgColor: 'bg-purple-100', textColor: 'text-purple-700' },
     };
 
-    const statusOptions = [
+    const statusOptions: { value: AppointmentWithPatient['status']; label: string }[] = [
         { value: 'scheduled', label: 'Agendado' },
         { value: 'confirmed', label: 'Confirmado' },
         { value: 'completed', label: 'Compareceu' },
-        { value: 'no_show', label: 'Não Compareceu' },
         { value: 'cancelled', label: 'Cancelado' },
-        { value: 'rescheduled', label: 'Remarcado' },
     ];
 
     const handleStatusPress = (appointment: AppointmentWithPatient) => {
@@ -200,7 +224,7 @@ export default function Agenda() {
         setShowStatusPicker(true);
     };
 
-    const handleStatusChange = async (newStatus: string) => {
+    const handleStatusChange = async (newStatus: AppointmentWithPatient['status']) => {
         if (!selectedAppointment) return;
 
         try {
@@ -240,7 +264,12 @@ export default function Agenda() {
                     calendarMonth={calendarMonth}
                     selectedDate={selectedDate}
                     datesWithAppointments={datesWithAppointments}
-                    onSelectDate={setSelectedDate}
+                    onSelectDate={(date) => {
+                        setSelectedDate(date);
+                        // Open new appointment modal when clicking a date
+                        setEditingAppointment(null);
+                        setShowModal(true);
+                    }}
                     onPrevMonth={goToPrevMonth}
                     onNextMonth={goToNextMonth}
                     onGoToToday={goToToday}

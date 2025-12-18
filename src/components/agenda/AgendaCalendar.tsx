@@ -3,13 +3,18 @@ import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import type { AgendaCalendarProps } from './types';
 
+interface ExtendedAgendaCalendarProps extends AgendaCalendarProps {
+  onDayClick?: (date: Date) => void;
+}
+
 export function AgendaCalendar({
   selectedDate,
   calendarMonth,
   datesWithAppointments,
   onDateSelect,
   onMonthChange,
-}: AgendaCalendarProps) {
+  onDayClick,
+}: ExtendedAgendaCalendarProps) {
   const hasAppointments = (date: Date) => {
     return datesWithAppointments.some(
       d => format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
@@ -21,7 +26,13 @@ export function AgendaCalendar({
       <Calendar
         mode="single"
         selected={selectedDate}
-        onSelect={onDateSelect}
+        onSelect={(date) => {
+          onDateSelect(date);
+          // Also trigger day click when selecting
+          if (date && onDayClick) {
+            onDayClick(date);
+          }
+        }}
         month={calendarMonth}
         onMonthChange={onMonthChange}
         locale={ptBR}
@@ -39,7 +50,7 @@ export function AgendaCalendar({
           head_cell: "text-muted-foreground rounded-md flex-1 font-medium text-sm text-center py-2",
           row: "flex w-full justify-between mt-1",
           cell: "flex-1 text-center text-sm p-1 relative [&:has([aria-selected])]:bg-accent rounded-lg",
-          day: "h-12 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent rounded-lg transition-colors flex items-center justify-center",
+          day: "h-12 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent rounded-lg transition-colors flex items-center justify-center cursor-pointer",
           day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-lg",
           day_today: "bg-accent text-accent-foreground font-semibold",
           day_outside: "text-muted-foreground opacity-40",
@@ -65,6 +76,7 @@ export function AgendaCalendar({
     </div>
   );
 }
+
 
 
 

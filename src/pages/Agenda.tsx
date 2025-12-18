@@ -126,6 +126,15 @@ export default function Agenda() {
       return;
     }
 
+    // Check for time conflict
+    const timeConflict = appointments.find(
+      apt => apt.time?.slice(0, 5) === data.time.slice(0, 5)
+    );
+    if (timeConflict) {
+      toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);
+      return;
+    }
+
     try {
       await appointmentsService.create({
         patient_id: data.patientId,
@@ -148,6 +157,15 @@ export default function Agenda() {
   };
 
   const handleUpdateAppointment = async (id: string, data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => {
+    // Check for time conflict (exclude current appointment)
+    const timeConflict = appointments.find(
+      apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5)
+    );
+    if (timeConflict) {
+      toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);
+      return;
+    }
+
     try {
       await appointmentsService.update(id, {
         patient_id: data.patientId,
@@ -238,6 +256,10 @@ export default function Agenda() {
         datesWithAppointments={datesWithAppointments}
         onDateSelect={handleDateSelect}
         onMonthChange={setCalendarMonth}
+        onDayClick={() => {
+          setEditingAppointment(null);
+          setDialogOpen(true);
+        }}
       />
 
       {/* Week Navigation */}
