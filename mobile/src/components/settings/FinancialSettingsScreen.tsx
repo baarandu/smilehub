@@ -40,6 +40,9 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     const [feeRate, setFeeRate] = useState('');
     const [feeAnticipationRate, setFeeAnticipationRate] = useState('');
 
+    // Fee Detail Modal
+    const [selectedFeeForDetails, setSelectedFeeForDetails] = useState<CardFeeConfig | null>(null);
+
     useEffect(() => {
         loadSettings();
     }, []);
@@ -423,8 +426,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                         <Text className="flex-1 text-xs text-gray-500 font-bold">BANDEIRA</Text>
                                         <Text className="w-20 text-xs text-gray-500 font-bold text-center">TIPO</Text>
                                         <Text className="w-20 text-xs text-gray-500 font-bold text-center">PARCELAS</Text>
-                                        <Text className="w-20 text-xs text-gray-500 font-bold text-right">TAXA</Text>
-                                        <View className="w-10" />
+                                        <Text className="w-16 text-xs text-gray-500 font-bold text-right">TAXA</Text>
                                     </View>
                                     {cardFees
                                         .filter(fee => {
@@ -434,9 +436,14 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                         })
                                         .sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments)
                                         .map((fee) => (
-                                            <View key={fee.id} className="flex-row items-center bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                            <TouchableOpacity
+                                                key={fee.id}
+                                                onPress={() => setSelectedFeeForDetails(fee)}
+                                                className="flex-row items-center bg-gray-50 p-3 rounded-lg border border-gray-100"
+                                                activeOpacity={0.7}
+                                            >
                                                 <Text className="flex-1 font-medium capitalize text-gray-900">
-                                                    {fee.brand === 'others' ? 'Outras Bandeiras' : fee.brand}
+                                                    {fee.brand === 'others' ? 'Outras' : fee.brand}
                                                 </Text>
                                                 <Text className="w-20 text-center text-xs text-gray-600 bg-white border border-gray-200 py-1 rounded capitalize">
                                                     {fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}
@@ -444,16 +451,10 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                                 <Text className="w-20 text-center text-gray-900">
                                                     {fee.installments}x
                                                 </Text>
-                                                <Text className="w-20 text-right font-bold text-red-500">
+                                                <Text className="w-16 text-right font-bold text-red-500">
                                                     {fee.rate}%
                                                 </Text>
-                                                <TouchableOpacity
-                                                    onPress={() => handleDeleteFee(fee.id)}
-                                                    className="w-10 items-end"
-                                                >
-                                                    <Trash2 size={18} color="#EF4444" />
-                                                </TouchableOpacity>
-                                            </View>
+                                            </TouchableOpacity>
                                         ))}
                                 </View>
                             )}
@@ -597,6 +598,77 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                             </TouchableOpacity>
                         </View>
                     </KeyboardAvoidingView>
+                </View>
+            )}
+
+            {/* Fee Detail Modal */}
+            {selectedFeeForDetails && (
+                <View className="absolute inset-0 z-50">
+                    <TouchableOpacity
+                        className="absolute inset-0 bg-black/40"
+                        activeOpacity={1}
+                        onPress={() => setSelectedFeeForDetails(null)}
+                    />
+                    <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6">
+                        <View className="w-12 h-1 bg-gray-300 rounded-full self-center mb-4" />
+
+                        <Text className="text-xl font-bold text-gray-900 mb-6 text-center">
+                            Detalhes da Taxa
+                        </Text>
+
+                        <View className="space-y-4 mb-6">
+                            <View className="flex-row justify-between py-3 border-b border-gray-100">
+                                <Text className="text-gray-500">Bandeira</Text>
+                                <Text className="font-semibold text-gray-900 capitalize">
+                                    {selectedFeeForDetails.brand === 'others' ? 'Outras Bandeiras' : selectedFeeForDetails.brand}
+                                </Text>
+                            </View>
+                            <View className="flex-row justify-between py-3 border-b border-gray-100">
+                                <Text className="text-gray-500">Tipo</Text>
+                                <Text className="font-semibold text-gray-900">
+                                    {selectedFeeForDetails.payment_type === 'credit' ? 'Crédito' : 'Débito'}
+                                </Text>
+                            </View>
+                            <View className="flex-row justify-between py-3 border-b border-gray-100">
+                                <Text className="text-gray-500">Parcelas</Text>
+                                <Text className="font-semibold text-gray-900">
+                                    {selectedFeeForDetails.installments}x
+                                </Text>
+                            </View>
+                            <View className="flex-row justify-between py-3 border-b border-gray-100">
+                                <Text className="text-gray-500">Taxa Normal</Text>
+                                <Text className="font-bold text-red-600 text-lg">
+                                    {selectedFeeForDetails.rate}%
+                                </Text>
+                            </View>
+                            <View className="flex-row justify-between py-3">
+                                <Text className="text-gray-500">Taxa de Antecipação</Text>
+                                <Text className="font-bold text-amber-600 text-lg">
+                                    {selectedFeeForDetails.anticipation_rate ? `${selectedFeeForDetails.anticipation_rate}%` : 'Não definida'}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={() => {
+                                    const feeId = selectedFeeForDetails.id;
+                                    setSelectedFeeForDetails(null);
+                                    handleDeleteFee(feeId);
+                                }}
+                                className="flex-1 bg-red-50 border border-red-200 rounded-xl py-4 items-center flex-row justify-center gap-2"
+                            >
+                                <Trash2 size={18} color="#EF4444" />
+                                <Text className="text-red-600 font-semibold">Excluir</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => setSelectedFeeForDetails(null)}
+                                className="flex-1 bg-gray-100 rounded-xl py-4 items-center"
+                            >
+                                <Text className="text-gray-700 font-semibold">Fechar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
             )}
         </SafeAreaView>
