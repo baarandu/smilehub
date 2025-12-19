@@ -120,7 +120,10 @@ export default function Alerts() {
 
     const initiateSendMessage = (template: string) => {
         setSendingTemplate(template);
-        setShowPatientSelectModal(true);
+        setShowTemplatesModal(false);
+        setTimeout(() => {
+            setShowPatientSelectModal(true);
+        }, 500);
     };
 
     const handlePatientSelect = (patient: Patient) => {

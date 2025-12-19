@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Plus, Calculator, CreditCard } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Plus, Calculator, CreditCard, X } from 'lucide-react-native';
 import { deletePatient } from '../../src/services/patients';
 import { anamnesesService } from '../../src/services/anamneses';
 import { proceduresService } from '../../src/services/procedures';
@@ -17,6 +17,8 @@ import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '.
 import * as Linking from 'expo-linking';
 import { Image } from 'react-native';
 import ImageViewing from 'react-native-image-viewing';
+import { WebView } from 'react-native-webview';
+import { getAccessibleUrl } from '../../src/utils/storage';
 
 type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 
@@ -65,14 +67,34 @@ export default function PatientDetail() {
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isImageViewVisible, setIsImageViewVisible] = useState(false);
+    const [showPdfModal, setShowPdfModal] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
+
 
     // Preview Handler
-    const handlePreviewFile = (url: string) => {
-        if (url.toLowerCase().includes('.pdf')) {
-            Linking.openURL(url);
-        } else {
-            setPreviewImage(url);
-            setIsImageViewVisible(true);
+    const handlePreviewFile = async (url: string) => {
+        try {
+            const accessibleUrl = await getAccessibleUrl(url);
+            if (!accessibleUrl) return;
+
+            if (accessibleUrl.toLowerCase().includes('.pdf') || url.toLowerCase().includes('.pdf')) {
+                setPdfUrl(accessibleUrl);
+                setShowPdfModal(true);
+            } else {
+                setPreviewImage(accessibleUrl);
+                setIsImageViewVisible(true);
+            }
+        } catch (error) {
+            console.error('Error getting accessible URL:', error);
+            // Fallback to original URL
+            if (url.toLowerCase().includes('.pdf')) {
+                setPdfUrl(url);
+                setShowPdfModal(true);
+            } else {
+                setPreviewImage(url);
+                setIsImageViewVisible(true);
+            }
         }
     };
 
@@ -761,6 +783,43 @@ export default function PatientDetail() {
                 visible={isImageViewVisible}
                 onRequestClose={() => setIsImageViewVisible(false)}
             />
+            {/* PDF Preview Modal */}
+            <Modal visible={showPdfModal} onRequestClose={() => setShowPdfModal(false)} animationType="slide" presentationStyle="pageSheet">
+                <View className="flex-1 bg-white">
+                    <View className="flex-row items-center px-4 pt-6 pb-3 border-b border-gray-100 bg-gray-50">
+                        <TouchableOpacity onPress={() => setShowPdfModal(false)} className="mr-4 p-2 bg-gray-200 rounded-full">
+                            <X size={20} color="#000" />
+                        </TouchableOpacity>
+                        <Text className="text-lg font-semibold text-gray-900 flex-1 text-center">Visualizar Documento</Text>
+                        <TouchableOpacity onPress={() => pdfUrl && Linking.openURL(pdfUrl)} className="ml-4 p-2">
+                            <Text className="text-teal-600 font-medium">Abrir</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {pdfUrl && (
+                        <WebView
+                            source={Platform.OS === 'android'
+                                ? { uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(pdfUrl)}` }
+                                : {
+                                    html: `
+                                    <html>
+                                        <head>
+                                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                            <style>body { margin: 0; padding: 0; height: 100%; display: flex; justify-content: center; align-items: center; background-color: #f5f5f5; } iframe, embed, object { width: 100%; height: 100%; border: none; }</style>
+                                        </head>
+                                        <body>
+                                            <embed src="${pdfUrl}" type="application/pdf" width="100%" height="100%" />
+                                        </body>
+                                    </html>
+                                ` }
+                            }
+                            className="flex-1"
+                            originWhitelist={['*']}
+                            startInLoadingState={true}
+                            renderLoading={() => <ActivityIndicator size="large" color="#0D9488" className="absolute top-1/2 left-1/2 h-10 w-10 -ml-5 -mt-5" />}
+                        />
+                    )}
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }

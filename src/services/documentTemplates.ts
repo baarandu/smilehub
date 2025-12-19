@@ -80,12 +80,22 @@ export const documentTemplatesService = {
     },
 
     async saveAsExam(patientId: string, patientName: string, name: string, content: string, letterheadUrl?: string | null): Promise<void> {
+        console.log('[saveAsExam] Starting PDF generation...');
+        console.log('[saveAsExam] patientId:', patientId);
+        console.log('[saveAsExam] name:', name);
+        console.log('[saveAsExam] content length:', content?.length);
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
+        console.log('[saveAsExam] User authenticated:', user.id);
 
         // Dynamically import jsPDF
         const { default: jsPDF } = await import('jspdf');
+        console.log('[saveAsExam] jsPDF imported');
+
         const doc = new jsPDF();
+        console.log('[saveAsExam] jsPDF instance created');
+
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 25;
@@ -138,21 +148,74 @@ export const documentTemplatesService = {
             y += 7; // Line height
         }
 
-        // Signature Line
-        y += 20;
-        if (y > pageHeight - 40) {
+        // Signature Section
+        // Check if this is a consent form (Termo de Consentimento)
+        const isConsentForm = name.toLowerCase().includes('termo') ||
+            name.toLowerCase().includes('consentimento') ||
+            name.toLowerCase().includes('consent');
+
+        // Get dentist name for non-consent documents
+        let dentistName: string = 'Responsável Técnico';
+        if (!isConsentForm) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('full_name, gender')
+                .eq('id', user.id)
+                .maybeSingle() as any;
+
+            if (profile && profile.full_name) {
+                const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
+                dentistName = `${prefix} ${profile.full_name}`;
+            }
+        }
+
+        // Add signature section
+        y += 30;
+        if (y > pageHeight - 60) {
             doc.addPage();
             await addBackground();
-            y = 50;
+            y = 60;
         }
+
         doc.setDrawColor(0);
         doc.setLineWidth(0.5);
-        doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
-        y += 5;
         doc.setFontSize(10);
-        doc.text(patientName, pageWidth / 2, y, { align: 'center' });
 
-        const pdfBlob = doc.output('blob');
+        if (isConsentForm) {
+            // Only patient signature for consent forms
+            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
+            y += 5;
+            doc.text(patientName, pageWidth / 2, y, { align: 'center' });
+        } else {
+            // Two signatures for other documents: patient (left) and dentist (right)
+            const leftCenter = pageWidth / 4;
+            const rightCenter = (pageWidth * 3) / 4;
+
+            // Patient signature line (left)
+            doc.line(leftCenter - 35, y, leftCenter + 35, y);
+
+            // Dentist signature line (right)
+            doc.line(rightCenter - 35, y, rightCenter + 35, y);
+
+            y += 5;
+
+            // Patient name
+            doc.text(patientName, leftCenter, y, { align: 'center' });
+
+            // Dentist name
+            doc.text(dentistName, rightCenter, y, { align: 'center' });
+        }
+
+        // Generate PDF blob with explicit options
+        const pdfOutput = doc.output('arraybuffer');
+        const pdfBlob = new Blob([pdfOutput], { type: 'application/pdf' });
+
+        console.log('[saveAsExam] PDF blob size:', pdfBlob.size);
+
+        if (pdfBlob.size < 100) {
+            throw new Error('PDF generation failed - blob too small');
+        }
+
         const fileName = `doc_${patientId}_${Date.now()}.pdf`;
 
         // Upload to exams bucket

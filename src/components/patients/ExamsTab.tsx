@@ -7,6 +7,8 @@ import { NewExamDialog } from './NewExamDialog';
 import type { Exam } from '@/types/database';
 import { toast } from 'sonner';
 
+import { getAccessibleUrl } from '@/lib/utils';
+
 interface ExamsTabProps {
   patientId: string;
 }
@@ -34,14 +36,31 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
     }
   };
 
-  const handleView = (exam: Exam) => {
-    if (exam.file_url) {
-      window.open(exam.file_url, '_blank');
-    } else if (exam.file_urls && exam.file_urls.length > 0) {
-      // Open first attachment or show list? For now open all (popups might block) or just first.
-      // Let's open the first one for simplicity as per mobile behavior.
-      const url = exam.file_urls[0];
-      if (url) window.open(url, '_blank');
+  const handleView = async (exam: Exam) => {
+    console.log('handleView called for:', exam);
+    const url = exam.file_url || (exam.file_urls && exam.file_urls.length > 0 ? exam.file_urls[0] : null);
+    console.log('Original URL:', url);
+
+    if (url) {
+      // Open window immediately to avoid popup blocker
+      const newWindow = window.open('', '_blank');
+
+      try {
+        if (newWindow) {
+          newWindow.document.write('Carregando documento...');
+        }
+
+        const signedUrl = await getAccessibleUrl(url);
+        console.log('Signed URL:', signedUrl);
+
+        if (newWindow) {
+          newWindow.location.href = signedUrl || url;
+        }
+      } catch (error) {
+        console.error('Error opening document:', error);
+        if (newWindow) newWindow.close();
+        toast.error('Erro ao abrir documento');
+      }
     } else {
       toast.info('Este exame não possui arquivo anexado');
     }

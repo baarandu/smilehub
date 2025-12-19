@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
 import type { DocumentTemplate, Patient } from '../types/database';
 
 export const documentTemplatesService = {
@@ -127,24 +128,48 @@ export const documentTemplatesService = {
     },
 
     async saveAsExam(patientId: string, name: string, fileUri: string): Promise<void> {
+        console.log('[saveAsExam] Starting mobile PDF upload...');
+        console.log('[saveAsExam] patientId:', patientId);
+        console.log('[saveAsExam] name:', name);
+        console.log('[saveAsExam] fileUri:', fileUri);
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        // Note: We use simple fetch + blob for React Native to upload to Supabase Storage
-        const fileExt = 'pdf';
-        const fileName = `doc_${patientId}_${Date.now()}.${fileExt}`;
+        // Read file as base64 using static FileSystem import
+        const base64Data = await FileSystem.readAsStringAsync(fileUri, {
+            encoding: 'base64'
+        } as any);
 
-        const response = await fetch(fileUri);
-        const blob = await response.blob();
+        console.log('[saveAsExam] Base64 data length:', base64Data.length);
+
+        if (!base64Data || base64Data.length < 100) {
+            throw new Error('PDF file is empty or too small');
+        }
+
+        // Convert base64 to Uint8Array for upload
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const fileName = `doc_${patientId}_${Date.now()}.pdf`;
+        console.log('[saveAsExam] Uploading as:', fileName);
 
         const { error: uploadError } = await supabase.storage
             .from('exams')
-            .upload(fileName, blob, {
+            .upload(fileName, bytes.buffer, {
                 contentType: 'application/pdf',
                 upsert: true
             });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+            console.error('[saveAsExam] Upload error:', uploadError);
+            throw uploadError;
+        }
+
+        console.log('[saveAsExam] Upload successful');
 
         const { data: { publicUrl } } = supabase.storage
             .from('exams')
@@ -162,6 +187,11 @@ export const documentTemplatesService = {
                 type: 'document'
             } as any);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+            console.error('[saveAsExam] Insert error:', insertError);
+            throw insertError;
+        }
+
+        console.log('[saveAsExam] Document saved successfully');
     }
 };

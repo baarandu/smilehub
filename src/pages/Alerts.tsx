@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw } from 'lucide-react';
+import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -11,6 +11,8 @@ import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
 import { remindersService, Reminder } from '@/services/reminders';
+import { getPatients } from '@/services/patients';
+import { Patient } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -37,6 +39,12 @@ export default function Alerts() {
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [reminderForm, setReminderForm] = useState({ title: '', description: '' });
+
+  // Message Sending
+  const [showPatientSelect, setShowPatientSelect] = useState(false);
+  const [sendingTemplate, setSendingTemplate] = useState<string | null>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
@@ -136,13 +144,46 @@ export default function Alerts() {
     } else if (type === 'return') {
       message = returnTemplate.replace('{name}', name);
     } else {
-      // Confirmation for tomorrow's appointments
       message = confirmationTemplate.replace('{name}', name);
     }
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
   };
+
+
+  const loadPatients = async () => {
+    try {
+      const data = await getPatients();
+      setPatients(data);
+    } catch (e) { console.error(e); }
+  };
+
+  const initiateSendMessage = (template: string) => {
+    setSendingTemplate(template);
+    setShowSettings(false);
+    loadPatients();
+    setTimeout(() => setShowPatientSelect(true), 200);
+  };
+
+  const handleSelectPatient = (patient: Patient) => {
+    if (!sendingTemplate) return;
+    const cleanPhone = patient.phone.replace(/\D/g, '');
+    const firstName = patient.name.split(' ')[0];
+    const message = sendingTemplate.replace('{name}', firstName);
+
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+
+    setShowPatientSelect(false);
+    setSendingTemplate(null);
+    setSearchQuery('');
+  };
+
+  const filteredPatients = patients.filter(p =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.phone.includes(searchQuery)
+  );
 
   const getUrgencyBadge = (days: number) => {
     if (days <= 7) return { text: 'Urgente', class: 'bg-destructive text-destructive-foreground', icon: AlertTriangle };
@@ -222,8 +263,13 @@ export default function Alerts() {
                   />
                   <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Mensagem de Retorno (6 meses)</Label>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                        <Label>Mensagem de Retorno (6 meses)</Label>
+                        <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
+                            <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                        </Button>
+                    </div>
                   <Textarea
                     value={returnTemplate}
                     onChange={(e) => setReturnTemplate(e.target.value)}
@@ -232,8 +278,13 @@ export default function Alerts() {
                   />
                   <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Mensagem de Confirmação de Consulta</Label>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                        <Label>Mensagem de Confirmação de Consulta</Label>
+                        <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
+                            <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                        </Button>
+                    </div>
                   <Textarea
                     value={confirmationTemplate}
                     onChange={(e) => setConfirmationTemplate(e.target.value)}
@@ -477,7 +528,44 @@ export default function Alerts() {
             <div className="p-6 text-center text-muted-foreground">Nenhum retorno agendado</div>
           )}
         </div>
-      </div>
-    </div>
+        </div>
+
+      <Dialog open={showPatientSelect} onOpenChange={setShowPatientSelect}>
+        <DialogContent className="sm:max-w-[400px] h-[500px] flex flex-col">
+            <DialogHeader>
+            <DialogTitle>Selecionar Paciente</DialogTitle>
+            </DialogHeader>
+            
+            <div className="relative mb-2">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Buscar paciente..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                />
+            </div>
+
+            <div className="flex-1 overflow-y-auto -mx-6 px-6">
+                {filteredPatients.map(patient => (
+                    <button
+                        key={patient.id}
+                        onClick={() => handleSelectPatient(patient)}
+                        className="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between border-b border-gray-50 last:border-0"
+                    >
+                        <div>
+                            <p className="font-medium text-sm">{patient.name}</p>
+                            <p className="text-xs text-muted-foreground">{patient.phone}</p>
+                        </div>
+                        <MessageCircle className="w-4 h-4 text-teal-600 opacity-0 group-hover:opacity-100" />
+                    </button>
+                ))}
+                {filteredPatients.length === 0 && (
+                    <p className="text-center text-muted-foreground text-sm py-4">Nenhum paciente encontrado.</p>
+                )}
+            </div>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 }
