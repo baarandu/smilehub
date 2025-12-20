@@ -38,9 +38,10 @@ export function NewProcedureModal({
   const [form, setForm] = useState<ProcedureFormState>({
     date: new Date().toISOString().split('T')[0],
     location: '',
-    value: '000',
+    value: '0',
     paymentMethod: 'pix',
     installments: '1',
+    status: 'in_progress',
   });
   const [observations, setObservations] = useState('');
 
@@ -64,9 +65,10 @@ export function NewProcedureModal({
         setForm({
           date: procedure.date,
           location: procedure.location || '',
-          value: procedure.value ? (procedure.value * 100).toFixed(0) : '000',
+          value: procedure.value ? Math.round(procedure.value * 100).toString() : '0',
           paymentMethod: procedure.payment_method || 'pix',
           installments: procedure.installments?.toString() || '1',
+          status: procedure.status || 'in_progress',
         });
         setObservations(procedure.description || '');
         setSelectedItemIds([]);
@@ -76,9 +78,10 @@ export function NewProcedureModal({
         setForm({
           date: new Date().toISOString().split('T')[0],
           location: '',
-          value: '000',
+          value: '0',
           paymentMethod: 'pix',
           installments: '1',
+          status: 'in_progress',
         });
         setObservations('');
         setSelectedItemIds([]);
@@ -306,6 +309,7 @@ export function NewProcedureModal({
         value: form.value ? parseFloat(form.value) / 100 : 0,
         payment_method: undefined,
         installments: undefined,
+        status: form.status,
       };
 
       let procedureId = procedure?.id;

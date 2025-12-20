@@ -32,6 +32,15 @@ export function ProceduresTab({
         }
     };
 
+    const getStatusInfo = (status: string | null) => {
+        switch (status) {
+            case 'pending': return { label: 'Pendente', bgColor: '#FEF3C7', color: '#B45309' };
+            case 'in_progress': return { label: 'Em Progresso', bgColor: '#DBEAFE', color: '#1D4ED8' };
+            case 'completed': return { label: 'Finalizado', bgColor: '#D1FAE5', color: '#047857' };
+            default: return { label: 'Em Progresso', bgColor: '#DBEAFE', color: '#1D4ED8' };
+        }
+    };
+
     const parseDescription = (description: string) => {
         const parts = description.split('\n\nObs: ');
         const itemsPart = parts[0];
@@ -86,13 +95,18 @@ export function ProceduresTab({
 
                             return (
                                 <View key={procedure.id} className="p-4 border-b border-gray-50 bg-white">
-                                    {/* Date and Actions */}
+                                    {/* Date, Status and Actions */}
                                     <View className="flex-row items-center justify-between mb-2">
                                         <View className="flex-row items-center gap-2">
                                             <Calendar size={14} color="#6B7280" />
                                             <Text className="text-sm text-gray-500">
                                                 {new Date(procedure.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                                             </Text>
+                                            <View style={{ backgroundColor: getStatusInfo(procedure.status).bgColor, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                                                <Text style={{ color: getStatusInfo(procedure.status).color, fontSize: 11, fontWeight: '600' }}>
+                                                    {getStatusInfo(procedure.status).label}
+                                                </Text>
+                                            </View>
                                         </View>
                                         <View className="flex-row gap-2">
                                             <TouchableOpacity onPress={() => onEdit(procedure)} className="bg-teal-50 p-2 rounded-lg">

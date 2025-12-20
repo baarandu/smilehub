@@ -125,6 +125,7 @@ export interface Database {
           payment_method: string | null
           installments: number | null
           location: string | null
+          status: 'pending' | 'in_progress' | 'completed'
           created_at: string
           updated_at: string
         }
@@ -137,6 +138,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
         }
@@ -149,6 +151,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
         }

@@ -10,12 +10,19 @@ interface ProcedureFormProps {
     locations: Location[];
 }
 
+const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Pendente', color: '#F59E0B' },
+    { value: 'in_progress', label: 'Em Progresso', color: '#3B82F6' },
+    { value: 'completed', label: 'Finalizado', color: '#10B981' },
+] as const;
+
 export function ProcedureForm({
     form,
     onChange,
     locations,
 }: ProcedureFormProps) {
     const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [showStatusPicker, setShowStatusPicker] = useState(false);
 
     // Helper formatting functions
     const formatCurrency = (value: string) => {
@@ -30,6 +37,16 @@ export function ProcedureForm({
         if (numbers.length <= 2) return numbers;
         if (numbers.length <= 4) return `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
         return `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
+    };
+
+    const getStatusLabel = () => {
+        const option = STATUS_OPTIONS.find(o => o.value === form.status);
+        return option?.label || 'Selecione o status';
+    };
+
+    const getStatusColor = () => {
+        const option = STATUS_OPTIONS.find(o => o.value === form.status);
+        return option?.color || '#6B7280';
     };
 
     return (
@@ -93,6 +110,47 @@ export function ProcedureForm({
                     </View>
                 )}
             </View>
+
+            <View>
+                <Text className="text-sm font-medium text-gray-700 mb-2">Status do Tratamento</Text>
+                {!showStatusPicker ? (
+                    <TouchableOpacity
+                        onPress={() => setShowStatusPicker(true)}
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex-row items-center justify-between"
+                    >
+                        <View className="flex-row items-center gap-2">
+                            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: getStatusColor() }} />
+                            <Text className={form.status ? 'text-gray-900' : 'text-gray-400'}>
+                                {getStatusLabel()}
+                            </Text>
+                        </View>
+                        <ChevronDown size={20} color="#6B7280" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                        <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                            <Text className="font-medium text-gray-700">Selecione o status</Text>
+                            <TouchableOpacity onPress={() => setShowStatusPicker(false)}>
+                                <X size={20} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+                        {STATUS_OPTIONS.map((option, index) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                onPress={() => {
+                                    onChange({ status: option.value });
+                                    setShowStatusPicker(false);
+                                }}
+                                className={`p-3 flex-row items-center gap-3 ${index < STATUS_OPTIONS.length - 1 ? 'border-b border-gray-100' : ''}`}
+                            >
+                                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: option.color }} />
+                                <Text className="font-medium text-gray-900">{option.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+            </View>
         </View>
     );
 }
+

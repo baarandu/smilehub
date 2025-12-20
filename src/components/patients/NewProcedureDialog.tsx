@@ -56,6 +56,7 @@ export function NewProcedureDialog({
     value: '',
     paymentMethod: '',
     installments: '1',
+    status: 'in_progress',
   });
 
   const [observations, setObservations] = useState('');
@@ -79,6 +80,7 @@ export function NewProcedureDialog({
           value: procedure.value ? procedure.value.toFixed(2).replace('.', ',') : '',
           paymentMethod: procedure.payment_method || '',
           installments: procedure.installments?.toString() || '1',
+          status: procedure.status || 'in_progress',
         });
         setObservations(procedure.description || '');
         setSelectedItemIds([]);
@@ -90,6 +92,7 @@ export function NewProcedureDialog({
           value: '',
           paymentMethod: '',
           installments: '1',
+          status: 'in_progress',
         });
         setObservations('');
         setSelectedItemIds([]);
@@ -251,6 +254,7 @@ export function NewProcedureDialog({
         value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) : null,
         payment_method: null,
         installments: null,
+        status: form.status,
       };
 
       if (procedure) {

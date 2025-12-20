@@ -13,6 +13,7 @@ export interface ProcedureFormState {
     value: string;
     paymentMethod: string;
     installments: string;
+    status: 'pending' | 'in_progress' | 'completed';
 }
 
 export interface Attachment {

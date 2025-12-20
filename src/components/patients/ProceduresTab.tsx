@@ -65,6 +65,15 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
     }
   };
 
+  const getStatusInfo = (status: string | null) => {
+    switch (status) {
+      case 'pending': return { label: 'Pendente', className: 'bg-amber-100 text-amber-700' };
+      case 'in_progress': return { label: 'Em Progresso', className: 'bg-blue-100 text-blue-700' };
+      case 'completed': return { label: 'Finalizado', className: 'bg-green-100 text-green-700' };
+      default: return { label: 'Em Progresso', className: 'bg-blue-100 text-blue-700' };
+    }
+  };
+
   const handleEdit = (procedure: Procedure) => {
     setEditingProcedure(procedure);
     setShowDialog(true);
@@ -77,7 +86,7 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
 
   const confirmDelete = async () => {
     if (!procedureToDelete) return;
-    
+
     try {
       await deleteProcedure.mutateAsync(procedureToDelete.id);
       toast.success('Procedimento excluído com sucesso!');
@@ -100,7 +109,7 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
             Novo Procedimento
           </Button>
         </div>
-        
+
         {isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-20 w-full" />
@@ -123,6 +132,9 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                     <div className="flex items-center gap-2 mb-2">
                       <CalendarIcon className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium">{formatDate(procedure.date)}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusInfo(procedure.status).className}`}>
+                        {getStatusInfo(procedure.status).label}
+                      </span>
                     </div>
                     {procedure.location && (
                       <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">

@@ -44,10 +44,11 @@ export function ProcedureFooter({
                     className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
                     placeholder="0,00"
                     placeholderTextColor="#9CA3AF"
-                    value={form.value}
+                    value={formatCurrency(form.value)}
                     onChangeText={(text) => {
-                        const formatted = formatCurrency(text);
-                        onChange({ value: formatted });
+                        // Remove tudo que não é número
+                        const numbers = text.replace(/\D/g, '');
+                        onChange({ value: numbers || '0' });
                     }}
                     keyboardType="numeric"
                 />

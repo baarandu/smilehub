@@ -16,6 +16,7 @@ export interface ProcedureFormState {
     value: string;
     paymentMethod: string;
     installments: string;
+    status: 'pending' | 'in_progress' | 'completed';
 }
 
 interface ProcedureFormProps {
@@ -24,6 +25,12 @@ interface ProcedureFormProps {
     locations: Location[];
     loading?: boolean;
 }
+
+const STATUS_OPTIONS = [
+    { value: 'pending', label: 'Pendente' },
+    { value: 'in_progress', label: 'Em Progresso' },
+    { value: 'completed', label: 'Finalizado' },
+] as const;
 
 export function ProcedureForm({
     form,
@@ -90,6 +97,27 @@ export function ProcedureForm({
                     disabled={loading}
                 />
             </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="status">Status do Tratamento</Label>
+                <Select
+                    value={form.status}
+                    onValueChange={(v) => onChange({ status: v as ProcedureFormState['status'] })}
+                    disabled={loading}
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
     );
 }
+
