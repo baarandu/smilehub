@@ -9,7 +9,7 @@
 | **Armazenamento de credenciais** | ✅ Feito | Tokens eram armazenados em *AsyncStorage* (mobile). | Migrado para *SecureStore* (Expo) com criptografia via `secureStorage.ts`. |
 | **Credenciais hardcoded** | ✅ Feito | Credenciais estavam diretamente no código-fonte. | Movido para variáveis de ambiente (`.env`) com fallback para compatibilidade. |
 | **Logs & Auditoria** | ✅ Feito | Script SQL pronto para ativar. | `supabase-audit-logs.sql` (triggers opcionais). |
-| **Dependências** | ⏳ Pendente | Algumas libs podem estar desatualizadas. | • Rodar `npm audit` e atualizar pacotes vulneráveis. |
+| **Dependências** | ✅ Feito | Vulnerabilidades auditadas. | Mobile limpo. Web mantido (risco de quebra). |
 | **Proteção de dados sensíveis (CPF)** | ✅ Feito | Funções de mascaramento criadas. | `maskCPF()` em `src/utils/security.ts`. |
 
 ## 2️⃣ UI/UX & Design
@@ -17,7 +17,7 @@
 |------|-------------------|------------------------|
 | **Consistência visual** | O mobile usa *glassmorphism* e cores vibrantes, enquanto o web tem um visual mais neutro. | • Unificar paleta de cores (usar tokens CSS/ThemeProvider).<br>• Aplicar micro‑animações (hover, transição) em botões e cards no web. |
 | **Fluxo de criação/edição** | O modal de "Novo Paciente" tem muitos campos em uma única tela, o que pode sobrecarregar o usuário. | • Dividir o formulário em *tabs* ou *stepper* (Pessoal → Contato → Saúde → Observações).<br>• Salvar progresso automático (localStorage) para evitar perda de dados. |
-| **Acessibilidade** | Falta de `aria-label`s, contraste insuficiente em alguns botões (ex.: badge de urgência). | • Garantir contraste ≥ 4.5:1 (WCAG AA).<br>• Adicionar `role="dialog"` e `aria‑modal="true"` nos modais.<br>• Suporte a navegação por teclado (focus trap). |
+| **Acessibilidade** | 🔄 Em andamento | Contraste das badges corrigido. Faltam `aria-label`s e navegação por teclado. | • Garantir contraste ≥ 4.5:1 (WCAG AA).<br>• Adicionar `role="dialog"` e `aria‑modal="true"` nos modais.<br>• Suporte a navegação por teclado (focus trap). |
 | **Responsividade** | A página de *Dashboard* tem layout fixo em desktop; em tablets pode ficar comprimido. | • Utilizar *CSS Grid* ou *Flexbox* com breakpoints fluidos (Tailwind ou CSS custom).<br>• Testar em dispositivos reais (iPad, Android tablets). |
 | **Feedback visual** | Operações assíncronas (salvar, excluir) mostram apenas *toast*; não há indicadores de loading nos botões de ação. | • Inserir spinners dentro dos botões (`<Loader2 className="animate-spin" />`).<br>• Desabilitar botões enquanto a requisição está em andamento. |
 | **Mensagens de WhatsApp** | Templates são editáveis, mas não há pré‑visualização. | • Mostrar preview ao editar template.<br>• Permitir inserir variáveis (`{name}`, `{date}`) com autocomplete. |
@@ -72,7 +72,7 @@
 ---
 
 ## 📌 Próximos passos recomendados (prioridade)
-1. **Segurança** – Mover credenciais para variáveis de ambiente, revisar RLS, migrar tokens para armazenamento seguro.
+1. ~~**Segurança**~~ ✅ (Concluída: Sanitização, RLS, Env Vars, Audit).
 2. **Acessibilidade** – Corrigir contraste, adicionar atributos ARIA e garantir navegação por teclado.
 3. **Performance** – Implementar lazy loading de rotas, cachear dados com react-query, adicionar paginação.
 4. **Qualidade de código** – Centralizar tratamento de erros, extrair utilitários, reduzir duplicação web/mobile.
