@@ -123,7 +123,6 @@ export const settingsService = {
             .order('name');
 
         if (error) {
-            console.log('card_brands table not found, using defaults');
             return defaultBrands;
         }
 

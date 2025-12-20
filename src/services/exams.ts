@@ -15,15 +15,12 @@ export const examsService = {
   },
 
   async create(exam: ExamInsert): Promise<Exam> {
-    console.log('[examsService.create] Input exam data:', exam);
-
     // Get user's clinic_id
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.error('[examsService.create] User not authenticated');
       throw new Error('User not authenticated');
     }
-    console.log('[examsService.create] User ID:', user.id);
 
     const { data: clinicUser, error: clinicError } = await supabase
       .from('clinic_users')
@@ -39,7 +36,6 @@ export const examsService = {
       console.error('[examsService.create] No clinic user found');
       throw new Error('Clinic not found');
     }
-    console.log('[examsService.create] Clinic ID:', clinicUser.clinic_id);
 
     // Ensure required fields are populated
     const examData = {
@@ -49,8 +45,6 @@ export const examsService = {
       title: (exam as any).title || (exam as any).name || 'Exame',
       date: (exam as any).date || (exam as any).order_date || new Date().toISOString().split('T')[0],
     };
-
-    console.log('[examsService.create] Final exam data to insert:', examData);
 
     const { data, error } = await supabase
       .from('exams')
@@ -63,7 +57,6 @@ export const examsService = {
       throw error;
     }
 
-    console.log('[examsService.create] Success! Created exam:', data);
     return data;
   },
 

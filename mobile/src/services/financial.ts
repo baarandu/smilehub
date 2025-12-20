@@ -7,7 +7,7 @@ export const financialService = {
         const startDate = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
         const endDate = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
 
-        console.log('[FinancialService] Fetching transactions:', { startDate, endDate });
+
 
         const { data, error } = await supabase
             .from('financial_transactions')
@@ -21,7 +21,6 @@ export const financialService = {
             throw error;
         }
 
-        console.log('[FinancialService] Fetched count:', data?.length);
         return (data || []) as unknown as FinancialTransactionWithPatient[];
     },
 
@@ -37,8 +36,6 @@ export const financialService = {
     },
 
     async create(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
-        console.log('[FinancialService] Creating transaction...', transaction);
-
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {

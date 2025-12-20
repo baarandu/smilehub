@@ -70,7 +70,6 @@ export const profileService = {
             if (clinic) {
                 clinicName = clinic.name;
                 logoUrl = clinic.logo_url;
-                console.log('Clinic fetched:', { clinicName, logoUrl });
             }
         }
 
@@ -157,8 +156,6 @@ export const profileService = {
             .getPublicUrl(fileName);
 
         const logoUrl = urlData.publicUrl;
-        console.log('Logo uploaded, URL:', logoUrl);
-        console.log('Updating clinic:', clinicId);
 
         const { error: updateError } = await (supabase
             .from('clinics') as any)
@@ -170,7 +167,6 @@ export const profileService = {
             throw updateError;
         }
 
-        console.log('Clinic updated successfully with logo');
         return logoUrl;
     },
 
@@ -213,4 +209,3 @@ export const profileService = {
         if (error) throw error;
     }
 };
-

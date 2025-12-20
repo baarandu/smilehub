@@ -500,6 +500,81 @@ export interface Database {
           updated_at?: string
         }
       },
+      clinic_users: {
+        Row: {
+          id: string
+          user_id: string
+          clinic_id: string
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          clinic_id: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          clinic_id?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      clinics: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      document_templates: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
       card_fee_config: {
         Row: {
           id: string

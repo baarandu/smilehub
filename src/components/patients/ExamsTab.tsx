@@ -37,9 +37,7 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
   };
 
   const handleView = async (exam: Exam) => {
-    console.log('handleView called for:', exam);
     const url = exam.file_url || (exam.file_urls && exam.file_urls.length > 0 ? exam.file_urls[0] : null);
-    console.log('Original URL:', url);
 
     if (url) {
       // Open window immediately to avoid popup blocker
@@ -51,7 +49,6 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
         }
 
         const signedUrl = await getAccessibleUrl(url);
-        console.log('Signed URL:', signedUrl);
 
         if (newWindow) {
           newWindow.location.href = signedUrl || url;

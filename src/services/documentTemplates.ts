@@ -80,21 +80,14 @@ export const documentTemplatesService = {
     },
 
     async saveAsExam(patientId: string, patientName: string, name: string, content: string, letterheadUrl?: string | null): Promise<void> {
-        console.log('[saveAsExam] Starting PDF generation...');
-        console.log('[saveAsExam] patientId:', patientId);
-        console.log('[saveAsExam] name:', name);
-        console.log('[saveAsExam] content length:', content?.length);
 
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
-        console.log('[saveAsExam] User authenticated:', user.id);
 
         // Dynamically import jsPDF
         const { default: jsPDF } = await import('jspdf');
-        console.log('[saveAsExam] jsPDF imported');
 
         const doc = new jsPDF();
-        console.log('[saveAsExam] jsPDF instance created');
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -209,8 +202,6 @@ export const documentTemplatesService = {
         // Generate PDF blob with explicit options
         const pdfOutput = doc.output('arraybuffer');
         const pdfBlob = new Blob([pdfOutput], { type: 'application/pdf' });
-
-        console.log('[saveAsExam] PDF blob size:', pdfBlob.size);
 
         if (pdfBlob.size < 100) {
             throw new Error('PDF generation failed - blob too small');

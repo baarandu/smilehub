@@ -50,14 +50,14 @@ export const examsService = {
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = fileName;
 
-    console.log('[ExamUpload] Starting upload for:', file.name, 'to path:', filePath);
+
 
     // Read file as base64 for React Native
     const base64 = await FileSystem.readAsStringAsync(file.uri, {
       encoding: 'base64',
     });
 
-    console.log('[ExamUpload] Base64 length:', base64.length);
+
 
     // Convert base64 to ArrayBuffer using inline decoder
     const arrayBuffer = decodeBase64(base64);
@@ -74,13 +74,13 @@ export const examsService = {
       throw error;
     }
 
-    console.log('[ExamUpload] Upload success, data:', data);
+
 
     const { data: { publicUrl } } = supabase.storage
       .from('exams')
       .getPublicUrl(filePath);
 
-    console.log('[ExamUpload] Public URL:', publicUrl);
+
 
     return publicUrl;
   },
