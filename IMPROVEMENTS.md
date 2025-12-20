@@ -33,8 +33,8 @@
 | **Imagens** | Ícones SVG são inline; não há otimização de imagens de pacientes. | • Compressão automática via `next‑image` (se migrar para Next.js) ou `expo‑asset`. |
 | **Consultas ao Supabase** | Algumas chamadas (`getPatients`, `getLocations`) são feitas a cada abertura de modal. | • Cachear resultados com `react‑query` (stale‑time adequado).<br>• Usar `prefetchQuery` para dados frequentes. |
 | **Bundle size** | Dependências como `lucide-react` são importadas integralmente. | • Importar apenas ícones usados (`import { Bell } from 'lucide-react'`).<br>• Analisar bundle com `vite-bundle-visualizer`. |
-| **Renderização de listas** | Listas de alertas e consultas podem crescer muito. | • Usar `FlatList` (mobile) e `react‑virtualized` (web) para renderização virtual. |
-| **Paginação** | Listas de pacientes e transações financeiras carregam todos os registros. | • Implementar paginação no Supabase (`.range(from, to)`) e infinite scroll na UI. |
+| **Renderização de listas** | 🔄 Mitigado | Paginação reduziu carga inicial. Virtualização ainda recomendada para listas muito longas. | • Usar `FlatList` (mobile) e `react‑virtualized` (web) para renderização virtual. |
+| **Paginação** | ✅ Feito | Lista de Pacientes usa `Infinite Query` e paginação no backend. | • Implementar paginação no Supabase (`.range(from, to)`) e infinite scroll na UI. |
 
 ## 4️⃣ Qualidade de código & Arquitetura
 | Tema | Problema | Recomendações |

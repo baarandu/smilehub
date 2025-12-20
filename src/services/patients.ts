@@ -2,11 +2,19 @@ import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
 import { sanitizeForDisplay } from '@/utils/security';
 
-export async function getPatients(): Promise<Patient[]> {
-  const { data, error } = await supabase
+export async function getPatients(page?: number, limit?: number): Promise<Patient[]> {
+  let query = supabase
     .from('patients')
     .select('*')
     .order('name');
+
+  if (page !== undefined && limit !== undefined) {
+    const from = page * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -111,7 +119,7 @@ export async function searchPatients(query: string): Promise<Patient[]> {
   const { data, error } = await supabase
     .from('patients')
     .select('*')
-    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf.ilike.%${query}%`)
+    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf.ilike.%${query}%,email.ilike.%${query}%`)
     .order('name')
     .limit(20);
 

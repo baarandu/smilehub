@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, FileText, FileClock } from 'lucide-react';
+import { Users, FileText, FileClock, Loader2 } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
 import { DocumentsModal } from '@/components/patients/DocumentsModal';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
-import { usePatients, useCreatePatient } from '@/hooks/usePatients';
+import { useInfinitePatients, usePatientSearch, useCreatePatient } from '@/hooks/usePatients';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { budgetsService } from '@/services/budgets';
@@ -16,7 +16,22 @@ export default function Patients() {
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const { data: patients, isLoading } = usePatients();
+
+  // Infinite Scroll Hook (Pagination)
+  const {
+    data: infiniteData,
+    isLoading: isInfiniteLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage
+  } = useInfinitePatients();
+
+  // Server-side Search Hook
+  const {
+    data: searchResults,
+    isLoading: isSearchLoading
+  } = usePatientSearch(search);
+
   const createPatient = useCreatePatient();
 
   useEffect(() => {
@@ -32,18 +47,17 @@ export default function Patients() {
     }
   };
 
-  const filteredPatients = useMemo(() => {
-    if (!patients) return [];
-    if (!search) return patients;
-    const query = search.toLowerCase();
-    return patients.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.phone.includes(query) ||
-        (p.email && p.email.toLowerCase().includes(query)) ||
-        (p.cpf && p.cpf.includes(query))
-    );
-  }, [search, patients]);
+  // Determine which list to show
+  const isSearching = search.length >= 2;
+  const isLoading = isSearching ? isSearchLoading : isInfiniteLoading;
+
+  const currentPatients = useMemo(() => {
+    if (isSearching) return searchResults || [];
+    if (infiniteData) {
+      return infiniteData.pages.flat();
+    }
+    return [];
+  }, [isSearching, searchResults, infiniteData]);
 
   const handleAddPatient = async (formData: PatientFormData) => {
     await createPatient.mutateAsync(formData);
@@ -56,7 +70,12 @@ export default function Patients() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Pacientes</h1>
           <p className="text-muted-foreground mt-1">
-            {isLoading ? '...' : `${patients?.length || 0} pacientes cadastrados`}
+            {isLoading
+              ? '...'
+              : isSearching
+                ? `${searchResults?.length || 0} resultados encontrados`
+                : `${currentPatients.length} pacientes listados`
+            }
           </p>
         </div>
         <div className="flex gap-2">
@@ -101,7 +120,7 @@ export default function Patients() {
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
-      ) : filteredPatients.length === 0 ? (
+      ) : currentPatients.length === 0 ? (
         <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
           <Users className="w-12 h-12 mx-auto text-muted-foreground/40" />
           <p className="mt-4 text-muted-foreground">
@@ -109,10 +128,33 @@ export default function Patients() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-3">
-          {filteredPatients.map((patient, index) => (
-            <PatientCard key={patient.id} patient={patient} index={index} />
-          ))}
+        <div className="space-y-4">
+          <div className="grid gap-3">
+            {currentPatients.map((patient, index) => (
+              <PatientCard key={patient.id} patient={patient} index={index} />
+            ))}
+          </div>
+
+          {/* Load More Button (Only for main list) */}
+          {!isSearching && hasNextPage && (
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="w-full sm:w-auto"
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  'Carregar mais pacientes'
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

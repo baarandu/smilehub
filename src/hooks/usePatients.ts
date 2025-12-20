@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import {
   getPatients,
   getPatientById,
@@ -7,12 +7,12 @@ import {
   deletePatient,
   searchPatients,
 } from '@/services/patients';
-import type { PatientFormData } from '@/types/database';
+import type { PatientFormData, Patient } from '@/types/database';
 
 export function usePatients() {
   return useQuery({
     queryKey: ['patients'],
-    queryFn: getPatients,
+    queryFn: () => getPatients(),
   });
 }
 
@@ -32,9 +32,20 @@ export function usePatientSearch(query: string) {
   });
 }
 
+export function useInfinitePatients() {
+  return useInfiniteQuery({
+    queryKey: ['patients', 'infinite'],
+    queryFn: ({ pageParam }) => getPatients(pageParam as number, 20),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: Patient[], allPages) => {
+      return lastPage.length === 20 ? allPages.length : undefined;
+    },
+  });
+}
+
 export function useCreatePatient() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (formData: PatientFormData) => createPatientFromForm(formData),
     onSuccess: () => {
@@ -45,9 +56,9 @@ export function useCreatePatient() {
 
 export function useUpdatePatient() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, formData }: { id: string; formData: PatientFormData }) => 
+    mutationFn: ({ id, formData }: { id: string; formData: PatientFormData }) =>
       updatePatientFromForm(id, formData),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -58,7 +69,7 @@ export function useUpdatePatient() {
 
 export function useDeletePatient() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: string) => deletePatient(id),
     onSuccess: () => {
