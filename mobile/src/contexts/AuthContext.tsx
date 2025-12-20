@@ -117,14 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    if (isLoading) {
-        return (
-            <View className="flex-1 items-center justify-center bg-gray-50">
-                <ActivityIndicator size="large" color="#00B37E" />
-            </View>
-        );
-    }
-
     return (
         <AuthContext.Provider value={{ session, user, isLoading, signIn, signUp, signOut, resetPassword }}>
             {children}

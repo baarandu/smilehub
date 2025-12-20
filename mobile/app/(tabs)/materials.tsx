@@ -811,3 +811,4 @@ const styles = StyleSheet.create({
     detailItemValue: { fontSize: 14, color: '#111827' },
 });
 
+

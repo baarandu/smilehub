@@ -82,6 +82,10 @@ export function NewAnamneseModal({
         healingProblemsDetails: '',
         currentMedication: false,
         currentMedicationDetails: '',
+        drugAllergy: false,
+        drugAllergyDetails: '',
+        continuousMedication: false,
+        continuousMedicationDetails: '',
         localAnesthesiaHistory: false,
         localAnesthesiaHistoryDetails: '',
         anesthesiaReaction: false,
@@ -126,6 +130,10 @@ export function NewAnamneseModal({
                     healingProblemsDetails: anamnese.healing_problems_details || '',
                     currentMedication: anamnese.current_medication,
                     currentMedicationDetails: anamnese.current_medication_details || '',
+                    drugAllergy: (anamnese as any).drug_allergy || false,
+                    drugAllergyDetails: (anamnese as any).drug_allergy_details || '',
+                    continuousMedication: (anamnese as any).continuous_medication || false,
+                    continuousMedicationDetails: (anamnese as any).continuous_medication_details || '',
                     localAnesthesiaHistory: anamnese.local_anesthesia_history,
                     localAnesthesiaHistoryDetails: (anamnese as any).local_anesthesia_history_details || '',
                     anesthesiaReaction: anamnese.anesthesia_reaction,
@@ -167,6 +175,10 @@ export function NewAnamneseModal({
                     healingProblemsDetails: '',
                     currentMedication: false,
                     currentMedicationDetails: '',
+                    drugAllergy: false,
+                    drugAllergyDetails: '',
+                    continuousMedication: false,
+                    continuousMedicationDetails: '',
                     localAnesthesiaHistory: false,
                     localAnesthesiaHistoryDetails: '',
                     anesthesiaReaction: false,
@@ -216,6 +228,10 @@ export function NewAnamneseModal({
                 healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
                 current_medication: form.currentMedication,
                 current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
+                drug_allergy: form.drugAllergy,
+                drug_allergy_details: form.drugAllergy ? form.drugAllergyDetails || null : null,
+                continuous_medication: form.continuousMedication,
+                continuous_medication_details: form.continuousMedication ? form.continuousMedicationDetails || null : null,
                 local_anesthesia_history: form.localAnesthesiaHistory,
                 local_anesthesia_history_details: form.localAnesthesiaHistory ? form.localAnesthesiaHistoryDetails || null : null,
                 anesthesia_reaction: form.anesthesiaReaction,
@@ -361,6 +377,24 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
+                            label="Tem alergia medicamentosa?"
+                            value={form.drugAllergy}
+                            onValueChange={(v) => setForm({ ...form, drugAllergy: v })}
+                            details={form.drugAllergyDetails}
+                            onDetailsChange={(t) => setForm({ ...form, drugAllergyDetails: t })}
+                            detailsPlaceholder="Quais medicamentos?"
+                        />
+
+                        <QuestionField
+                            label="Faz uso de medicação contínua?"
+                            value={form.continuousMedication}
+                            onValueChange={(v) => setForm({ ...form, continuousMedication: v })}
+                            details={form.continuousMedicationDetails}
+                            onDetailsChange={(t) => setForm({ ...form, continuousMedicationDetails: t })}
+                            detailsPlaceholder="Quais medicações?"
+                        />
+
+                        <QuestionField
                             label="Já foi submetido a procedimento sob anestesia local?"
                             value={form.localAnesthesiaHistory}
                             onValueChange={(v) => setForm({ ...form, localAnesthesiaHistory: v })}
@@ -497,12 +531,12 @@ export function NewAnamneseModal({
                         {/* Notes */}
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3 mt-4">
                             <View className="p-4">
-                                <Text className="text-gray-900 font-medium mb-2">Observações adicionais</Text>
+                                <Text className="text-gray-900 font-medium mb-2">Queixa Principal</Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 min-h-[80px]"
                                     value={form.notes}
                                     onChangeText={(t) => setForm({ ...form, notes: t })}
-                                    placeholder="Outras informações relevantes..."
+                                    placeholder="Descreva a queixa principal do paciente..."
                                     placeholderTextColor="#9CA3AF"
                                     multiline
                                     textAlignVertical="top"

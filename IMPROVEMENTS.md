@@ -1,16 +1,16 @@
 # 📋 Avaliação geral e sugestões de melhoria para o **Smile Care Hub**
 
 ## 1️⃣ Segurança
-| Área | Problema / Oportunidade | Sugestão |
-|------|------------------------|----------|
-| **Autenticação & Autorização** | Verificar se todas as rotas da API (Supabase) têm RLS (Row‑Level Security) configurado corretamente. | • Revisar políticas RLS para garantir que apenas usuários autenticados acessem dados de pacientes, consultas e finanças.<br>• Implementar *refresh tokens* e expiração curta de *access tokens* (JWT ou sessão Supabase). |
-| **Validação de entrada** | Alguns formulários (ex.: criação/edição de consultas) enviam dados diretamente ao backend. | • Usar *zod* / *yup* para validar payloads no cliente antes de enviar.<br>• No servidor, validar novamente (Supabase `INSERT`/`UPDATE` com tipos corretos). |
-| **Proteção contra XSS/CSRF** | Mensagens de WhatsApp são inseridas via `window.open` com texto codificado, mas ainda há risco de injeção de scripts em campos de texto livre. | • Sanitizar todos os campos de texto que são exibidos em HTML (ex.: notas, observações).<br>• Utilizar cabeçalhos CSP (Content‑Security‑Policy) no servidor estático. |
-| **Armazenamento de credenciais** | Tokens de Supabase são armazenados em *AsyncStorage* (mobile) e *localStorage* (web). | • Migrar para *SecureStore* (Expo) no mobile.<br>• No web, usar *httpOnly* cookies via backend ou *Secure* flag em localStorage (não há, então considerar backend). |
-| **Credenciais hardcoded** | `supabaseUrl` e `supabaseAnonKey` estão diretamente no código-fonte (`src/lib/supabase.ts`, `mobile/src/lib/supabase.ts`). | • Mover para variáveis de ambiente (`VITE_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_URL`).<br>• Criar `.env.example` e adicionar `.env` ao `.gitignore`. |
-| **Logs & Auditoria** | Não há registro de ações críticas (ex.: exclusão de consultas, alterações de pacientes). | • Criar tabela `audit_logs` no Supabase e registrar eventos com `user_id`, `action`, `timestamp`.<br>• Exibir histórico de auditoria em UI de admin. |
-| **Dependências** | Algumas libs podem estar desatualizadas. | • Rodar `npm audit` e atualizar pacotes vulneráveis.<br>• Bloquear versões maiores que 2.x para libs críticas (e.g., `react-native`, `expo`). |
-| **Proteção de dados sensíveis (CPF)** | CPF é armazenado em texto puro no banco. | • Considerar criptografia em repouso ou mascaramento na exibição (ex.: `***.123.456-**`). |
+| Área | Status | Problema / Oportunidade | Sugestão |
+|------|--------|------------------------|----------|
+| **Autenticação & Autorização** | ✅ Feito | RLS (Row‑Level Security) configurado corretamente. | Políticas RLS implementadas para todas as tabelas principais via `clinic_id`. |
+| **Validação de entrada** | ⏳ Pendente | Alguns formulários enviam dados diretamente ao backend. | • Usar *zod* / *yup* para validar payloads no cliente antes de enviar. |
+| **Proteção contra XSS/CSRF** | ⏳ Pendente | Risco de injeção de scripts em campos de texto livre. | • Sanitizar campos de texto exibidos em HTML.<br>• Utilizar cabeçalhos CSP. |
+| **Armazenamento de credenciais** | ✅ Feito | Tokens eram armazenados em *AsyncStorage* (mobile). | Migrado para *SecureStore* (Expo) com criptografia via `secureStorage.ts`. |
+| **Credenciais hardcoded** | ✅ Feito | Credenciais estavam diretamente no código-fonte. | Movido para variáveis de ambiente (`.env`) com fallback para compatibilidade. |
+| **Logs & Auditoria** | ⏳ Pendente | Não há registro de ações críticas. | • Criar tabela `audit_logs` no Supabase. |
+| **Dependências** | ⏳ Pendente | Algumas libs podem estar desatualizadas. | • Rodar `npm audit` e atualizar pacotes vulneráveis. |
+| **Proteção de dados sensíveis (CPF)** | ⏳ Pendente | CPF é armazenado em texto puro no banco. | • Considerar criptografia ou mascaramento na exibição. |
 
 ## 2️⃣ UI/UX & Design
 | Tema | Pontos de atenção | Melhorias recomendadas |

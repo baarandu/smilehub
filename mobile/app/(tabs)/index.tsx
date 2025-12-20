@@ -80,7 +80,7 @@ export default function Dashboard() {
     const handleLogout = async () => {
         try {
             await signOut();
-            router.replace('/(auth)/login');
+            router.replace('/login');
         } catch (error) {
             console.error(error);
         }

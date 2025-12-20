@@ -68,7 +68,7 @@ export function AnamneseSummaryDialog({
                         Resumo da Anamnese
                     </DialogTitle>
                 </DialogHeader>
-                
+
                 <ScrollArea className="max-h-[60vh] pr-4">
                     <div className="space-y-4">
                         {/* Data da anamnese */}
@@ -108,7 +108,7 @@ export function AnamneseSummaryDialog({
                             <>
                                 <Separator />
                                 <div className="space-y-2">
-                                    <h3 className="font-semibold text-foreground">Observações</h3>
+                                    <h3 className="font-semibold text-foreground">Queixa Principal</h3>
                                     <div className="pl-4 border-l-2 border-primary/20">
                                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                                             {anamnese.notes}

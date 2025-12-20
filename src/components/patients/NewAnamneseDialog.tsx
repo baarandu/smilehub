@@ -92,6 +92,10 @@ export function NewAnamneseDialog({
     healingProblemsDetails: '',
     currentMedication: false,
     currentMedicationDetails: '',
+    drugAllergy: false,
+    drugAllergyDetails: '',
+    continuousMedication: false,
+    continuousMedicationDetails: '',
     localAnesthesiaHistory: false,
     localAnesthesiaHistoryDetails: '',
     anesthesiaReaction: false,
@@ -136,6 +140,10 @@ export function NewAnamneseDialog({
           healingProblemsDetails: anamnese.healing_problems_details || '',
           currentMedication: anamnese.current_medication,
           currentMedicationDetails: anamnese.current_medication_details || '',
+          drugAllergy: (anamnese as any).drug_allergy || false,
+          drugAllergyDetails: (anamnese as any).drug_allergy_details || '',
+          continuousMedication: (anamnese as any).continuous_medication || false,
+          continuousMedicationDetails: (anamnese as any).continuous_medication_details || '',
           localAnesthesiaHistory: anamnese.local_anesthesia_history,
           localAnesthesiaHistoryDetails: (anamnese as any).local_anesthesia_history_details || '',
           anesthesiaReaction: anamnese.anesthesia_reaction,
@@ -177,6 +185,10 @@ export function NewAnamneseDialog({
           healingProblemsDetails: '',
           currentMedication: false,
           currentMedicationDetails: '',
+          drugAllergy: false,
+          drugAllergyDetails: '',
+          continuousMedication: false,
+          continuousMedicationDetails: '',
           localAnesthesiaHistory: false,
           localAnesthesiaHistoryDetails: '',
           anesthesiaReaction: false,
@@ -226,6 +238,10 @@ export function NewAnamneseDialog({
         healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
         current_medication: form.currentMedication,
         current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
+        drug_allergy: form.drugAllergy,
+        drug_allergy_details: form.drugAllergy ? form.drugAllergyDetails || null : null,
+        continuous_medication: form.continuousMedication,
+        continuous_medication_details: form.continuousMedication ? form.continuousMedicationDetails || null : null,
         local_anesthesia_history: form.localAnesthesiaHistory,
         local_anesthesia_history_details: form.localAnesthesiaHistory ? form.localAnesthesiaHistoryDetails || null : null,
         anesthesia_reaction: form.anesthesiaReaction,
@@ -330,6 +346,26 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, currentMedication: value })}
               details={form.currentMedicationDetails}
               onDetailsChange={(text) => setForm({ ...form, currentMedicationDetails: text })}
+            />
+
+            {/* Alergia Medicamentosa */}
+            <QuestionField
+              label="Tem alergia medicamentosa?"
+              value={form.drugAllergy}
+              onValueChange={(value) => setForm({ ...form, drugAllergy: value })}
+              details={form.drugAllergyDetails}
+              onDetailsChange={(text) => setForm({ ...form, drugAllergyDetails: text })}
+              detailsPlaceholder="Quais medicamentos?"
+            />
+
+            {/* Medicação Contínua */}
+            <QuestionField
+              label="Faz uso de medicação contínua?"
+              value={form.continuousMedication}
+              onValueChange={(value) => setForm({ ...form, continuousMedication: value })}
+              details={form.continuousMedicationDetails}
+              onDetailsChange={(text) => setForm({ ...form, continuousMedicationDetails: text })}
+              detailsPlaceholder="Quais medicações?"
             />
 
             {/* Histórico de Anestesia Local */}
@@ -460,13 +496,13 @@ export function NewAnamneseDialog({
 
             <Separator />
 
-            {/* Observações */}
+            {/* Queixa Principal */}
             <div className="space-y-2">
-              <Label>Observações</Label>
+              <Label>Queixa Principal</Label>
               <Textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Observações adicionais..."
+                placeholder="Descreva a queixa principal do paciente..."
                 className="min-h-[100px]"
               />
             </div>

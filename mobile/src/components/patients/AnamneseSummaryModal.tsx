@@ -109,7 +109,7 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                     {anamnese.notes && anamnese.notes.trim() && (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
                             <View className="p-3 border-b border-gray-100 bg-teal-50">
-                                <Text className="font-semibold text-teal-800">Observações</Text>
+                                <Text className="font-semibold text-teal-800">Queixa Principal</Text>
                             </View>
                             <View className="p-4">
                                 <View className="pl-4 border-l-2 border-teal-200">
