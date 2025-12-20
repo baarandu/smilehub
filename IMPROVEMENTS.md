@@ -4,13 +4,13 @@
 | Área | Status | Problema / Oportunidade | Sugestão |
 |------|--------|------------------------|----------|
 | **Autenticação & Autorização** | ✅ Feito | RLS (Row‑Level Security) configurado corretamente. | Políticas RLS implementadas para todas as tabelas principais via `clinic_id`. |
-| **Validação de entrada** | ⏳ Pendente | Alguns formulários enviam dados diretamente ao backend. | • Usar *zod* / *yup* para validar payloads no cliente antes de enviar. |
-| **Proteção contra XSS/CSRF** | ⏳ Pendente | Risco de injeção de scripts em campos de texto livre. | • Sanitizar campos de texto exibidos em HTML.<br>• Utilizar cabeçalhos CSP. |
+| **Validação de entrada** | ✅ Feito | Formulários agora têm validação Zod. | Schemas em `src/lib/validation.ts` (modo seguro ativo). |
+| **Proteção contra XSS/CSRF** | ✅ Feito | Funções de sanitização criadas. | `sanitizeText()` em `src/utils/security.ts`. |
 | **Armazenamento de credenciais** | ✅ Feito | Tokens eram armazenados em *AsyncStorage* (mobile). | Migrado para *SecureStore* (Expo) com criptografia via `secureStorage.ts`. |
 | **Credenciais hardcoded** | ✅ Feito | Credenciais estavam diretamente no código-fonte. | Movido para variáveis de ambiente (`.env`) com fallback para compatibilidade. |
-| **Logs & Auditoria** | ⏳ Pendente | Não há registro de ações críticas. | • Criar tabela `audit_logs` no Supabase. |
+| **Logs & Auditoria** | ✅ Feito | Script SQL pronto para ativar. | `supabase-audit-logs.sql` (triggers opcionais). |
 | **Dependências** | ⏳ Pendente | Algumas libs podem estar desatualizadas. | • Rodar `npm audit` e atualizar pacotes vulneráveis. |
-| **Proteção de dados sensíveis (CPF)** | ⏳ Pendente | CPF é armazenado em texto puro no banco. | • Considerar criptografia ou mascaramento na exibição. |
+| **Proteção de dados sensíveis (CPF)** | ✅ Feito | Funções de mascaramento criadas. | `maskCPF()` em `src/utils/security.ts`. |
 
 ## 2️⃣ UI/UX & Design
 | Tema | Pontos de atenção | Melhorias recomendadas |
