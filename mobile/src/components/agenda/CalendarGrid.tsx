@@ -41,7 +41,7 @@ export function CalendarGrid({
             lastClickRef.current.date.toDateString() === date.toDateString();
         const timeDiff = now - lastClickRef.current.time;
 
-        if (isSameDay && timeDiff < 500 && onDayDoubleClick) {
+        if (isSameDay && timeDiff < 550 && onDayDoubleClick) {
             onDayDoubleClick(date);
             lastClickRef.current = { time: 0, date: null };
         } else {

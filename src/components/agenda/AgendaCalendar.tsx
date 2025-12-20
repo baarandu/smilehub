@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
@@ -22,35 +22,32 @@ export function AgendaCalendar({
     );
   };
 
-  // Track last click for double-click detection (persisted with useRef)
-  const lastClickRef = useRef({ time: 0, date: null as Date | null });
+  // Track last click for double-click detection
+  const lastClickRef = useRef<{ time: number; dateStr: string }>({ time: 0, dateStr: '' });
 
-  const handleDayClick = (date: Date | undefined) => {
-    if (!date) return;
-
+  const handleDayClick = useCallback((day: Date) => {
     const now = Date.now();
-    const isSameDay = lastClickRef.current.date &&
-      format(lastClickRef.current.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+    const dayStr = format(day, 'yyyy-MM-dd');
     const timeDiff = now - lastClickRef.current.time;
+    const isSameDay = lastClickRef.current.dateStr === dayStr;
 
-    // Double-click: same day clicked within 500ms
-    if (isSameDay && timeDiff < 500 && onDayDoubleClick) {
-      onDayDoubleClick(date);
-      // Reset to prevent triple-click triggering
-      lastClickRef.current = { time: 0, date: null };
+    if (isSameDay && timeDiff < 550 && onDayDoubleClick) {
+      // Double-click detected
+      onDayDoubleClick(day);
+      lastClickRef.current = { time: 0, dateStr: '' };
     } else {
-      // Single click: just select the date
-      onDateSelect(date);
-      lastClickRef.current = { time: now, date };
+      // Single click - update ref and select date
+      lastClickRef.current = { time: now, dateStr: dayStr };
+      onDateSelect(day);
     }
-  };
+  }, [onDateSelect, onDayDoubleClick]);
 
   return (
     <div className="bg-card rounded-xl p-6 shadow-card border border-border">
       <Calendar
         mode="single"
         selected={selectedDate}
-        onSelect={handleDayClick}
+        onDayClick={handleDayClick}
         month={calendarMonth}
         onMonthChange={onMonthChange}
         locale={ptBR}
@@ -94,8 +91,4 @@ export function AgendaCalendar({
     </div>
   );
 }
-
-
-
-
 
