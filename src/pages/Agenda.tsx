@@ -256,7 +256,7 @@ export default function Agenda() {
         datesWithAppointments={datesWithAppointments}
         onDateSelect={handleDateSelect}
         onMonthChange={setCalendarMonth}
-        onDayClick={() => {
+        onDayDoubleClick={() => {
           setEditingAppointment(null);
           setDialogOpen(true);
         }}

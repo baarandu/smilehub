@@ -1,10 +1,11 @@
+import { useRef } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import type { AgendaCalendarProps } from './types';
 
 interface ExtendedAgendaCalendarProps extends AgendaCalendarProps {
-  onDayClick?: (date: Date) => void;
+  onDayDoubleClick?: (date: Date) => void;
 }
 
 export function AgendaCalendar({
@@ -13,7 +14,7 @@ export function AgendaCalendar({
   datesWithAppointments,
   onDateSelect,
   onMonthChange,
-  onDayClick,
+  onDayDoubleClick,
 }: ExtendedAgendaCalendarProps) {
   const hasAppointments = (date: Date) => {
     return datesWithAppointments.some(
@@ -21,18 +22,35 @@ export function AgendaCalendar({
     );
   };
 
+  // Track last click for double-click detection (persisted with useRef)
+  const lastClickRef = useRef({ time: 0, date: null as Date | null });
+
+  const handleDayClick = (date: Date | undefined) => {
+    if (!date) return;
+
+    const now = Date.now();
+    const isSameDay = lastClickRef.current.date &&
+      format(lastClickRef.current.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+    const timeDiff = now - lastClickRef.current.time;
+
+    // Double-click: same day clicked within 500ms
+    if (isSameDay && timeDiff < 500 && onDayDoubleClick) {
+      onDayDoubleClick(date);
+      // Reset to prevent triple-click triggering
+      lastClickRef.current = { time: 0, date: null };
+    } else {
+      // Single click: just select the date
+      onDateSelect(date);
+      lastClickRef.current = { time: now, date };
+    }
+  };
+
   return (
     <div className="bg-card rounded-xl p-6 shadow-card border border-border">
       <Calendar
         mode="single"
         selected={selectedDate}
-        onSelect={(date) => {
-          onDateSelect(date);
-          // Also trigger day click when selecting
-          if (date && onDayClick) {
-            onDayClick(date);
-          }
-        }}
+        onSelect={handleDayClick}
         month={calendarMonth}
         onMonthChange={onMonthChange}
         locale={ptBR}

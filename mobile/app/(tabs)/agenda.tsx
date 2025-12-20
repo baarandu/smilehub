@@ -266,7 +266,9 @@ export default function Agenda() {
                     datesWithAppointments={datesWithAppointments}
                     onSelectDate={(date) => {
                         setSelectedDate(date);
-                        // Open new appointment modal when clicking a date
+                    }}
+                    onDayDoubleClick={(date) => {
+                        setSelectedDate(date);
                         setEditingAppointment(null);
                         setShowModal(true);
                     }}

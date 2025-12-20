@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 
@@ -12,6 +13,7 @@ interface CalendarGridProps {
     selectedDate: Date;
     datesWithAppointments: string[];
     onSelectDate: (date: Date) => void;
+    onDayDoubleClick?: (date: Date) => void;
     onPrevMonth: () => void;
     onNextMonth: () => void;
     onGoToToday: () => void;
@@ -22,12 +24,31 @@ export function CalendarGrid({
     selectedDate,
     datesWithAppointments,
     onSelectDate,
+    onDayDoubleClick,
     onPrevMonth,
     onNextMonth,
     onGoToToday,
 }: CalendarGridProps) {
     const isCurrentMonth = calendarMonth.getMonth() === new Date().getMonth() &&
         calendarMonth.getFullYear() === new Date().getFullYear();
+
+    // Track last click for double-click detection
+    const lastClickRef = useRef({ time: 0, date: null as Date | null });
+
+    const handleDayPress = (date: Date) => {
+        const now = Date.now();
+        const isSameDay = lastClickRef.current.date &&
+            lastClickRef.current.date.toDateString() === date.toDateString();
+        const timeDiff = now - lastClickRef.current.time;
+
+        if (isSameDay && timeDiff < 500 && onDayDoubleClick) {
+            onDayDoubleClick(date);
+            lastClickRef.current = { time: 0, date: null };
+        } else {
+            onSelectDate(date);
+            lastClickRef.current = { time: now, date };
+        }
+    };
 
     const getCalendarDays = () => {
         const year = calendarMonth.getFullYear();
@@ -102,20 +123,20 @@ export function CalendarGrid({
                     <View key={index} className="w-[14.28%] aspect-square p-0.5">
                         {date ? (
                             <TouchableOpacity
-                                onPress={() => onSelectDate(date)}
+                                onPress={() => handleDayPress(date)}
                                 className={`flex-1 items-center justify-center rounded-lg relative ${isSelectedDate(date)
-                                        ? 'bg-teal-600'
-                                        : isTodayDate(date)
-                                            ? 'bg-teal-100'
-                                            : ''
+                                    ? 'bg-teal-600'
+                                    : isTodayDate(date)
+                                        ? 'bg-teal-100'
+                                        : ''
                                     }`}
                             >
                                 <Text
                                     className={`text-sm font-medium ${isSelectedDate(date)
-                                            ? 'text-white'
-                                            : isTodayDate(date)
-                                                ? 'text-teal-700'
-                                                : 'text-gray-700'
+                                        ? 'text-white'
+                                        : isTodayDate(date)
+                                            ? 'text-teal-700'
+                                            : 'text-gray-700'
                                         }`}
                                 >
                                     {date.getDate()}
