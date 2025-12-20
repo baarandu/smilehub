@@ -3,7 +3,7 @@ import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/
 import { sanitizeForDisplay } from '@/utils/security';
 
 export async function getPatients(page?: number, limit?: number): Promise<Patient[]> {
-  let query = supabase
+  const query = supabase
     .from('patients')
     .select('*')
     .order('name');
@@ -11,11 +11,12 @@ export async function getPatients(page?: number, limit?: number): Promise<Patien
   if (page !== undefined && limit !== undefined) {
     const from = page * limit;
     const to = from + limit - 1;
-    query = query.range(from, to);
+    const { data, error } = await query.range(from, to);
+    if (error) throw error;
+    return data || [];
   }
 
   const { data, error } = await query;
-
   if (error) throw error;
   return data || [];
 }
@@ -34,7 +35,7 @@ export async function getPatientById(id: string): Promise<Patient | null> {
 export async function createPatient(patient: PatientInsert): Promise<Patient> {
   const { data, error } = await supabase
     .from('patients')
-    .insert(patient)
+    .insert(patient as unknown as never)
     .select()
     .single();
 
@@ -71,7 +72,7 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
 export async function updatePatient(id: string, patient: PatientUpdate): Promise<Patient> {
   const { data, error } = await supabase
     .from('patients')
-    .update(patient)
+    .update(patient as unknown as never)
     .eq('id', id)
     .select()
     .single();
