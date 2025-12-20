@@ -6,6 +6,7 @@ import { proceduresService } from '../../services/procedures';
 import { examsService } from '../../services/exams';
 import { locationsService, type Location } from '../../services/locations';
 import { budgetsService } from '../../services/budgets';
+import { sanitizeForDisplay } from '../../utils/security';
 import type { ProcedureInsert, Procedure } from '../../types/database';
 import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 
@@ -305,7 +306,7 @@ export function NewProcedureModal({
         patient_id: patientId,
         date: dateStr,
         location: form.location || undefined,
-        description: finalDescription || '',
+        description: sanitizeForDisplay(finalDescription) || '',
         value: form.value ? parseFloat(form.value) / 100 : 0,
         payment_method: undefined,
         installments: undefined,
@@ -319,7 +320,7 @@ export function NewProcedureModal({
         // But here we are just setting description to observations or finalDescription
         const updated = await proceduresService.update(procedure.id, {
           ...procedureData,
-          description: observations || undefined,
+          description: sanitizeForDisplay(observations) || undefined,
         });
         procedureId = updated.id;
         Alert.alert('Sucesso', 'Procedimento atualizado!');

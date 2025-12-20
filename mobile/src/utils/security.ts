@@ -62,8 +62,28 @@ export function sanitizeText(text: string | null | undefined): string {
         .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
         // Remove javascript: URLs
         .replace(/javascript:/gi, '')
-        // Remove HTML tags for mobile (React Native doesn't render HTML)
-        .replace(/<[^>]*>/g, '');
+        // Escape HTML entities
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Sanitize text for display in React Native (simpler version)
+ * Just removes dangerous patterns without HTML entity encoding
+ */
+export function sanitizeForDisplay(text: string | null | undefined): string {
+    if (!text) return '';
+
+    return text
+        // Remove script tags
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        // Remove HTML tags
+        .replace(/<[^>]*>/g, '')
+        // Remove javascript: URLs
+        .replace(/javascript:/gi, '');
 }
 
 /**

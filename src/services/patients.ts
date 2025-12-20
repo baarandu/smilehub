@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
+import { sanitizeForDisplay } from '@/utils/security';
 
 export async function getPatients(): Promise<Patient[]> {
   const { data, error } = await supabase
@@ -41,7 +42,7 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
     birth_date: formData.birthDate || null,
     cpf: formData.cpf || null,
     rg: formData.rg || null,
-    address: formData.address || null,
+    address: sanitizeForDisplay(formData.address) || null,
     city: formData.city || null,
     state: formData.state || null,
     zip_code: formData.zipCode || null,
@@ -50,10 +51,10 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
     emergency_phone: formData.emergencyPhone || null,
     health_insurance: formData.healthInsurance || null,
     health_insurance_number: formData.healthInsuranceNumber || null,
-    allergies: formData.allergies || null,
-    medications: formData.medications || null,
-    medical_history: formData.medicalHistory || null,
-    notes: formData.notes || null,
+    allergies: sanitizeForDisplay(formData.allergies) || null,
+    medications: sanitizeForDisplay(formData.medications) || null,
+    medical_history: sanitizeForDisplay(formData.medicalHistory) || null,
+    notes: sanitizeForDisplay(formData.notes) || null,
   };
 
   return createPatient(patient);
@@ -79,7 +80,7 @@ export async function updatePatientFromForm(id: string, formData: PatientFormDat
     birth_date: formData.birthDate || null,
     cpf: formData.cpf || null,
     rg: formData.rg || null,
-    address: formData.address || null,
+    address: sanitizeForDisplay(formData.address) || null,
     city: formData.city || null,
     state: formData.state || null,
     zip_code: formData.zipCode || null,
@@ -88,10 +89,10 @@ export async function updatePatientFromForm(id: string, formData: PatientFormDat
     emergency_phone: formData.emergencyPhone || null,
     health_insurance: formData.healthInsurance || null,
     health_insurance_number: formData.healthInsuranceNumber || null,
-    allergies: formData.allergies || null,
-    medications: formData.medications || null,
-    medical_history: formData.medicalHistory || null,
-    notes: formData.notes || null,
+    allergies: sanitizeForDisplay(formData.allergies) || null,
+    medications: sanitizeForDisplay(formData.medications) || null,
+    medical_history: sanitizeForDisplay(formData.medicalHistory) || null,
+    notes: sanitizeForDisplay(formData.notes) || null,
   };
 
   return updatePatient(id, patient);

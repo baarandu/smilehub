@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { sanitizeForDisplay } from '@/utils/security';
 import {
   Dialog,
   DialogContent,
@@ -250,7 +251,7 @@ export function NewProcedureDialog({
       const procedureData = {
         date: form.date,
         location: form.location || null,
-        description: finalDescription || null,
+        description: sanitizeForDisplay(finalDescription) || null,
         value: form.value ? parseFloat(form.value.replace(/\./g, '').replace(',', '.')) : null,
         payment_method: null,
         installments: null,
@@ -264,7 +265,7 @@ export function NewProcedureDialog({
             ...procedureData,
             // If editing, we typically keep the manual description unless specific change logic is requested.
             // Here, 'observations' (editing state) becomes the Description.
-            description: observations || null,
+            description: sanitizeForDisplay(observations) || null,
           },
         });
         toast.success('Procedimento atualizado com sucesso!');
