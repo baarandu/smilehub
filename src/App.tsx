@@ -5,37 +5,78 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ClinicProvider } from "@/contexts/ClinicContext";
-import Index from "./pages/Index";
-import Patients from "./pages/Patients";
-import PatientDetail from "./pages/PatientDetail";
-import Agenda from "./pages/Agenda";
-import Alerts from "./pages/Alerts";
-import Materials from "./pages/Materials";
-import Financial from "./pages/Financial";
-import FinancialSettings from "./pages/FinancialSettings";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import NotFound from "./pages/NotFound";
+import { Suspense, lazy } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy loading content pages
+const Index = lazy(() => import("./pages/Index"));
+const Patients = lazy(() => import("./pages/Patients"));
+const PatientDetail = lazy(() => import("./pages/PatientDetail"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+const Alerts = lazy(() => import("./pages/Alerts"));
+const Materials = lazy(() => import("./pages/Materials"));
+const Financial = lazy(() => import("./pages/Financial"));
+const FinancialSettings = lazy(() => import("./pages/FinancialSettings"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-const AppContent = () => (
-  <Routes>
-    {/* Auth routes (no layout) */}
-    <Route path="/login" element={<Login />} />
-    <Route path="/signup" element={<Signup />} />
+const LoadingFallback = () => (
+  <div className="flex min-h-screen bg-background w-full">
+    {/* Sidebar Skeleton (hidden on mobile) */}
+    <div className="hidden md:block w-64 border-r border-border p-4 space-y-4">
+      <Skeleton className="h-8 w-3/4 mb-8" />
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
 
-    {/* App routes (with layout) */}
-    <Route path="/" element={<AppLayout><Index /></AppLayout>} />
-    <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
-    <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
-    <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
-    <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
-    <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
-    <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
-    <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
-    <Route path="*" element={<NotFound />} />
-  </Routes>
+    {/* Main Content Skeleton */}
+    <div className="flex-1 p-4 md:p-8 space-y-6">
+      {/* Header Skeleton */}
+      <div className="flex justify-between items-center mb-8">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-10 rounded-full" />
+      </div>
+
+      {/* Cards Grid Skeleton */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-xl" />
+        ))}
+      </div>
+
+      {/* Table/List Skeleton */}
+      <div className="space-y-4 mt-8">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    </div>
+  </div>
+);
+
+const AppContent = () => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Routes>
+      {/* Auth routes (no layout) */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+
+      {/* App routes (with layout) */}
+      <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+      <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
+      <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
+      <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
+      <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
+      <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
+      <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
+      <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </Suspense>
 );
 
 const App = () => (

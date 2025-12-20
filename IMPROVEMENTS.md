@@ -29,7 +29,7 @@
 ## 3️⃣ Performance
 | Item | Observação | Ação |
 |------|------------|------|
-| **Lazy loading** | Todas as páginas são carregadas de uma vez (`App.tsx` importa tudo eager). | • Utilizar `React.lazy` + `Suspense` para carregamento de módulos (ex.: *Alerts*, *Dashboard*, *Financial*). |
+| **Lazy loading** | ✅ Feito | Rotas usam `React.lazy` + `Suspense` em `App.tsx`. | • Utilizar `React.lazy` + `Suspense` para carregamento de módulos (ex.: *Alerts*, *Dashboard*, *Financial*). |
 | **Imagens** | Ícones SVG são inline; não há otimização de imagens de pacientes. | • Compressão automática via `next‑image` (se migrar para Next.js) ou `expo‑asset`. |
 | **Consultas ao Supabase** | Algumas chamadas (`getPatients`, `getLocations`) são feitas a cada abertura de modal. | • Cachear resultados com `react‑query` (stale‑time adequado).<br>• Usar `prefetchQuery` para dados frequentes. |
 | **Bundle size** | Dependências como `lucide-react` são importadas integralmente. | • Importar apenas ícones usados (`import { Bell } from 'lucide-react'`).<br>• Analisar bundle com `vite-bundle-visualizer`. |
