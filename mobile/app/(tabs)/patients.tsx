@@ -6,9 +6,33 @@ import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileCl
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { budgetsService } from '../../src/services/budgets';
 import { DocumentsModal } from '../../components/DocumentsModal';
-import type { Patient, PatientFormData, BudgetWithItems } from '../../src/types/database';
+import type { Patient, PatientFormData } from '../../src/types/database';
 
-type PendingBudget = BudgetWithItems & { patient_name: string };
+interface PendingItem {
+    budgetId: string;
+    patientId: string;
+    patientName: string;
+    date: string;
+    tooth: {
+        tooth: string;
+        treatments: string[];
+        values: Record<string, string>;
+        status: string;
+    };
+    totalBudgetValue: number;
+}
+
+const getToothDisplayName = (tooth: string): string => {
+    if (tooth === 'ARC_SUP') return 'Arcada Superior';
+    if (tooth === 'ARC_INF') return 'Arcada Inferior';
+    if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Inferior';
+    if (tooth.includes('Arcada')) return tooth;
+    return `Dente ${tooth}`;
+};
+
+const calculateToothTotal = (values: Record<string, string>): number => {
+    return Object.values(values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
+};
 
 const emptyForm: PatientFormData = {
     name: '',
@@ -40,7 +64,7 @@ export default function Patients() {
     const [showModal, setShowModal] = useState(false);
     const [showDocumentsModal, setShowDocumentsModal] = useState(false);
     const [showBudgetsModal, setShowBudgetsModal] = useState(false);
-    const [pendingBudgets, setPendingBudgets] = useState<PendingBudget[]>([]);
+    const [pendingBudgets, setPendingBudgets] = useState<PendingItem[]>([]);
     const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
     const [form, setForm] = useState<PatientFormData>(emptyForm);
     const [saving, setSaving] = useState(false);
@@ -421,58 +445,48 @@ export default function Patients() {
                             <X size={24} color="#6B7280" />
                         </TouchableOpacity>
                         <Text className="text-lg font-semibold text-gray-900">
-                            Orçamentos Pendentes ({pendingBudgetsCount})
+                            Tratamentos Pendentes ({pendingBudgetsCount})
                         </Text>
-                        <TouchableOpacity
-                            onPress={handleSyncBudgets}
-                            disabled={syncingBudgets}
-                            className="w-10 h-10 items-center justify-center rounded-xl"
-                        >
-                            <RotateCw size={20} color={syncingBudgets ? "#9CA3AF" : "#0D9488"} className={syncingBudgets ? "animate-spin" : ""} />
-                        </TouchableOpacity>
+                        <View className="w-10" />
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
                         {pendingBudgets.length === 0 ? (
                             <View className="py-12 items-center">
                                 <FileText size={48} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum orçamento pendente</Text>
+                                <Text className="text-gray-400 mt-4">Nenhum tratamento pendente</Text>
                             </View>
                         ) : (
                             <View className="gap-3">
-                                {pendingBudgets.map((budget) => (
+                                {pendingBudgets.map((item, index) => (
                                     <TouchableOpacity
-                                        key={budget.id}
+                                        key={`${item.budgetId}-${index}`}
                                         onPress={() => {
                                             setShowBudgetsModal(false);
-                                            router.push(`/patient/${budget.patient_id}?tab=budgets`);
+                                            router.push(`/patient/${item.patientId}?tab=budgets`);
                                         }}
                                         className="bg-white p-4 rounded-xl border border-gray-100"
                                     >
                                         <View className="flex-row justify-between items-start mb-2">
                                             <View className="flex-1">
-                                                <Text className="font-semibold text-gray-900">{budget.patient_name}</Text>
-                                                <Text className="text-sm text-gray-500">{budget.treatment}</Text>
-                                            </View>
-                                            <Text className="text-lg font-bold text-teal-600">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(budget.value)}
-                                            </Text>
-                                        </View>
-                                        <View className="flex-row justify-between items-center">
-                                            <Text className="text-gray-400 text-xs">
-                                                Criado em {new Date(budget.created_at).toLocaleDateString('pt-BR')}
-                                            </Text>
-                                            <View className="bg-amber-100 px-2 py-1 rounded-full">
-                                                <Text className="text-amber-700 text-xs font-medium">Pendente</Text>
-                                            </View>
-                                        </View>
-                                        {budget.budget_items && budget.budget_items.length > 0 && (
-                                            <View className="mt-2 pt-2 border-t border-gray-100">
-                                                <Text className="text-gray-500 text-xs">
-                                                    {budget.budget_items.length} procedimento(s) incluído(s)
+                                                <Text className="font-semibold text-gray-900">{item.patientName}</Text>
+                                                <Text className="text-sm text-gray-500">
+                                                    {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                                                 </Text>
                                             </View>
-                                        )}
+                                            <ChevronRight size={20} color="#9CA3AF" />
+                                        </View>
+                                        <View className="bg-yellow-50 p-3 rounded-lg">
+                                            <Text className="font-medium text-yellow-800">
+                                                {getToothDisplayName(item.tooth.tooth)}
+                                            </Text>
+                                            <Text className="text-sm text-yellow-600">
+                                                {item.tooth.treatments.join(', ')}
+                                            </Text>
+                                            <Text className="text-teal-600 font-bold mt-1">
+                                                R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            </Text>
+                                        </View>
                                     </TouchableOpacity>
                                 ))}
                             </View>
