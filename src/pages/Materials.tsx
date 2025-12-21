@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock, Eye } from 'lucide-react';
+import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -42,6 +42,7 @@ export default function Materials() {
   const [quantity, setQuantity] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [supplier, setSupplier] = useState('');
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
 
   // Checkout State
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
@@ -156,6 +157,43 @@ export default function Materials() {
   // Remove Item
   const handleRemoveItem = (id: string) => {
     setItems(items.filter((item) => item.id !== id));
+  };
+
+  // Edit Item - Open modal with item data
+  const handleEditItem = (item: ShoppingItem) => {
+    setEditingItem(item);
+    setName(item.name);
+    setQuantity(item.quantity.toString());
+    setUnitPrice(item.unitPrice.toString());
+    setSupplier(item.supplier === 'Não informado' ? '' : item.supplier);
+    setAddItemModalVisible(true);
+  };
+
+  // Update Item
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    if (!name.trim()) {
+      toast.error('Informe o nome do produto');
+      return;
+    }
+    const qty = parseInt(quantity) || 1;
+    const price = getNumericValue(unitPrice);
+    const total = qty * price;
+
+    const updatedItem: ShoppingItem = {
+      ...editingItem,
+      name: name.trim(),
+      quantity: qty,
+      unitPrice: price,
+      totalPrice: total,
+      supplier: supplier.trim() || 'Não informado',
+    };
+
+    setItems(items.map(item => item.id === editingItem.id ? updatedItem : item));
+    setAddItemModalVisible(false);
+    setEditingItem(null);
+    resetForm();
+    toast.success('Item atualizado!');
   };
 
   // Save List
@@ -377,8 +415,11 @@ export default function Materials() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
                         <span className="font-bold text-primary">{formatCurrency(item.totalPrice)}</span>
+                        <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)}>
+                          <Pencil className="w-4 h-4 text-muted-foreground" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -519,11 +560,17 @@ export default function Materials() {
         </TabsContent>
       </Tabs>
 
-      {/* Add Item Modal */}
-      <Dialog open={addItemModalVisible} onOpenChange={setAddItemModalVisible}>
+      {/* Add/Edit Item Modal */}
+      <Dialog open={addItemModalVisible} onOpenChange={(open) => {
+        setAddItemModalVisible(open);
+        if (!open) {
+          setEditingItem(null);
+          resetForm();
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Adicionar Item</DialogTitle>
+            <DialogTitle>{editingItem ? 'Editar Item' : 'Adicionar Item'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -564,9 +611,9 @@ export default function Materials() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddItemModalVisible(false)}>Cancelar</Button>
-            <Button onClick={handleAddItem} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Adicionar
+            <Button onClick={editingItem ? handleUpdateItem : handleAddItem} className="gap-2">
+              {editingItem ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {editingItem ? 'Salvar' : 'Adicionar'}
             </Button>
           </DialogFooter>
         </DialogContent>

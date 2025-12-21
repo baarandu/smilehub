@@ -16,6 +16,7 @@ import { DollarSign } from 'lucide-react-native';
 import { Store } from 'lucide-react-native';
 import { Hash } from 'lucide-react-native';
 import { Clock } from 'lucide-react-native';
+import { Pencil } from 'lucide-react-native';
 
 interface ShoppingItem {
     id: string;
@@ -55,6 +56,7 @@ export default function Materials() {
     const [quantity, setQuantity] = useState('');
     const [unitPrice, setUnitPrice] = useState('');
     const [supplier, setSupplier] = useState('');
+    const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
 
     // Checkout State
     const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
@@ -183,6 +185,55 @@ export default function Materials() {
 
     const handleRemoveItem = (id: string) => {
         setItems(prev => prev.filter(i => i.id !== id));
+    };
+
+    // Edit Item - Open modal with item data
+    const handleEditItem = (item: ShoppingItem) => {
+        setEditingItem(item);
+        setName(item.name);
+        setQuantity(item.quantity.toString());
+        setUnitPrice(item.unitPrice > 0 ? item.unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '');
+        setSupplier(item.supplier === 'Não informado' ? '' : item.supplier);
+        setAddItemModalVisible(true);
+    };
+
+    // Update Item
+    const handleUpdateItem = () => {
+        if (!editingItem) return;
+        if (!name.trim()) {
+            Alert.alert('Erro', 'Informe o nome do material.');
+            return;
+        }
+        const qty = parseInt(quantity) || 1;
+        const uPrice = getNumericValue(unitPrice);
+        const total = qty * uPrice;
+
+        const updatedItem: ShoppingItem = {
+            ...editingItem,
+            name: name.trim(),
+            quantity: qty,
+            unitPrice: uPrice,
+            totalPrice: total,
+            supplier: supplier.trim() || 'Não informado',
+        };
+
+        setItems(prev => prev.map(item => item.id === editingItem.id ? updatedItem : item));
+        setAddItemModalVisible(false);
+        setEditingItem(null);
+        setName('');
+        setQuantity('');
+        setUnitPrice('');
+        setSupplier('');
+    };
+
+    // Reset form and editingItem when modal closes
+    const handleCloseAddModal = () => {
+        setAddItemModalVisible(false);
+        setEditingItem(null);
+        setName('');
+        setQuantity('');
+        setUnitPrice('');
+        setSupplier('');
     };
 
     const handleSaveOrder = async () => {
@@ -400,9 +451,14 @@ export default function Materials() {
                                             <Text style={styles.supplierText}>{item.supplier}</Text>
                                         </View>
                                     </View>
-                                    <TouchableOpacity onPress={() => handleRemoveItem(item.id)} style={{ padding: 8 }}>
-                                        <Trash2 size={18} color="#EF4444" />
-                                    </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                                        <TouchableOpacity onPress={() => handleEditItem(item)} style={{ padding: 8 }}>
+                                            <Pencil size={18} color="#6B7280" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => handleRemoveItem(item.id)} style={{ padding: 8 }}>
+                                            <Trash2 size={18} color="#EF4444" />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
 
                                 <View style={styles.itemDetailsRow}>
@@ -552,13 +608,13 @@ export default function Materials() {
                 </View>
             ) : activeTab === 'pending' ? renderPendingContent() : renderHistoryContent()}
 
-            {/* Add Item Modal */}
+            {/* Add/Edit Item Modal */}
             <Modal visible={addItemModalVisible} animationType="slide" transparent>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Novo Material</Text>
-                            <TouchableOpacity onPress={() => setAddItemModalVisible(false)} style={styles.modalCloseButton}>
+                            <Text style={styles.modalTitle}>{editingItem ? 'Editar Material' : 'Novo Material'}</Text>
+                            <TouchableOpacity onPress={handleCloseAddModal} style={styles.modalCloseButton}>
                                 <X size={20} color="#374151" />
                             </TouchableOpacity>
                         </View>
@@ -611,9 +667,9 @@ export default function Materials() {
                                 onChangeText={setSupplier}
                             />
 
-                            <TouchableOpacity onPress={handleAddItem} style={styles.addItemButton}>
-                                <Plus size={20} color="white" />
-                                <Text style={styles.addItemButtonText}>Adicionar à Lista</Text>
+                            <TouchableOpacity onPress={editingItem ? handleUpdateItem : handleAddItem} style={styles.addItemButton}>
+                                {editingItem ? <Check size={20} color="white" /> : <Plus size={20} color="white" />}
+                                <Text style={styles.addItemButtonText}>{editingItem ? 'Salvar Alterações' : 'Adicionar à Lista'}</Text>
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
