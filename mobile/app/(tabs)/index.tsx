@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle, Users2, CheckCircle } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle, Users2, CheckCircle, Building2 } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
@@ -412,6 +412,17 @@ export default function Dashboard() {
                             <Text className="text-xl font-bold text-gray-900">{displayName || 'Usuário'}</Text>
                             <Text className="text-gray-500">{clinicName || 'Minha Clínica'}</Text>
                         </View>
+
+                        <TouchableOpacity
+                            className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
+                            onPress={() => {
+                                setShowProfileModal(false);
+                                router.push('/settings/clinic');
+                            }}
+                        >
+                            <Building2 size={20} color="#6B7280" />
+                            <Text className="text-gray-700 font-medium">Minha Clínica</Text>
+                        </TouchableOpacity>
 
                         <TouchableOpacity className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3">
                             <Key size={20} color="#6B7280" />

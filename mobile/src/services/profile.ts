@@ -1,3 +1,5 @@
+import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 
 export interface ClinicInfo {
@@ -90,6 +92,95 @@ export const profileService = {
             logoUrl,
             letterheadUrl
         };
+    },
+
+    async updateClinicName(name: string): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const { error } = await (supabase
+            .from('clinics') as any)
+            .update({ name })
+            .eq('id', clinicUser.clinic_id);
+
+        if (error) throw error;
+    },
+
+    async uploadLogo(uri: string): Promise<string> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const clinicId = clinicUser.clinic_id;
+        const fileExt = uri.split('.').pop() || 'jpg';
+        const fileName = `${clinicId}/logo.${fileExt}`;
+
+        // Read file as Base64
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+            encoding: FileSystem.EncodingType.Base64,
+        });
+
+        // Upload to Supabase
+        const { error } = await supabase.storage
+            .from('clinic-logos')
+            .upload(fileName, decode(base64), {
+                contentType: `image/${fileExt}`,
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('clinic-logos')
+            .getPublicUrl(fileName);
+
+        const logoUrl = urlData.publicUrl;
+
+        // Update clinic record
+        const { error: updateError } = await (supabase
+            .from('clinics') as any)
+            .update({ logo_url: logoUrl })
+            .eq('id', clinicId);
+
+        if (updateError) throw updateError;
+
+        return logoUrl;
+    },
+
+    async removeLogo(): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) return;
+
+        const { error } = await (supabase
+            .from('clinics') as any)
+            .update({ logo_url: null })
+            .eq('id', clinicUser.clinic_id);
+
+        if (error) throw error;
     }
 };
 
