@@ -35,7 +35,7 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
 
     // New Fee State
     const [newFee, setNewFee] = useState({
-        brand: 'visa',
+        brand: '',
         payment_type: 'credit',
         installments: '1',
         rate: ''
@@ -61,6 +61,10 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
     };
 
     const handleAddFee = async () => {
+        if (!newFee.brand) {
+            toast.error('Selecione a bandeira do cartão');
+            return;
+        }
         if (!newFee.rate) {
             toast.error('Informe a taxa');
             return;
@@ -74,7 +78,7 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
                 rate: parseFloat(newFee.rate) || 0
             });
             toast.success('Regra adicionada');
-            setNewFee({ ...newFee, rate: '' });
+            setNewFee({ ...newFee, brand: '', rate: '' });
             loadData();
         } catch (error) {
             console.error(error);
@@ -127,9 +131,11 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
                                 </Select>
                             </div>
                             <div className="space-y-1.5 col-span-1">
-                                <Label className="text-xs">Bandeira</Label>
+                                <Label className="text-xs">Bandeira *</Label>
                                 <Select value={newFee.brand} onValueChange={v => setNewFee({ ...newFee, brand: v })}>
-                                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className={`h-8 ${!newFee.brand ? 'border-amber-400' : ''}`}>
+                                        <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         {CARD_BRANDS.map(b => (
                                             <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
