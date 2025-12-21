@@ -819,11 +819,38 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                             <TouchableOpacity
                                 activeOpacity={0.7}
                                 onPress={() => {
-                                    console.log('Delete button pressed');
-                                    setConfirmDeleteVisible(true);
+                                    Alert.alert(
+                                        'Excluir Receita',
+                                        'Tem certeza que deseja excluir esta receita?\n\nSe houver orçamentos vinculados, eles voltarão ao status "pendente".',
+                                        [
+                                            { text: 'Cancelar', style: 'cancel' },
+                                            {
+                                                text: 'Excluir',
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    if (!selectedTransaction) return;
+                                                    setDeleting(true);
+                                                    try {
+                                                        await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+                                                        setSelectedTransaction(null);
+                                                        if (onRefresh) {
+                                                            onRefresh();
+                                                        }
+                                                        Alert.alert('Sucesso', 'Receita excluída. Orçamentos vinculados voltaram a pendente.');
+                                                    } catch (error) {
+                                                        console.error('Error deleting:', error);
+                                                        Alert.alert('Erro', 'Falha ao excluir receita.');
+                                                    } finally {
+                                                        setDeleting(false);
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    );
                                 }}
+                                disabled={deleting}
                                 style={{
-                                    backgroundColor: '#fef2f2',
+                                    backgroundColor: deleting ? '#fecaca' : '#fef2f2',
                                     borderWidth: 1,
                                     borderColor: '#fecaca',
                                     borderRadius: 12,
@@ -834,8 +861,14 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                     gap: 8
                                 }}
                             >
-                                <Trash2 size={18} color="#dc2626" />
-                                <Text style={{ color: '#dc2626', fontWeight: '600' }}>Excluir Receita</Text>
+                                {deleting ? (
+                                    <ActivityIndicator size="small" color="#dc2626" />
+                                ) : (
+                                    <Trash2 size={18} color="#dc2626" />
+                                )}
+                                <Text style={{ color: '#dc2626', fontWeight: '600' }}>
+                                    {deleting ? 'Excluindo...' : 'Excluir Receita'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
