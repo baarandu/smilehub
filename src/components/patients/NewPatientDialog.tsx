@@ -29,8 +29,9 @@ export function NewPatientDialog({ onAdd, isLoading }: NewPatientDialogProps) {
       await onAdd(formData);
       setOpen(false);
       toast.success('Paciente cadastrado com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao cadastrar paciente');
+    } catch (error: any) {
+      console.error('Error creating patient:', error);
+      toast.error(error.message || error.details || 'Erro ao cadastrar paciente');
     }
   };
 
