@@ -2,13 +2,21 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, Calendar, User, ChevronRight, Loader2, RotateCw } from 'lucide-react';
+import { FileText, Calendar, User, ChevronRight, Loader2 } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
-import { formatMoney } from '@/utils/budgetUtils';
-import type { BudgetWithItems } from '@/types/database';
 
-interface PendingBudget extends BudgetWithItems {
-    patient_name: string;
+interface PendingItem {
+    budgetId: string;
+    patientId: string;
+    patientName: string;
+    date: string;
+    tooth: {
+        tooth: string;
+        treatments: string[];
+        values: Record<string, string>;
+        status: string;
+    };
+    totalBudgetValue: number;
 }
 
 interface PendingBudgetsDialogProps {
@@ -16,86 +24,74 @@ interface PendingBudgetsDialogProps {
     onClose: () => void;
 }
 
+const getToothDisplayName = (tooth: string): string => {
+    if (tooth === 'ARC_SUP') return 'Arcada Superior';
+    if (tooth === 'ARC_INF') return 'Arcada Inferior';
+    if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Inferior';
+    if (tooth.includes('Arcada')) return tooth;
+    return `Dente ${tooth}`;
+};
+
+const calculateToothTotal = (values: Record<string, string>): number => {
+    return Object.values(values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
+};
+
 export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProps) {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [syncing, setSyncing] = useState(false);
-    const [budgets, setBudgets] = useState<PendingBudget[]>([]);
+    const [items, setItems] = useState<PendingItem[]>([]);
 
     useEffect(() => {
         if (open) {
-            loadBudgets();
+            loadItems();
         }
     }, [open]);
 
-    const loadBudgets = async () => {
+    const loadItems = async () => {
         try {
             setLoading(true);
             const data = await budgetsService.getAllPending();
-            setBudgets(data);
+            setItems(data);
         } catch (error) {
-            console.error('Error loading pending budgets:', error);
+            console.error('Error loading pending items:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSync = async () => {
-        try {
-            setSyncing(true);
-            await budgetsService.reconcileAllStatuses();
-            await loadBudgets();
-        } catch (error) {
-            console.error('Error syncing budgets:', error);
-        } finally {
-            setSyncing(false);
-        }
-    };
-
-    const handleBudgetClick = (budget: PendingBudget) => {
+    const handleItemClick = (item: PendingItem) => {
         onClose();
-        navigate(`/pacientes/${budget.patient_id}?tab=budgets`);
+        navigate(`/pacientes/${item.patientId}?tab=budgets`);
     };
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
                 <DialogHeader className="p-6 pb-2">
-                    <div className="flex items-center justify-between mr-8">
-                        <DialogTitle className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-amber-500" />
-                            Orçamentos Pendentes ({budgets.length})
-                        </DialogTitle>
-                        <button
-                            onClick={handleSync}
-                            disabled={syncing || loading}
-                            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-                            title="Atualizar lista e corrigir inconsistências"
-                        >
-                            <RotateCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-                            {syncing ? 'Sincronizando...' : 'Sincronizar'}
-                        </button>
-                    </div>
+                    <DialogTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-amber-500" />
+                        Tratamentos Pendentes ({items.length})
+                    </DialogTitle>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 p-6">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                             <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
-                            <p>Carregando orçamentos...</p>
+                            <p>Carregando tratamentos...</p>
                         </div>
-                    ) : budgets.length === 0 ? (
+                    ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground text-center">
                             <FileText className="w-12 h-12 mb-4 opacity-20" />
-                            <p className="font-medium">Nenhum orçamento pendente</p>
-                            <p className="text-sm">Todos os orçamentos foram aprovados ou finalizados.</p>
+                            <p className="font-medium">Nenhum tratamento pendente</p>
+                            <p className="text-sm">Todos os tratamentos foram aprovados ou finalizados.</p>
                         </div>
                     ) : (
                         <div className="grid gap-3">
-                            {budgets.map((budget) => (
+                            {items.map((item, index) => (
                                 <div
-                                    key={budget.id}
-                                    onClick={() => handleBudgetClick(budget)}
+                                    key={`${item.budgetId}-${index}`}
+                                    onClick={() => handleItemClick(item)}
                                     className="group relative bg-card p-4 rounded-xl border border-border hover:border-primary/20 hover:shadow-md transition-all cursor-pointer overflow-hidden"
                                 >
                                     <div className="flex justify-between items-start">
@@ -103,20 +99,25 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                                             <div className="flex items-center gap-2 mb-1">
                                                 <User className="w-4 h-4 text-muted-foreground" />
                                                 <span className="font-semibold text-foreground truncate">
-                                                    {budget.patient_name}
+                                                    {item.patientName}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-muted-foreground truncate ml-6">
-                                                {budget.treatment}
-                                            </p>
+                                            <div className="bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg ml-6">
+                                                <p className="font-medium text-amber-800 dark:text-amber-200">
+                                                    {getToothDisplayName(item.tooth.tooth)}
+                                                </p>
+                                                <p className="text-sm text-amber-600 dark:text-amber-300">
+                                                    {item.tooth.treatments.join(', ')}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div className="text-right ml-4">
                                             <p className="text-lg font-bold text-emerald-600">
-                                                R$ {formatMoney(budget.value)}
+                                                R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </p>
                                             <div className="flex items-center justify-end gap-1.5 mt-1 text-xs text-muted-foreground">
                                                 <Calendar className="w-3.5 h-3.5" />
-                                                <span>{new Date(budget.created_at).toLocaleDateString('pt-BR')}</span>
+                                                <span>{new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                                             </div>
                                         </div>
                                     </div>
