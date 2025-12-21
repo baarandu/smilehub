@@ -880,7 +880,27 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                 <Text className="text-gray-700 font-semibold">Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                onPress={handleDeleteIncome}
+                                onPress={async () => {
+                                    console.log('Confirm delete pressed');
+                                    if (!selectedTransaction) return;
+                                    setDeleting(true);
+                                    try {
+                                        console.log('Calling service...');
+                                        await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+                                        console.log('Delete success');
+                                        setConfirmDeleteVisible(false);
+                                        setSelectedTransaction(null);
+                                        if (onRefresh) {
+                                            onRefresh();
+                                        }
+                                        Alert.alert('Sucesso', 'Receita excluída. Orçamentos vinculados voltaram a pendente.');
+                                    } catch (error) {
+                                        console.error('Error deleting:', error);
+                                        Alert.alert('Erro', 'Falha ao excluir receita.');
+                                    } finally {
+                                        setDeleting(false);
+                                    }
+                                }}
                                 disabled={deleting}
                                 className="flex-1 bg-red-600 rounded-xl p-4 items-center flex-row justify-center gap-2"
                             >
