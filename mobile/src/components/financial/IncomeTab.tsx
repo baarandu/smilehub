@@ -265,10 +265,13 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
     // Delete Income Handler
     const handleDeleteIncome = async () => {
+        console.log('handleDeleteIncome called, selectedTransaction:', selectedTransaction?.id);
         if (!selectedTransaction) return;
         setDeleting(true);
         try {
+            console.log('Calling deleteIncomeAndRevertBudget...');
             await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+            console.log('Delete successful');
             setConfirmDeleteVisible(false);
             setSelectedTransaction(null);
             // Refresh the list
@@ -811,7 +814,11 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
                                 {/* Delete Button */}
                                 <TouchableOpacity
-                                    onPress={() => setConfirmDeleteVisible(true)}
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                        console.log('Delete button pressed');
+                                        setConfirmDeleteVisible(true);
+                                    }}
                                     style={{
                                         marginTop: 24,
                                         backgroundColor: '#fef2f2',
