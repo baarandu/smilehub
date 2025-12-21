@@ -13,6 +13,16 @@ import { Trash2, Plus, Save, Loader2, Info, X, Tag, ArrowLeft } from 'lucide-rea
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+// Helper to format brand names with proper capitalization
+const formatBrandName = (brand: string): string => {
+    if (brand === 'others') return 'Outras Bandeiras';
+    // Handle multi-word brands like "visa/mastercard"
+    return brand
+        .split(/([\/\s-])/) // Split by / or space or hyphen, keeping delimiters
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('');
+};
+
 export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -441,7 +451,7 @@ export default function FinancialSettings() {
                                     className={filterBrand === brand ? "bg-teal-600 hover:bg-teal-700" : ""}
                                     onClick={() => setFilterBrand(brand)}
                                 >
-                                    {brand === 'others' ? 'Outras' : brand}
+                                    {formatBrandName(brand)}
                                 </Button>
                             ))}
                         </div>
@@ -467,7 +477,7 @@ export default function FinancialSettings() {
                             <TableBody>
                                 {filteredCardFees.map(fee => (
                                     <TableRow key={fee.id}>
-                                        <TableCell className="capitalize">{fee.brand === 'others' ? 'Outros' : fee.brand}</TableCell>
+                                        <TableCell>{formatBrandName(fee.brand)}</TableCell>
                                         <TableCell>{fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}</TableCell>
                                         <TableCell>{fee.installments}x</TableCell>
                                         <TableCell className="font-medium text-red-600">{fee.rate}%</TableCell>
