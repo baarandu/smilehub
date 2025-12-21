@@ -199,12 +199,33 @@ export const profileService = {
             .eq('user_id', user.id)
             .maybeSingle() as any;
 
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+        let clinicId = clinicUser?.clinic_id;
+
+        // If no clinic exists, create one
+        if (!clinicId) {
+            const { data: newClinic, error: createError } = await (supabase
+                .from('clinics') as any)
+                .insert({ name })
+                .select('id')
+                .single();
+
+            if (createError) throw createError;
+            if (!newClinic) throw new Error('Failed to create clinic');
+            clinicId = newClinic.id;
+
+            // Link user to clinic
+            const { error: linkError } = await (supabase
+                .from('clinic_users') as any)
+                .insert({ user_id: user.id, clinic_id: clinicId, role: 'owner' });
+
+            if (linkError) throw linkError;
+            return; // Name already set during creation
+        }
 
         const { error } = await (supabase
             .from('clinics') as any)
             .update({ name })
-            .eq('id', clinicUser.clinic_id);
+            .eq('id', clinicId);
 
         if (error) throw error;
     }
