@@ -4,7 +4,8 @@ import { ArrowLeft, FileText, CreditCard, Hospital, ClipboardList, Calculator } 
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePatient } from '@/hooks/usePatients';
+import { usePatient, useDeletePatient } from '@/hooks/usePatients';
+import { toast } from 'sonner';
 import {
   PatientHeader,
   ProceduresTab,
@@ -20,6 +21,7 @@ export default function PatientDetail() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
+  const deletePatient = useDeletePatient();
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'anamnese');
 
@@ -34,6 +36,19 @@ export default function PatientDetail() {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setSearchParams({ tab: value });
+  };
+
+  const handleDelete = async () => {
+    if (!patient?.id) return;
+
+    try {
+      await deletePatient.mutateAsync(patient.id);
+      toast.success('Paciente excluído com sucesso');
+      navigate('/pacientes');
+    } catch (error) {
+      console.error('Error deleting patient:', error);
+      toast.error('Erro ao excluir paciente');
+    }
   };
 
   if (isLoading) {
@@ -70,7 +85,11 @@ export default function PatientDetail() {
       </button>
 
       {/* Patient Header Card */}
-      <PatientHeader patient={patient} onEdit={() => setShowEditDialog(true)} />
+      <PatientHeader
+        patient={patient}
+        onEdit={() => setShowEditDialog(true)}
+        onDelete={handleDelete}
+      />
 
       {/* Edit Dialog */}
       <EditPatientDialog

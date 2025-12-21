@@ -1,14 +1,28 @@
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit } from 'lucide-react';
+import { useState } from 'react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PatientHeaderProps {
   patient: Patient;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
+export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -67,75 +81,114 @@ export function PatientHeader({ patient, onEdit }: PatientHeaderProps) {
   const sanitizedPhone = patient.phone?.replace(/\D/g, '');
   const whatsappUrl = sanitizedPhone ? `https://wa.me/55${sanitizedPhone}` : '#';
 
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
+      setShowDeleteDialog(false);
+    }
+  };
+
   return (
-    <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-start gap-6">
-        <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0">
-          <span className="text-2xl font-bold text-primary-foreground">
-            {getInitials(patient.name)}
-          </span>
-        </div>
-        <div className="flex-1">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{patient.name}</h1>
-              {patient.occupation && (
-                <p className="text-muted-foreground mt-1">{patient.occupation}</p>
-              )}
-            </div>
-            <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
-              <Edit className="w-4 h-4" />
-              Editar
-            </Button>
+    <>
+      <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-6">
+          <div className="w-20 h-20 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl font-bold text-primary-foreground">
+              {getInitials(patient.name)}
+            </span>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3 mt-4">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm">{patient.phone}</span>
-            </a>
-            {patient.email && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="w-4 h-4" />
-                <span className="text-sm">{patient.email}</span>
+          <div className="flex-1">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">{patient.name}</h1>
+                {patient.occupation && (
+                  <p className="text-muted-foreground mt-1">{patient.occupation}</p>
+                )}
               </div>
-            )}
-            {patient.birth_date && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
+                  <Edit className="w-4 h-4" />
+                  Editar
+                </Button>
+                {onDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Excluir
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 mt-4">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-500" />
+                <span className="text-sm">{patient.phone}</span>
+              </a>
+              {patient.email && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail className="w-4 h-4" />
+                  <span className="text-sm">{patient.email}</span>
+                </div>
+              )}
+              {patient.birth_date && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <CalendarIcon className="w-4 h-4" />
+                  <span className="text-sm">
+                    {new Date(patient.birth_date).toLocaleDateString('pt-BR')}
+                    {age && ` (${age} anos)`}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-muted-foreground">
-                <CalendarIcon className="w-4 h-4" />
+                <Clock className="w-4 h-4" />
                 <span className="text-sm">
-                  {new Date(patient.birth_date).toLocaleDateString('pt-BR')}
-                  {age && ` (${age} anos)`}
+                  Desde {new Date(patient.created_at).toLocaleDateString('pt-BR')}
                 </span>
               </div>
-            )}
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">
-                Desde {new Date(patient.created_at).toLocaleDateString('pt-BR')}
-              </span>
             </div>
           </div>
         </div>
+
+        {badges.length > 0 && (
+          <div className="pt-4 border-t border-border flex flex-wrap gap-2">
+            {badges.map((badge, index) => (
+              <span
+                key={index}
+                className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
-      {badges.length > 0 && (
-        <div className="pt-4 border-t border-border flex flex-wrap gap-2">
-          {badges.map((badge, index) => (
-            <span
-              key={index}
-              className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}
-            >
-              {badge.label}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
