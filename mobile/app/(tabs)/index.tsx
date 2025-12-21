@@ -53,7 +53,7 @@ export default function Dashboard() {
 
     // Pending Budgets Modal
     const [showPendingBudgetsModal, setShowPendingBudgetsModal] = useState(false);
-    const [pendingBudgetsList, setPendingBudgetsList] = useState<(BudgetWithItems & { patient_name: string })[]>([]);
+    const [pendingBudgetsList, setPendingBudgetsList] = useState<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]>([]);
     const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     // Auth & Profile Loading

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { Mail, Lock, User as UserIcon, ArrowLeft, Building2, Stethoscope } from 'lucide-react-native';
@@ -59,7 +59,13 @@ export default function SignUp() {
                         </TouchableOpacity>
                     </Link>
 
-                    <View className="mb-8">
+                    <View className="mb-8 items-center">
+                        <Image
+                            source={require('../assets/logo-login.png')}
+                            style={{ width: 80, height: 80 }}
+                            resizeMode="contain"
+                            className="mb-4"
+                        />
                         <Text className="text-3xl font-bold text-gray-900">Criar Conta</Text>
                         <Text className="text-gray-500 mt-2">Comece a organizar sua clínica hoje</Text>
                     </View>

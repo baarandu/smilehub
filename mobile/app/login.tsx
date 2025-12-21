@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { Mail, Lock, ArrowRight, Check } from 'lucide-react-native';
@@ -35,9 +35,12 @@ export default function Login() {
                 <View className="p-8">
                     {/* Logo / Header */}
                     <View className="items-center mb-10">
-                        <View className="w-20 h-20 bg-teal-100 rounded-2xl items-center justify-center mb-4">
-                            <Text className="text-4xl">🦷</Text>
-                        </View>
+                        <Image
+                            source={require('../assets/logo-login.png')}
+                            style={{ width: 120, height: 120 }}
+                            resizeMode="contain"
+                            className="mb-4"
+                        />
                         <Text className="text-3xl font-bold text-gray-900">Bem-vindo!</Text>
                         <Text className="text-gray-500 mt-2 text-center">Faça login para gerenciar sua clínica</Text>
                     </View>

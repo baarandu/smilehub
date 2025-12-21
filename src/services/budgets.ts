@@ -94,32 +94,70 @@ export const budgetsService = {
         return this.update(id, { status });
     },
 
-    async getAllPending(): Promise<(BudgetWithItems & { patient_name: string })[]> {
+    async getAllPending(): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
         const { data, error } = await supabase
             .from('budgets')
             .select(`
-                *,
-                budget_items (*),
+                id,
+                patient_id,
+                date,
+                value,
+                notes,
                 patients (name)
             `)
-            .eq('status', 'pending')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return (data || []).map((b: any) => ({
-            ...b,
-            patient_name: b.patients?.name || 'Paciente'
-        })) as (BudgetWithItems & { patient_name: string })[];
+
+        const pendingItems: { budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[] = [];
+
+        (data || []).forEach((budget: any) => {
+            if (!budget.notes) return;
+            try {
+                const parsed = JSON.parse(budget.notes);
+                if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                    parsed.teeth.forEach((tooth: any) => {
+                        if (tooth.status === 'pending') {
+                            pendingItems.push({
+                                budgetId: budget.id,
+                                patientId: budget.patient_id,
+                                patientName: budget.patients?.name || 'Paciente',
+                                date: budget.date,
+                                tooth,
+                                totalBudgetValue: budget.value
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                // Invalid JSON, skip
+            }
+        });
+
+        return pendingItems;
     },
 
     async getPendingCount(): Promise<number> {
-        const { count, error } = await supabase
+        const { data, error } = await supabase
             .from('budgets')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'pending');
+            .select('notes');
 
         if (error) throw error;
-        return count || 0;
+
+        let count = 0;
+        (data || []).forEach((budget: any) => {
+            if (!budget.notes) return;
+            try {
+                const parsed = JSON.parse(budget.notes);
+                if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                    count += parsed.teeth.filter((tooth: any) => tooth.status === 'pending').length;
+                }
+            } catch (e) {
+                // Invalid JSON, skip
+            }
+        });
+
+        return count;
     },
 
     async reconcileAllStatuses(): Promise<void> {

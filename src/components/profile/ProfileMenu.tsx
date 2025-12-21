@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Key, MapPin, LogOut, CreditCard, Users, Building2 } from 'lucide-react';
+import { User, Key, MapPin, LogOut, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LocationsModal } from './LocationsModal';
-import { CardFeesModal } from './CardFeesModal';
 import { TeamManagementModal } from './TeamManagementModal';
 import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -18,7 +17,6 @@ import { toast } from 'sonner';
 
 export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
-  const [cardFeesOpen, setCardFeesOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { isAdmin, clinicName, displayName } = useClinic();
@@ -66,13 +64,6 @@ export function ProfileMenu() {
             <MapPin className="mr-2 h-4 w-4" />
             <span>Gerenciar Locais</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="cursor-pointer"
-            onClick={() => setCardFeesOpen(true)}
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Gerenciar Cartões</span>
-          </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem
               className="cursor-pointer"
@@ -94,7 +85,6 @@ export function ProfileMenu() {
       </DropdownMenu>
 
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
-      <CardFeesModal open={cardFeesOpen} onOpenChange={setCardFeesOpen} />
       <TeamManagementModal open={teamOpen} onOpenChange={setTeamOpen} />
       <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />
     </>
