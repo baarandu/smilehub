@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -75,12 +76,6 @@ export default function Login() {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <Label htmlFor="password">Senha</Label>
-                                <Link
-                                    to="/forgot-password"
-                                    className="text-sm text-teal-600 hover:text-teal-700"
-                                >
-                                    Esqueceu a senha?
-                                </Link>
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -93,6 +88,25 @@ export default function Login() {
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox id="remember" />
+                                <label
+                                    htmlFor="remember"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-600"
+                                >
+                                    Permanecer conectado
+                                </label>
+                            </div>
+
+                            <Link
+                                to="/forgot-password"
+                                className="text-sm text-teal-600 hover:text-teal-700"
+                            >
+                                Esqueceu a senha?
+                            </Link>
                         </div>
 
                         <Button
