@@ -66,6 +66,9 @@ export default function Materials() {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
 
+    // Autocomplete State
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     // Helpers
     const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -148,6 +151,26 @@ export default function Materials() {
     const currentTotal = useMemo(() => {
         return items.reduce((acc, item) => acc + item.totalPrice, 0);
     }, [items]);
+
+    // Extract unique product names from all orders for autocomplete
+    const productSuggestions = useMemo(() => {
+        const allItems: ShoppingItem[] = [];
+        [...pendingOrders, ...historyOrders].forEach(order => {
+            if (order.items && Array.isArray(order.items)) {
+                allItems.push(...order.items);
+            }
+        });
+        const uniqueNames = [...new Set(allItems.map(item => item.name))];
+        return uniqueNames.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }, [pendingOrders, historyOrders]);
+
+    // Filtered suggestions based on current input
+    const filteredSuggestions = useMemo(() => {
+        if (!name.trim()) return [];
+        return productSuggestions.filter(suggestion =>
+            suggestion.toLowerCase().includes(name.toLowerCase())
+        ).slice(0, 6); // Limit to 6 suggestions on mobile
+    }, [name, productSuggestions]);
 
     // Add Item Logic
     const handleUnitValueChange = (text: string) => {
@@ -619,15 +642,61 @@ export default function Materials() {
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={{ padding: 16 }}>
+                        <ScrollView style={{ padding: 16 }} keyboardShouldPersistTaps="handled">
                             <Text style={styles.inputLabel}>Nome do Produto</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Ex: Resina A2"
-                                value={name}
-                                onChangeText={setName}
-                                autoFocus
-                            />
+                            <View style={{ position: 'relative', zIndex: 10 }}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Ex: Resina A2"
+                                    value={name}
+                                    onChangeText={(text) => {
+                                        setName(text);
+                                        setShowSuggestions(true);
+                                    }}
+                                    onFocus={() => setShowSuggestions(true)}
+                                    autoFocus
+                                />
+                                {/* Autocomplete Dropdown */}
+                                {showSuggestions && filteredSuggestions.length > 0 && (
+                                    <View style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        borderWidth: 1,
+                                        borderColor: '#e5e7eb',
+                                        borderRadius: 8,
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 2 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 4,
+                                        elevation: 5,
+                                        maxHeight: 200,
+                                        zIndex: 100
+                                    }}>
+                                        <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                                            {filteredSuggestions.map((suggestion, index) => (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    onPress={() => {
+                                                        setName(suggestion);
+                                                        setShowSuggestions(false);
+                                                    }}
+                                                    style={{
+                                                        paddingHorizontal: 16,
+                                                        paddingVertical: 12,
+                                                        borderBottomWidth: index < filteredSuggestions.length - 1 ? 1 : 0,
+                                                        borderBottomColor: '#f3f4f6'
+                                                    }}
+                                                >
+                                                    <Text style={{ fontSize: 14, color: '#374151' }}>{suggestion}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+                            </View>
 
                             <View style={styles.inputRow}>
                                 <View style={{ flex: 1 }}>

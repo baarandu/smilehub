@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,9 @@ export default function Materials() {
   // Order Detail Modal State
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
+
+  // Autocomplete State
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Helpers
   const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -121,6 +124,27 @@ export default function Materials() {
 
   // Current Total
   const currentTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  // Extract unique product names from all orders for autocomplete
+  const productSuggestions = useMemo(() => {
+    const allItems: ShoppingItem[] = [];
+    [...pendingOrders, ...historyOrders].forEach(order => {
+      if (order.items && Array.isArray(order.items)) {
+        allItems.push(...order.items);
+      }
+    });
+    // Get unique names, sorted alphabetically
+    const uniqueNames = [...new Set(allItems.map(item => item.name))];
+    return uniqueNames.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [pendingOrders, historyOrders]);
+
+  // Filtered suggestions based on current input
+  const filteredSuggestions = useMemo(() => {
+    if (!name.trim()) return [];
+    return productSuggestions.filter(suggestion =>
+      suggestion.toLowerCase().includes(name.toLowerCase())
+    ).slice(0, 8); // Limit to 8 suggestions
+  }, [name, productSuggestions]);
 
   // Add Item
   const handleAddItem = () => {
@@ -573,13 +597,40 @@ export default function Materials() {
             <DialogTitle>{editingItem ? 'Editar Item' : 'Adicionar Item'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
+            <div className="relative">
               <label className="text-sm font-medium text-foreground mb-2 block">Nome do Produto *</label>
               <Input
                 placeholder="Ex: Resina Composta A2"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => {
+                  // Delay to allow click on suggestion
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+                autoComplete="off"
               />
+              {/* Autocomplete Dropdown */}
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-teal-50 hover:text-teal-700 transition-colors border-b border-gray-50 last:border-0"
+                      onClick={() => {
+                        setName(suggestion);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
