@@ -86,7 +86,7 @@ export default function Materials() {
       const { data: pending } = await (supabase
         .from('shopping_orders') as any)
         .select('*')
-        .eq('clinic_id', clinicUser.clinic_id)
+        .eq('clinic_id', (clinicUser as any).clinic_id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
@@ -94,7 +94,7 @@ export default function Materials() {
       const { data: completed } = await (supabase
         .from('shopping_orders') as any)
         .select('*')
-        .eq('clinic_id', clinicUser.clinic_id)
+        .eq('clinic_id', (clinicUser as any).clinic_id)
         .eq('status', 'completed')
         .order('completed_at', { ascending: false });
 
