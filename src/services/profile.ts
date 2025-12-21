@@ -216,7 +216,7 @@ export const profileService = {
             // Link user to clinic
             const { error: linkError } = await (supabase
                 .from('clinic_users') as any)
-                .insert({ user_id: user.id, clinic_id: clinicId, role: 'owner' });
+                .insert({ user_id: user.id, clinic_id: clinicId });
 
             if (linkError) throw linkError;
             return; // Name already set during creation
