@@ -61,6 +61,7 @@ export default function Materials() {
     // Checkout State
     const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [excludedItemIds, setExcludedItemIds] = useState<Set<string>>(new Set());
 
     // Order Detail Modal State
     const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -171,6 +172,12 @@ export default function Materials() {
             suggestion.toLowerCase().includes(name.toLowerCase())
         ).slice(0, 6); // Limit to 6 suggestions on mobile
     }, [name, productSuggestions]);
+
+    // Calculate purchased vs excluded items for checkout
+    const purchasedItems = useMemo(() => items.filter(item => !excludedItemIds.has(item.id)), [items, excludedItemIds]);
+    const unpurchasedItems = useMemo(() => items.filter(item => excludedItemIds.has(item.id)), [items, excludedItemIds]);
+    const purchasedTotal = useMemo(() => purchasedItems.reduce((sum, item) => sum + item.totalPrice, 0), [purchasedItems]);
+    const unpurchasedTotal = useMemo(() => unpurchasedItems.reduce((sum, item) => sum + item.totalPrice, 0), [unpurchasedItems]);
 
     // Add Item Logic
     const handleUnitValueChange = (text: string) => {
@@ -331,14 +338,14 @@ export default function Materials() {
     };
 
     const handleConfirmPurchase = async () => {
-        if (items.length === 0) return;
+        if (purchasedItems.length === 0) return;
 
         setLoading(true);
         try {
             const today = new Date();
             const dbDate = today.toISOString().split('T')[0];
 
-            const itemsDesc = items.map(i =>
+            const itemsDesc = purchasedItems.map(i =>
                 `${i.name} (${i.quantity}x ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
             ).join(' | ');
 
@@ -346,44 +353,68 @@ export default function Materials() {
 
             await financialService.create({
                 type: 'expense',
-                amount: currentTotal,
+                amount: purchasedTotal,
                 description: description,
                 category: 'Materiais',
                 date: dbDate,
                 location: null,
             });
 
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data: clinicUser } = await supabase
+                .from('clinic_users')
+                .select('clinic_id')
+                .eq('user_id', user?.id || '')
+                .single();
+
+            // Update or create completed order with purchased items only
             if (currentOrderId) {
                 await (supabase
                     .from('shopping_orders') as any)
-                    .update({ status: 'completed', completed_at: new Date().toISOString() })
+                    .update({
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                        items: purchasedItems,
+                        total_amount: purchasedTotal
+                    })
                     .eq('id', currentOrderId);
-            } else {
-                const { data: { user } } = await supabase.auth.getUser();
-                const { data: clinicUser } = await supabase
-                    .from('clinic_users')
-                    .select('clinic_id')
-                    .eq('user_id', user?.id || '')
-                    .single();
-
-                if (clinicUser) {
-                    await supabase
-                        .from('shopping_orders')
-                        .insert([{
-                            clinic_id: (clinicUser as any).clinic_id,
-                            items: items,
-                            total_amount: currentTotal,
-                            status: 'completed',
-                            completed_at: new Date().toISOString(),
-                            created_by: user?.id
-                        }] as any);
-                }
+            } else if (clinicUser) {
+                await supabase
+                    .from('shopping_orders')
+                    .insert([{
+                        clinic_id: (clinicUser as any).clinic_id,
+                        items: purchasedItems,
+                        total_amount: purchasedTotal,
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                        created_by: user?.id
+                    }] as any);
             }
 
-            Alert.alert('Sucesso', 'Despesa lançada com sucesso!');
+            // If there are unpurchased items, create a new pending order for them
+            if (unpurchasedItems.length > 0 && clinicUser) {
+                await supabase
+                    .from('shopping_orders')
+                    .insert([{
+                        clinic_id: (clinicUser as any).clinic_id,
+                        items: unpurchasedItems,
+                        total_amount: unpurchasedTotal,
+                        status: 'pending',
+                        created_by: user?.id
+                    }] as any);
+            }
+
+            setCheckoutModalVisible(false);
+            setExcludedItemIds(new Set());
+
+            if (unpurchasedItems.length > 0) {
+                Alert.alert('Sucesso', `Despesa lançada! ${unpurchasedItems.length} ${unpurchasedItems.length === 1 ? 'item transferido' : 'itens transferidos'} para nova lista.`);
+            } else {
+                Alert.alert('Sucesso', 'Despesa lançada com sucesso!');
+            }
+
             setItems([]);
             setCurrentOrderId(null);
-            setCheckoutModalVisible(false);
             loadOrders();
 
         } catch (error) {
@@ -746,34 +777,132 @@ export default function Materials() {
             </Modal>
 
             {/* Confirm Checkout Modal */}
-            <Modal visible={checkoutModalVisible} transparent animationType="fade">
-                <View style={styles.confirmModalOverlay}>
-                    <View style={styles.confirmModalContent}>
-                        <Text style={styles.confirmModalTitle}>Confirmar Compra</Text>
-                        <Text style={styles.confirmModalText}>
-                            Deseja lançar uma despesa de {formatCurrency(currentTotal)} referente a {items.length} itens?
-                        </Text>
+            <Modal visible={checkoutModalVisible} transparent animationType="slide" onRequestClose={() => { setCheckoutModalVisible(false); setExcludedItemIds(new Set()); }}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { maxHeight: '90%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Confirmar Compra</Text>
+                            <TouchableOpacity onPress={() => { setCheckoutModalVisible(false); setExcludedItemIds(new Set()); }} style={styles.modalCloseButton}>
+                                <X size={20} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
 
-                        <TouchableOpacity
-                            onPress={handleConfirmPurchase}
-                            disabled={loading}
-                            style={[styles.confirmButton, loading && { opacity: 0.7 }]}
-                        >
-                            {loading ? <ActivityIndicator color="white" /> : (
-                                <>
-                                    <Check size={20} color="white" />
-                                    <Text style={styles.confirmButtonText}>Confirmar Lançamento</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
+                        <ScrollView style={{ padding: 16 }}>
+                            <Text style={{ fontSize: 14, color: '#6b7280', marginBottom: 16 }}>
+                                Marque os itens comprados. Itens desmarcados irão para nova lista.
+                            </Text>
 
-                        <TouchableOpacity
-                            onPress={() => setCheckoutModalVisible(false)}
-                            disabled={loading}
-                            style={styles.cancelButton}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancelar</Text>
-                        </TouchableOpacity>
+                            {/* Items with Checkboxes */}
+                            {items.map((item) => {
+                                const isExcluded = excludedItemIds.has(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        onPress={() => {
+                                            setExcludedItemIds(prev => {
+                                                const newSet = new Set(prev);
+                                                if (newSet.has(item.id)) {
+                                                    newSet.delete(item.id);
+                                                } else {
+                                                    newSet.add(item.id);
+                                                }
+                                                return newSet;
+                                            });
+                                        }}
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            padding: 12,
+                                            marginBottom: 8,
+                                            borderRadius: 12,
+                                            borderWidth: 1,
+                                            backgroundColor: isExcluded ? '#f9fafb' : '#ecfdf5',
+                                            borderColor: isExcluded ? '#e5e7eb' : '#6ee7b7',
+                                            opacity: isExcluded ? 0.6 : 1
+                                        }}
+                                    >
+                                        <View style={{
+                                            width: 24,
+                                            height: 24,
+                                            borderRadius: 6,
+                                            borderWidth: 2,
+                                            borderColor: isExcluded ? '#d1d5db' : '#10b981',
+                                            backgroundColor: isExcluded ? '#fff' : '#10b981',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            marginRight: 12
+                                        }}>
+                                            {!isExcluded && <Check size={14} color="white" />}
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{
+                                                fontWeight: '600',
+                                                color: isExcluded ? '#9ca3af' : '#111827',
+                                                textDecorationLine: isExcluded ? 'line-through' : 'none'
+                                            }}>{item.name}</Text>
+                                            <Text style={{ fontSize: 12, color: '#6b7280' }}>
+                                                {item.quantity}x {formatCurrency(item.unitPrice)}
+                                            </Text>
+                                        </View>
+                                        <Text style={{
+                                            fontWeight: '700',
+                                            color: isExcluded ? '#9ca3af' : '#10b981'
+                                        }}>{formatCurrency(item.totalPrice)}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+
+                            {/* Summary */}
+                            <View style={{ backgroundColor: '#f3f4f6', borderRadius: 12, padding: 16, marginTop: 8 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <Text style={{ color: '#6b7280' }}>Itens a comprar ({purchasedItems.length})</Text>
+                                    <Text style={{ fontWeight: '600', color: '#10b981' }}>{formatCurrency(purchasedTotal)}</Text>
+                                </View>
+                                {unpurchasedItems.length > 0 && (
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <Text style={{ color: '#6b7280' }}>Não encontrados ({unpurchasedItems.length})</Text>
+                                        <Text style={{ fontWeight: '600', color: '#f97316' }}>{formatCurrency(unpurchasedTotal)}</Text>
+                                    </View>
+                                )}
+                                <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ fontWeight: '600' }}>Total da Compra</Text>
+                                    <Text style={{ fontSize: 20, fontWeight: '700', color: '#10b981' }}>{formatCurrency(purchasedTotal)}</Text>
+                                </View>
+                                {unpurchasedItems.length > 0 && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                                        <ClipboardList size={12} color="#f97316" />
+                                        <Text style={{ fontSize: 12, color: '#f97316', marginLeft: 4 }}>
+                                            {unpurchasedItems.length} {unpurchasedItems.length === 1 ? 'item será transferido' : 'itens serão transferidos'} para nova lista
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </ScrollView>
+
+                        {/* Footer Buttons */}
+                        <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                            <TouchableOpacity
+                                onPress={handleConfirmPurchase}
+                                disabled={loading || purchasedItems.length === 0}
+                                style={[styles.confirmButton, (loading || purchasedItems.length === 0) && { opacity: 0.5 }]}
+                            >
+                                {loading ? <ActivityIndicator color="white" /> : (
+                                    <>
+                                        <Check size={20} color="white" />
+                                        <Text style={styles.confirmButtonText}>
+                                            {purchasedItems.length === 0 ? 'Selecione itens' : `Confirmar (${formatCurrency(purchasedTotal)})`}
+                                        </Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => { setCheckoutModalVisible(false); setExcludedItemIds(new Set()); }}
+                                disabled={loading}
+                                style={styles.cancelButton}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancelar</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>

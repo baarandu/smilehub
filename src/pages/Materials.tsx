@@ -47,6 +47,7 @@ export default function Materials() {
   // Checkout State
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [excludedItemIds, setExcludedItemIds] = useState<Set<string>>(new Set());
 
   // Order Detail Modal State
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -145,6 +146,12 @@ export default function Materials() {
       suggestion.toLowerCase().includes(name.toLowerCase())
     ).slice(0, 8); // Limit to 8 suggestions
   }, [name, productSuggestions]);
+
+  // Calculate purchased vs excluded items for checkout
+  const purchasedItems = useMemo(() => items.filter(item => !excludedItemIds.has(item.id)), [items, excludedItemIds]);
+  const unpurchasedItems = useMemo(() => items.filter(item => excludedItemIds.has(item.id)), [items, excludedItemIds]);
+  const purchasedTotal = useMemo(() => purchasedItems.reduce((sum, item) => sum + item.totalPrice, 0), [purchasedItems]);
+  const unpurchasedTotal = useMemo(() => unpurchasedItems.reduce((sum, item) => sum + item.totalPrice, 0), [unpurchasedItems]);
 
   // Add Item
   const handleAddItem = () => {
@@ -269,7 +276,7 @@ export default function Materials() {
 
   // Confirm Purchase
   const handleConfirmPurchase = async () => {
-    if (items.length === 0) return;
+    if (purchasedItems.length === 0) return;
 
     try {
       setLoading(true);
@@ -282,38 +289,63 @@ export default function Materials() {
         .eq('user_id', user.id)
         .single();
 
-      // Create expense record
+      // Create expense record only for purchased items
       const today = new Date();
       const dbDate = today.toISOString().split('T')[0];
 
       await financialService.createExpense({
-        amount: currentTotal,
-        description: `Compra de materiais - ${items.length} itens`,
+        amount: purchasedTotal,
+        description: `Compra de materiais - ${purchasedItems.length} itens`,
         category: 'Materiais',
         date: dbDate,
         location: null,
       });
 
+      // Update or create completed order with purchased items only
       if (currentOrderId) {
         await (supabase
           .from('shopping_orders') as any)
-          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            items: purchasedItems,
+            total_amount: purchasedTotal
+          })
           .eq('id', currentOrderId);
       } else if (clinicUser) {
         await (supabase
           .from('shopping_orders') as any)
           .insert([{
             clinic_id: (clinicUser as any).clinic_id,
-            items: items,
-            total_amount: currentTotal,
+            items: purchasedItems,
+            total_amount: purchasedTotal,
             status: 'completed',
             created_by: user.id,
             completed_at: new Date().toISOString()
           }]);
       }
 
+      // If there are unpurchased items, create a new pending order for them
+      if (unpurchasedItems.length > 0 && clinicUser) {
+        await (supabase
+          .from('shopping_orders') as any)
+          .insert([{
+            clinic_id: (clinicUser as any).clinic_id,
+            items: unpurchasedItems,
+            total_amount: unpurchasedTotal,
+            status: 'pending',
+            created_by: user.id
+          }]);
+      }
+
       setCheckoutModalVisible(false);
-      toast.success('Compra registrada com sucesso!');
+      setExcludedItemIds(new Set());
+
+      if (unpurchasedItems.length > 0) {
+        toast.success(`Compra registrada! ${unpurchasedItems.length} ${unpurchasedItems.length === 1 ? 'item transferido' : 'itens transferidos'} para nova lista.`);
+      } else {
+        toast.success('Compra registrada com sucesso!');
+      }
 
       // Reset
       setItems([]);
@@ -671,25 +703,94 @@ export default function Materials() {
       </Dialog>
 
       {/* Checkout Confirmation Modal */}
-      <Dialog open={checkoutModalVisible} onOpenChange={setCheckoutModalVisible}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={checkoutModalVisible} onOpenChange={(open) => {
+        setCheckoutModalVisible(open);
+        if (!open) setExcludedItemIds(new Set());
+      }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Confirmar Compra</DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingCart className="w-8 h-8 text-green-600" />
-            </div>
-            <p className="text-muted-foreground mb-2">Deseja confirmar a compra de</p>
-            <p className="text-3xl font-bold text-green-600 mb-2">{formatCurrency(currentTotal)}</p>
-            <p className="text-sm text-muted-foreground">
-              {items.length} {items.length === 1 ? 'item' : 'itens'} • Será registrado como despesa
+          <div className="flex-1 overflow-y-auto py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Marque os itens que foram comprados. Itens desmarcados serão transferidos para uma nova lista.
             </p>
+
+            {/* Items List with Checkboxes */}
+            <div className="space-y-2 mb-4">
+              {items.map((item) => {
+                const isExcluded = excludedItemIds.has(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setExcludedItemIds(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(item.id)) {
+                          newSet.delete(item.id);
+                        } else {
+                          newSet.add(item.id);
+                        }
+                        return newSet;
+                      });
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${isExcluded
+                      ? 'bg-gray-50 border-gray-200 opacity-60'
+                      : 'bg-green-50 border-green-200'
+                      }`}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isExcluded ? 'border-gray-300 bg-white' : 'border-green-500 bg-green-500'
+                      }`}>
+                      {!isExcluded && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate ${isExcluded ? 'text-gray-500 line-through' : 'text-foreground'}`}>
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.quantity}x {formatCurrency(item.unitPrice)}
+                      </p>
+                    </div>
+                    <p className={`font-semibold ${isExcluded ? 'text-gray-400' : 'text-green-600'}`}>
+                      {formatCurrency(item.totalPrice)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Summary */}
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Itens a comprar ({purchasedItems.length})</span>
+                <span className="font-semibold text-green-600">{formatCurrency(purchasedTotal)}</span>
+              </div>
+              {unpurchasedItems.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Itens não encontrados ({unpurchasedItems.length})</span>
+                  <span className="font-semibold text-orange-500">{formatCurrency(unpurchasedTotal)}</span>
+                </div>
+              )}
+              <div className="border-t pt-2 flex justify-between">
+                <span className="font-medium">Total da Compra</span>
+                <span className="text-xl font-bold text-green-600">{formatCurrency(purchasedTotal)}</span>
+              </div>
+              {unpurchasedItems.length > 0 && (
+                <p className="text-xs text-orange-600 flex items-center gap-1">
+                  <ClipboardList className="w-3 h-3" />
+                  {unpurchasedItems.length} {unpurchasedItems.length === 1 ? 'item será transferido' : 'itens serão transferidos'} para nova lista
+                </p>
+              )}
+            </div>
           </div>
-          <DialogFooter className="flex-col gap-2 sm:flex-col">
-            <Button onClick={handleConfirmPurchase} disabled={loading} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+          <DialogFooter className="flex-col gap-2 sm:flex-col border-t pt-4">
+            <Button
+              onClick={handleConfirmPurchase}
+              disabled={loading || purchasedItems.length === 0}
+              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+            >
               <Check className="w-4 h-4" />
-              Confirmar Compra
+              {purchasedItems.length === 0 ? 'Selecione itens para comprar' : `Confirmar Compra (${formatCurrency(purchasedTotal)})`}
             </Button>
             <Button variant="outline" onClick={() => setCheckoutModalVisible(false)} className="w-full">
               Cancelar
