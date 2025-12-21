@@ -7,7 +7,9 @@ import {
     Search,
     X,
     Calendar,
-    Eye
+    Eye,
+    Trash2,
+    Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +61,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     // Detail modal state
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
     // Load Locations
     const { data: locations = [] } = useQuery({
@@ -485,8 +489,72 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             </div>
                         </div>
                     )}
-                    <div className="flex justify-end">
+                    <div className="flex justify-between">
+                        <Button
+                            variant="destructive"
+                            onClick={() => setConfirmDeleteOpen(true)}
+                            className="gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Excluir
+                        </Button>
                         <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Confirm Delete Dialog */}
+            <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600 flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" />
+                            Confirmar Exclusão
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-muted-foreground">
+                            Tem certeza que deseja excluir esta receita?
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Se houver orçamentos vinculados, eles voltarão ao status "pendente".
+                        </p>
+                        {selectedTransaction && (
+                            <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-100">
+                                <p className="font-medium text-foreground">{selectedTransaction.patients?.name || 'Receita'}</p>
+                                <p className="text-lg font-bold text-red-600">{formatCurrency(selectedTransaction.amount)}</p>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={async () => {
+                                if (!selectedTransaction) return;
+                                setDeleting(true);
+                                try {
+                                    await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+                                    setConfirmDeleteOpen(false);
+                                    setDetailModalOpen(false);
+                                    setSelectedTransaction(null);
+                                    // Trigger reload by navigating to same page
+                                    window.location.reload();
+                                } catch (error) {
+                                    console.error('Error deleting:', error);
+                                    alert('Erro ao excluir receita');
+                                } finally {
+                                    setDeleting(false);
+                                }
+                            }}
+                            disabled={deleting}
+                            className="gap-2"
+                        >
+                            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            {deleting ? 'Excluindo...' : 'Confirmar Exclusão'}
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
