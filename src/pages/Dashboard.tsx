@@ -127,7 +127,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Painel de Controle</h1>
           <p className="text-muted-foreground mt-1">
             Bem-vinda de volta! Aqui está o resumo do dia.
           </p>

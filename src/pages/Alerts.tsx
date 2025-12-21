@@ -50,7 +50,7 @@ export default function Alerts() {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
     const loadedReturn = localStorage.getItem('returnTemplate');
     const loadedConfirmation = localStorage.getItem('confirmationTemplate');
-    setBirthdayTemplate(loadedBirthday || "Parabéns {name}! 🎉\n\nNós do Smile Care Hub desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.");
+    setBirthdayTemplate(loadedBirthday || "Parabéns {name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.");
     setReturnTemplate(loadedReturn || "Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?");
     setConfirmationTemplate(loadedConfirmation || "Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.");
 
@@ -263,13 +263,13 @@ export default function Alerts() {
                   />
                   <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
                 </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label>Mensagem de Retorno (6 meses)</Label>
-                        <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
-                            <MessageCircle className="w-4 h-4 mr-1" /> Enviar
-                        </Button>
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Mensagem de Retorno (6 meses)</Label>
+                    <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
+                      <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                    </Button>
+                  </div>
                   <Textarea
                     value={returnTemplate}
                     onChange={(e) => setReturnTemplate(e.target.value)}
@@ -278,13 +278,13 @@ export default function Alerts() {
                   />
                   <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
                 </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label>Mensagem de Confirmação de Consulta</Label>
-                        <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
-                            <MessageCircle className="w-4 h-4 mr-1" /> Enviar
-                        </Button>
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label>Mensagem de Confirmação de Consulta</Label>
+                    <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
+                      <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                    </Button>
+                  </div>
                   <Textarea
                     value={confirmationTemplate}
                     onChange={(e) => setConfirmationTemplate(e.target.value)}
@@ -394,7 +394,7 @@ export default function Alerts() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="font-medium">{alert.patient.name}</p>
-                    <p className="text-sm text-muted-foreground">Fazendo {new Date().getFullYear() - new Date(alert.patient.birth_date!).getFullYear()} anos</p>
+                    <p className="text-sm text-muted-foreground">Fazendo {new Date().getFullYear() - new Date(alert.date).getFullYear()} anos</p>
                   </div>
                   <Button
                     size="sm"
@@ -528,42 +528,42 @@ export default function Alerts() {
             <div className="p-6 text-center text-muted-foreground">Nenhum retorno agendado</div>
           )}
         </div>
-        </div>
+      </div>
 
       <Dialog open={showPatientSelect} onOpenChange={setShowPatientSelect}>
         <DialogContent className="sm:max-w-[400px] h-[500px] flex flex-col">
-            <DialogHeader>
+          <DialogHeader>
             <DialogTitle>Selecionar Paciente</DialogTitle>
-            </DialogHeader>
-            
-            <div className="relative mb-2">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Buscar paciente..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                />
-            </div>
+          </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto -mx-6 px-6">
-                {filteredPatients.map(patient => (
-                    <button
-                        key={patient.id}
-                        onClick={() => handleSelectPatient(patient)}
-                        className="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between border-b border-gray-50 last:border-0"
-                    >
-                        <div>
-                            <p className="font-medium text-sm">{patient.name}</p>
-                            <p className="text-xs text-muted-foreground">{patient.phone}</p>
-                        </div>
-                        <MessageCircle className="w-4 h-4 text-teal-600 opacity-0 group-hover:opacity-100" />
-                    </button>
-                ))}
-                {filteredPatients.length === 0 && (
-                    <p className="text-center text-muted-foreground text-sm py-4">Nenhum paciente encontrado.</p>
-                )}
-            </div>
+          <div className="relative mb-2">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar paciente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            {filteredPatients.map(patient => (
+              <button
+                key={patient.id}
+                onClick={() => handleSelectPatient(patient)}
+                className="w-full text-left p-3 hover:bg-slate-50 flex items-center justify-between border-b border-gray-50 last:border-0"
+              >
+                <div>
+                  <p className="font-medium text-sm">{patient.name}</p>
+                  <p className="text-xs text-muted-foreground">{patient.phone}</p>
+                </div>
+                <MessageCircle className="w-4 h-4 text-teal-600 opacity-0 group-hover:opacity-100" />
+              </button>
+            ))}
+            {filteredPatients.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm py-4">Nenhum paciente encontrado.</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div >

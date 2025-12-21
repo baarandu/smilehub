@@ -43,7 +43,7 @@
 | **Separação de responsabilidades** | Lógica de formatação (CPF, telefone) está dentro do componente de UI. | • Extrair utilitários (`formatCPF`, `formatPhone`) para `src/utils/formatters.ts`. |
 | **Duplicação de código** | Services (`patients.ts`, `appointments.ts`, etc.) são quase idênticos entre `src/services` e `mobile/src/services`. | • Criar pacote compartilhado (`packages/shared`) com lógica comum.<br>• Ou usar monorepo com Turborepo/Nx. |
 | **Tratamento de erros** | Services lançam erros diretamente (`throw error`); componentes usam `console.error` de forma dispersa. | • Criar wrapper de erro centralizado (`handleApiError`).<br>• Usar Error Boundaries no React para captura global.<br>• Reportar erros para Sentry. |
-| **Testes** | Não há testes unitários ou de integração. | • Adicionar testes com `jest` + `react‑testing‑library` para componentes críticos (Alertas, Formulários).<br>• Testar serviços Supabase usando *mock* de client. |
+| **Testes** | ✅ Configurado | Vitest + React Testing Library instalados. Smoke test rodando. | • Adicionar testes com `jest` + `react‑testing‑library` para componentes críticos (Alertas, Formulários).<br>• Testar serviços Supabase usando *mock* de client. |
 | **CI/CD** | Não há pipeline automatizado. | • Configurar GitHub Actions para lint, test, build e deploy (Expo + Vercel). |
 | **Documentação** | Falta de README atualizado e documentação de API. | • Atualizar README com instruções de setup, scripts de migração Supabase e screenshots de UI.<br>• Gerar documentação OpenAPI (se houver backend custom). |
 | **Linting & Formatting** | Há `eslint.config.js` mas não há Prettier configurado. | • Adicionar Prettier com regras consistentes.<br>• Configurar husky + lint-staged para pre-commit hooks. |

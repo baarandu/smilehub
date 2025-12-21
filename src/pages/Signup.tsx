@@ -258,7 +258,7 @@ export default function Signup() {
 
                 {/* Footer */}
                 <p className="text-center text-gray-400 text-sm mt-6">
-                    © 2024 Smile Care Hub. Todos os direitos reservados.
+                    © 2024 Organiza Odonto. Todos os direitos reservados.
                 </p>
             </div>
         </div>

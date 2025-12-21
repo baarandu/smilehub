@@ -28,7 +28,7 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
 
     // Default messages (should ideally come from settings context)
     if (type === 'birthday') {
-      message = `Parabéns ${name}! 🎉\n\nNós do Smile Care Hub desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
+      message = `Parabéns ${name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
     } else if (type === 'procedure_return') {
       message = `Olá ${name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?`;
     } else {

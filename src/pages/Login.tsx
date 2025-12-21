@@ -45,10 +45,12 @@ export default function Login() {
             <div className="w-full max-w-md">
                 {/* Logo/Header */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-3xl">🦷</span>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Smile Care Hub</h1>
+                    <img
+                        src="/logo-login.png"
+                        alt="Smile Care Hub"
+                        className="w-24 h-24 mx-auto mb-4 object-contain rounded-2xl"
+                    />
+                    <h1 className="text-2xl font-bold text-gray-900">Organiza Odonto</h1>
                     <p className="text-gray-500 mt-1">Entre na sua conta</p>
                 </div>
 
@@ -121,7 +123,7 @@ export default function Login() {
 
                 {/* Footer */}
                 <p className="text-center text-gray-400 text-sm mt-6">
-                    © 2024 Smile Care Hub. Todos os direitos reservados.
+                    © 2024 Organiza Odonto. Todos os direitos reservados.
                 </p>
             </div>
         </div>
