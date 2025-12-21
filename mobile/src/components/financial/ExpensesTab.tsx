@@ -527,7 +527,13 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh }: Expens
                                     )}
                                     <View className="flex-row items-center gap-3">
                                         <Receipt size={16} color="#6B7280" />
-                                        <Text className="text-sm text-gray-700 flex-1">{selectedExpense.description}</Text>
+                                        <Text className="text-sm text-gray-700 flex-1">
+                                            {selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id
+                                                ? `Compra de ${materialItems.length || '?'} materiais`
+                                                : selectedExpense.category === 'Materiais' && selectedExpense.description.includes('|')
+                                                    ? 'Compra de materiais'
+                                                    : selectedExpense.description}
+                                        </Text>
                                     </View>
                                 </View>
 
@@ -559,6 +565,33 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh }: Expens
                                                         <Text className="font-semibold text-red-600">{formatCurrency(item.totalPrice)}</Text>
                                                     </View>
                                                 ))}
+                                            </View>
+                                        ) : selectedExpense.description.includes('|') ? (
+                                            // Parse legacy format: "Compra Materiais: Item1 (2x R$10) Forn: X | Item2..."
+                                            <View className="gap-2">
+                                                {selectedExpense.description
+                                                    .replace(/^Compra\s+Materiais:\s*/i, '')
+                                                    .split(' | ')
+                                                    .filter((s: string) => s.trim())
+                                                    .map((itemStr: string, index: number) => {
+                                                        const match = itemStr.match(/^(.+?)\s*\((\d+)x\s*R\$\s*([\d.,]+)\)\s*Forn:\s*(.+)$/);
+                                                        if (match) {
+                                                            const [, name, qty, price, supplier] = match;
+                                                            return (
+                                                                <View key={index} className="flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                                                    <View className="flex-1">
+                                                                        <Text className="font-medium text-sm text-gray-900">{name.trim()}</Text>
+                                                                        <Text className="text-xs text-gray-500">{qty}x R$ {price} • {supplier.trim()}</Text>
+                                                                    </View>
+                                                                </View>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <View key={index} className="p-3 bg-gray-50 rounded-lg">
+                                                                <Text className="text-sm text-gray-700">{itemStr.trim()}</Text>
+                                                            </View>
+                                                        );
+                                                    })}
                                             </View>
                                         ) : (selectedExpense as any).related_entity_id ? (
                                             <Text className="text-sm text-gray-400 italic">Itens não encontrados</Text>
