@@ -342,6 +342,47 @@ export default function Materials() {
 
         setLoading(true);
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { data: clinicUser } = await supabase
+                .from('clinic_users')
+                .select('clinic_id')
+                .eq('user_id', user?.id || '')
+                .single();
+
+            let shoppingOrderId: string | null = null;
+
+            // First: Create or update the shopping order to get its ID
+            if (currentOrderId) {
+                await (supabase
+                    .from('shopping_orders') as any)
+                    .update({
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                        items: purchasedItems,
+                        total_amount: purchasedTotal
+                    })
+                    .eq('id', currentOrderId);
+                shoppingOrderId = currentOrderId;
+            } else if (clinicUser) {
+                const { data: newOrder } = await (supabase
+                    .from('shopping_orders') as any)
+                    .insert([{
+                        clinic_id: (clinicUser as any).clinic_id,
+                        items: purchasedItems,
+                        total_amount: purchasedTotal,
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                        created_by: user?.id
+                    }])
+                    .select('id')
+                    .single();
+
+                if (newOrder) {
+                    shoppingOrderId = newOrder.id;
+                }
+            }
+
+            // Second: Create expense with related_entity_id pointing to shopping order
             const today = new Date();
             const dbDate = today.toISOString().split('T')[0];
 
@@ -358,38 +399,8 @@ export default function Materials() {
                 category: 'Materiais',
                 date: dbDate,
                 location: null,
+                related_entity_id: shoppingOrderId,
             });
-
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user?.id || '')
-                .single();
-
-            // Update or create completed order with purchased items only
-            if (currentOrderId) {
-                await (supabase
-                    .from('shopping_orders') as any)
-                    .update({
-                        status: 'completed',
-                        completed_at: new Date().toISOString(),
-                        items: purchasedItems,
-                        total_amount: purchasedTotal
-                    })
-                    .eq('id', currentOrderId);
-            } else if (clinicUser) {
-                await supabase
-                    .from('shopping_orders')
-                    .insert([{
-                        clinic_id: (clinicUser as any).clinic_id,
-                        items: purchasedItems,
-                        total_amount: purchasedTotal,
-                        status: 'completed',
-                        completed_at: new Date().toISOString(),
-                        created_by: user?.id
-                    }] as any);
-            }
 
             // If there are unpurchased items, create a new pending order for them
             if (unpurchasedItems.length > 0 && clinicUser) {

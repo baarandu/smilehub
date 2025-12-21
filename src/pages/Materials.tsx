@@ -289,20 +289,11 @@ export default function Materials() {
         .eq('user_id', user.id)
         .single();
 
-      // Create expense record only for purchased items
-      const today = new Date();
-      const dbDate = today.toISOString().split('T')[0];
+      let shoppingOrderId: string | null = null;
 
-      await financialService.createExpense({
-        amount: purchasedTotal,
-        description: `Compra de materiais - ${purchasedItems.length} itens`,
-        category: 'Materiais',
-        date: dbDate,
-        location: null,
-      });
-
-      // Update or create completed order with purchased items only
+      // First: Create or update the shopping order to get its ID
       if (currentOrderId) {
+        // Update existing order
         await (supabase
           .from('shopping_orders') as any)
           .update({
@@ -312,8 +303,10 @@ export default function Materials() {
             total_amount: purchasedTotal
           })
           .eq('id', currentOrderId);
+        shoppingOrderId = currentOrderId;
       } else if (clinicUser) {
-        await (supabase
+        // Create new completed order
+        const { data: newOrder } = await (supabase
           .from('shopping_orders') as any)
           .insert([{
             clinic_id: (clinicUser as any).clinic_id,
@@ -322,8 +315,27 @@ export default function Materials() {
             status: 'completed',
             created_by: user.id,
             completed_at: new Date().toISOString()
-          }]);
+          }])
+          .select('id')
+          .single();
+
+        if (newOrder) {
+          shoppingOrderId = newOrder.id;
+        }
       }
+
+      // Second: Create expense with related_entity_id pointing to shopping order
+      const today = new Date();
+      const dbDate = today.toISOString().split('T')[0];
+
+      await financialService.createExpense({
+        amount: purchasedTotal,
+        description: `Compra de materiais - ${purchasedItems.length} itens`,
+        category: 'Materiais',
+        date: dbDate,
+        location: null,
+        related_entity_id: shoppingOrderId,
+      });
 
       // If there are unpurchased items, create a new pending order for them
       if (unpurchasedItems.length > 0 && clinicUser) {

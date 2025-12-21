@@ -31,6 +31,7 @@ export const financialService = {
         category: string;
         date: string;
         location?: string | null;
+        related_entity_id?: string | null;
     }): Promise<FinancialTransaction> {
         const { data, error } = await supabase
             .from('financial_transactions')
@@ -41,6 +42,7 @@ export const financialService = {
                 category: expense.category,
                 date: expense.date,
                 location: expense.location || null,
+                related_entity_id: expense.related_entity_id || null,
             } as any)
             .select()
             .single();
@@ -162,6 +164,48 @@ export const financialService = {
         }
 
         // 3. Delete the transaction
+        const { error: deleteError } = await supabase
+            .from('financial_transactions')
+            .delete()
+            .eq('id', transactionId);
+
+        if (deleteError) throw deleteError;
+    },
+
+    /**
+     * Delete an expense and revert the linked shopping order to pending status if it's a materials expense
+     */
+    async deleteExpenseAndRevertMaterials(transactionId: string): Promise<void> {
+        // 1. Get the expense to find related_entity_id
+        const { data: transaction, error: fetchError } = await supabase
+            .from('financial_transactions')
+            .select('*')
+            .eq('id', transactionId)
+            .single();
+
+        if (fetchError) throw fetchError;
+        if (!transaction) throw new Error('Transaction not found');
+
+        // 2. If it's a materials expense with a linked shopping order, revert it
+        if ((transaction as any).category === 'Materiais' && (transaction as any).related_entity_id) {
+            const shoppingOrderId = (transaction as any).related_entity_id;
+
+            // Revert shopping order to pending status
+            const { error: revertError } = await (supabase
+                .from('shopping_orders') as any)
+                .update({
+                    status: 'pending',
+                    completed_at: null
+                })
+                .eq('id', shoppingOrderId);
+
+            if (revertError) {
+                console.error('Error reverting shopping order:', revertError);
+                // Don't throw, continue with deletion
+            }
+        }
+
+        // 3. Delete the expense transaction
         const { error: deleteError } = await supabase
             .from('financial_transactions')
             .delete()

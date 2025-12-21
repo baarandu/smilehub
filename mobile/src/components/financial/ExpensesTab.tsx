@@ -1,13 +1,16 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
-import { TrendingDown, ArrowDownRight, MapPin, Filter, X, CreditCard, Receipt, Percent } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { TrendingDown, ArrowDownRight, MapPin, Filter, X, CreditCard, Receipt, Percent, Package, Calendar, Tag, Pencil, Trash2, Eye, Check } from 'lucide-react-native';
 import { FinancialTransaction } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
+import { financialService } from '../../services/financial';
+import { supabase } from '../../lib/supabase';
 import { useState, useMemo, useEffect } from 'react';
 
 interface ExpensesTabProps {
     transactions: FinancialTransaction[];
     loading: boolean;
     onEdit: (transaction: FinancialTransaction) => void;
+    onRefresh: () => void;
 }
 
 interface FilterState {
@@ -26,14 +29,21 @@ const INITIAL_FILTERS: FilterState = {
     locations: []
 };
 
-export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps) {
+export function ExpensesTab({ transactions, loading, onEdit, onRefresh }: ExpensesTabProps) {
     // Filter State
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [activeFilters, setActiveFilters] = useState<FilterState>(INITIAL_FILTERS);
     const [tempFilters, setTempFilters] = useState<FilterState>(INITIAL_FILTERS);
 
+    // Detail Modal State
+    const [selectedExpense, setSelectedExpense] = useState<FinancialTransaction | null>(null);
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [materialItems, setMaterialItems] = useState<any[]>([]);
+    const [loadingMaterialItems, setLoadingMaterialItems] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
     // Locations State
-    const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+    const [availableLocations, setAvailableLocations] = useState<Location[]>([]);;
 
     useEffect(() => {
         loadLocations();
@@ -328,12 +338,35 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
                             <TouchableOpacity
                                 key={transaction.id}
                                 className="p-4 border-b border-gray-50 flex-row items-center justify-between active:bg-gray-50"
-                                onPress={() => onEdit(transaction)}
+                                onPress={async () => {
+                                    setSelectedExpense(transaction);
+                                    setDetailModalVisible(true);
+                                    // Fetch material items if applicable
+                                    if (transaction.category === 'Materiais' && (transaction as any).related_entity_id) {
+                                        setLoadingMaterialItems(true);
+                                        try {
+                                            const { data: order } = await (supabase
+                                                .from('shopping_orders') as any)
+                                                .select('items')
+                                                .eq('id', (transaction as any).related_entity_id)
+                                                .single();
+                                            if (order?.items) {
+                                                setMaterialItems(order.items as any[]);
+                                            }
+                                        } catch (e) {
+                                            console.error('Error fetching material items:', e);
+                                        } finally {
+                                            setLoadingMaterialItems(false);
+                                        }
+                                    } else {
+                                        setMaterialItems([]);
+                                    }
+                                }}
                             >
                                 <View className="flex-1 mr-4">
                                     <View className="flex-row items-start gap-3">
-                                        <View className="w-10 h-10 rounded-lg items-center justify-center bg-red-100">
-                                            <ArrowDownRight size={20} color="#EF4444" />
+                                        <View className={`w-10 h-10 rounded-lg items-center justify-center ${transaction.category === 'Materiais' ? 'bg-orange-100' : 'bg-red-100'}`}>
+                                            {transaction.category === 'Materiais' ? <Package size={20} color="#F97316" /> : <ArrowDownRight size={20} color="#EF4444" />}
                                         </View>
                                         <View className="flex-1">
                                             <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
@@ -348,9 +381,12 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
                                         </View>
                                     </View>
                                 </View>
-                                <Text className="font-semibold text-red-500 whitespace-nowrap">
-                                    - {formatCurrency(transaction.amount)}
-                                </Text>
+                                <View className="flex-row items-center gap-2">
+                                    <Text className="font-semibold text-red-500 whitespace-nowrap">
+                                        - {formatCurrency(transaction.amount)}
+                                    </Text>
+                                    <Eye size={16} color="#9CA3AF" />
+                                </View>
                             </TouchableOpacity>
                         ))
                     )}
@@ -456,6 +492,154 @@ export function ExpensesTab({ transactions, loading, onEdit }: ExpensesTabProps)
                     </View>
                 </View>
             </Modal>
+
+            {/* Expense Detail Modal */}
+            <Modal visible={detailModalVisible} animationType="slide" transparent>
+                <View className="flex-1 justify-end bg-black/50">
+                    <View className="bg-white rounded-t-3xl h-[85%]">
+                        <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
+                            <Text className="text-xl font-bold text-gray-800">Detalhes da Despesa</Text>
+                            <TouchableOpacity
+                                onPress={() => { setDetailModalVisible(false); setSelectedExpense(null); setMaterialItems([]); }}
+                                className="bg-gray-100 p-2 rounded-full"
+                            >
+                                <X size={20} color="#374151" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {selectedExpense && (
+                            <ScrollView className="flex-1 p-4">
+                                {/* Expense Info */}
+                                <View className="bg-gray-50 rounded-xl p-4 gap-3 mb-4">
+                                    <View className="flex-row items-center gap-3">
+                                        <Calendar size={16} color="#6B7280" />
+                                        <Text className="text-sm text-gray-700">
+                                            {new Date(selectedExpense.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                        </Text>
+                                    </View>
+                                    {selectedExpense.category && (
+                                        <View className="flex-row items-center gap-3">
+                                            <Tag size={16} color="#6B7280" />
+                                            <View className="bg-gray-200 px-2 py-1 rounded">
+                                                <Text className="text-xs text-gray-700">{selectedExpense.category}</Text>
+                                            </View>
+                                        </View>
+                                    )}
+                                    <View className="flex-row items-center gap-3">
+                                        <Receipt size={16} color="#6B7280" />
+                                        <Text className="text-sm text-gray-700 flex-1">{selectedExpense.description}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Amount */}
+                                <View className="bg-red-50 rounded-xl py-6 items-center mb-4">
+                                    <Text className="text-sm text-gray-500 mb-1">Valor da Despesa</Text>
+                                    <Text className="text-3xl font-bold text-red-600">- {formatCurrency(selectedExpense.amount)}</Text>
+                                </View>
+
+                                {/* Material Items */}
+                                {selectedExpense.category === 'Materiais' && (
+                                    <View className="mb-4">
+                                        <View className="flex-row items-center gap-2 mb-3">
+                                            <Package size={16} color="#374151" />
+                                            <Text className="font-semibold text-gray-800">Itens Comprados</Text>
+                                        </View>
+                                        {loadingMaterialItems ? (
+                                            <View className="py-4 items-center">
+                                                <ActivityIndicator size="small" color="#6B7280" />
+                                            </View>
+                                        ) : materialItems.length > 0 ? (
+                                            <View className="gap-2">
+                                                {materialItems.map((item: any, index: number) => (
+                                                    <View key={index} className="flex-row justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                                        <View className="flex-1">
+                                                            <Text className="font-medium text-sm text-gray-900">{item.name}</Text>
+                                                            <Text className="text-xs text-gray-500">{item.quantity}x {formatCurrency(item.unitPrice)} • {item.supplier}</Text>
+                                                        </View>
+                                                        <Text className="font-semibold text-red-600">{formatCurrency(item.totalPrice)}</Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        ) : (selectedExpense as any).related_entity_id ? (
+                                            <Text className="text-sm text-gray-400 italic">Itens não encontrados</Text>
+                                        ) : (
+                                            <Text className="text-sm text-gray-400 italic">Despesa sem lista de materiais vinculada</Text>
+                                        )}
+                                    </View>
+                                )}
+
+                                {/* Warning for Materials */}
+                                {selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id && (
+                                    <View className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                                        <Text className="text-sm text-orange-700">
+                                            <Text className="font-bold">Atenção:</Text> Ao excluir esta despesa, a lista de materiais voltará para "Pendente".
+                                        </Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+                        )}
+
+                        {/* Footer Buttons */}
+                        <View className="p-4 border-t border-gray-100 bg-white safe-area-bottom">
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setDetailModalVisible(false);
+                                        if (selectedExpense) onEdit(selectedExpense);
+                                    }}
+                                    className="flex-1 bg-gray-100 rounded-xl p-4 flex-row items-center justify-center gap-2"
+                                >
+                                    <Pencil size={18} color="#374151" />
+                                    <Text className="font-semibold text-gray-700">Editar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        if (!selectedExpense) return;
+                                        const isMaterials = selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id;
+                                        Alert.alert(
+                                            'Excluir Despesa',
+                                            isMaterials
+                                                ? 'A lista de materiais voltará para "Pendente". Deseja continuar?'
+                                                : 'Tem certeza que deseja excluir esta despesa?',
+                                            [
+                                                { text: 'Cancelar', style: 'cancel' },
+                                                {
+                                                    text: 'Excluir',
+                                                    style: 'destructive',
+                                                    onPress: async () => {
+                                                        if (!selectedExpense) return;
+                                                        setDeleting(true);
+                                                        try {
+                                                            await financialService.deleteExpenseAndRevertMaterials(selectedExpense.id);
+                                                            setDetailModalVisible(false);
+                                                            setSelectedExpense(null);
+                                                            Alert.alert('Sucesso', isMaterials
+                                                                ? 'Despesa excluída! Lista de materiais revertida para pendente.'
+                                                                : 'Despesa excluída com sucesso!');
+                                                            onRefresh();
+                                                        } catch (error) {
+                                                            console.error('Error deleting expense:', error);
+                                                            Alert.alert('Erro', 'Falha ao excluir despesa');
+                                                        } finally {
+                                                            setDeleting(false);
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        );
+                                    }}
+                                    disabled={deleting}
+                                    className={`flex-1 bg-red-500 rounded-xl p-4 flex-row items-center justify-center gap-2 ${deleting ? 'opacity-50' : ''}`}
+                                >
+                                    {deleting ? <ActivityIndicator size="small" color="white" /> : <Trash2 size={18} color="white" />}
+                                    <Text className="font-semibold text-white">Excluir</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
+
