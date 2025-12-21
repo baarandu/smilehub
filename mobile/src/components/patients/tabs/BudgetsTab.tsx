@@ -51,12 +51,14 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
                                                 if (parsed.teeth && Array.isArray(parsed.teeth)) {
                                                     return parsed.teeth.map((tooth: ToothEntry, idx: number) => {
                                                         const status = tooth.status || 'pending';
+                                                        const isPaid = status === 'paid' || status === 'completed';
+
                                                         const bgColor = status === 'approved' ? 'bg-green-50 border-green-200'
-                                                            : status === 'paid' ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200';
+                                                            : isPaid ? 'bg-blue-50 border-blue-200' : 'bg-yellow-50 border-yellow-200';
                                                         const titleColor = status === 'approved' ? 'text-green-800'
-                                                            : status === 'paid' ? 'text-blue-800' : 'text-yellow-800';
+                                                            : isPaid ? 'text-blue-800' : 'text-yellow-800';
                                                         const subtitleColor = status === 'approved' ? 'text-green-600'
-                                                            : status === 'paid' ? 'text-blue-600' : 'text-yellow-600';
+                                                            : isPaid ? 'text-blue-600' : 'text-yellow-600';
                                                         return (
                                                             <View key={idx} className={`border px-3 py-2 rounded-lg ${bgColor}`}>
                                                                 <Text className={`font-medium text-sm ${titleColor}`}>{getToothDisplayName(tooth.tooth)}</Text>

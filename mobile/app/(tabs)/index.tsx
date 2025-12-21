@@ -10,6 +10,7 @@ import { appointmentsService } from '../../src/services/appointments';
 import { consultationsService } from '../../src/services/consultations';
 import { alertsService, type Alert as PatientAlert } from '../../src/services/alerts';
 import { budgetsService } from '../../src/services/budgets';
+import { PendingBudgetsModal } from '../../src/components/dashboard/PendingBudgetsModal';
 import type { ReturnAlert, BudgetWithItems } from '../../src/types/database';
 import { locationsService, type Location } from '../../src/services/locations';
 import { remindersService } from '../../src/services/reminders';
@@ -49,6 +50,11 @@ export default function Dashboard() {
     const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
     const [pendingReturnsList, setPendingReturnsList] = useState<PendingReturn[]>([]);
     const [loadingPendingReturns, setLoadingPendingReturns] = useState(false);
+
+    // Pending Budgets Modal
+    const [showPendingBudgetsModal, setShowPendingBudgetsModal] = useState(false);
+    const [pendingBudgetsList, setPendingBudgetsList] = useState<(BudgetWithItems & { patient_name: string })[]>([]);
+    const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     // Auth & Profile Loading
     const { session, signOut } = useAuth();
@@ -285,7 +291,18 @@ export default function Dashboard() {
                         title="Orçamentos Pendentes"
                         value={pendingBudgetsCount.toString()}
                         icon={<FileText size={24} color="#0D9488" />}
-                        onPress={() => router.push('/patients')}
+                        onPress={async () => {
+                            setShowPendingBudgetsModal(true);
+                            setLoadingPendingBudgets(true);
+                            try {
+                                const data = await budgetsService.getAllPending();
+                                setPendingBudgetsList(data);
+                            } catch (error) {
+                                console.error('Error loading pending budgets:', error);
+                            } finally {
+                                setLoadingPendingBudgets(false);
+                            }
+                        }}
                     />
                 </View>
 
@@ -568,6 +585,14 @@ export default function Dashboard() {
             <TeamManagementModal
                 visible={showTeamModal}
                 onClose={() => setShowTeamModal(false)}
+            />
+
+            {/* Pending Budgets Modal */}
+            <PendingBudgetsModal
+                visible={showPendingBudgetsModal}
+                onClose={() => setShowPendingBudgetsModal(false)}
+                budgets={pendingBudgetsList}
+                loading={loadingPendingBudgets}
             />
 
             {/* Pending Returns Modal */}
