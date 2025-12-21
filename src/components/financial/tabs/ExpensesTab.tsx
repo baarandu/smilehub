@@ -332,7 +332,13 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                     {t.category === 'Materiais' ? <Package className="h-5 w-5 text-orange-600" /> : <CreditCard className="h-5 w-5 text-red-600" />}
                                 </div>
                                 <div>
-                                    <p className="font-medium text-foreground">{t.description}</p>
+                                    <p className="font-medium text-foreground">
+                                        {t.category === 'Materiais' && t.description.includes('|')
+                                            ? 'Compra de materiais'
+                                            : t.category === 'Materiais' && t.description.startsWith('Compra Materiais:')
+                                                ? 'Compra de materiais'
+                                                : t.description}
+                                    </p>
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString()}</span>
                                         {t.category && (
