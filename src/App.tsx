@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { ClinicProvider } from "@/contexts/ClinicContext";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,18 +66,21 @@ const AppContent = () => (
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
-      {/* App routes (with layout) */}
-      <Route path="/" element={<AppLayout><Index /></AppLayout>} />
-      <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
-      <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
-      <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
-      <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
-      <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
-      <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
-      <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+      {/* Protected Routes */}
+      <Route element={<PrivateRoute />}>
+        <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+        <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
+        <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
+        <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
+        <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
+        <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
+        <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
+        <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+      </Route>
+
       <Route path="*" element={<NotFound />} />
     </Routes>
-  </Suspense>
+  </Suspense >
 );
 
 const App = () => (
