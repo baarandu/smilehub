@@ -22,10 +22,34 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString('pt-BR');
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
 };
 
-type PendingBudget = BudgetWithItems & { patient_name: string };
+interface PendingItem {
+  budgetId: string;
+  patientId: string;
+  patientName: string;
+  date: string;
+  tooth: {
+    tooth: string;
+    treatments: string[];
+    values: Record<string, string>;
+    status: string;
+  };
+  totalBudgetValue: number;
+}
+
+const getToothDisplayName = (tooth: string): string => {
+  if (tooth === 'ARC_SUP') return 'Arcada Superior';
+  if (tooth === 'ARC_INF') return 'Arcada Inferior';
+  if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Inferior';
+  if (tooth.includes('Arcada')) return tooth;
+  return `Dente ${tooth}`;
+};
+
+const calculateToothTotal = (values: Record<string, string>): number => {
+  return Object.values(values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -48,7 +72,7 @@ export default function Dashboard() {
 
   // Pending Budgets State
   const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
-  const [pendingBudgets, setPendingBudgets] = useState<PendingBudget[]>([]);
+  const [pendingBudgets, setPendingBudgets] = useState<PendingItem[]>([]);
   const [loadingBudgets, setLoadingBudgets] = useState(true);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
 
@@ -203,47 +227,42 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-teal-600" />
-              Orçamentos Pendentes ({pendingBudgetsCount})
+              Tratamentos Pendentes ({pendingBudgetsCount})
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3 mt-4">
             {pendingBudgets.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
-                Nenhum orçamento pendente
+                Nenhum tratamento pendente
               </div>
             ) : (
-              pendingBudgets.map(budget => (
+              pendingBudgets.map((item, index) => (
                 <div
-                  key={budget.id}
+                  key={`${item.budgetId}-${index}`}
                   onClick={() => {
                     setShowBudgetsModal(false);
-                    navigate(`/pacientes/${budget.patient_id}?tab=budgets`);
+                    navigate(`/pacientes/${item.patientId}?tab=budgets`);
                   }}
                   className="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-semibold text-gray-900">{budget.patient_name}</p>
-                      <p className="text-sm text-gray-500">{budget.treatment}</p>
+                      <p className="font-semibold text-gray-900">{item.patientName}</p>
+                      <p className="text-sm text-gray-500">{formatDate(item.date)}</p>
                     </div>
                     <span className="text-lg font-bold text-teal-600">
-                      {formatCurrency(budget.value)}
+                      R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">
-                      Criado em {formatDate(budget.created_at)}
-                    </span>
-                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
-                      Pendente
-                    </span>
+                  <div className="bg-amber-50 p-3 rounded-lg">
+                    <p className="font-medium text-amber-800">
+                      {getToothDisplayName(item.tooth.tooth)}
+                    </p>
+                    <p className="text-sm text-amber-600">
+                      {item.tooth.treatments.join(', ')}
+                    </p>
                   </div>
-                  {budget.budget_items && budget.budget_items.length > 0 && (
-                    <div className="mt-2 pt-2 border-t text-xs text-gray-500">
-                      {budget.budget_items.length} procedimento(s) incluído(s)
-                    </div>
-                  )}
                 </div>
               ))
             )}
