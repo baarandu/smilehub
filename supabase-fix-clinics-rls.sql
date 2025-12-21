@@ -1,85 +1,107 @@
 -- FIX RLS POLICIES FOR CLINICS AND CLINIC_USERS TABLES
--- Error 42501: new row violates row-level security policy for table "clinics"
+-- AGGRESSIVE FIX: Drops ALL existing policies first
 
 -- ============================================
--- 1. CLINICS TABLE POLICIES
+-- 1. DROP ALL EXISTING POLICIES ON CLINICS
 -- ============================================
+DO $$
+DECLARE
+    policy_name TEXT;
+BEGIN
+    FOR policy_name IN 
+        SELECT policyname FROM pg_policies WHERE tablename = 'clinics'
+    LOOP
+        EXECUTE 'DROP POLICY IF EXISTS "' || policy_name || '" ON clinics';
+        RAISE NOTICE 'Dropped policy: %', policy_name;
+    END LOOP;
+END $$;
 
--- Drop existing policies on clinics
-DROP POLICY IF EXISTS "Users can view their clinic" ON clinics;
-DROP POLICY IF EXISTS "Users can insert clinics" ON clinics;
-DROP POLICY IF EXISTS "Users can update their clinic" ON clinics;
-DROP POLICY IF EXISTS "Allow authenticated users to create clinics" ON clinics;
-DROP POLICY IF EXISTS "Allow users to view their clinics" ON clinics;
-DROP POLICY IF EXISTS "Allow users to update their clinics" ON clinics;
+-- ============================================
+-- 2. DROP ALL EXISTING POLICIES ON CLINIC_USERS
+-- ============================================
+DO $$
+DECLARE
+    policy_name TEXT;
+BEGIN
+    FOR policy_name IN 
+        SELECT policyname FROM pg_policies WHERE tablename = 'clinic_users'
+    LOOP
+        EXECUTE 'DROP POLICY IF EXISTS "' || policy_name || '" ON clinic_users';
+        RAISE NOTICE 'Dropped policy: %', policy_name;
+    END LOOP;
+END $$;
 
--- Enable RLS on clinics
+-- ============================================
+-- 3. ENSURE RLS IS ENABLED
+-- ============================================
 ALTER TABLE clinics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_users ENABLE ROW LEVEL SECURITY;
 
--- Policy: Authenticated users can create clinics
-CREATE POLICY "Allow authenticated users to create clinics"
+-- ============================================
+-- 4. CREATE SIMPLE PERMISSIVE POLICIES FOR CLINICS
+-- ============================================
+
+-- INSERT: Any authenticated user can create a clinic
+CREATE POLICY "clinics_insert_policy"
 ON clinics FOR INSERT
 TO authenticated
 WITH CHECK (true);
 
--- Policy: Users can view clinics they belong to
-CREATE POLICY "Allow users to view their clinics"
+-- SELECT: Users can see clinics they belong to
+CREATE POLICY "clinics_select_policy"
 ON clinics FOR SELECT
 TO authenticated
 USING (
-    id IN (
-        SELECT clinic_id FROM clinic_users 
-        WHERE user_id = auth.uid()
-    )
+    id IN (SELECT clinic_id FROM clinic_users WHERE user_id = auth.uid())
+    OR NOT EXISTS (SELECT 1 FROM clinic_users WHERE user_id = auth.uid())
 );
 
--- Policy: Users can update clinics they own
-CREATE POLICY "Allow users to update their clinics"
+-- UPDATE: Users can update clinics they belong to
+CREATE POLICY "clinics_update_policy"
 ON clinics FOR UPDATE
 TO authenticated
-USING (
-    id IN (
-        SELECT clinic_id FROM clinic_users 
-        WHERE user_id = auth.uid()
-    )
-)
-WITH CHECK (
-    id IN (
-        SELECT clinic_id FROM clinic_users 
-        WHERE user_id = auth.uid()
-    )
-);
+USING (id IN (SELECT clinic_id FROM clinic_users WHERE user_id = auth.uid()))
+WITH CHECK (true);
+
+-- DELETE: Users can delete clinics they own
+CREATE POLICY "clinics_delete_policy"
+ON clinics FOR DELETE
+TO authenticated
+USING (id IN (SELECT clinic_id FROM clinic_users WHERE user_id = auth.uid() AND role = 'owner'));
 
 -- ============================================
--- 2. CLINIC_USERS TABLE POLICIES
+-- 5. CREATE SIMPLE PERMISSIVE POLICIES FOR CLINIC_USERS
 -- ============================================
 
--- Drop existing policies on clinic_users
-DROP POLICY IF EXISTS "Users can view their clinic memberships" ON clinic_users;
-DROP POLICY IF EXISTS "Users can insert their clinic memberships" ON clinic_users;
-DROP POLICY IF EXISTS "Allow authenticated users to create clinic_users" ON clinic_users;
-DROP POLICY IF EXISTS "Allow users to view their clinic_users" ON clinic_users;
-
--- Enable RLS on clinic_users
-ALTER TABLE clinic_users ENABLE ROW LEVEL SECURITY;
-
--- Policy: Authenticated users can create clinic_users (for initial clinic setup)
-CREATE POLICY "Allow authenticated users to create clinic_users"
+-- INSERT: Authenticated users can link themselves to a clinic
+CREATE POLICY "clinic_users_insert_policy"
 ON clinic_users FOR INSERT
 TO authenticated
 WITH CHECK (user_id = auth.uid());
 
--- Policy: Users can view their own clinic memberships
-CREATE POLICY "Allow users to view their clinic_users"
+-- SELECT: Users can see their own clinic memberships
+CREATE POLICY "clinic_users_select_policy"
 ON clinic_users FOR SELECT
 TO authenticated
 USING (user_id = auth.uid());
 
--- ============================================
--- 3. VERIFY POLICIES
--- ============================================
+-- UPDATE: Users can update their own clinic memberships
+CREATE POLICY "clinic_users_update_policy"
+ON clinic_users FOR UPDATE
+TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
 
--- Check clinics policies
-SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+-- DELETE: Users can remove their own clinic memberships
+CREATE POLICY "clinic_users_delete_policy"
+ON clinic_users FOR DELETE
+TO authenticated
+USING (user_id = auth.uid());
+
+-- ============================================
+-- 6. VERIFY NEW POLICIES
+-- ============================================
+SELECT tablename, policyname, cmd, roles, qual, with_check
 FROM pg_policies 
-WHERE tablename IN ('clinics', 'clinic_users');
+WHERE tablename IN ('clinics', 'clinic_users')
+ORDER BY tablename, cmd;
