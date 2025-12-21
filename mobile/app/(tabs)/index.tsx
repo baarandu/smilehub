@@ -14,6 +14,7 @@ import { PendingBudgetsModal } from '../../src/components/dashboard/PendingBudge
 import type { ReturnAlert, BudgetWithItems } from '../../src/types/database';
 import { locationsService, type Location } from '../../src/services/locations';
 import { remindersService } from '../../src/services/reminders';
+import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
 import * as Linking from 'expo-linking';
 
@@ -69,6 +70,7 @@ export default function Dashboard() {
         useCallback(() => {
             if (session?.user) {
                 loadData();
+                loadProfile();
             }
         }, [session])
     );
@@ -76,6 +78,8 @@ export default function Dashboard() {
     const loadProfile = async () => {
         try {
             if (!session?.user) return;
+
+            // Get profile for display name
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('*')
@@ -85,9 +89,12 @@ export default function Dashboard() {
             if (profile) {
                 const p = profile as any;
                 setDisplayName(p.full_name || 'Usuário');
-                setClinicName(p.clinic_name || 'Minha Clínica');
                 setIsAdmin(p.role === 'admin' || p.role === 'owner');
             }
+
+            // Get clinic info from the correct source
+            const clinicInfo = await profileService.getClinicInfo();
+            setClinicName(clinicInfo.clinicName || 'Minha Clínica');
         } catch (e) { console.error(e); }
     };
 
