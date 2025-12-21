@@ -811,32 +811,33 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         </View>
                                     </View>
                                 )}
-
-                                {/* Delete Button */}
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    onPress={() => {
-                                        console.log('Delete button pressed');
-                                        setConfirmDeleteVisible(true);
-                                    }}
-                                    style={{
-                                        marginTop: 24,
-                                        backgroundColor: '#fef2f2',
-                                        borderWidth: 1,
-                                        borderColor: '#fecaca',
-                                        borderRadius: 12,
-                                        padding: 16,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: 8
-                                    }}
-                                >
-                                    <Trash2 size={18} color="#dc2626" />
-                                    <Text style={{ color: '#dc2626', fontWeight: '600' }}>Excluir Receita</Text>
-                                </TouchableOpacity>
                             </View>
                         </ScrollView>
+
+                        {/* Delete Button - Fixed Footer outside ScrollView */}
+                        <View style={{ padding: 16, paddingBottom: 24, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() => {
+                                    console.log('Delete button pressed');
+                                    setConfirmDeleteVisible(true);
+                                }}
+                                style={{
+                                    backgroundColor: '#fef2f2',
+                                    borderWidth: 1,
+                                    borderColor: '#fecaca',
+                                    borderRadius: 12,
+                                    padding: 16,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 8
+                                }}
+                            >
+                                <Trash2 size={18} color="#dc2626" />
+                                <Text style={{ color: '#dc2626', fontWeight: '600' }}>Excluir Receita</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
