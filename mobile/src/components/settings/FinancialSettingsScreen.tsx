@@ -34,7 +34,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
 
     // Fee Form
     const [editingFee, setEditingFee] = useState<CardFeeConfig | null>(null);
-    const [feeBrand, setFeeBrand] = useState('visa');
+    const [feeBrand, setFeeBrand] = useState('');
     const [feeType, setFeeType] = useState<'credit' | 'debit'>('credit');
     const [feeInstallments, setFeeInstallments] = useState('1');
     const [feeRate, setFeeRate] = useState('');
@@ -107,6 +107,10 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
 
     const handleSaveFee = async () => {
         try {
+            if (!feeBrand) {
+                Alert.alert('Erro', 'Selecione a bandeira do cartão');
+                return;
+            }
             if (!feeRate) {
                 Alert.alert('Erro', 'Informe a taxa percentual');
                 return;
@@ -130,6 +134,9 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
             });
 
             setShowFeeModal(false);
+            setFeeBrand(''); // Reset brand
+            setFeeRate('');
+            setFeeAnticipationRate('');
             await loadSettings(); // Wait for reload
         } catch (error) {
             console.error('Save error:', error);
@@ -165,7 +172,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
             setFeeAnticipationRate(fee.anticipation_rate?.toString() || '');
         } else {
             setEditingFee(null);
-            setFeeBrand('visa');
+            setFeeBrand('');
             setFeeType('credit');
             setFeeInstallments('1');
             setFeeRate('');

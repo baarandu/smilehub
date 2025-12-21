@@ -31,7 +31,7 @@ export default function FinancialSettings() {
     // New Fee State
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [newFee, setNewFee] = useState({
-        brand: 'visa',
+        brand: '',
         payment_type: 'credit',
         installments: '1',
         rate: '',
@@ -110,6 +110,14 @@ export default function FinancialSettings() {
     };
 
     const handleAddFee = async () => {
+        if (!newFee.brand) {
+            toast({ variant: "destructive", title: "Erro", description: "Selecione a bandeira do cartão." });
+            return;
+        }
+        if (!newFee.rate) {
+            toast({ variant: "destructive", title: "Erro", description: "Informe a taxa." });
+            return;
+        }
         try {
             await settingsService.saveCardFee({
                 brand: newFee.brand,
@@ -119,6 +127,7 @@ export default function FinancialSettings() {
                 anticipation_rate: newFee.anticipation_rate ? parseFloat(newFee.anticipation_rate) : null
             });
             toast({ title: "Sucesso", description: "Regra de taxa adicionada." });
+            setNewFee({ ...newFee, brand: '', rate: '', anticipation_rate: '' });
             setIsAddOpen(false);
             loadData(); // Reload list
         } catch (error) {
