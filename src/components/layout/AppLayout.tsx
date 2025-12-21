@@ -22,9 +22,9 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
-  { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
+  { to: '/alertas', icon: Bell, label: 'Alertas' },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
