@@ -8,6 +8,7 @@ import { financialService } from '../../services/financial';
 interface IncomeTabProps {
     transactions: FinancialTransactionWithPatient[];
     loading: boolean;
+    onRefresh?: () => void;
 }
 
 type IncomeSubTab = 'gross' | 'net';
@@ -89,7 +90,7 @@ const getYearRange = () => {
     };
 };
 
-export function IncomeTab({ transactions, loading }: IncomeTabProps) {
+export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
@@ -270,6 +271,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
             await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
             setConfirmDeleteVisible(false);
             setSelectedTransaction(null);
+            // Refresh the list
+            if (onRefresh) {
+                onRefresh();
+            }
             Alert.alert('Sucesso', 'Receita excluída. Orçamentos vinculados voltaram a pendente.');
         } catch (error) {
             console.error('Error deleting:', error);
