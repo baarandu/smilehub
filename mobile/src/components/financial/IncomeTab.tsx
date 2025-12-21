@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
-import { TrendingUp, ArrowUpRight, MapPin, X, Calendar, Filter, Check } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Platform, Alert, ActivityIndicator } from 'react-native';
+import { TrendingUp, ArrowUpRight, MapPin, X, Calendar, Filter, Check, Trash2 } from 'lucide-react-native';
 import { FinancialTransactionWithPatient } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
+import { financialService } from '../../services/financial';
 
 interface IncomeTabProps {
     transactions: FinancialTransactionWithPatient[];
@@ -99,6 +100,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
     // Locations State
     const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+
+    // Delete State
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
     React.useEffect(() => {
         loadLocations();
@@ -255,6 +260,23 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
         setTempFilters(INITIAL_FILTERS);
         setActiveFilters(INITIAL_FILTERS);
         setFilterModalVisible(false);
+    };
+
+    // Delete Income Handler
+    const handleDeleteIncome = async () => {
+        if (!selectedTransaction) return;
+        setDeleting(true);
+        try {
+            await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+            setConfirmDeleteVisible(false);
+            setSelectedTransaction(null);
+            Alert.alert('Sucesso', 'Receita excluída. Orçamentos vinculados voltaram a pendente.');
+        } catch (error) {
+            console.error('Error deleting:', error);
+            Alert.alert('Erro', 'Falha ao excluir receita.');
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const activeFilterCount = useMemo(() => {
@@ -781,8 +803,82 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </View>
                                     </View>
                                 )}
+
+                                {/* Delete Button */}
+                                <TouchableOpacity
+                                    onPress={() => setConfirmDeleteVisible(true)}
+                                    style={{
+                                        marginTop: 24,
+                                        backgroundColor: '#fef2f2',
+                                        borderWidth: 1,
+                                        borderColor: '#fecaca',
+                                        borderRadius: 12,
+                                        padding: 16,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 8
+                                    }}
+                                >
+                                    <Trash2 size={18} color="#dc2626" />
+                                    <Text style={{ color: '#dc2626', fontWeight: '600' }}>Excluir Receita</Text>
+                                </TouchableOpacity>
                             </View>
                         </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Confirm Delete Modal */}
+            <Modal visible={confirmDeleteVisible} transparent animationType="fade" statusBarTranslucent>
+                <View className="flex-1 justify-center items-center p-4 bg-black/50">
+                    <View className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl p-6">
+                        <View className="flex-row items-center gap-3 mb-4">
+                            <View className="w-10 h-10 rounded-full bg-red-100 items-center justify-center">
+                                <Trash2 size={20} color="#dc2626" />
+                            </View>
+                            <Text className="text-xl font-bold text-red-600">Confirmar Exclusão</Text>
+                        </View>
+
+                        <Text className="text-gray-600 mb-2">
+                            Tem certeza que deseja excluir esta receita?
+                        </Text>
+                        <Text className="text-sm text-gray-500 mb-4">
+                            Se houver orçamentos vinculados, eles voltarão ao status "pendente".
+                        </Text>
+
+                        {selectedTransaction && (
+                            <View className="bg-red-50 p-4 rounded-xl border border-red-100 mb-4">
+                                <Text className="font-medium text-gray-900">
+                                    {selectedTransaction.patients?.name || 'Receita'}
+                                </Text>
+                                <Text className="text-lg font-bold text-red-600 mt-1">
+                                    {formatCurrency(selectedTransaction.amount)}
+                                </Text>
+                            </View>
+                        )}
+
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                onPress={() => setConfirmDeleteVisible(false)}
+                                disabled={deleting}
+                                className="flex-1 bg-gray-100 rounded-xl p-4 items-center"
+                            >
+                                <Text className="text-gray-700 font-semibold">Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={handleDeleteIncome}
+                                disabled={deleting}
+                                className="flex-1 bg-red-600 rounded-xl p-4 items-center flex-row justify-center gap-2"
+                            >
+                                {deleting ? (
+                                    <ActivityIndicator color="white" size="small" />
+                                ) : (
+                                    <Trash2 size={18} color="white" />
+                                )}
+                                <Text className="text-white font-semibold">{deleting ? 'Excluindo...' : 'Excluir'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
