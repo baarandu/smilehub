@@ -382,7 +382,13 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                 )}
                                 <div className="flex items-center gap-3">
                                     <Receipt className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm flex-1">{selectedExpense.description}</span>
+                                    <span className="text-sm flex-1">
+                                        {selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id
+                                            ? `Compra de ${materialItems.length || '?'} materiais`
+                                            : selectedExpense.category === 'Materiais' && selectedExpense.description.includes('|')
+                                                ? 'Compra de materiais'
+                                                : selectedExpense.description}
+                                    </span>
                                 </div>
                             </div>
 
@@ -414,6 +420,33 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                                     <span className="font-semibold text-red-600">{formatCurrency(item.totalPrice)}</span>
                                                 </div>
                                             ))}
+                                        </div>
+                                    ) : selectedExpense.description.includes('|') ? (
+                                        // Parse legacy format: "Compra Materiais: Item1 (2x R$10) Forn: X | Item2..."
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {selectedExpense.description
+                                                .replace(/^Compra\s+Materiais:\s*/i, '')
+                                                .split(' | ')
+                                                .filter((s: string) => s.trim())
+                                                .map((itemStr: string, index: number) => {
+                                                    const match = itemStr.match(/^(.+?)\s*\((\d+)x\s*R\$\s*([\d.,]+)\)\s*Forn:\s*(.+)$/);
+                                                    if (match) {
+                                                        const [, name, qty, price, supplier] = match;
+                                                        return (
+                                                            <div key={index} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                                                                <div>
+                                                                    <p className="font-medium text-sm">{name.trim()}</p>
+                                                                    <p className="text-xs text-muted-foreground">{qty}x R$ {price} • {supplier.trim()}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div key={index} className="p-3 bg-muted/30 rounded-lg">
+                                                            <p className="text-sm">{itemStr.trim()}</p>
+                                                        </div>
+                                                    );
+                                                })}
                                         </div>
                                     ) : (selectedExpense as any).related_entity_id ? (
                                         <p className="text-sm text-muted-foreground italic">Itens não encontrados</p>
