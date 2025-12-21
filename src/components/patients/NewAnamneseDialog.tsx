@@ -397,7 +397,7 @@ export function NewAnamneseDialog({
 
             {/* Fumante ou Bebe */}
             <QuestionField
-              label="É fumante ou bebe?"
+              label="É fumante ou etilista?"
               value={form.smokerOrDrinker}
               onValueChange={(value) => setForm({ ...form, smokerOrDrinker: value })}
               details={form.smokerOrDrinkerDetails}
