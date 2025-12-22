@@ -156,10 +156,17 @@ export const alertsService = {
     },
 
     async getTotalAlertsCount(): Promise<number> {
-        const [birthdays, returns] = await Promise.all([
+        // Import services inline to avoid circular dependencies
+        const { appointmentsService } = await import('./appointments');
+        const { consultationsService } = await import('./consultations');
+
+        const [birthdays, procedureReturns, tomorrowAppointments, scheduledReturns] = await Promise.all([
             this.getBirthdayAlerts(),
-            this.getProcedureReminders()
+            this.getProcedureReminders(),
+            appointmentsService.getTomorrow().catch(() => []),
+            consultationsService.getReturnAlerts().catch(() => [])
         ]);
-        return birthdays.length + returns.length;
+
+        return birthdays.length + procedureReturns.length + tomorrowAppointments.length + scheduledReturns.length;
     }
 };
