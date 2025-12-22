@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate } from '@/hooks/useAppointments';
-import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useDismissAlert } from '@/hooks/useAlerts';
 import { remindersService, Reminder } from '@/services/reminders';
 import { getPatients } from '@/services/patients';
 import { Patient } from '@/types/database';
@@ -25,6 +25,7 @@ export default function Alerts() {
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
+  const dismissAlert = useDismissAlert();
   const { data: tomorrowAppointments, isLoading: loadingTomorrow } = useAppointmentsByDate(tomorrowStr);
 
   // Template State
@@ -135,7 +136,12 @@ export default function Alerts() {
     setShowSettings(false);
   };
 
-  const handleWhatsApp = (phone: string, name: string, type: 'birthday' | 'return' | 'reminder') => {
+  const handleWhatsApp = (
+    phone: string,
+    name: string,
+    type: 'birthday' | 'return' | 'reminder',
+    alertInfo?: { patientId: string; alertDate: string }
+  ) => {
     const cleanPhone = phone.replace(/\D/g, '');
     let message = '';
 
@@ -149,6 +155,31 @@ export default function Alerts() {
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+
+    // Mark alert as handled if alertInfo is provided
+    if (alertInfo) {
+      const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
+      dismissAlert.mutate({
+        alertType: alertType as 'birthday' | 'procedure_return',
+        patientId: alertInfo.patientId,
+        alertDate: alertInfo.alertDate,
+        action: 'messaged'
+      });
+    }
+  };
+
+  const handleDismissAlert = (
+    type: 'birthday' | 'procedure_return',
+    patientId: string,
+    alertDate: string
+  ) => {
+    dismissAlert.mutate({
+      alertType: type,
+      patientId,
+      alertDate,
+      action: 'dismissed'
+    });
+    toast.success('Alerta dispensado');
   };
 
 
@@ -389,24 +420,42 @@ export default function Alerts() {
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {birthdayAlerts?.map((alert) => (
-              <div key={alert.patient.id} className="p-4 hover:bg-pink-50/30 transition-colors">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium">{alert.patient.name}</p>
-                    <p className="text-sm text-muted-foreground">Fazendo {new Date().getFullYear() - new Date(alert.date).getFullYear()} anos</p>
+            {birthdayAlerts?.map((alert) => {
+              const todayStr = new Date().toISOString().split('T')[0];
+              return (
+                <div key={alert.patient.id} className="p-4 hover:bg-pink-50/30 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium">{alert.patient.name}</p>
+                      <p className="text-sm text-muted-foreground">Fazendo {new Date().getFullYear() - new Date(alert.date).getFullYear()} anos</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-pink-500 hover:bg-pink-600 border-pink-600 gap-2 text-white"
+                        onClick={() => handleWhatsApp(
+                          alert.patient.phone,
+                          alert.patient.name.split(' ')[0],
+                          'birthday',
+                          { patientId: alert.patient.id, alertDate: todayStr }
+                        )}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Parabenizar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDismissAlert('birthday', alert.patient.id, todayStr)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    size="sm"
-                    className="bg-pink-500 hover:bg-pink-600 border-pink-600 gap-2 text-white"
-                    onClick={() => handleWhatsApp(alert.patient.phone, alert.patient.name.split(' ')[0], 'birthday')}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Parabenizar
-                  </Button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -435,14 +484,29 @@ export default function Alerts() {
                     <p className="font-medium">{alert.patient.name}</p>
                     <p className="text-sm text-muted-foreground">{alert.daysSince} dias desde o último procedimento</p>
                   </div>
-                  <Button
-                    size="sm"
-                    className="bg-amber-500 hover:bg-amber-600 border-amber-600 gap-2 text-white"
-                    onClick={() => handleWhatsApp(alert.patient.phone, alert.patient.name.split(' ')[0], 'return')}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Agendar
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-amber-500 hover:bg-amber-600 border-amber-600 gap-2 text-white"
+                      onClick={() => handleWhatsApp(
+                        alert.patient.phone,
+                        alert.patient.name.split(' ')[0],
+                        'return',
+                        { patientId: alert.patient.id, alertDate: alert.date }
+                      )}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Agendar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDismissAlert('procedure_return', alert.patient.id, alert.date)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

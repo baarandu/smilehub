@@ -11,7 +11,31 @@ export interface Alert {
     daysSince?: number; // For return alerts
 }
 
+export type AlertActionType = 'messaged' | 'scheduled' | 'dismissed';
+
 export const alertsService = {
+    async getDismissedAlerts(): Promise<Set<string>> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return new Set();
+
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data, error } = await (supabase
+            .from('alert_dismissals') as any)
+            .select('alert_type, patient_id, alert_date')
+            .eq('user_id', user.id);
+
+        if (error) {
+            console.error('Error fetching dismissals:', error);
+            return new Set();
+        }
+
+        // Create a set of "type:patientId:date" keys for fast lookup
+        return new Set(
+            (data || []).map((d: any) => `${d.alert_type}:${d.patient_id}:${d.alert_date}`)
+        );
+    },
+
     async getBirthdayAlerts(): Promise<Alert[]> {
         const { data: patients, error } = await supabase
             .from('patients')
@@ -23,15 +47,23 @@ export const alertsService = {
         const today = new Date();
         const todayMonth = today.getMonth();
         const todayDay = today.getDate();
+        const todayStr = today.toISOString().split('T')[0];
+
+        // Get dismissed alerts
+        const dismissed = await this.getDismissedAlerts();
 
         return (patients as any[] || [])
             .filter(p => {
                 if (!p.birth_date) return false;
                 const [year, month, day] = p.birth_date.split('-').map(Number);
-                return (month - 1) === todayMonth && day === todayDay;
+                if (!((month - 1) === todayMonth && day === todayDay)) return false;
+
+                // Check if already dismissed
+                const key = `birthday:${p.id}:${todayStr}`;
+                return !dismissed.has(key);
             })
             .map(p => ({
-                type: 'birthday',
+                type: 'birthday' as const,
                 patient: {
                     id: p.id,
                     name: p.name,
@@ -64,6 +96,9 @@ export const alertsService = {
             }
         });
 
+        // Get dismissed alerts
+        const dismissed = await this.getDismissedAlerts();
+
         const alerts: Alert[] = [];
         const sixMonthsAgo = new Date();
         sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 180);
@@ -74,6 +109,10 @@ export const alertsService = {
 
             const procDate = new Date(data.date);
             if (procDate <= sixMonthsAgo) {
+                // Check if already dismissed
+                const key = `procedure_return:${patientId}:${data.date}`;
+                if (dismissed.has(key)) continue;
+
                 const diffTime = Math.abs(new Date().getTime() - procDate.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -91,5 +130,37 @@ export const alertsService = {
         }
 
         return alerts.sort((a, b) => (b.daysSince || 0) - (a.daysSince || 0));
+    },
+
+    async dismissAlert(
+        alertType: 'birthday' | 'procedure_return',
+        patientId: string,
+        alertDate: string,
+        action: AlertActionType
+    ): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await (supabase
+            .from('alert_dismissals') as any)
+            .upsert({
+                user_id: user.id,
+                alert_type: alertType,
+                patient_id: patientId,
+                alert_date: alertDate,
+                action_taken: action
+            }, {
+                onConflict: 'user_id,alert_type,patient_id,alert_date'
+            });
+
+        if (error) throw error;
+    },
+
+    async getTotalAlertsCount(): Promise<number> {
+        const [birthdays, returns] = await Promise.all([
+            this.getBirthdayAlerts(),
+            this.getProcedureReminders()
+        ]);
+        return birthdays.length + returns.length;
     }
 };

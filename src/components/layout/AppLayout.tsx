@@ -35,9 +35,18 @@ export function AppLayout({ children }: AppLayoutProps) {
   useState(() => {
     const loadCount = async () => {
       try {
-        const { remindersService } = await import('@/services/reminders');
-        const count = await remindersService.getActiveCount();
-        setActiveRemindersCount(count);
+        const [{ remindersService }, { alertsService }] = await Promise.all([
+          import('@/services/reminders'),
+          import('@/services/alerts')
+        ]);
+
+        const [remindersCount, birthdays, returns] = await Promise.all([
+          remindersService.getActiveCount(),
+          alertsService.getBirthdayAlerts(),
+          alertsService.getProcedureReminders()
+        ]);
+
+        setActiveRemindersCount(remindersCount + birthdays.length + returns.length);
       } catch (e) { console.error(e); }
     };
     loadCount();

@@ -3,6 +3,7 @@ import { Tabs, useFocusEffect } from 'expo-router';
 import { DeviceEventEmitter } from 'react-native';
 import { LayoutDashboard, Users, Calendar, Bell, Package, DollarSign } from 'lucide-react-native';
 import { remindersService } from '../../src/services/reminders';
+import { alertsService } from '../../src/services/alerts';
 
 export default function TabLayout() {
     const [activeReminders, setActiveReminders] = useState(0);
@@ -22,8 +23,11 @@ export default function TabLayout() {
 
     const loadRemindersCount = async () => {
         try {
-            const count = await remindersService.getActiveCount();
-            setActiveReminders(count);
+            const [remindersCount, alertsCount] = await Promise.all([
+                remindersService.getActiveCount(),
+                alertsService.getTotalAlertsCount()
+            ]);
+            setActiveReminders(remindersCount + alertsCount);
         } catch (error) {
             console.error(error);
         }

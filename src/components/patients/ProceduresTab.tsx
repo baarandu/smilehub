@@ -90,9 +90,10 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
     try {
       await deleteProcedure.mutateAsync(procedureToDelete.id);
       toast.success('Procedimento excluído com sucesso!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting procedure:', error);
-      toast.error('Erro ao excluir procedimento');
+      const errorMessage = error?.message || error?.error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao excluir procedimento: ${errorMessage}`);
     } finally {
       setDeleteDialogOpen(false);
       setProcedureToDelete(null);

@@ -214,7 +214,12 @@ export default function Alerts() {
         Linking.openURL(`tel:${cleanPhone}`);
     };
 
-    const handleWhatsApp = (phone: string, name: string, type: 'birthday' | 'return' | 'scheduled' | 'reminder') => {
+    const handleWhatsApp = async (
+        phone: string,
+        name: string,
+        type: 'birthday' | 'return' | 'scheduled' | 'reminder',
+        alertInfo?: { patientId: string; alertDate: string }
+    ) => {
         const cleanPhone = phone.replace(/\D/g, '');
         let message = '';
 
@@ -230,6 +235,39 @@ export default function Alerts() {
 
         const encodedMessage = encodeURIComponent(message);
         Linking.openURL(`https://wa.me/55${cleanPhone}?text=${encodedMessage}`);
+
+        // Mark alert as handled if alertInfo is provided
+        if (alertInfo) {
+            try {
+                const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
+                await alertsService.dismissAlert(
+                    alertType as 'birthday' | 'procedure_return',
+                    alertInfo.patientId,
+                    alertInfo.alertDate,
+                    'messaged'
+                );
+                DeviceEventEmitter.emit('reminderUpdated');
+                loadData(); // Refresh lists
+            } catch (error) {
+                console.error('Error dismissing alert:', error);
+            }
+        }
+    };
+
+    const handleDismissAlert = async (
+        type: 'birthday' | 'procedure_return',
+        patientId: string,
+        alertDate: string
+    ) => {
+        try {
+            await alertsService.dismissAlert(type, patientId, alertDate, 'dismissed');
+            DeviceEventEmitter.emit('reminderUpdated');
+            RNAlert.alert('Sucesso', 'Alerta dispensado');
+            loadData(); // Refresh lists
+        } catch (error) {
+            console.error('Error dismissing alert:', error);
+            RNAlert.alert('Erro', 'Não foi possível dispensar o alerta');
+        }
     };
 
     const getUrgencyConfig = (days: number) => {
@@ -401,27 +439,43 @@ export default function Alerts() {
                                     <Text className="text-lg font-bold text-gray-800">Aniversariantes do Dia</Text>
                                 </View>
                                 <View className="gap-3">
-                                    {birthdayAlerts.map((alert) => (
-                                        <View key={alert.patient.id} className="bg-pink-50 rounded-xl p-4 border-l-4 border-l-pink-500">
-                                            <View className="flex-row justify-between items-start">
-                                                <View>
-                                                    <Text className="font-bold text-gray-900">{alert.patient.name}</Text>
-                                                    <Text className="text-gray-600 text-sm mt-1">{alert.patient.phone}</Text>
+                                    {birthdayAlerts.map((alert) => {
+                                        const todayStr = new Date().toISOString().split('T')[0];
+                                        return (
+                                            <View key={alert.patient.id} className="bg-pink-50 rounded-xl p-4 border-l-4 border-l-pink-500">
+                                                <View className="flex-row justify-between items-start">
+                                                    <View className="flex-1">
+                                                        <Text className="font-bold text-gray-900">{alert.patient.name}</Text>
+                                                        <Text className="text-gray-600 text-sm mt-1">{alert.patient.phone}</Text>
+                                                    </View>
+                                                    <View className="flex-row items-center gap-2">
+                                                        <View className="bg-white px-2 py-1 rounded-full">
+                                                            <Text className="text-xs font-bold text-pink-600">Hoje</Text>
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            onPress={() => handleDismissAlert('birthday', alert.patient.id, todayStr)}
+                                                            className="w-8 h-8 items-center justify-center"
+                                                        >
+                                                            <X size={18} color="#9CA3AF" />
+                                                        </TouchableOpacity>
+                                                    </View>
                                                 </View>
-                                                <View className="bg-white px-2 py-1 rounded-full">
-                                                    <Text className="text-xs font-bold text-pink-600">Hoje</Text>
-                                                </View>
-                                            </View>
 
-                                            <TouchableOpacity
-                                                className="mt-3 bg-pink-500 rounded-lg py-2 flex-row justify-center items-center gap-2"
-                                                onPress={() => handleWhatsApp(alert.patient.phone, alert.patient.name.split(' ')[0], 'birthday')}
-                                            >
-                                                <MessageCircle size={18} color="white" />
-                                                <Text className="text-white font-medium">Mandar Parabéns</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))}
+                                                <TouchableOpacity
+                                                    className="mt-3 bg-pink-500 rounded-lg py-2 flex-row justify-center items-center gap-2"
+                                                    onPress={() => handleWhatsApp(
+                                                        alert.patient.phone,
+                                                        alert.patient.name.split(' ')[0],
+                                                        'birthday',
+                                                        { patientId: alert.patient.id, alertDate: todayStr }
+                                                    )}
+                                                >
+                                                    <MessageCircle size={18} color="white" />
+                                                    <Text className="text-white font-medium">Mandar Parabéns</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    })}
                                 </View>
                             </View>
                         )}
@@ -436,17 +490,30 @@ export default function Alerts() {
                                 <View className="gap-3">
                                     {procedureAlerts.map((alert) => (
                                         <View key={alert.patient.id} className="bg-amber-50 rounded-xl p-4 border-l-4 border-l-amber-500">
-                                            <View>
-                                                <Text className="font-bold text-gray-900">{alert.patient.name}</Text>
-                                                <Text className="text-gray-600 text-sm mt-1">{alert.patient.phone}</Text>
-                                                <Text className="text-amber-800 text-xs mt-2">
-                                                    Último proc.: {new Date(alert.date).toLocaleDateString()} ({alert.daysSince} dias atrás)
-                                                </Text>
+                                            <View className="flex-row justify-between items-start">
+                                                <View className="flex-1">
+                                                    <Text className="font-bold text-gray-900">{alert.patient.name}</Text>
+                                                    <Text className="text-gray-600 text-sm mt-1">{alert.patient.phone}</Text>
+                                                    <Text className="text-amber-800 text-xs mt-2">
+                                                        Último proc.: {new Date(alert.date).toLocaleDateString()} ({alert.daysSince} dias atrás)
+                                                    </Text>
+                                                </View>
+                                                <TouchableOpacity
+                                                    onPress={() => handleDismissAlert('procedure_return', alert.patient.id, alert.date)}
+                                                    className="w-8 h-8 items-center justify-center"
+                                                >
+                                                    <X size={18} color="#9CA3AF" />
+                                                </TouchableOpacity>
                                             </View>
 
                                             <TouchableOpacity
                                                 className="mt-3 bg-amber-500 rounded-lg py-2 flex-row justify-center items-center gap-2"
-                                                onPress={() => handleWhatsApp(alert.patient.phone, alert.patient.name.split(' ')[0], 'return')}
+                                                onPress={() => handleWhatsApp(
+                                                    alert.patient.phone,
+                                                    alert.patient.name.split(' ')[0],
+                                                    'return',
+                                                    { patientId: alert.patient.id, alertDate: alert.date }
+                                                )}
                                             >
                                                 <MessageCircle size={18} color="white" />
                                                 <Text className="text-white font-medium">Enviar Lembrete</Text>
