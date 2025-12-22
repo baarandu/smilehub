@@ -606,7 +606,7 @@ export default function Materials() {
                     ListHeaderComponent={() => (
                         <Text style={styles.listHeaderText}>{historyOrders.length} pedido(s) no histórico</Text>
                     )}
-                    renderItem={({ item }) => <OrderCard order={item} showDelete={false} />}
+                    renderItem={({ item }) => <OrderCard order={item} showDelete={true} />}
                 />
             );
         }
