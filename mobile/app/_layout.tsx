@@ -16,7 +16,7 @@ function RootLayoutNav() {
         const firstSegment = segments[0];
 
         // Auth routes that don't require login
-        const publicRoutes = ['login', 'signup', 'forgot-password'];
+        const publicRoutes = ['login', 'signup', 'forgot-password', 'reset-password'];
         const isPublicRoute = publicRoutes.includes(firstSegment as string);
 
         // Protected routes (tabs and other authenticated pages)

@@ -9,7 +9,7 @@
 import { z } from 'zod';
 
 // Configuration
-const STRICT_VALIDATION = false; // Set to true to enforce validation
+const STRICT_VALIDATION = true; // ✅ Validation enforced - invalid data will be blocked
 
 // Helper: Validate and return result (doesn't throw)
 export function safeValidate<T>(schema: z.ZodSchema<T>, data: unknown): {

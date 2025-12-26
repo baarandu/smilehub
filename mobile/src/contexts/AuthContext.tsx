@@ -105,7 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const resetPassword = async (email: string) => {
         setIsLoading(true);
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'organizaodonto://reset-password',
+            });
             if (error) throw error;
             Alert.alert('Email Enviado', 'Verifique sua caixa de entrada para redefinir a senha.');
         } catch (error: any) {

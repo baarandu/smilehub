@@ -3,9 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/database';
 import { SecureStorageAdapter } from './secureStorage';
 
-// Use environment variables with fallback to hardcoded values (for backwards compatibility)
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://pakusdbmpgrfhjouiniz.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBha3VzZGJtcGdyZmhqb3Vpbml6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzOTU4MjAsImV4cCI6MjA4MDk3MTgyMH0.MuNMCwKub9HLBUkWD6F58xzYYh-fE_Til4C1OpFbg6Y';
+// Environment variables - MUST be configured in .env file
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+// Validate environment variables are set
+if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+        'Missing Supabase environment variables. ' +
+        'Please ensure EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY are set in your .env file.'
+    );
+}
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
