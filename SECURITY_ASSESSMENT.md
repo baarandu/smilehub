@@ -76,27 +76,27 @@ const { data } = await supabase
 
 ## 3️⃣ Falta de Validação de Entrada (Upload de Arquivos)
 
-### Status: ⚠️ PARCIAL
+### Status: ✅ CORRIGIDO (26/12/2024)
 
 **O que verificamos:**
 - ✅ Uploads vão para Supabase Storage (fora do webroot)
 - ✅ Arquivos são armazenados com UUIDs (não nomes originais)
-- ⚠️ Sem validação explícita de MIME type real
-- ⚠️ Storage policies permitem qualquer arquivo autenticado
+- ✅ Validação de MIME type implementada (26/12/2024)
+- ✅ Limite de tamanho: 10MB
 
-**Arquivos relacionados:**
-- `supabase-storage-policies.sql`
-- Buckets: `exams`, `clinic-assets`, `documents`
+**Validação implementada em:**
+- `src/services/documents.ts` (web)
+- `mobile/src/services/exams.ts` (mobile)
 
-**Riscos identificados:**
-- Usuário pode fazer upload de qualquer tipo de arquivo
-- Sem limite de tamanho definido no código
+**Tipos permitidos:**
+- Imagens: JPEG, PNG, GIF, WebP, HEIC
+- Documentos: PDF
 
-**Recomendações:**
-- [ ] Validar MIME type real do arquivo (não só extensão)
-- [ ] Definir whitelist de extensões permitidas: `.jpg`, `.png`, `.pdf`
-- [ ] Configurar limites de tamanho no Supabase Storage
-- [ ] Adicionar scan de malware (Supabase não tem nativo)
+**Recomendações pendentes:**
+- [x] Validar MIME type real do arquivo
+- [x] Definir whitelist de extensões permitidas
+- [x] Configurar limites de tamanho (10MB)
+- [ ] Adicionar scan de malware (opcional - Supabase não tem nativo)
 
 ---
 

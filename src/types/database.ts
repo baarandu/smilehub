@@ -761,3 +761,30 @@ export type DocumentTemplateUpdate = {
   content?: string
   updated_at?: string
 }
+
+// Patient Documents (for file uploads)
+export type PatientDocument = {
+  id: string
+  patient_id: string
+  name: string
+  description: string | null
+  file_url: string
+  file_type: 'image' | 'pdf' | 'document'
+  file_size: number
+  category: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
+  uploaded_at: string
+  created_at: string
+}
+
+export type PatientDocumentInsert = {
+  id?: string
+  patient_id: string
+  name: string
+  description?: string | null
+  file_url: string
+  file_type?: 'image' | 'pdf' | 'document'
+  file_size?: number
+  category?: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
+  uploaded_at?: string
+  created_at?: string
+}

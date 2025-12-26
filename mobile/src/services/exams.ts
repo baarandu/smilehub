@@ -32,6 +32,19 @@ function decodeBase64(base64: string): ArrayBuffer {
   return arraybuffer;
 }
 
+// Allowed MIME types for security
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 export const examsService = {
   async getByPatient(patientId: string): Promise<Exam[]> {
     const { data, error } = await supabase
@@ -46,18 +59,30 @@ export const examsService = {
   },
 
   async uploadFile(file: { uri: string; type: string; name: string }): Promise<string> {
+    // Validate MIME type before upload
+    const mimeType = file.type || 'image/jpeg';
+    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+      throw new Error(
+        `Tipo de arquivo não permitido: ${mimeType}. Apenas imagens (JPEG, PNG, GIF, WebP, HEIC) e PDFs são aceitos.`
+      );
+    }
+
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = fileName;
-
-
 
     // Read file as base64 for React Native
     const base64 = await FileSystem.readAsStringAsync(file.uri, {
       encoding: 'base64',
     });
 
-
+    // Check file size (base64 is ~33% larger)
+    const estimatedSize = (base64.length * 3) / 4;
+    if (estimatedSize > MAX_FILE_SIZE) {
+      throw new Error(
+        `Arquivo muito grande (${(estimatedSize / 1024 / 1024).toFixed(2)}MB). O tamanho máximo permitido é ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+      );
+    }
 
     // Convert base64 to ArrayBuffer using inline decoder
     const arrayBuffer = decodeBase64(base64);
@@ -65,7 +90,7 @@ export const examsService = {
     const { data, error } = await supabase.storage
       .from('exams')
       .upload(filePath, arrayBuffer, {
-        contentType: file.type || 'image/jpeg',
+        contentType: mimeType,
         upsert: false,
       });
 
@@ -74,13 +99,9 @@ export const examsService = {
       throw error;
     }
 
-
-
     const { data: { publicUrl } } = supabase.storage
       .from('exams')
       .getPublicUrl(filePath);
-
-
 
     return publicUrl;
   },

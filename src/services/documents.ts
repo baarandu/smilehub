@@ -3,11 +3,44 @@ import { PatientDocument, PatientDocumentInsert } from '@/types/database';
 
 const BUCKET_NAME = 'patient-documents';
 
+// Allowed MIME types for security
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf',
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+// Validate file before upload
+function validateFile(file: File): void {
+  // Check MIME type
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    throw new Error(
+      `Tipo de arquivo não permitido: ${file.type}. Apenas imagens (JPEG, PNG, GIF, WebP, HEIC) e PDFs são aceitos.`
+    );
+  }
+
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(
+      `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(2)}MB). O tamanho máximo permitido é ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+    );
+  }
+}
+
 // Upload file to Supabase Storage
 export async function uploadFile(
   file: File,
   patientId: string
 ): Promise<{ url: string; path: string }> {
+  // Validate file before upload
+  validateFile(file);
+
   const fileExt = file.name.split('.').pop();
   const fileName = `${patientId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
@@ -57,12 +90,12 @@ export async function createDocument(
 ): Promise<PatientDocument> {
   const { data, error } = await supabase
     .from('patient_documents')
-    .insert(document)
+    .insert(document as any)
     .select()
     .single();
 
   if (error) throw error;
-  return data;
+  return data as PatientDocument;
 }
 
 // Upload file and create document record
@@ -79,8 +112,8 @@ export async function uploadPatientDocument(
   const { url } = await uploadFile(file, patientId);
 
   // Determine file type
-  const fileType = file.type.startsWith('image/') ? 'image' : 
-                   file.type === 'application/pdf' ? 'pdf' : 'document';
+  const fileType = file.type.startsWith('image/') ? 'image' :
+    file.type === 'application/pdf' ? 'pdf' : 'document';
 
   // Create document record
   const document = await createDocument({
