@@ -1,7 +1,7 @@
 # 🔐 Avaliação de Segurança - SmileHub / Organiza Odonto
 
 **Data:** 24/12/2024  
-**Última atualização:** 26/12/2024 08:37
+**Última atualização:** 26/12/2024 09:05
 
 ---
 
@@ -11,7 +11,7 @@
 |---|-----------------|-------------------|-------|
 | 1 | Injeção de Código (SQL/NoSQL) | ✅ Protegido | Baixo |
 | 2 | Cross-Site Scripting (XSS) | ✅ Protegido | Baixo |
-| 3 | Validação de Upload de Arquivos | ⚠️ Parcial | Médio |
+| 3 | Validação de Upload de Arquivos | ✅ Corrigido | Baixo |
 | 4 | Autenticação e Sessão | ⚠️ Parcial | Médio |
 | 5 | Exposição de APIs/Dados Sensíveis | ✅ Corrigido | Baixo |
 | 6 | CSRF (Cross-Site Request Forgery) | ✅ Protegido | Baixo |
@@ -316,7 +316,7 @@ USING (bucket_id = 'clinic-assets');
 ### ⚠️ ALTO (próxima semana)
 4. ~~Ativar `STRICT_VALIDATION = true`~~ ✅ FEITO (26/12/2024)
 5. ~~Ativar triggers de auditoria no banco~~ ✅ FEITO - 18 triggers ativos
-6. Implementar validação de MIME type em uploads
+6. ~~Implementar validação de MIME type em uploads~~ ✅ FEITO (26/12/2024)
 7. Adicionar rate limiting para login
 
 ### 📋 MÉDIO (próximo mês)
