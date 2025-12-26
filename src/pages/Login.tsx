@@ -1,21 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import {
+    checkRateLimit,
+    recordFailedAttempt,
+    resetRateLimit,
+    getRemainingAttempts,
+    RATE_LIMIT_CONFIG
+} from '@/lib/rateLimit';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [lockout, setLockout] = useState<{ locked: boolean; minutesRemaining: number }>({ locked: false, minutesRemaining: 0 });
     const navigate = useNavigate();
+
+    // Check lockout status on mount and periodically
+    useEffect(() => {
+        const checkLockout = () => {
+            setLockout(checkRateLimit());
+        };
+        checkLockout();
+        const interval = setInterval(checkLockout, 10000); // Check every 10 seconds
+        return () => clearInterval(interval);
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Check if locked out
+        const rateLimitStatus = checkRateLimit();
+        if (rateLimitStatus.locked) {
+            setLockout(rateLimitStatus);
+            toast.error(`Muitas tentativas. Tente novamente em ${rateLimitStatus.minutesRemaining} minutos.`);
+            return;
+        }
 
         if (!email || !password) {
             toast.error('Preencha todos os campos');
@@ -31,11 +57,25 @@ export default function Login() {
 
             if (error) throw error;
 
+            // Reset rate limit on successful login
+            resetRateLimit();
             toast.success('Login realizado com sucesso!');
             navigate('/');
         } catch (error: any) {
             console.error('Login error:', error);
-            toast.error(error.message || 'Erro ao fazer login');
+
+            // Record failed attempt
+            const isLockedOut = recordFailedAttempt();
+            const remaining = getRemainingAttempts();
+
+            if (isLockedOut) {
+                setLockout(checkRateLimit());
+                toast.error(`Conta bloqueada temporariamente. Tente novamente em ${RATE_LIMIT_CONFIG.lockoutMinutes} minutos.`);
+            } else if (remaining <= 2) {
+                toast.error(`${error.message}. Restam ${remaining} tentativas.`);
+            } else {
+                toast.error(error.message || 'Erro ao fazer login');
+            }
         } finally {
             setLoading(false);
         }

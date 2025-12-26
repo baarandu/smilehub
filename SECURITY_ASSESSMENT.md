@@ -1,7 +1,7 @@
 # 🔐 Avaliação de Segurança - SmileHub / Organiza Odonto
 
 **Data:** 24/12/2024  
-**Última atualização:** 26/12/2024 09:05
+**Última atualização:** 26/12/2024 09:12
 
 ---
 
@@ -12,7 +12,7 @@
 | 1 | Injeção de Código (SQL/NoSQL) | ✅ Protegido | Baixo |
 | 2 | Cross-Site Scripting (XSS) | ✅ Protegido | Baixo |
 | 3 | Validação de Upload de Arquivos | ✅ Corrigido | Baixo |
-| 4 | Autenticação e Sessão | ⚠️ Parcial | Médio |
+| 4 | Autenticação e Sessão | ✅ Melhorado | Baixo |
 | 5 | Exposição de APIs/Dados Sensíveis | ✅ Corrigido | Baixo |
 | 6 | CSRF (Cross-Site Request Forgery) | ✅ Protegido | Baixo |
 | 7 | Componentes com Vulnerabilidades | ✅ Verificado | Baixo |
@@ -102,7 +102,7 @@ const { data } = await supabase
 
 ## 4️⃣ Autenticação e Gerenciamento de Sessão
 
-### Status: ⚠️ PARCIAL
+### Status: ✅ MELHORADO (26/12/2024)
 
 **O que está BOM:**
 | Aspecto | Status |
@@ -113,30 +113,31 @@ const { data } = await supabase
 | Refresh Token | ✅ `autoRefreshToken: true` |
 | Sessão persistida | ✅ SecureStore (mobile), localStorage (web) |
 | Recuperação de senha | ✅ Via email |
+| Rate limiting login | ✅ 5 tentativas, bloqueio 15min |
 
-**O que FALTA:**
+**Rate Limiting implementado (26/12/2024):**
+- Arquivos: `src/lib/rateLimit.ts`, `mobile/src/lib/rateLimit.ts`
+- Configuração: 5 tentativas máximas, bloqueio de 15 minutos
+- Avisos ao usuário: a partir de 2 tentativas restantes
+
+> [!NOTE]
+> **Implementação atual é frontend-only** (localStorage/AsyncStorage).
+> Protege contra ataques simples de força bruta, mas pode ser bypassada por atacantes mais sofisticados.
+> 
+> **Recomendado para o futuro:** Migrar para Supabase Edge Function com Redis ou tabela de rate limiting no banco para proteção server-side.
+
+**O que ainda FALTA:**
 | Aspecto | Status |
 |---------|--------|
 | 2FA/MFA | ❌ Não implementado |
 | Política de senha complexa | ⚠️ Só mínimo 6 caracteres |
 | Cookies HttpOnly | ⚠️ Supabase usa localStorage |
 | Expiração curta de sessão | ⚠️ Padrão Supabase (1h JWT, 1 semana refresh) |
-| Rate limiting login | ❌ Não implementado |
 
-**Código atual:**
-```typescript
-// Signup - apenas tamanho mínimo
-if (password.length < 6) {
-    toast.error('A senha deve ter pelo menos 6 caracteres');
-    return;
-}
-```
-
-**Recomendações:**
+**Recomendações pendentes:**
 - [ ] Implementar 2FA com Supabase Auth (SMS ou TOTP)
 - [ ] Exigir senha com maiúscula, número e símbolo
-- [ ] Implementar rate limiting para tentativas de login
-- [ ] Adicionar bloqueio após X tentativas falhas
+- [ ] Migrar rate limiting para server-side (Edge Function)
 
 ---
 
@@ -309,27 +310,27 @@ USING (bucket_id = 'clinic-assets');
 ## 🎯 Plano de Ação Priorizado
 
 ### 🔴 URGENTE (fazer agora)
-1. ~~**Remover credenciais hardcoded**~~ ✅ FEITO (24/12/2024)
-2. **Regenerar anon key** no dashboard Supabase (recomendado - chave ainda está no histórico Git)
-3. ~~**Rodar `npm audit`**~~ ✅ FEITO - 2 moderate (dev only)
+- [x] 1. ~~**Remover credenciais hardcoded**~~ ✅ FEITO (24/12/2024)
+- [ ] 2. **Regenerar anon key** no dashboard Supabase (recomendado - chave ainda está no histórico Git)
+- [x] 3. ~~**Rodar `npm audit`**~~ ✅ FEITO - 2 moderate (dev only)
 
 ### ⚠️ ALTO (próxima semana)
-4. ~~Ativar `STRICT_VALIDATION = true`~~ ✅ FEITO (26/12/2024)
-5. ~~Ativar triggers de auditoria no banco~~ ✅ FEITO - 18 triggers ativos
-6. ~~Implementar validação de MIME type em uploads~~ ✅ FEITO (26/12/2024)
-7. Adicionar rate limiting para login
+- [x] 4. ~~Ativar `STRICT_VALIDATION = true`~~ ✅ FEITO (26/12/2024)
+- [x] 5. ~~Ativar triggers de auditoria no banco~~ ✅ FEITO - 18 triggers ativos
+- [x] 6. ~~Implementar validação de MIME type em uploads~~ ✅ FEITO (26/12/2024)
+- [x] 7. ~~Adicionar rate limiting para login~~ ✅ FEITO (26/12/2024) - 5 tentativas, bloqueio 15min
 
 ### 📋 MÉDIO (próximo mês)
-8. Implementar 2FA (Supabase Auth suporta)
-9. ~~Adicionar CSP headers~~ ✅ FEITO (26/12/2024) - `vercel.json`
-10. ~~Configurar Dependabot no GitHub~~ ✅ FEITO - `.github/dependabot.yml`
-11. Revisar storage policies por clínica
+- [ ] 8. Implementar 2FA (Supabase Auth suporta)
+- [x] 9. ~~Adicionar CSP headers~~ ✅ FEITO (26/12/2024) - `vercel.json`
+- [x] 10. ~~Configurar Dependabot no GitHub~~ ✅ FEITO - `.github/dependabot.yml`
+- [ ] 11. Revisar storage policies por clínica
 
 ### 📝 BAIXO (backlog)
-12. Integrar ferramenta de análise de logs
-13. Configurar alertas de segurança
-14. Fazer pentest profissional
-15. Treinar equipe em segurança
+- [ ] 12. Integrar ferramenta de análise de logs
+- [ ] 13. Configurar alertas de segurança
+- [ ] 14. Fazer pentest profissional
+- [ ] 15. Treinar equipe em segurança
 
 ---
 
@@ -343,26 +344,26 @@ USING (bucket_id = 'clinic-assets');
 ### XSS
 - [x] Busca por `dangerouslySetInnerHTML` - 1 uso controlado
 - [x] Verificação de escape em outputs - React automático
-- [ ] CSP configurada
+- [x] CSP configurada ✅ (26/12/2024)
 
 ### Upload de Arquivos
 - [x] Arquivos em storage externo (Supabase)
 - [x] Nomes aleatórios (UUID)
-- [ ] Validação de MIME type
-- [ ] Limite de tamanho
+- [x] Validação de MIME type ✅ (26/12/2024)
+- [x] Limite de tamanho ✅ (26/12/2024) - 10MB
 
 ### Autenticação
 - [x] Hash de senhas (bcrypt via Supabase)
 - [x] Tokens JWT
 - [x] Refresh token
 - [ ] 2FA/MFA
-- [ ] Rate limiting
+- [x] Rate limiting ✅ (26/12/2024) - 5 tentativas, 15min bloqueio
 
 ### APIs e Dados
 - [x] RLS implementado
 - [x] HTTPS
-- [ ] Credenciais em variáveis de ambiente apenas
-- [ ] Rate limiting
+- [x] Credenciais em variáveis de ambiente apenas ✅ (24/12/2024)
+- [x] Rate limiting ✅ (26/12/2024)
 
 ### CSRF
 - [x] Bearer token (não cookies)
@@ -374,7 +375,7 @@ USING (bucket_id = 'clinic-assets');
 
 ### Configurações
 - [x] .env no .gitignore
-- [ ] Validação strict ativa
+- [x] Validação strict ativa ✅ (26/12/2024)
 - [ ] Storage policies por clínica
 
 ### Logging

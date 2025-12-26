@@ -1,26 +1,78 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 import { Mail, Lock, ArrowRight, Check } from 'lucide-react-native';
+import {
+    checkRateLimit,
+    recordFailedAttempt,
+    resetRateLimit,
+    getRemainingAttempts,
+    RATE_LIMIT_CONFIG
+} from '../src/lib/rateLimit';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(true);
     const [loading, setLoading] = useState(false);
+    const [isLocked, setIsLocked] = useState(false);
     const { signIn } = useAuth();
     const router = useRouter();
 
+    // Check lockout status on mount
+    useEffect(() => {
+        const checkLockout = async () => {
+            const status = await checkRateLimit();
+            setIsLocked(status.locked);
+            if (status.locked) {
+                Alert.alert(
+                    'Conta Bloqueada',
+                    `Muitas tentativas de login. Tente novamente em ${status.minutesRemaining} minutos.`
+                );
+            }
+        };
+        checkLockout();
+    }, []);
+
     const handleLogin = async () => {
-        if (!email || !password) return;
+        if (!email || !password) {
+            Alert.alert('Erro', 'Preencha todos os campos');
+            return;
+        }
+
+        // Check if locked
+        const rateLimitStatus = await checkRateLimit();
+        if (rateLimitStatus.locked) {
+            setIsLocked(true);
+            Alert.alert(
+                'Conta Bloqueada',
+                `Muitas tentativas. Tente novamente em ${rateLimitStatus.minutesRemaining} minutos.`
+            );
+            return;
+        }
+
         setLoading(true);
         try {
             await signIn(email, password);
-            // Navigate to dashboard after successful login
+            // Reset rate limit on success
+            await resetRateLimit();
             router.replace('/(tabs)');
-        } catch (error) {
-            // Alert is already handled in context
+        } catch (error: any) {
+            // Record failed attempt
+            const lockedOut = await recordFailedAttempt();
+            const remaining = await getRemainingAttempts();
+
+            if (lockedOut) {
+                setIsLocked(true);
+                Alert.alert(
+                    'Conta Bloqueada',
+                    `Muitas tentativas. Tente novamente em ${RATE_LIMIT_CONFIG.lockoutMinutes} minutos.`
+                );
+            } else if (remaining <= 2) {
+                Alert.alert('Erro', `Login falhou. Restam ${remaining} tentativas.`);
+            }
+            // Otherwise, the error is already handled in context
         } finally {
             setLoading(false);
         }
