@@ -1,7 +1,7 @@
 # 🔐 Avaliação de Segurança - SmileHub / Organiza Odonto
 
 **Data:** 24/12/2024  
-**Última atualização:** 26/12/2024 09:12
+**Última atualização:** 27/12/2024 11:15
 
 ---
 
@@ -16,7 +16,7 @@
 | 5 | Exposição de APIs/Dados Sensíveis | ✅ Corrigido | Baixo |
 | 6 | CSRF (Cross-Site Request Forgery) | ✅ Protegido | Baixo |
 | 7 | Componentes com Vulnerabilidades | ✅ Verificado | Baixo |
-| 8 | Misconfiguration | ⚠️ Atenção | Médio |
+| 8 | Misconfiguration | ✅ Melhorado | Baixo |
 | 9 | Monitoramento e Logging | ✅ Implementado | Baixo |
 
 ---
@@ -229,31 +229,31 @@ Requisições de outros sites não terão o token.
 
 ## 8️⃣ Misconfiguration (Configurações Incorretas)
 
-### Status: ⚠️ ATENÇÃO
+### Status: ✅ MELHORADO (27/12/2024)
 
-**Problemas encontrados:**
+**Problemas corrigidos:**
 
 | Configuração | Status | Problema |
 |--------------|--------|----------|
 | `.env` no `.gitignore` | ✅ OK | - |
-| Credenciais hardcoded | 🔴 | Fallback no código |
-| Storage público | ⚠️ | `clinic-assets` é público |
-| Validação strict | ⚠️ | Desativada (`false`) |
-| Audit triggers | ⚠️ | Comentados no SQL |
+| Credenciais hardcoded | ✅ CORRIGIDO | Removido fallback |
+| Storage policies | ✅ CORRIGIDO | Isolamento por clinic_id |
+| Validação strict | ✅ CORRIGIDO | Ativada |
+| Audit triggers | ✅ CORRIGIDO | 18 triggers ativos |
 
-**Storage policies permissivas:**
-```sql
--- clinic-assets é PÚBLICO para leitura
-CREATE POLICY "Public access to clinic-assets"
-ON storage.objects FOR SELECT
-TO public  -- Qualquer um pode ver logos
-USING (bucket_id = 'clinic-assets');
-```
+**Storage policies implementadas (27/12/2024):**
+- SQL: `supabase-storage-policies-by-clinic.sql`
+- Código atualizado para usar path `{clinicId}/{filename}`
+- Usuários só podem acessar arquivos da própria clínica
 
-**Recomendações:**
-- [ ] Revisar se `clinic-assets` precisa ser público
-- [ ] Ativar `STRICT_VALIDATION = true`
-- [ ] Ativar triggers de auditoria
+> [!NOTE]
+> O bucket `clinic-assets` permanece público para leitura (logos são públicos em relatórios).
+> A gestão de arquivos está isolada por clínica.
+
+**Recomendações pendentes:**
+- [x] Ativar `STRICT_VALIDATION = true`
+- [x] Ativar triggers de auditoria
+- [x] Implementar storage policies por clínica
 - [ ] Fazer checklist de segurança antes de deploy
 
 ---
@@ -324,7 +324,7 @@ USING (bucket_id = 'clinic-assets');
 - [ ] 8. Implementar 2FA (Supabase Auth suporta)
 - [x] 9. ~~Adicionar CSP headers~~ ✅ FEITO (26/12/2024) - `vercel.json`
 - [x] 10. ~~Configurar Dependabot no GitHub~~ ✅ FEITO - `.github/dependabot.yml`
-- [ ] 11. Revisar storage policies por clínica
+- [x] 11. ~~Revisar storage policies por clínica~~ ✅ FEITO (27/12/2024)
 
 ### 📝 BAIXO (backlog)
 - [ ] 12. Integrar ferramenta de análise de logs
@@ -376,7 +376,7 @@ USING (bucket_id = 'clinic-assets');
 ### Configurações
 - [x] .env no .gitignore
 - [x] Validação strict ativa ✅ (26/12/2024)
-- [ ] Storage policies por clínica
+- [x] Storage policies por clínica ✅ (27/12/2024)
 
 ### Logging
 - [x] Tabela audit_logs

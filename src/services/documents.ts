@@ -34,15 +34,21 @@ function validateFile(file: File): void {
 }
 
 // Upload file to Supabase Storage
+// Path format: {clinicId}/{patientId}/{timestamp}-{random}.{ext}
 export async function uploadFile(
   file: File,
+  clinicId: string,
   patientId: string
 ): Promise<{ url: string; path: string }> {
   // Validate file before upload
   validateFile(file);
 
+  if (!clinicId) {
+    throw new Error('clinicId é obrigatório para upload de arquivos');
+  }
+
   const fileExt = file.name.split('.').pop();
-  const fileName = `${patientId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+  const fileName = `${clinicId}/${patientId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -101,6 +107,7 @@ export async function createDocument(
 // Upload file and create document record
 export async function uploadPatientDocument(
   file: File,
+  clinicId: string,
   patientId: string,
   metadata: {
     name: string;
@@ -108,8 +115,8 @@ export async function uploadPatientDocument(
     category?: PatientDocument['category'];
   }
 ): Promise<PatientDocument> {
-  // Upload file
-  const { url } = await uploadFile(file, patientId);
+  // Upload file with clinic isolation
+  const { url } = await uploadFile(file, clinicId, patientId);
 
   // Determine file type
   const fileType = file.type.startsWith('image/') ? 'image' :

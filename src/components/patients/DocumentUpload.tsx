@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useClinic } from '@/contexts/ClinicContext';
 import { Upload, X, File, Image, FileText, Trash2, Eye, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ interface DocumentUploadProps {
 }
 
 export function DocumentUpload({ patientId }: DocumentUploadProps) {
+  const { clinicId } = useClinic();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState('');
@@ -43,7 +45,7 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
     if (file) {
       setSelectedFile(file);
       setDocumentName(file.name.split('.')[0]);
-      
+
       // Create preview for images
       if (file.type.startsWith('image/')) {
         const url = URL.createObjectURL(file);
@@ -56,8 +58,13 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
     if (!selectedFile) return;
 
     try {
+      if (!clinicId) {
+        toast.error('Erro: Clínica não identificada');
+        return;
+      }
       await uploadMutation.mutateAsync({
         file: selectedFile,
+        clinicId,
         patientId,
         metadata: {
           name: documentName || selectedFile.name,
@@ -247,8 +254,8 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
                 <div className={cn(
                   "w-10 h-10 rounded-lg flex items-center justify-center",
                   doc.file_type === 'image' ? 'bg-blue-100 text-blue-600' :
-                  doc.file_type === 'pdf' ? 'bg-red-100 text-red-600' :
-                  'bg-gray-100 text-gray-600'
+                    doc.file_type === 'pdf' ? 'bg-red-100 text-red-600' :
+                      'bg-gray-100 text-gray-600'
                 )}>
                   {getFileIcon(doc.file_type)}
                 </div>

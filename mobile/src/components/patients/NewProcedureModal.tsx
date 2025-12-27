@@ -8,6 +8,7 @@ import { locationsService, type Location } from '../../services/locations';
 import { budgetsService } from '../../services/budgets';
 import { sanitizeForDisplay } from '../../utils/security';
 import type { ProcedureInsert, Procedure } from '../../types/database';
+import { useClinic } from '../../contexts/ClinicContext';
 import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 
 // Components
@@ -32,6 +33,7 @@ export function NewProcedureModal({
   onSuccess,
   procedure,
 }: NewProcedureModalProps) {
+  const { clinicId } = useClinic();
   const [saving, setSaving] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
 
@@ -374,6 +376,10 @@ export function NewProcedureModal({
       // Attachments
       if (files.length > 0 && procedureId) {
         try {
+          if (!clinicId) {
+            Alert.alert('Erro', 'Clínica não identificada para upload');
+            return;
+          }
           const uploadedUrls = [];
           for (const file of files) {
             if (!file.uri) continue;
@@ -381,7 +387,7 @@ export function NewProcedureModal({
               uri: file.uri,
               name: file.name,
               type: file.type || 'image/jpeg'
-            });
+            }, clinicId);
             uploadedUrls.push(url);
           }
           if (uploadedUrls.length > 0) {

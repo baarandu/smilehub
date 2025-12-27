@@ -4,6 +4,7 @@ import { X, Calendar, Upload, Camera, Image as ImageIcon, FileText, Trash2, Chec
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { examsService } from '../../services/exams';
+import { useClinic } from '../../contexts/ClinicContext';
 import type { Exam } from '../../types/database';
 
 interface NewExamModalProps {
@@ -21,6 +22,7 @@ interface SelectedFile {
 }
 
 export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: NewExamModalProps) {
+  const { clinicId } = useClinic();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
@@ -119,8 +121,12 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
       const uploadedUrls = [];
 
       // Upload new files
+      if (!clinicId) {
+        Alert.alert('Erro', 'Clínica não identificada');
+        return;
+      }
       for (const file of files) {
-        const url = await examsService.uploadFile(file);
+        const url = await examsService.uploadFile(file, clinicId);
         uploadedUrls.push(url);
       }
 

@@ -20,17 +20,19 @@ export function useUploadDocument() {
   return useMutation({
     mutationFn: ({
       file,
+      clinicId,
       patientId,
       metadata,
     }: {
       file: File;
+      clinicId: string;
       patientId: string;
       metadata: {
         name: string;
         description?: string;
         category?: PatientDocument['category'];
       };
-    }) => uploadPatientDocument(file, patientId, metadata),
+    }) => uploadPatientDocument(file, clinicId, patientId, metadata),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['patient-documents', variables.patientId],

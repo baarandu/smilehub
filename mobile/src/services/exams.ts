@@ -58,7 +58,7 @@ export const examsService = {
     return (data as unknown as Exam[]) || [];
   },
 
-  async uploadFile(file: { uri: string; type: string; name: string }): Promise<string> {
+  async uploadFile(file: { uri: string; type: string; name: string }, clinicId: string): Promise<string> {
     // Validate MIME type before upload
     const mimeType = file.type || 'image/jpeg';
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
@@ -67,9 +67,14 @@ export const examsService = {
       );
     }
 
+    if (!clinicId) {
+      throw new Error('clinicId é obrigatório para upload de arquivos');
+    }
+
     const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = fileName;
+    // Path format: {clinicId}/{filename}
+    const filePath = `${clinicId}/${fileName}`;
 
     // Read file as base64 for React Native
     const base64 = await FileSystem.readAsStringAsync(file.uri, {
