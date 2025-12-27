@@ -281,13 +281,23 @@ Requisições de outros sites não terão o token.
 
 **SQL aplicado:** `supabase-enable-audit-triggers.sql`
 
-**Próximos passos (opcionais):**
+**Status atual:**
 - [x] Ativar triggers para tabelas críticas
-- [ ] Integrar com Supabase Logs (dashboard)
-- [ ] Configurar alertas no Supabase para:
-  - Muitas tentativas de login falhas
-  - Acessos de IPs incomuns
-  - Exclusões em massa
+- [x] Logs disponíveis no Supabase Dashboard → Table Editor → `audit_logs`
+- [ ] Alertas automáticos (para implementar no futuro)
+
+**Opções de alertas para o futuro:**
+
+| Opção | Complexidade | Custo | Recomendação |
+|-------|--------------|-------|--------------|
+| Dashboard manual | Já funciona | Gratuito | ✅ Usar agora |
+| Email diário resumo | Baixa | Gratuito | Para quando tiver mais usuários |
+| Edge Function + Webhook | Média | Gratuito | Automação completa |
+| Ferramenta externa | Alta | Pago | Apps grandes |
+
+> [!TIP]
+> **Para verificar logs agora:** Supabase Dashboard → Table Editor → `audit_logs`
+> Filtre por `action_type = 'DELETE'` para ver exclusões.
 
 ---
 
