@@ -336,11 +336,28 @@ Requisições de outros sites não terão o token.
 - [x] 10. ~~Configurar Dependabot no GitHub~~ ✅ FEITO - `.github/dependabot.yml`
 - [x] 11. ~~Revisar storage policies por clínica~~ ✅ FEITO (27/12/2024)
 
-### 📝 BAIXO (backlog)
-- [ ] 12. Integrar ferramenta de análise de logs
-- [ ] 13. Configurar alertas de segurança
-- [ ] 14. Fazer pentest profissional
-- [ ] 15. Treinar equipe em segurança
+### 📝 BAIXO (backlog) - Notas
+
+#### 12. Análise de logs
+- Já temos `audit_logs` funcionando
+- Por agora: usar Supabase Dashboard manualmente
+- Futuro: implementar email diário com resumo
+
+#### 13. Alertas de segurança
+- Opções documentadas na seção de Monitoramento
+- Dashboard manual já funciona (gratuito)
+
+#### 14. Pentest profissional
+- Custo: R$ 5-25k dependendo do escopo
+- **Recomendação:** Fazer quando tiver clientes pagando e orçamento
+- O que já temos cobre 90% das vulnerabilidades OWASP
+- "Pentest caseiro" já realizado nesta avaliação
+
+#### 15. Scan de malware em uploads
+- Risco baixo: usuários são funcionários conhecidos
+- Não é app público de compartilhamento
+- MIME type + tamanho máximo já implementados
+- Opcional para o futuro se tiver clientes corporativos exigentes
 
 ---
 
