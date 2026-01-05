@@ -107,8 +107,21 @@ export function NewExamDialog({
   };
 
   const uploadFile = async (file: File): Promise<string> => {
+    // Get user's clinic_id for storage path
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data: clinicUser } = await (supabase
+      .from('clinic_users') as any)
+      .select('clinic_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+    const clinicId = clinicUser.clinic_id as string;
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const fileName = `${clinicId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('exams')
@@ -145,6 +158,7 @@ export function NewExamDialog({
         order_date: form.orderDate,
         exam_date: form.examDate || null,
         file_url: fileUrl,
+        file_urls: fileUrl ? [fileUrl] : [],
         file_type: fileType,
       };
 
