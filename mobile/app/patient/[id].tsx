@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X } from 'lucide-react-native';
@@ -53,6 +53,20 @@ export default function PatientDetail() {
     const [isImageViewVisible, setIsImageViewVisible] = useState(false);
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Pull-to-refresh handler
+    const handleRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await Promise.all([
+            loadPatient(),
+            loadAnamneses(),
+            loadBudgets(),
+            loadProcedures(),
+            loadExams(),
+        ]);
+        setRefreshing(false);
+    }, [loadPatient, loadAnamneses, loadBudgets, loadProcedures, loadExams]);
 
     useEffect(() => {
         if (tab && tab !== activeTab) setActiveTab(tab as TabType);
@@ -159,7 +173,17 @@ export default function PatientDetail() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1">
+            <ScrollView
+                className="flex-1"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        colors={['#0D9488']}
+                        tintColor="#0D9488"
+                    />
+                }
+            >
                 {/* Patient Card */}
                 <View className="bg-white m-4 p-5 rounded-xl border border-gray-100">
                     <View className="flex-row items-center gap-4">
