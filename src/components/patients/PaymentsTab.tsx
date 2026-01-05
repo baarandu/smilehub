@@ -85,6 +85,13 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       }
     });
 
+    // Sort paid history by payment date (most recent first)
+    history.sort((a, b) => {
+      const dateA = a.tooth.paymentDate || a.budgetDate;
+      const dateB = b.tooth.paymentDate || b.budgetDate;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+
     setPaymentItems(toPay);
     setPaidHistory(history);
     setStats({
@@ -132,6 +139,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       const today = new Date();
 
+      // Helper to format date as local YYYY-MM-DD
+      const formatLocalDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       for (let i = 0; i < numTransactions; i++) {
         const date = new Date(today);
         if (!isAnticipated) {
@@ -143,7 +158,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           amount: txAmount, // Store GROSS
           description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
           category: 'Tratamento',
-          date: date.toISOString(),
+          date: formatLocalDate(date),
           patient_id: patientId,
           related_entity_id: budget.id,
           // Deductions

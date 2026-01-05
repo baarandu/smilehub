@@ -17,6 +17,7 @@ export interface Transaction {
     name: string;
   } | null;
   status?: string;
+  created_at?: string;
 }
 
 export const MONTHS = [

@@ -302,7 +302,16 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             Nenhuma transação encontrada.
                         </div>
                     ) : (
-                        filteredTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
+                        filteredTransactions.sort((a, b) => {
+                            const dateA = new Date(a.date).getTime();
+                            const dateB = new Date(b.date).getTime();
+                            if (dateB !== dateA) return dateB - dateA;
+
+                            // Sorting fallback: created_at desc
+                            const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                            const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                            return createdB - createdA;
+                        }).map((t) => (
                             <div
                                 key={t.id}
                                 className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
@@ -316,7 +325,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         <p className="font-medium text-foreground">{t.patients?.name || 'Não identificado'}</p>
                                         <p className="text-sm text-muted-foreground line-clamp-1" title={t.description}>{t.description}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString()}</span>
+                                            <span className="text-xs text-slate-400">{new Date(t.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                                             {t.location && (
                                                 <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-100">
                                                     {t.location}
@@ -454,7 +463,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             <div className="space-y-3">
                                 <div className="flex justify-between py-2 border-b">
                                     <span className="text-muted-foreground">Data</span>
-                                    <span className="font-medium">{new Date(selectedTransaction.date).toLocaleDateString('pt-BR')}</span>
+                                    <span className="font-medium">{new Date(selectedTransaction.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                                 </div>
                                 <div className="flex justify-between py-2 border-b">
                                     <span className="text-muted-foreground">Descrição</span>
