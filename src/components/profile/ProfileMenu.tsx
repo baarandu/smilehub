@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LocationsModal } from './LocationsModal';
-import { TeamManagementModal } from './TeamManagementModal';
+
 import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 export function ProfileMenu() {
   const [locationsOpen, setLocationsOpen] = useState(false);
-  const [teamOpen, setTeamOpen] = useState(false);
+
   const [profileOpen, setProfileOpen] = useState(false);
   const { isAdmin, clinicName, displayName } = useClinic();
 
@@ -64,15 +64,7 @@ export function ProfileMenu() {
             <MapPin className="mr-2 h-4 w-4" />
             <span>Gerenciar Locais</span>
           </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => setTeamOpen(true)}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              <span>Gerenciar Equipe</span>
-            </DropdownMenuItem>
-          )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer text-destructive"
@@ -85,7 +77,7 @@ export function ProfileMenu() {
       </DropdownMenu>
 
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
-      <TeamManagementModal open={teamOpen} onOpenChange={setTeamOpen} />
+
       <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />
     </>
   );

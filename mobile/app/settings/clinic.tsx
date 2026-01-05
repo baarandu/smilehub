@@ -2,16 +2,20 @@ import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Building2, Upload, X, Save, Image as ImageIcon } from 'lucide-react-native';
+import { ChevronLeft, Building2, Upload, X, Save, Image as ImageIcon, Users } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { profileService } from '../../src/services/profile';
+import { useClinic } from '../../src/contexts/ClinicContext';
+import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 
 export default function ClinicSettings() {
     const router = useRouter();
+    const { isAdmin } = useClinic();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [name, setName] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
+    const [showTeamModal, setShowTeamModal] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -161,7 +165,7 @@ export default function ClinicSettings() {
                 </View>
 
                 {/* Name Section */}
-                <View className="bg-white p-6 rounded-2xl border border-gray-100">
+                <View className="bg-white p-6 rounded-2xl border border-gray-100 mb-6">
                     <Text className="text-gray-900 font-semibold mb-2 flex-row items-center gap-2">
                         <Building2 size={16} color="#374151" />
                         Nome da Clínica
@@ -192,7 +196,30 @@ export default function ClinicSettings() {
                     </TouchableOpacity>
                 </View>
 
+                {/* Team Management Section (Admin Only) */}
+                {isAdmin && (
+                    <TouchableOpacity
+                        className="bg-white p-4 rounded-2xl border border-gray-100 flex-row items-center justify-between"
+                        onPress={() => setShowTeamModal(true)}
+                    >
+                        <View className="flex-row items-center gap-3">
+                            <View className="w-10 h-10 bg-indigo-50 rounded-full items-center justify-center">
+                                <Users size={20} color="#6366f1" />
+                            </View>
+                            <View>
+                                <Text className="text-gray-900 font-semibold">Gerenciar Equipe</Text>
+                                <Text className="text-gray-500 text-sm">Adicionar ou remover membros</Text>
+                            </View>
+                        </View>
+                        <ChevronLeft size={20} color="#9ca3af" style={{ transform: [{ rotate: '180deg' }] }} />
+                    </TouchableOpacity>
+                )}
             </ScrollView>
+
+            <TeamManagementModal
+                visible={showTeamModal}
+                onClose={() => setShowTeamModal(false)}
+            />
         </SafeAreaView>
     );
 }

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 
-type Role = 'admin' | 'editor' | 'viewer';
+type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
 
 interface ClinicMember {
     id: string;

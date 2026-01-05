@@ -44,6 +44,21 @@ export const remindersService = {
         return count || 0;
     },
 
+    async getActive(): Promise<Reminder[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data, error } = await supabase
+            .from('reminders')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []) as Reminder[];
+    },
+
     async create(reminder: ReminderInsert): Promise<Reminder> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');

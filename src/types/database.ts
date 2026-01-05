@@ -629,6 +629,32 @@ export interface Database {
           rate?: number
           created_at?: string
         }
+      },
+      clinic_invites: {
+        Row: {
+          id: string
+          clinic_id: string
+          email: string
+          role: string
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          email: string
+          role: string
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          email?: string
+          role?: string
+          status?: string
+          created_at?: string
+        }
       }
     }
     Views: {

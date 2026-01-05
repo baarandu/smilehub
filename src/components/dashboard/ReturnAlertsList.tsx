@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface RecentAlert {
   id: string;
-  type: 'birthday' | 'procedure_return' | 'scheduled';
+  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder';
   patientName: string;
   patientPhone: string;
   date: string;
@@ -31,6 +31,9 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
       message = `Parabéns ${name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
     } else if (type === 'procedure_return') {
       message = `Olá ${name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?`;
+    } else if (type === 'reminder') {
+      // For generic reminders, maybe just a hello or reusing confirmation
+      message = `Olá ${name}!`;
     } else {
       message = `Olá ${name}! Estamos entrando em contato para lembrar sobre sua consulta de retorno. Podemos agendar um horário?`;
     }
@@ -45,6 +48,8 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
         return { icon: Gift, color: 'text-pink-600', bg: 'bg-pink-50 border-pink-100' };
       case 'procedure_return':
         return { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' };
+      case 'reminder':
+        return { icon: Bell, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-100' };
       default:
         return { icon: Bell, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-100' };
     }

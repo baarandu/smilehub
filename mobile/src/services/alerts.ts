@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import type { Patient } from '../types/database';
 
 export interface Alert {
-    type: 'return' | 'birthday';
+    type: 'procedure_return' | 'birthday';
     patient: {
         id: string;
         name: string;
@@ -116,7 +116,7 @@ export const alertsService = {
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                 alerts.push({
-                    type: 'return',
+                    type: 'procedure_return',
                     patient: {
                         id: patientId,
                         name: data.patient.name,

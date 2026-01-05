@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { budgetsService } from '@/services/budgets';
 import type { BudgetWithItems } from '@/types/database';
+import { remindersService, type Reminder } from '@/services/reminders';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 
@@ -68,6 +69,7 @@ export default function Dashboard() {
 
   // Reminders Count
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+  const [activeRemindersList, setActiveRemindersList] = useState<Reminder[]>([]);
   const [loadingReminders, setLoadingReminders] = useState(true);
 
   // Pending Budgets State
@@ -88,9 +90,12 @@ export default function Dashboard() {
     // Load Reminders
     try {
       // Dynamic import to avoid circular dependencies if any, though likely safe to import normally
-      const { remindersService } = await import('@/services/reminders');
-      const count = await remindersService.getActiveCount();
+      const [count, list] = await Promise.all([
+        remindersService.getActiveCount(),
+        remindersService.getActive()
+      ]);
       setActiveRemindersCount(count);
+      setActiveRemindersList(list);
     } catch (err) {
       console.error("Failed to load reminders count", err);
     } finally {
@@ -152,6 +157,15 @@ export default function Dashboard() {
       date: a.suggested_return_date,
       subtitle: `Retorno em ${a.days_until_return} dias`,
       urgency: (a.days_until_return <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal'
+    })),
+    ...(activeRemindersList || []).map(r => ({
+      id: `rem-${r.id}`,
+      type: 'reminder' as const,
+      patientName: r.title,
+      patientPhone: '',
+      date: r.created_at,
+      subtitle: r.description || 'Lembrete',
+      urgency: 'normal' as const
     }))
   ].slice(0, 6); // Top 6
 

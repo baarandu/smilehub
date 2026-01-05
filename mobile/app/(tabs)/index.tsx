@@ -13,7 +13,7 @@ import { budgetsService } from '../../src/services/budgets';
 import { PendingBudgetsModal } from '../../src/components/dashboard/PendingBudgetsModal';
 import type { ReturnAlert, BudgetWithItems } from '../../src/types/database';
 import { locationsService, type Location } from '../../src/services/locations';
-import { remindersService } from '../../src/services/reminders';
+import { remindersService, type Reminder } from '../../src/services/reminders';
 import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
 import * as Linking from 'expo-linking';
@@ -113,7 +113,7 @@ export default function Dashboard() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount, remindersCount] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount, remindersCount, activeRemindersList] = await Promise.all([
                 patientsService.count(),
                 appointmentsService.countToday(),
                 consultationsService.countPendingReturns(),
@@ -122,18 +122,11 @@ export default function Dashboard() {
                 alertsService.getBirthdayAlerts(),
                 alertsService.getProcedureReminders(),
                 budgetsService.getPendingCount(),
-                remindersService.getActiveCount()
+                remindersService.getActiveCount(),
+                remindersService.getActive()
             ]);
             setPatientsCount(patients);
             setActiveReminders(remindersCount);
-            setTodayCount(today);
-            setPendingReturns(returnsCount);
-            setTodayAppointments(appointments);
-            setPendingBudgetsCount(budgetsCount);
-            // ...
-
-            // ...
-            // ...
             setTodayCount(today);
             setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
@@ -143,7 +136,8 @@ export default function Dashboard() {
             const combined: any[] = [
                 ...birthdays,
                 ...procedures,
-                ...scheduled.map(s => ({ ...s, type: 'scheduled' }))
+                ...scheduled.map(s => ({ ...s, type: 'scheduled' })),
+                ...((activeRemindersList || []) as Reminder[]).map(r => ({ ...r, type: 'reminder' }))
             ];
 
             // Prioritize: Birthdays > Procedures > Scheduled (soonest)
@@ -410,6 +404,11 @@ export default function Dashboard() {
                                     color = "bg-teal-50";
                                     title = `Retorno Agendado: ${alert.patient_name}`;
                                     subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`;
+                                } else if (alert.type === 'reminder') {
+                                    icon = <Bell size={20} color="#0D9488" />;
+                                    color = "bg-teal-50";
+                                    title = alert.title;
+                                    subtitle = alert.description || 'Lembrete';
                                 }
 
                                 return (
