@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Users, Calendar, Bell, FileText, ChevronRight, User, Key, MapPin, LogOut, X, Plus, Pencil, Trash2, Gift, Clock, AlertTriangle, Users2, CheckCircle, Building2 } from 'lucide-react-native';
@@ -25,6 +25,7 @@ import { supabase } from '../../src/lib/supabase';
 export default function Dashboard() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [patientsCount, setPatientsCount] = useState(0);
     const [activeReminders, setActiveReminders] = useState(0);
     const [todayCount, setTodayCount] = useState(0);
@@ -246,7 +247,21 @@ export default function Dashboard() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView className="px-4 py-6">
+            <ScrollView
+                className="px-4 py-6"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={async () => {
+                            setRefreshing(true);
+                            await loadData();
+                            setRefreshing(false);
+                        }}
+                        colors={['#0D9488']}
+                        tintColor="#0D9488"
+                    />
+                }
+            >
                 {/* Header */}
                 <View className="flex-row items-start justify-between mb-6">
                     <View className="flex-1">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, FileText, FileClock, Loader2 } from 'lucide-react';
+import { Users, FileText, FileClock, Loader2, RefreshCw } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
@@ -16,6 +16,7 @@ export default function Patients() {
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Infinite Scroll Hook (Pagination)
   const {
@@ -45,6 +46,13 @@ export default function Patients() {
     } catch (error) {
       console.error('Error loading pending count:', error);
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadPendingCount();
+    // React Query will handle data refresh through cache invalidation
+    setIsRefreshing(false);
   };
 
   // Determine which list to show
@@ -79,6 +87,15 @@ export default function Patients() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-10 w-10"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowBudgetsModal(true)}

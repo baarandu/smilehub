@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { TrendingDown, ArrowDownRight, MapPin, Filter, X, CreditCard, Receipt, Percent, Package, Calendar, Tag, Pencil, Trash2, Eye, Check } from 'lucide-react-native';
 import { FinancialTransaction } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
@@ -11,6 +11,7 @@ interface ExpensesTabProps {
     loading: boolean;
     onEdit: (transaction: FinancialTransaction) => void;
     onRefresh: () => void;
+    refreshing?: boolean;
 }
 
 interface FilterState {
@@ -29,7 +30,7 @@ const INITIAL_FILTERS: FilterState = {
     locations: []
 };
 
-export function ExpensesTab({ transactions, loading, onEdit, onRefresh }: ExpensesTabProps) {
+export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshing }: ExpensesTabProps) {
     // Filter State
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [activeFilters, setActiveFilters] = useState<FilterState>(INITIAL_FILTERS);
@@ -229,7 +230,18 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh }: Expens
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false}>
+            <ScrollView
+                className="flex-1 px-4 py-2"
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing || false}
+                        onRefresh={onRefresh}
+                        colors={['#EF4444']}
+                        tintColor="#EF4444"
+                    />
+                }
+            >
                 {/* Summary Cards */}
                 <View className="flex-row gap-3 mb-4">
                     <View className="flex-1 bg-white p-3 rounded-xl border border-red-100">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Bell, FileText, AlertTriangle, Phone, CheckCircle } from 'lucide-react';
+import { Users, Calendar, Bell, FileText, AlertTriangle, Phone, CheckCircle, RefreshCw } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
@@ -75,6 +75,7 @@ export default function Dashboard() {
   const [pendingBudgets, setPendingBudgets] = useState<PendingItem[]>([]);
   const [loadingBudgets, setLoadingBudgets] = useState(true);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -95,6 +96,14 @@ export default function Dashboard() {
     } finally {
       setLoadingReminders(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadDashboardData();
+    // The React Query hooks will auto-refresh on window focus, but we can manually refetch
+    refetchPendingReturns();
+    setIsRefreshing(false);
   };
 
   const loadPendingBudgets = async () => {
@@ -156,7 +165,18 @@ export default function Dashboard() {
             Bem-vinda de volta! Aqui está o resumo do dia.
           </p>
         </div>
-        <ProfileMenu />
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-10 w-10"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <ProfileMenu />
+        </div>
       </div>
 
       {/* Stats */}

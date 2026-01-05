@@ -1,7 +1,7 @@
 # 🔐 Avaliação de Segurança - SmileHub / Organiza Odonto
 
 **Data:** 24/12/2024  
-**Última atualização:** 27/12/2024 11:15
+**Última atualização:** 05/01/2026 16:12
 
 ---
 
@@ -173,7 +173,7 @@ if (!supabaseUrl) {
 **Próximos passos (opcionais):**
 - [x] Remover fallback hardcoded das credenciais
 - [x] Usar apenas variáveis de ambiente
-- [ ] Regenerar a anon key no Supabase (recomendado)
+- [x] ~~Regenerar a anon key~~ ✅ FEITO (05/01/2026) - Migrado para Publishable Keys + chaves legadas desativadas
 - [ ] Implementar rate limiting via Supabase Edge Functions
 
 ---
@@ -321,7 +321,7 @@ Requisições de outros sites não terão o token.
 
 ### 🔴 URGENTE (fazer agora)
 - [x] 1. ~~**Remover credenciais hardcoded**~~ ✅ FEITO (24/12/2024)
-- [ ] 2. **Regenerar anon key** no dashboard Supabase (recomendado - chave ainda está no histórico Git)
+- [x] 2. ~~**Regenerar anon key**~~ ✅ FEITO (05/01/2026) - Migrado para novas Publishable Keys
 - [x] 3. ~~**Rodar `npm audit`**~~ ✅ FEITO - 2 moderate (dev only)
 
 ### ⚠️ ALTO (próxima semana)

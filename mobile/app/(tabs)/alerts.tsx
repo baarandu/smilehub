@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Modal, TextInput, Alert as RNAlert, Switch, DeviceEventEmitter } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Modal, TextInput, Alert as RNAlert, Switch, DeviceEventEmitter, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings, Plus, Trash2, Edit2, X, Search } from 'lucide-react-native';
@@ -17,6 +17,7 @@ export default function Alerts() {
     const [procedureAlerts, setProcedureAlerts] = useState<Alert[]>([]);
     const [tomorrowAppointments, setTomorrowAppointments] = useState<AppointmentWithPatient[]>([]);
     const [reminders, setReminders] = useState<Reminder[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Reminders UI State
     const [showReminderModal, setShowReminderModal] = useState(false);
@@ -307,7 +308,21 @@ export default function Alerts() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView className="px-4 py-6">
+            <ScrollView
+                className="px-4 py-6"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={async () => {
+                            setRefreshing(true);
+                            await loadData();
+                            setRefreshing(false);
+                        }}
+                        colors={['#0D9488']}
+                        tintColor="#0D9488"
+                    />
+                }
+            >
                 {/* Header */}
                 <View className="flex-row items-center justify-between mb-6">
                     <View>

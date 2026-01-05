@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, RefreshControl } from 'react-native';
 import { DollarSign, Filter, X } from 'lucide-react-native';
 import { FinancialTransaction } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
@@ -8,6 +8,8 @@ import { useState, useMemo, useEffect } from 'react';
 interface ClosureTabProps {
     transactions: FinancialTransaction[];
     loading: boolean;
+    onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
 interface FilterState {
@@ -42,7 +44,7 @@ const getPaymentMethod = (description: string): string | null => {
     return m;
 };
 
-export function ClosureTab({ transactions, loading }: ClosureTabProps) {
+export function ClosureTab({ transactions, loading, onRefresh, refreshing }: ClosureTabProps) {
     // Filter State
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [activeFilters, setActiveFilters] = useState<FilterState>(INITIAL_FILTERS);
@@ -273,7 +275,20 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false}>
+            <ScrollView
+                className="flex-1 px-4 py-2"
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    onRefresh ? (
+                        <RefreshControl
+                            refreshing={refreshing || false}
+                            onRefresh={onRefresh}
+                            colors={['#0D9488']}
+                            tintColor="#0D9488"
+                        />
+                    ) : undefined
+                }
+            >
                 {/* Balance Card */}
                 <View className="bg-teal-600 p-6 rounded-2xl mb-6 shadow-md shadow-teal-900/20">
                     <Text className="text-teal-100 text-sm font-medium mb-1">Saldo Final</Text>

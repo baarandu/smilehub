@@ -237,9 +237,9 @@ export default function Financial() {
                         </View>
                     )}
 
-                    {activeTab === 'income' && <IncomeTab transactions={transactions} loading={loading} onRefresh={loadData} />}
-                    {activeTab === 'expenses' && <ExpensesTab transactions={transactions} loading={loading} onEdit={handleEditTransaction} onRefresh={loadData} />}
-                    {activeTab === 'closure' && <ClosureTab transactions={transactions} loading={loading} />}
+                    {activeTab === 'income' && <IncomeTab transactions={transactions} loading={loading} onRefresh={loadData} refreshing={loading} />}
+                    {activeTab === 'expenses' && <ExpensesTab transactions={transactions} loading={loading} onEdit={handleEditTransaction} onRefresh={loadData} refreshing={loading} />}
+                    {activeTab === 'closure' && <ClosureTab transactions={transactions} loading={loading} onRefresh={loadData} refreshing={loading} />}
                 </View>
 
                 {/* Pickers */}

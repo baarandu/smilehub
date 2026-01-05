@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Settings, Calendar, Filter, X, ChevronDown } from 'lucide-react';
+import { Settings, Calendar, Filter, X, ChevronDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -46,6 +46,13 @@ export default function Financial() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadData();
+    setIsRefreshing(false);
+  };
 
   // Quick presets
   const setPreset = (preset: 'today' | 'week' | 'month' | 'year') => {
@@ -123,6 +130,15 @@ export default function Financial() {
           <p className="text-muted-foreground mt-1">Controle completo de receitas e despesas</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-10 w-10"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
           {/* Filter Button */}
           <Button
             variant="outline"

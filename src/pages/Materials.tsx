@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil } from 'lucide-react';
+import { Package, Plus, Trash2, ShoppingCart, Check, X, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -53,8 +53,14 @@ export default function Materials() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
 
-  // Autocomplete State
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadOrders();
+    setIsRefreshing(false);
+  };
 
   // Helpers
   const formatCurrency = (val: number) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -419,6 +425,15 @@ export default function Materials() {
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Materiais</h1>
           <p className="text-muted-foreground mt-1">Pedidos de compra de materiais</p>
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="h-10 w-10"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">

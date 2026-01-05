@@ -7,6 +7,8 @@ import { locationsService, type Location } from '@/services/locations';
 import type { AppointmentWithPatient, Patient } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +39,13 @@ export default function Agenda() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentWithPatient | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([loadDayAppointments(), loadMonthDates()]);
+    setIsRefreshing(false);
+  };
 
   useEffect(() => {
     loadDayAppointments();
@@ -234,19 +243,30 @@ export default function Agenda() {
             {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <NewAppointmentDialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) setEditingAppointment(null);
-          }}
-          patients={patients}
-          locations={locations}
-          selectedDate={dateString}
-          onAdd={handleAddAppointment}
-          onUpdate={handleUpdateAppointment}
-          appointmentToEdit={editingAppointment}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-10 w-10"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+          <NewAppointmentDialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) setEditingAppointment(null);
+            }}
+            patients={patients}
+            locations={locations}
+            selectedDate={dateString}
+            onAdd={handleAddAppointment}
+            onUpdate={handleUpdateAppointment}
+            appointmentToEdit={editingAppointment}
+          />
+        </div>
       </div>
 
       {/* Calendar */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Calendar, Plus, MapPin } from 'lucide-react-native';
@@ -13,6 +13,7 @@ export default function Agenda() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [calendarMonth, setCalendarMonth] = useState(new Date());
     const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
@@ -240,7 +241,21 @@ export default function Agenda() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView className="px-4 py-6">
+            <ScrollView
+                className="px-4 py-6"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={async () => {
+                            setRefreshing(true);
+                            await Promise.all([loadAppointments(), loadMonthDates()]);
+                            setRefreshing(false);
+                        }}
+                        colors={['#0D9488']}
+                        tintColor="#0D9488"
+                    />
+                }
+            >
                 {/* Header */}
                 <View className="flex-row items-center justify-between mb-6">
                     <View>

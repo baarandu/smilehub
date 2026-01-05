@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, Platform, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { TrendingUp, ArrowUpRight, MapPin, X, Calendar, Filter, Check, Trash2 } from 'lucide-react-native';
 import { FinancialTransactionWithPatient } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
@@ -9,6 +9,7 @@ interface IncomeTabProps {
     transactions: FinancialTransactionWithPatient[];
     loading: boolean;
     onRefresh?: () => void;
+    refreshing?: boolean;
 }
 
 type IncomeSubTab = 'gross' | 'net';
@@ -90,7 +91,7 @@ const getYearRange = () => {
     };
 };
 
-export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
+export function IncomeTab({ transactions, loading, onRefresh, refreshing }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
@@ -357,7 +358,20 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false}>
+            <ScrollView
+                className="flex-1 px-4 py-2"
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    onRefresh ? (
+                        <RefreshControl
+                            refreshing={refreshing || false}
+                            onRefresh={onRefresh}
+                            colors={['#22C55E']}
+                            tintColor="#22C55E"
+                        />
+                    ) : undefined
+                }
+            >
                 {/* Summary Card */}
                 <View className="bg-white p-4 rounded-xl border border-green-100 mb-6 shadow-sm">
                     <View className="flex-row justify-between items-center">

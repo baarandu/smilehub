@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw, Search, X } from 'lucide-react';
+import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw, Search, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -46,6 +46,13 @@ export default function Alerts() {
   const [sendingTemplate, setSendingTemplate] = useState<string | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadReminders();
+    setIsRefreshing(false);
+  };
 
   useEffect(() => {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
@@ -231,6 +238,15 @@ export default function Alerts() {
           <p className="text-muted-foreground mt-1">Gerencie lembretes internos e retornos de pacientes</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-10 w-10"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
           <Dialog open={showReminderDialog} onOpenChange={(open) => {
             setShowReminderDialog(open);
             if (!open) {

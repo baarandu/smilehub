@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw } from 'lucide-react-native';
@@ -59,6 +59,7 @@ const emptyForm: PatientFormData = {
 export default function Patients() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
@@ -237,7 +238,21 @@ export default function Patients() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView className="px-4 py-6">
+            <ScrollView
+                className="px-4 py-6"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={async () => {
+                            setRefreshing(true);
+                            await Promise.all([loadPatients(), loadPendingBudgets()]);
+                            setRefreshing(false);
+                        }}
+                        colors={['#0D9488']}
+                        tintColor="#0D9488"
+                    />
+                }
+            >
                 {/* Header */}
                 <View className="flex-row justify-between items-start mb-6">
                     <View>
