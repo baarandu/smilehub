@@ -61,8 +61,8 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data, error } = await supabase
-            .from('card_fee_config')
+        const { data, error } = await (supabase
+            .from('card_fee_config') as any)
             .select('*')
             .eq('user_id', user.id);
 
@@ -79,16 +79,16 @@ export const settingsService = {
 
         // We use upsert based on the UNIQUE constraint (user_id, brand, payment_type, installments)
         // Ensure your table has this unique constraint!
-        const { error } = await supabase
-            .from('card_fee_config')
+        const { error } = await (supabase
+            .from('card_fee_config') as any)
             .upsert(payload, { onConflict: 'user_id, brand, payment_type, installments' });
 
         if (error) throw error;
     },
 
     async deleteCardFee(id: string) {
-        const { error } = await supabase
-            .from('card_fee_config')
+        const { error } = await (supabase
+            .from('card_fee_config') as any)
             .delete()
             .eq('id', id);
 
@@ -101,8 +101,8 @@ export const settingsService = {
         if (!user) throw new Error('User not authenticated');
 
         // Get clinic_id
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
             .select('clinic_id')
             .eq('user_id', user.id)
             .single();
@@ -119,8 +119,8 @@ export const settingsService = {
             ];
         }
 
-        const { data, error } = await supabase
-            .from('card_brands')
+        const { data, error } = await (supabase
+            .from('card_brands') as any)
             .select('*')
             .eq('clinic_id', clinicUser.clinic_id)
             .order('name');
@@ -157,16 +157,16 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
             .select('clinic_id')
             .eq('user_id', user.id)
             .single();
 
         if (!clinicUser) throw new Error('Clinic not found');
 
-        const { data, error } = await supabase
-            .from('card_brands')
+        const { data, error } = await (supabase
+            .from('card_brands') as any)
             .insert({ clinic_id: clinicUser.clinic_id, name, is_default: false })
             .select()
             .single();
@@ -176,8 +176,8 @@ export const settingsService = {
     },
 
     async deleteCardBrand(id: string) {
-        const { error } = await supabase
-            .from('card_brands')
+        const { error } = await (supabase
+            .from('card_brands') as any)
             .delete()
             .eq('id', id);
 

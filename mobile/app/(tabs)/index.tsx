@@ -151,6 +151,15 @@ export default function Dashboard() {
                 details: error?.details,
                 hint: error?.hint,
             });
+
+            // Auto-logout if session is invalid
+            if (error?.message?.includes('User not authenticated') || error?.message?.includes('JWT expired')) {
+                Alert.alert(
+                    'Sessão Expirada',
+                    'Sua sessão expirou. Por favor, faça login novamente.',
+                    [{ text: 'OK', onPress: () => handleLogout() }]
+                );
+            }
         } finally {
             setLoading(false);
         }

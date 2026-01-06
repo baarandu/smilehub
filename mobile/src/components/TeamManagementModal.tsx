@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, UserPlus, Trash2, Shield, Edit3, Eye, Users, Check, Clock } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
 import { useClinic } from '../contexts/ClinicContext';
+import { auditService, type AuditLog } from '../services/audit';
 
 type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
 
@@ -60,7 +61,11 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteRole, setInviteRole] = useState<Role>('dentist');
     const [saving, setSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'members' | 'invites'>('members');
+    const [activeTab, setActiveTab] = useState<'members' | 'invites' | 'audit'>('members');
+
+    // Audit State
+    const [auditLogs, setAuditLogs] = useState<(AuditLog & { profiles: { full_name: string | null, email: string | null } | null })[]>([]);
+    const [loadingAudit, setLoadingAudit] = useState(false);
 
     // Role change modal state
     const [showRoleModal, setShowRoleModal] = useState(false);
@@ -70,8 +75,11 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
     useEffect(() => {
         if (visible && clinicId) {
             loadData();
+            if (activeTab === 'audit') {
+                loadAuditLogs();
+            }
         }
-    }, [visible, clinicId]);
+    }, [visible, clinicId, activeTab]);
 
     const loadData = async () => {
         if (!clinicId) return;
@@ -100,31 +108,31 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
             const typedData = membersData as ClinicUserRow[] | null;
 
             // Get profiles and emails for each user
-            const membersWithProfiles = await Promise.all(
-                (typedData || []).map(async (m) => {
-                    // Get profile name
-                    const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('full_name')
-                        .eq('id', m.user_id)
-                        .single();
+            const memberIds = (typedData || []).map(m => m.user_id);
+            let profilesMap: Record<string, any> = {};
 
-                    // Get email using RPC or fallback
-                    let userEmail = `Usuário ${m.user_id.slice(0, 8)}...`;
-                    // In a real app we would join with users table via admin API or public view
-                    // For now keeping simple
+            if (memberIds.length > 0) {
+                const { data: profiles } = await (supabase as any)
+                    .rpc('get_profiles_for_users', { user_ids: memberIds });
 
-                    const fullName = (profile as { full_name?: string } | null)?.full_name;
+                if (profiles) {
+                    profilesMap = (profiles as any[]).reduce((acc, profile) => {
+                        acc[profile.id] = profile;
+                        return acc;
+                    }, {} as Record<string, any>);
+                }
+            }
 
-                    return {
-                        id: m.id,
-                        user_id: m.user_id,
-                        email: userEmail, // In prod this would be real email
-                        full_name: fullName || 'Membro da Equipe',
-                        role: m.role as Role,
-                    };
-                })
-            );
+            const membersWithProfiles = (typedData || []).map((m) => {
+                const profile = profilesMap[m.user_id];
+                return {
+                    id: m.id,
+                    user_id: m.user_id,
+                    email: profile?.email || `Usuário ${m.user_id.slice(0, 8)}...`,
+                    full_name: profile?.full_name || 'Membro da Equipe',
+                    role: m.role as Role,
+                };
+            });
 
             setMembers(membersWithProfiles);
             setInvites((invitesData || []) as TeamInvite[]);
@@ -133,6 +141,19 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
             Alert.alert('Erro', 'Não foi possível carregar os dados da equipe');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadAuditLogs = async () => {
+        if (!clinicId) return;
+        setLoadingAudit(true);
+        try {
+            const logs = await auditService.getLogs(clinicId);
+            setAuditLogs(logs);
+        } catch (error) {
+            console.error('Error loading audit logs:', error);
+        } finally {
+            setLoadingAudit(false);
         }
     };
 
@@ -233,9 +254,9 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
         }
 
         try {
-            const { error } = await supabase
-                .from('clinic_users')
-                .update({ role: selectedRole } as any)
+            const { error } = await (supabase
+                .from('clinic_users') as any)
+                .update({ role: selectedRole })
                 .eq('id', selectedMember.id);
 
             if (error) throw error;
@@ -356,6 +377,42 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
         </View>
     );
 
+    const renderAuditLogs = () => (
+        <View>
+            <Text className="text-sm font-medium text-gray-500 mb-3">
+                Histórico de atividades recentes
+            </Text>
+
+            {loadingAudit ? (
+                <View className="items-center py-8">
+                    <ActivityIndicator size="large" color="#14b8a6" />
+                </View>
+            ) : auditLogs.length === 0 ? (
+                <View className="items-center py-8">
+                    <Text className="text-gray-400">Nenhuma atividade registrada</Text>
+                </View>
+            ) : (
+                auditLogs.map((log) => (
+                    <View key={log.id} className="bg-white rounded-xl p-3 mb-3 border border-gray-100">
+                        <View className="flex-row justify-between items-start">
+                            <Text className="font-semibold text-gray-900 text-sm">
+                                {log.profiles?.full_name || log.profiles?.email || 'Usuário Desconhecido'}
+                            </Text>
+                            <Text className="text-xs text-gray-400">
+                                {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                        </View>
+                        <Text className="text-sm text-gray-600 mt-1">
+                            <Text className="font-medium text-teal-700">{log.action}</Text> em {log.entity}
+                        </Text>
+                        {/* Optionally show details if needed */}
+                        {/* <Text className="text-xs text-gray-400 mt-1">{JSON.stringify(log.details)}</Text> */}
+                    </View>
+                ))
+            )}
+        </View>
+    );
+
     return (
         <>
             <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
@@ -387,6 +444,14 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                         >
                             <Text className={`font-medium ${activeTab === 'invites' ? 'text-teal-800' : 'text-gray-500'}`}>
                                 Convites ({invites.length})
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('audit')}
+                            className={`pb-2 border-b-2 ${activeTab === 'audit' ? 'border-teal-600' : 'border-transparent'}`}
+                        >
+                            <Text className={`font-medium ${activeTab === 'audit' ? 'text-teal-800' : 'text-gray-500'}`}>
+                                Auditoria
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -452,7 +517,9 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                 </View>
                             )}
 
-                            {activeTab === 'members' ? renderMembersList() : renderInvitesList()}
+                            {activeTab === 'members' && renderMembersList()}
+                            {activeTab === 'invites' && renderInvitesList()}
+                            {activeTab === 'audit' && renderAuditLogs()}
                         </ScrollView>
                     )}
                 </SafeAreaView>

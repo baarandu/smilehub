@@ -655,13 +655,52 @@ export interface Database {
           status?: string
           created_at?: string
         }
+      },
+      audit_logs: {
+        Row: {
+          id: string
+          clinic_id: string
+          user_id: string | null
+          action: string
+          entity: string
+          entity_id: string | null
+          details: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          user_id?: string | null
+          action: string
+          entity: string
+          entity_id?: string | null
+          details?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          user_id?: string | null
+          action?: string
+          entity?: string
+          entity_id?: string | null
+          details?: Json
+          created_at?: string
+        }
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_profiles_for_users: {
+        Args: { user_ids: string[] }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+        }[]
+      }
     }
     Enums: {
       appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'

@@ -488,6 +488,32 @@ export interface Database {
           updated_at?: string
         }
       }
+      clinic_users: {
+        Row: {
+          id: string
+          user_id: string
+          clinic_id: string
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          clinic_id: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          clinic_id?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
       financial_settings: {
         Row: {
           id: string
@@ -545,7 +571,7 @@ export interface Database {
           anticipation_rate?: number | null
           created_at?: string
         }
-      },
+      }
       tax_config: {
         Row: {
           id: string
@@ -568,7 +594,7 @@ export interface Database {
           rate?: number
           created_at?: string
         }
-      },
+      }
       document_templates: {
         Row: {
           id: string
@@ -594,7 +620,7 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-      },
+      }
       clinic_settings: {
         Row: {
           id: string
@@ -618,12 +644,51 @@ export interface Database {
           updated_at?: string
         }
       }
+      audit_logs: {
+        Row: {
+          id: string
+          clinic_id: string
+          user_id: string | null
+          action: string
+          entity: string
+          entity_id: string | null
+          details: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          user_id?: string | null
+          action: string
+          entity: string
+          entity_id?: string | null
+          details?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          user_id?: string | null
+          action?: string
+          entity?: string
+          entity_id?: string | null
+          details?: Json
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_profiles_for_users: {
+        Args: { user_ids: string[] }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+        }[]
+      }
     }
     Enums: {
       appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'

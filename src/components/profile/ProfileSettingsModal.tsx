@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Building2, Upload, X, Loader2, Image as ImageIcon, Users, UserPlus, Shield, Edit3, Eye, Trash2 } from 'lucide-react';
+import { Building2, Upload, X, Loader2, Image as ImageIcon, Users, UserPlus, Shield, Edit3, Eye, Trash2, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { profileService } from '@/services/profile';
+import { auditService, type AuditLog } from '@/services/audit';
 import { useClinic } from '@/contexts/ClinicContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -83,11 +84,18 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
     const [inviteRole, setInviteRole] = useState<Role>('dentist');
     const [sendingInvite, setSendingInvite] = useState(false);
 
+    // Audit State
+    const [auditLogs, setAuditLogs] = useState<(AuditLog & { profiles: { full_name: string | null, email: string | null } | null })[]>([]);
+    const [loadingAudit, setLoadingAudit] = useState(false);
+
     useEffect(() => {
         if (open) {
             loadClinicInfo();
             if (isAdmin && activeTab === 'team') {
                 loadTeamData();
+            }
+            if (isAdmin && activeTab === 'audit') {
+                loadAuditLogs();
             }
         }
     }, [open, activeTab, isAdmin]);
@@ -112,24 +120,39 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
         setLoadingTeam(true);
         try {
             // Load Members
-            const { data: membersData } = await supabase
-                .from('clinic_users')
+            const { data: membersData } = await (supabase
+                .from('clinic_users') as any)
                 .select('id, user_id, role, created_at')
                 .eq('clinic_id', clinicId)
                 .order('created_at');
 
             // Load Pending Invites
-            const { data: invitesData } = await supabase
-                .from('clinic_invites')
+            const { data: invitesData } = await (supabase
+                .from('clinic_invites') as any)
                 .select('*')
                 .eq('clinic_id', clinicId)
                 .eq('status', 'pending')
                 .order('created_at', { ascending: false });
 
-            // Mock email for members (in prod join with profiles)
-            const mappedMembers = (membersData || []).map(m => ({
+            // Fetch profiles for members
+            const memberIds = ((membersData || []) as any[]).map(m => m.user_id);
+            let profilesMap: Record<string, any> = {};
+
+            if (memberIds.length > 0) {
+                const { data: profiles } = await (supabase as any)
+                    .rpc('get_profiles_for_users', { user_ids: memberIds });
+
+                if (profiles) {
+                    profilesMap = (profiles as any[]).reduce((acc, profile) => {
+                        acc[profile.id] = profile;
+                        return acc;
+                    }, {} as Record<string, any>);
+                }
+            }
+
+            const mappedMembers = ((membersData || []) as any[]).map(m => ({
                 ...m,
-                email: `Usuário ${m.user_id.slice(0, 8)}...` // Placeholder
+                email: profilesMap[m.user_id]?.email || `Usuário ${m.user_id.slice(0, 8)}...`
             })) as TeamMember[];
 
             setMembers(mappedMembers);
@@ -140,6 +163,19 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             toast.error('Erro ao carregar equipe');
         } finally {
             setLoadingTeam(false);
+        }
+    };
+
+    const loadAuditLogs = async () => {
+        if (!clinicId) return;
+        setLoadingAudit(true);
+        try {
+            const logs = await auditService.getLogs(clinicId);
+            setAuditLogs(logs);
+        } catch (error) {
+            console.error('Error loading audit logs:', error);
+        } finally {
+            setLoadingAudit(false);
         }
     };
 
@@ -273,9 +309,10 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                 </DialogHeader>
 
                 <Tabs defaultValue="clinic" value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="clinic">Dados da Clínica</TabsTrigger>
                         <TabsTrigger value="team">Equipe</TabsTrigger>
+                        {isAdmin && <TabsTrigger value="audit">Auditoria</TabsTrigger>}
                     </TabsList>
 
                     <TabsContent value="clinic" className="space-y-6 py-4">
@@ -484,6 +521,43 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                                 </div>
                             </div>
                         )}
+                    </TabsContent>
+
+                    <TabsContent value="audit" className="space-y-6 py-4">
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-medium flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                Histórico de Atividades
+                            </h3>
+                            {loadingAudit ? (
+                                <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
+                            ) : auditLogs.length === 0 ? (
+                                <p className="text-sm text-muted-foreground italic">Nenhuma atividade registrada.</p>
+                            ) : (
+                                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                                    {auditLogs.map(log => (
+                                        <div key={log.id} className="p-3 border rounded-lg bg-card text-sm">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="font-medium text-foreground">
+                                                    {log.profiles?.full_name || log.profiles?.email || 'Usuário Desconhecido'}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {new Date(log.created_at).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <p className="text-muted-foreground">
+                                                <span className="font-semibold text-primary/80">{log.action}</span> {log.entity}
+                                                {log.details && Object.keys(log.details as object).length > 0 ? (
+                                                    <span className="text-xs ml-2 opacity-70">
+                                                        ({JSON.stringify(log.details).slice(0, 50)}...)
+                                                    </span>
+                                                ) : null}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </TabsContent>
                 </Tabs>
             </DialogContent>
