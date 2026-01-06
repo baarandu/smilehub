@@ -1,73 +1,212 @@
-# Welcome to your Lovable project
+# 🦷 Organiza Odonto (Smile Care Hub)
 
-## Project info
+Sistema completo para gestão de clínicas odontológicas com suporte multi-tenant, controle financeiro, agendamento e muito mais.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## 📱 Plataformas
 
-## How can I edit this code?
+| Plataforma | Tecnologia | Status |
+|------------|------------|--------|
+| **Web** | React + Vite + Tailwind | ✅ Produção |
+| **Mobile** | React Native (Expo) | ✅ Produção |
+| **Backend** | Supabase (PostgreSQL + Auth) | ✅ Produção |
 
-There are several ways of editing your application.
+## ✨ Funcionalidades
 
-**Use Lovable**
+### 👥 Gestão de Pacientes
+- Cadastro completo com histórico
+- Anamnese detalhada
+- Exames e documentos
+- Orçamentos e procedimentos
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### 📅 Agendamento
+- Calendário visual
+- Confirmação via WhatsApp
+- Alertas de retorno
 
-Changes made via Lovable will be committed automatically to this repo.
+### 💰 Financeiro
+- Receitas e despesas
+- Fechamento por período
+- Taxas de cartão e impostos
+- Relatórios por unidade
 
-**Use your preferred IDE**
+### 🔔 Alertas
+- Aniversariantes
+- Retornos pendentes
+- Confirmações de consulta
+- Lembretes personalizados
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🏢 Multi-tenant
+- Isolamento por clínica
+- Gestão de equipe
+- Convites por e-mail
+- Controle de permissões
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🚀 Instalação
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+### Pré-requisitos
+- Node.js 18+ 
+- npm ou bun
+- Conta no [Supabase](https://supabase.com)
+
+### Web (Vite)
+
+```bash
+# 1. Clone o repositório
 git clone <YOUR_GIT_URL>
+cd smile-care-hub-main
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. Instale dependências
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# 3. Configure variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas credenciais Supabase
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 4. Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Mobile (Expo)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# 1. Entre na pasta mobile
+cd mobile
 
-**Use GitHub Codespaces**
+# 2. Instale dependências
+npm install
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# 3. Configure variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas credenciais Supabase
 
-## What technologies are used for this project?
+# 4. Inicie o Expo
+npx expo start
+```
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🗄️ Banco de Dados (Supabase)
 
-## How can I deploy this project?
+### Configuração Inicial
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. Crie um projeto no [Supabase Dashboard](https://supabase.com/dashboard)
+2. Execute os scripts SQL da pasta `supabase/migrations/` em ordem
+3. Configure as políticas RLS (Row Level Security)
+4. Copie as credenciais para `.env`
 
-## Can I connect a custom domain to my Lovable project?
+### Variáveis de Ambiente
 
-Yes, you can!
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-anon-key
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📁 Estrutura do Projeto
+
+```
+smile-care-hub-main/
+├── src/                    # Código web (React + Vite)
+│   ├── components/         # Componentes React
+│   ├── pages/              # Páginas da aplicação
+│   ├── services/           # Serviços (Supabase, APIs)
+│   ├── hooks/              # Custom hooks
+│   ├── types/              # Definições TypeScript
+│   └── lib/                # Utilitários
+│
+├── mobile/                 # Código mobile (Expo)
+│   ├── app/                # Telas (file-based routing)
+│   ├── src/
+│   │   ├── components/     # Componentes React Native
+│   │   ├── services/       # Serviços
+│   │   └── types/          # Tipos TypeScript
+│   └── assets/             # Imagens e fontes
+│
+├── supabase/               # Migrações e configuração
+│   └── migrations/         # Scripts SQL
+│
+└── public/                 # Assets estáticos web
+```
+
+---
+
+## 🛠️ Tecnologias
+
+### Web
+- **Framework**: React 18 + Vite
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui (Radix)
+- **State**: React Query (TanStack)
+- **Forms**: React Hook Form + Zod
+- **Charts**: Recharts
+
+### Mobile
+- **Framework**: React Native (Expo SDK 53)
+- **Styling**: NativeWind (Tailwind)
+- **Navigation**: Expo Router
+- **Icons**: Lucide React Native
+
+### Backend
+- **Database**: PostgreSQL (Supabase)
+- **Auth**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Functions**: Supabase Edge Functions
+
+---
+
+## 📦 Scripts Disponíveis
+
+### Web
+```bash
+npm run dev        # Servidor de desenvolvimento
+npm run build      # Build de produção
+npm run preview    # Preview do build
+npm run lint       # Verificar ESLint
+npm run test       # Executar testes
+```
+
+### Mobile
+```bash
+cd mobile
+npx expo start     # Iniciar Expo Dev Server
+npx expo run:ios   # Executar no iOS
+npx expo run:android # Executar no Android
+```
+
+---
+
+## 🚀 Deploy
+
+### Web (Vercel)
+O projeto está configurado para deploy na Vercel. Basta conectar o repositório e definir as variáveis de ambiente.
+
+### Mobile (EAS)
+```bash
+# Instalar EAS CLI
+npm install -g eas-cli
+
+# Login
+eas login
+
+# Build para iOS
+eas build --platform ios
+
+# Build para Android
+eas build --platform android
+```
+
+---
+
+## 📄 Documentos Adicionais
+
+- [IMPROVEMENTS.md](./IMPROVEMENTS.md) - Melhorias planejadas
+- [SECURITY_ASSESSMENT.md](./SECURITY_ASSESSMENT.md) - Avaliação de segurança
+
+---
+
+## 📝 Licença
+
+Projeto privado. Todos os direitos reservados.
