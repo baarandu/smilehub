@@ -165,22 +165,28 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
 
         setSaving(true);
         try {
-            const { error } = await supabase
-                .from('clinic_invites')
-                .insert({
-                    clinic_id: clinicId,
-                    email: inviteEmail.trim().toLowerCase(),
-                    role: inviteRole,
-                    status: 'pending'
-                } as any);
+            // Use RPC that handles both existing and new users
+            const { data, error } = await (supabase as any).rpc('invite_or_add_user', {
+                p_clinic_id: clinicId,
+                p_email: inviteEmail.trim().toLowerCase(),
+                p_role: inviteRole
+            });
 
             if (error) throw error;
 
-            Alert.alert('Sucesso', `Convite enviado para ${inviteEmail}`);
+            const result = data as { success: boolean; error?: string; message?: string; action?: string };
+
+            if (!result.success) {
+                Alert.alert('Erro', result.error || 'Não foi possível adicionar o usuário');
+                return;
+            }
+
+            Alert.alert('Sucesso', result.message || 'Usuário processado com sucesso');
             setInviteEmail('');
             setShowInviteForm(false);
             loadData();
-            setActiveTab('invites');
+            // Switch to appropriate tab based on action
+            setActiveTab(result.action === 'added_directly' ? 'members' : 'invites');
         } catch (error: any) {
             console.error('Error inviting:', error);
             Alert.alert('Erro', error.message || 'Não foi possível enviar o convite');
@@ -188,6 +194,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
             setSaving(false);
         }
     };
+
 
     const handleRemoveInvite = (inviteId: string) => {
         Alert.alert('Remover Convite', 'Deseja cancelar este convite?', [

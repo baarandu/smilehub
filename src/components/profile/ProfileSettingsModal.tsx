@@ -251,18 +251,23 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
 
         setSendingInvite(true);
         try {
-            const { error } = await supabase
-                .from('clinic_invites')
-                .insert({
-                    clinic_id: clinicId,
-                    email: inviteEmail,
-                    role: inviteRole,
-                    status: 'pending'
-                } as any);
+            // Use RPC that handles both existing and new users
+            const { data, error } = await (supabase as any).rpc('invite_or_add_user', {
+                p_clinic_id: clinicId,
+                p_email: inviteEmail.trim().toLowerCase(),
+                p_role: inviteRole
+            });
 
             if (error) throw error;
 
-            toast.success(`Convite enviado para ${inviteEmail}`);
+            const result = data as { success: boolean; error?: string; message?: string; action?: string };
+
+            if (!result.success) {
+                toast.error(result.error || 'Não foi possível adicionar o usuário');
+                return;
+            }
+
+            toast.success(result.message || 'Usuário processado com sucesso');
             setInviteEmail('');
             loadTeamData();
         } catch (error) {
@@ -272,6 +277,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             setSendingInvite(false);
         }
     };
+
 
     const handleRemoveInvite = async (id: string) => {
         if (!confirm('Remover convite pendente?')) return;
