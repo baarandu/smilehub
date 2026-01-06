@@ -24,30 +24,30 @@ export const locationsService = {
       .from('locations')
       .select('*')
       .order('name');
-    
+
     if (error) throw error;
     return data || [];
   },
 
   async create(location: LocationInsert): Promise<Location> {
-    const { data, error } = await supabase
-      .from('locations')
+    const { data, error } = await (supabase
+      .from('locations') as any)
       .insert(location)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
 
   async update(id: string, location: LocationUpdate): Promise<Location> {
-    const { data, error } = await supabase
-      .from('locations')
+    const { data, error } = await (supabase
+      .from('locations') as any)
       .update(location)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },
@@ -57,7 +57,7 @@ export const locationsService = {
       .from('locations')
       .delete()
       .eq('id', id);
-    
+
     if (error) throw error;
   }
 };

@@ -14,8 +14,8 @@ export const anamnesesService = {
     },
 
     async create(anamnese: AnamneseInsert): Promise<Anamnese> {
-        const { data, error } = await supabase
-            .from('anamneses')
+        const { data, error } = await (supabase
+            .from('anamneses') as any)
             .insert(anamnese)
             .select()
             .single();
@@ -25,8 +25,8 @@ export const anamnesesService = {
     },
 
     async update(id: string, anamnese: Partial<AnamneseInsert>): Promise<Anamnese> {
-        const { data, error } = await supabase
-            .from('anamneses')
+        const { data, error } = await (supabase
+            .from('anamneses') as any)
             .update(anamnese)
             .eq('id', id)
             .select()

@@ -16,8 +16,8 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
 
     // Auto-update in_progress procedures older than 30 days to pending
-    await supabase
-        .from('procedures')
+    await (supabase
+        .from('procedures') as any)
         .update({ status: 'pending' })
         .eq('status', 'in_progress')
         .lt('updated_at', thirtyDaysAgoStr);
@@ -62,8 +62,8 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
  * Mark a procedure as completed
  */
 export async function markProcedureCompleted(procedureId: string): Promise<void> {
-    const { error } = await supabase
-        .from('procedures')
+    const { error } = await (supabase
+        .from('procedures') as any)
         .update({ status: 'completed', updated_at: new Date().toISOString() })
         .eq('id', procedureId);
 

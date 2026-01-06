@@ -24,8 +24,8 @@ export async function getPatientById(id: string): Promise<Patient | null> {
 }
 
 export async function createPatient(patient: PatientInsert): Promise<Patient> {
-  const { data, error } = await supabase
-    .from('patients')
+  const { data, error } = await (supabase
+    .from('patients') as any)
     .insert(patient)
     .select()
     .single();
@@ -70,8 +70,8 @@ export async function getPatientsCount(): Promise<number> {
 }
 
 export async function updatePatient(id: string, patient: Partial<PatientInsert>): Promise<Patient> {
-  const { data, error } = await supabase
-    .from('patients')
+  const { data, error } = await (supabase
+    .from('patients') as any)
     .update(patient)
     .eq('id', id)
     .select()
