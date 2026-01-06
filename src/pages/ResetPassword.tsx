@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Loader2, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,29 +12,53 @@ export default function ResetPassword() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [verifying, setVerifying] = useState(true);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
-    // Check if we have a valid session from the email link
+    // Handle token verification from email link
     useEffect(() => {
-        const handleHashToken = async () => {
-            // Supabase sends tokens in hash: #access_token=xxx&type=recovery
+        const verifyToken = async () => {
+            const tokenHash = searchParams.get('token_hash');
+            const type = searchParams.get('type');
+
+            // Also check hash for backwards compatibility
             const hash = window.location.hash;
 
-            if (hash && hash.includes('access_token')) {
-                // Let Supabase handle the hash - it should auto-detect and set session
-                // Wait a moment for Supabase to process
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+            if (tokenHash && type === 'recovery') {
+                // Verify the token with Supabase
+                const { error } = await supabase.auth.verifyOtp({
+                    token_hash: tokenHash,
+                    type: 'recovery',
+                });
 
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                toast.error('Link inválido ou expirado');
+                if (error) {
+                    console.error('Token verification error:', error);
+                    toast.error('Link inválido ou expirado');
+                    navigate('/login');
+                    return;
+                }
+
+                setVerifying(false);
+            } else if (hash && hash.includes('access_token')) {
+                // Legacy hash-based token handling
+                await new Promise(resolve => setTimeout(resolve, 500));
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    toast.error('Link inválido ou expirado');
+                    navigate('/login');
+                    return;
+                }
+                setVerifying(false);
+            } else {
+                // No token found
+                toast.error('Link inválido');
                 navigate('/login');
             }
         };
 
-        handleHashToken();
-    }, [navigate]);
+        verifyToken();
+    }, [navigate, searchParams]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +122,12 @@ export default function ResetPassword() {
 
                 {/* Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-8">
-                    {success ? (
+                    {verifying ? (
+                        <div className="text-center py-8">
+                            <Loader2 className="w-10 h-10 animate-spin text-teal-500 mx-auto mb-4" />
+                            <p className="text-gray-600">Verificando link...</p>
+                        </div>
+                    ) : success ? (
                         <div className="text-center">
                             <CheckCircle className="w-16 h-16 text-teal-500 mx-auto mb-4" />
                             <h2 className="text-xl font-semibold text-gray-900 mb-2">
