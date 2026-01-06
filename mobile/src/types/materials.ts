@@ -1,0 +1,17 @@
+export interface ShoppingItem {
+    id: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    supplier: string;
+}
+
+export interface ShoppingOrder {
+    id: string;
+    items: ShoppingItem[];
+    total_amount: number;
+    status: 'pending' | 'completed';
+    completed_at: string | null;
+    created_at: string;
+}
