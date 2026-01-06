@@ -21,44 +21,49 @@ export default function ResetPassword() {
         const verifyToken = async () => {
             const tokenHash = searchParams.get('token_hash');
             const type = searchParams.get('type');
-
-            // Also check hash for backwards compatibility
             const hash = window.location.hash;
 
+            console.log('Reset password params:', { tokenHash: tokenHash?.substring(0, 20) + '...', type, hash: hash?.substring(0, 50) });
+            console.log('Full URL:', window.location.href);
+
             if (tokenHash && type === 'recovery') {
-                // Verify the token with Supabase
-                const { error } = await supabase.auth.verifyOtp({
+                console.log('Attempting verifyOtp with token_hash...');
+                const { data, error } = await supabase.auth.verifyOtp({
                     token_hash: tokenHash,
                     type: 'recovery',
                 });
 
+                console.log('verifyOtp result:', { data, error });
+
                 if (error) {
                     console.error('Token verification error:', error);
-                    toast.error('Link inválido ou expirado');
-                    navigate('/login');
+                    toast.error(`Erro: ${error.message}`);
+                    // Don't redirect immediately, let user see the error
+                    setTimeout(() => navigate('/login'), 3000);
                     return;
                 }
 
                 setVerifying(false);
             } else if (hash && hash.includes('access_token')) {
-                // Legacy hash-based token handling
+                console.log('Using legacy hash-based token...');
                 await new Promise(resolve => setTimeout(resolve, 500));
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     toast.error('Link inválido ou expirado');
-                    navigate('/login');
+                    setTimeout(() => navigate('/login'), 3000);
                     return;
                 }
                 setVerifying(false);
             } else {
-                // No token found
-                toast.error('Link inválido');
-                navigate('/login');
+                console.log('No token found in URL');
+                toast.error('Link inválido - nenhum token encontrado');
+                setTimeout(() => navigate('/login'), 3000);
             }
         };
 
         verifyToken();
     }, [navigate, searchParams]);
+
 
 
     const handleSubmit = async (e: React.FormEvent) => {
