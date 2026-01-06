@@ -16,15 +16,26 @@ export default function ResetPassword() {
 
     // Check if we have a valid session from the email link
     useEffect(() => {
-        const checkSession = async () => {
+        const handleHashToken = async () => {
+            // Supabase sends tokens in hash: #access_token=xxx&type=recovery
+            const hash = window.location.hash;
+
+            if (hash && hash.includes('access_token')) {
+                // Let Supabase handle the hash - it should auto-detect and set session
+                // Wait a moment for Supabase to process
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 toast.error('Link inválido ou expirado');
                 navigate('/login');
             }
         };
-        checkSession();
+
+        handleHashToken();
     }, [navigate]);
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
