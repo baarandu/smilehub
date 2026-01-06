@@ -1,6 +1,11 @@
--- Function to invite a user to a clinic
--- If user already exists in profiles, add them directly to clinic_users
+-- CORRECTED: Function to invite a user to a clinic
+-- Uses auth.users instead of profiles.email (profiles may not have email column in production)
+-- If user already exists in auth.users, add them directly to clinic_users
 -- If user doesn't exist, create a pending invite
+
+-- First, drop the old version if it exists
+DROP FUNCTION IF EXISTS public.invite_or_add_user(uuid, text, text);
+
 CREATE OR REPLACE FUNCTION public.invite_or_add_user(
     p_clinic_id uuid,
     p_email text,
@@ -14,7 +19,6 @@ AS $$
 DECLARE
     v_user_id uuid;
     v_already_member boolean;
-    v_result jsonb;
 BEGIN
     -- 1. Check if current user is admin of this clinic
     IF NOT EXISTS (
@@ -26,9 +30,9 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Você não tem permissão para convidar usuários');
     END IF;
 
-    -- 2. Check if user already exists in profiles (has an account)
+    -- 2. Check if user already exists in auth.users (has an account)
     SELECT id INTO v_user_id
-    FROM profiles
+    FROM auth.users
     WHERE LOWER(email) = LOWER(p_email);
 
     IF v_user_id IS NOT NULL THEN
