@@ -81,21 +81,21 @@ export default function Dashboard() {
                 .eq('id', session.user.id)
                 .single();
 
-            if (profile) {
-                const p = profile as any;
-                const fullName = p.full_name || session.user.user_metadata?.full_name || null;
-                const userGender = p.gender || session.user.user_metadata?.gender || null;
+            // Prepare profile data, preferring DB but falling back to session metadata
+            const p = (profile || {}) as any;
+            const fullName = p.full_name || session.user.user_metadata?.full_name || null;
+            const userGender = p.gender || session.user.user_metadata?.gender || null;
+            const userRole = p.role || 'viewer';
 
-                // Create display name with Dr./Dra. prefix (same logic as web)
-                if (fullName) {
-                    const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
-                    setDisplayName(`${prefix} ${fullName}`);
-                } else {
-                    setDisplayName('Usuário');
-                }
-
-                setIsAdmin(p.role === 'admin' || p.role === 'owner');
+            // Create display name with Dr./Dra. prefix (same logic as web)
+            if (fullName) {
+                const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
+                setDisplayName(`${prefix} ${fullName}`);
+            } else {
+                setDisplayName('Usuário');
             }
+
+            setIsAdmin(userRole === 'admin' || userRole === 'owner');
             const clinicInfo = await profileService.getClinicInfo();
             setClinicName(clinicInfo.clinicName || 'Minha Clínica');
         } catch (e) { console.error(e); }
