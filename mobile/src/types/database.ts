@@ -32,6 +32,8 @@ export interface Database {
           medical_history: string | null
           avatar_url: string | null
           notes: string | null
+          clinic_id: string | null
+          user_id: string | null
           created_at: string
           updated_at: string
         }
@@ -57,6 +59,8 @@ export interface Database {
           medical_history?: string | null
           avatar_url?: string | null
           notes?: string | null
+          clinic_id?: string | null
+          user_id?: string | null
           created_at?: string
           updated_at?: string
         }

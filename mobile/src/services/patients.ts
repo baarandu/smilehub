@@ -24,15 +24,34 @@ export async function getPatientById(id: string): Promise<Patient | null> {
 }
 
 export async function createPatient(patient: PatientInsert): Promise<Patient> {
+  // Get clinic_id for the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado');
+
+  const { data: clinicUser } = await supabase
+    .from('clinic_users')
+    .select('clinic_id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+
+  const patientWithClinic = {
+    ...patient,
+    clinic_id: clinicUser.clinic_id,
+    user_id: user.id,
+  };
+
   const { data, error } = await (supabase
     .from('patients') as any)
-    .insert(patient)
+    .insert(patientWithClinic)
     .select()
     .single();
 
   if (error) throw error;
   return data;
 }
+
 
 export async function createPatientFromForm(formData: PatientFormData): Promise<Patient> {
   const patient: PatientInsert = {
