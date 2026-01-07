@@ -42,13 +42,13 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     .from('clinic_users')
     .select('clinic_id')
     .eq('user_id', user.id)
-    .single();
+    .single() as { data: { clinic_id: string } | null };
 
   if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
 
   const patientWithClinic = {
     ...patient,
-    clinic_id: clinicUser.clinic_id,
+    clinic_id: clinicUser.clinic_id as string,
     user_id: user.id,
   };
 
