@@ -172,24 +172,32 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Painel de Controle</h1>
-          <p className="text-muted-foreground mt-1">
-            Bem-vinda de volta! Aqui está o resumo do dia.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="h-10 w-10"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          <ProfileMenu />
+      {/* Header */}
+      <div className="bg-teal-600 rounded-2xl p-6 shadow-lg mb-2">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <img src="/logo-login.png" alt="Logo" className="w-10 h-10 object-contain" />
+            </div>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-white">Painel de Controle</h1>
+              <p className="text-teal-50 mt-1 opacity-90">
+                Bem-vinda de volta! Aqui está o resumo do dia.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="default" // Changed to default but we need a custom style/ghost for white bg
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white border-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <ProfileMenu className="text-white hover:bg-white/20" />
+          </div>
         </div>
       </div>
 

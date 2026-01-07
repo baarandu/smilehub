@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, Key, MapPin, LogOut, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +16,11 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-export function ProfileMenu() {
+interface ProfileMenuProps {
+  className?: string;
+}
+
+export function ProfileMenu({ className }: ProfileMenuProps) {
   const [locationsOpen, setLocationsOpen] = useState(false);
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -35,10 +40,10 @@ export function ProfileMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-colors">
+          <button className={cn("flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-colors", className)}>
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground">{displayName || 'Usuário'}</p>
-              <p className="text-xs text-muted-foreground">{clinicName || 'Minha Clínica'}</p>
+              <p className="text-sm font-medium">{displayName || 'Usuário'}</p>
+              <p className="text-xs opacity-80">{clinicName || 'Minha Clínica'}</p>
             </div>
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <User className="w-5 h-5 text-primary-foreground" />
