@@ -1,5 +1,7 @@
 -- Allow admins, managers, and dentists to delete patients within their clinic
--- This fixes the issue where dentists could not delete their own patients
+-- Fixes error 42710 by dropping strict policy if it exists to replace with inclusive one
+DROP POLICY IF EXISTS "Users can delete patients in their clinic" ON public.patients;
+
 CREATE POLICY "Users can delete patients in their clinic" ON public.patients
     FOR DELETE USING (
         EXISTS (
