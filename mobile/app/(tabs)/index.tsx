@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
@@ -220,19 +220,20 @@ export default function Dashboard() {
         }
     };
 
+    const insets = useSafeAreaInsets();
+
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
+            <View className="flex-1 bg-gray-50 items-center justify-center">
                 <ActivityIndicator size="large" color="#0D9488" />
                 <Text className="text-gray-500 mt-4">Carregando...</Text>
-            </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-1 bg-gray-50">
             <ScrollView
-                className="px-4 py-6"
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -242,115 +243,126 @@ export default function Dashboard() {
                     />
                 }
             >
-                {/* Header */}
-                <View className="flex-row items-start justify-between mb-6">
-                    <View className="flex-1">
-                        <Text className="text-2xl font-bold text-gray-900">Dashboard</Text>
-                        <Text className="text-gray-500 mt-1">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
-                    </View>
-                    <TouchableOpacity className="w-10 h-10 bg-white border border-gray-200 rounded-full items-center justify-center" onPress={() => setShowProfileModal(true)}>
-                        <Menu size={24} color="#374151" />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Stats Grid */}
-                <View className="flex-row flex-wrap justify-between gap-y-4 mb-6">
-                    <StatsCard title="Lembretes Ativos" value={activeReminders.toString()} icon={<Bell size={24} color="#0D9488" />} onPress={() => router.push('/alerts')} />
-                    <StatsCard title="Consultas Hoje" value={todayCount.toString()} icon={<Calendar size={24} color="#0D9488" />} onPress={() => router.push('/agenda?date=today')} />
-                    <StatsCard title="Retornos Pendentes" value={pendingReturns.toString()} icon={<AlertTriangle size={24} color="#F59E0B" />} onPress={async () => {
-                        setShowPendingReturnsModal(true);
-                        setLoadingPendingReturns(true);
-                        try { setPendingReturnsList(await getPendingReturns()); } catch (e) { console.error(e); } finally { setLoadingPendingReturns(false); }
-                    }} />
-                    <StatsCard title="Orçamentos Pendentes" value={pendingBudgetsCount.toString()} icon={<FileText size={24} color="#0D9488" />} onPress={async () => {
-                        setShowPendingBudgetsModal(true);
-                        setLoadingPendingBudgets(true);
-                        try { setPendingBudgetsList(await budgetsService.getAllPending()); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
-                    }} />
-                </View>
-
-                {/* Agenda Section */}
-                <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                    <View className="flex-row justify-between items-center mb-4">
-                        <View className="flex-row items-center gap-2">
-                            <Calendar size={20} color="#0D9488" />
-                            <Text className="text-lg font-bold text-gray-900">Agenda de Hoje</Text>
+                {/* Green Header */}
+                <View
+                    style={{ paddingTop: insets.top + 20, paddingBottom: 32 }}
+                    className="bg-teal-600 px-6 rounded-b-[32px] mb-6 shadow-md"
+                >
+                    <View className="flex-row items-center justify-between">
+                        <View className="flex-1 mr-4">
+                            <Text className="text-2xl font-bold text-white">Dashboard</Text>
+                            <Text className="text-teal-50 mt-1 text-sm opacity-90">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
                         </View>
-                        <TouchableOpacity onPress={() => router.push('/agenda')}>
-                            <Text className="text-teal-600 font-medium">Ver agenda</Text>
+                        <TouchableOpacity
+                            className="w-10 h-10 bg-white/20 rounded-full items-center justify-center border border-white/30"
+                            onPress={() => setShowProfileModal(true)}
+                        >
+                            <Menu size={20} color="#FFFFFF" />
                         </TouchableOpacity>
                     </View>
-                    <Text className="text-gray-500 mb-4">{todayAppointments.length} consultas</Text>
-                    {todayAppointments.length === 0 ? (
-                        <View className="py-8 items-center">
-                            <Calendar size={40} color="#D1D5DB" />
-                            <Text className="text-gray-400 mt-2">Nenhuma consulta hoje</Text>
+                </View>
+
+                {/* Content Container */}
+                <View className="px-4 pb-8">
+                    {/* Stats Grid */}
+                    <View className="flex-row flex-wrap justify-between gap-y-4 mb-6">
+                        <StatsCard title="Lembretes Ativos" value={activeReminders.toString()} icon={<Bell size={24} color="#0D9488" />} onPress={() => router.push('/alerts')} />
+                        <StatsCard title="Consultas Hoje" value={todayCount.toString()} icon={<Calendar size={24} color="#0D9488" />} onPress={() => router.push('/agenda?date=today')} />
+                        <StatsCard title="Retornos Pendentes" value={pendingReturns.toString()} icon={<AlertTriangle size={24} color="#F59E0B" />} onPress={async () => {
+                            setShowPendingReturnsModal(true);
+                            setLoadingPendingReturns(true);
+                            try { setPendingReturnsList(await getPendingReturns()); } catch (e) { console.error(e); } finally { setLoadingPendingReturns(false); }
+                        }} />
+                        <StatsCard title="Orçamentos Pendentes" value={pendingBudgetsCount.toString()} icon={<FileText size={24} color="#0D9488" />} onPress={async () => {
+                            setShowPendingBudgetsModal(true);
+                            setLoadingPendingBudgets(true);
+                            try { setPendingBudgetsList(await budgetsService.getAllPending()); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
+                        }} />
+                    </View>
+
+                    {/* Agenda Section */}
+                    <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8">
+                        <View className="flex-row justify-between items-center mb-4">
+                            <View className="flex-row items-center gap-2">
+                                <Calendar size={20} color="#0D9488" />
+                                <Text className="text-lg font-bold text-gray-900">Agenda de Hoje</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => router.push('/agenda')}>
+                                <Text className="text-teal-600 font-medium">Ver agenda</Text>
+                            </TouchableOpacity>
                         </View>
-                    ) : (
-                        <View className="gap-3">
-                            {todayAppointments.map((apt) => (
-                                <View key={apt.id} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-xl">
-                                    <View className="flex-row items-center gap-3">
-                                        <View className="w-10 h-10 bg-teal-100 rounded-full items-center justify-center">
-                                            <Users size={20} color="#0D9488" />
+                        <Text className="text-gray-500 mb-4">{todayAppointments.length} consultas</Text>
+                        {todayAppointments.length === 0 ? (
+                            <View className="py-8 items-center">
+                                <Calendar size={40} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-2">Nenhuma consulta hoje</Text>
+                            </View>
+                        ) : (
+                            <View className="gap-3">
+                                {todayAppointments.map((apt) => (
+                                    <View key={apt.id} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-xl">
+                                        <View className="flex-row items-center gap-3">
+                                            <View className="w-10 h-10 bg-teal-100 rounded-full items-center justify-center">
+                                                <Users size={20} color="#0D9488" />
+                                            </View>
+                                            <View>
+                                                <Text className="font-semibold text-gray-900">{apt.patients?.name}</Text>
+                                                <Text className="text-teal-700 font-bold">{apt.time?.slice(0, 5)}</Text>
+                                                {apt.notes && <Text className="text-xs text-gray-500">{apt.notes}</Text>}
+                                            </View>
                                         </View>
-                                        <View>
-                                            <Text className="font-semibold text-gray-900">{apt.patients?.name}</Text>
-                                            <Text className="text-teal-700 font-bold">{apt.time?.slice(0, 5)}</Text>
-                                            {apt.notes && <Text className="text-xs text-gray-500">{apt.notes}</Text>}
-                                        </View>
+                                        <ChevronRight size={20} color="#9CA3AF" />
                                     </View>
-                                    <ChevronRight size={20} color="#9CA3AF" />
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-
-                {/* Recent Alerts Section */}
-                <View className="mb-6">
-                    <View className="flex-row justify-between items-center mb-4">
-                        <View className="flex-row items-center gap-2">
-                            <Bell size={20} color="#F59E0B" />
-                            <Text className="text-lg font-bold text-gray-900">Alertas Recentes</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => router.push('/alerts')}>
-                            <Text className="text-teal-600 font-medium">Ver todos</Text>
-                        </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
                     </View>
-                    {recentAlerts.length === 0 ? (
-                        <View className="bg-white p-6 rounded-2xl border border-gray-100 items-center">
-                            <Bell size={32} color="#D1D5DB" />
-                            <Text className="text-gray-400 mt-2">Nenhum alerta recente</Text>
-                        </View>
-                    ) : (
-                        <View className="gap-3">
-                            {recentAlerts.map((alert: any, index) => {
-                                let icon = <Bell size={20} color="#6B7280" />;
-                                let color = "bg-gray-50";
-                                let title = "";
-                                let subtitle = "";
 
-                                if (alert.type === 'birthday') { icon = <Gift size={20} color="#EC4899" />; color = "bg-pink-50"; title = `Aniversário de ${alert.patient.name}`; subtitle = "Hoje"; }
-                                else if (alert.type === 'procedure_return') { icon = <Clock size={20} color="#F59E0B" />; color = "bg-amber-50"; title = `Retorno: ${alert.patient.name}`; subtitle = `${alert.daysSince} dias sem vir`; }
-                                else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#0D9488" />; color = "bg-teal-50"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
-                                else if (alert.type === 'reminder') { icon = <Bell size={20} color="#0D9488" />; color = "bg-teal-50"; title = alert.title; subtitle = alert.description || 'Lembrete'; }
-
-                                return (
-                                    <TouchableOpacity key={index} className="flex-row items-center p-3 rounded-xl border border-gray-100 bg-white" onPress={() => router.push('/alerts')}>
-                                        <View className={`p-2 rounded-full mr-3 ${color}`}>{icon}</View>
-                                        <View className="flex-1">
-                                            <Text className="font-semibold text-gray-900">{title}</Text>
-                                            <Text className="text-gray-500 text-xs">{subtitle}</Text>
-                                        </View>
-                                        <ChevronRight size={16} color="#9CA3AF" />
-                                    </TouchableOpacity>
-                                );
-                            })}
+                    {/* Recent Alerts Section */}
+                    <View className="mb-6">
+                        <View className="flex-row justify-between items-center mb-4">
+                            <View className="flex-row items-center gap-2">
+                                <Bell size={20} color="#F59E0B" />
+                                <Text className="text-lg font-bold text-gray-900">Alertas Recentes</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => router.push('/alerts')}>
+                                <Text className="text-teal-600 font-medium">Ver todos</Text>
+                            </TouchableOpacity>
                         </View>
-                    )}
+                        {recentAlerts.length === 0 ? (
+                            <View className="bg-white p-6 rounded-2xl border border-gray-100 items-center">
+                                <Bell size={32} color="#D1D5DB" />
+                                <Text className="text-gray-400 mt-2">Nenhum alerta recente</Text>
+                            </View>
+                        ) : (
+                            <View className="gap-3">
+                                {recentAlerts.map((alert: any, index) => {
+                                    let icon = <Bell size={20} color="#6B7280" />;
+                                    let color = "bg-gray-50";
+                                    let title = "";
+                                    let subtitle = "";
+
+                                    if (alert.type === 'birthday') { icon = <Gift size={20} color="#EC4899" />; color = "bg-pink-50"; title = `Aniversário de ${alert.patient.name}`; subtitle = "Hoje"; }
+                                    else if (alert.type === 'procedure_return') { icon = <Clock size={20} color="#F59E0B" />; color = "bg-amber-50"; title = `Retorno: ${alert.patient.name}`; subtitle = `${alert.daysSince} dias sem vir`; }
+                                    else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#0D9488" />; color = "bg-teal-50"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
+                                    else if (alert.type === 'reminder') { icon = <Bell size={20} color="#0D9488" />; color = "bg-teal-50"; title = alert.title; subtitle = alert.description || 'Lembrete'; }
+
+                                    return (
+                                        <TouchableOpacity key={index} className="flex-row items-center p-3 rounded-xl border border-gray-100 bg-white" onPress={() => router.push('/alerts')}>
+                                            <View className={`p-2 rounded-full mr-3 ${color}`}>{icon}</View>
+                                            <View className="flex-1">
+                                                <Text className="font-semibold text-gray-900">{title}</Text>
+                                                <Text className="text-gray-500 text-xs">{subtitle}</Text>
+                                            </View>
+                                            <ChevronRight size={16} color="#9CA3AF" />
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        )}
+                    </View>
+                    <View className="h-6" />
                 </View>
-                <View className="h-6" />
             </ScrollView>
 
             {/* Modals */}
@@ -391,7 +403,7 @@ export default function Dashboard() {
                 loading={loadingPendingReturns}
                 onMarkCompleted={handleMarkProcedureCompleted}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
