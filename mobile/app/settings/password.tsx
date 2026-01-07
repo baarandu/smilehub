@@ -38,8 +38,8 @@ export default function PasswordSettings() {
             if (error) throw error;
 
             Alert.alert(
-                'Sucesso',
-                'Senha alterada com sucesso!',
+                'Solicitação Enviada',
+                'Se a sua conta exigir verificação, um e-mail de confirmação foi enviado. Caso contrário, sua senha foi alterada com sucesso.',
                 [{ text: 'OK', onPress: () => router.back() }]
             );
         } catch (error: any) {

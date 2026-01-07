@@ -117,7 +117,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
 
             if (error) throw error;
 
-            toast.success('Senha alterada com sucesso!');
+            toast.success('Solicitação enviada! Verifique seu e-mail caso seja necessária confirmação.');
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
