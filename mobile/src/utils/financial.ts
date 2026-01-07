@@ -3,9 +3,12 @@ export const formatCurrency = (value: number) => {
     return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 };
 
-// Date Formatting
+// Date Formatting - using T00:00:00 to prevent timezone shift
 export const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // If dateString is already in ISO format with time, just use it
+    // Otherwise, append T00:00:00 to interpret as local date
+    const dateStr = dateString.includes('T') ? dateString : dateString + 'T00:00:00';
+    return new Date(dateStr).toLocaleDateString('pt-BR');
 };
 
 export const formatDateInput = (text: string): string => {
