@@ -48,7 +48,16 @@ export default function Financial() {
             }
 
             const data = await financialService.getTransactions(start, end);
-            setTransactions(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            // Sort by date (newest first), then by created_at (newest first) for same-day transactions
+            setTransactions(data.sort((a, b) => {
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                if (dateB !== dateA) return dateB - dateA;
+                // Same date: sort by created_at (newest first)
+                const createdA = new Date(a.created_at).getTime();
+                const createdB = new Date(b.created_at).getTime();
+                return createdB - createdA;
+            }));
         } catch (error) {
             console.error('Error loading financial data:', error);
             Alert.alert('Erro', 'Não foi possível carregar os dados financeiros');

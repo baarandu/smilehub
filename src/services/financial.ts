@@ -8,7 +8,8 @@ export const financialService = {
             .select('*, patients(name)')
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
         return data || [];
