@@ -67,7 +67,7 @@ export const auditService = {
                 .rpc('get_profiles_for_users', { user_ids: userIds });
 
             console.log('[AuditService] Fetched Profiles:', profiles);
-            console.log('[AuditService] Profile Error:', profilesError);
+            console.log('[AuditService] Profile Error:', profilesError, 'UserIDs:', userIds);
 
             if (!profilesError && profiles) {
                 profilesMap = (profiles as any[]).reduce((acc, profile) => {
