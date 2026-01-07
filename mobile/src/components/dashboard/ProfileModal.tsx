@@ -130,7 +130,13 @@ export function ProfileModal({
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Conta</Text>
 
-                            <TouchableOpacity className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1">
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/settings/password');
+                                }}
+                            >
                                 <Key size={20} color="#6B7280" />
                                 <Text className="text-gray-700 font-medium">Alterar Senha</Text>
                             </TouchableOpacity>

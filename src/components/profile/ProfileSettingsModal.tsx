@@ -29,6 +29,8 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
+// ... (existing helper methods)
+
 interface ProfileSettingsModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -87,6 +89,44 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
     // Audit State
     const [auditLogs, setAuditLogs] = useState<(AuditLog & { profiles: { full_name: string | null, email: string | null } | null })[]>([]);
     const [loadingAudit, setLoadingAudit] = useState(false);
+
+    // Password Change State
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loadingPassword, setLoadingPassword] = useState(false);
+
+    const handlePasswordChange = async () => {
+        if (!newPassword || !confirmPassword) {
+            toast.error('Preencha os campos de nova senha');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            toast.error('A senha deve ter pelo menos 6 caracteres');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            toast.error('As senhas não coincidem');
+            return;
+        }
+
+        setLoadingPassword(true);
+        try {
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+            if (error) throw error;
+
+            toast.success('Senha alterada com sucesso!');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            console.error('Error changing password:', error);
+            toast.error(error.message || 'Erro ao alterar senha');
+        } finally {
+            setLoadingPassword(false);
+        }
+    };
 
     useEffect(() => {
         if (open) {
@@ -529,40 +569,103 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                         )}
                     </TabsContent>
 
-                    <TabsContent value="audit" className="space-y-6 py-4">
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-medium flex items-center gap-2">
-                                <Activity className="w-4 h-4" />
-                                Histórico de Atividades
-                            </h3>
+                    {isAdmin && (
+                        <TabsContent value="audit" className="mt-4 h-[400px]">
                             {loadingAudit ? (
-                                <div className="text-center py-4"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
-                            ) : auditLogs.length === 0 ? (
-                                <p className="text-sm text-muted-foreground italic">Nenhuma atividade registrada.</p>
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                                </div>
                             ) : (
-                                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                                    {auditLogs.map(log => (
-                                        <div key={log.id} className="p-3 border rounded-lg bg-card text-sm">
-                                            <div className="flex justify-between items-start mb-1">
-                                                <span className="font-medium text-foreground">
-                                                    {log.profiles?.full_name || log.profiles?.email || 'Usuário Desconhecido'}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {new Date(log.created_at).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <p className="text-muted-foreground">
-                                                <span className="font-semibold text-primary/80">{log.action}</span> {log.entity}
-                                                {log.details && Object.keys(log.details as object).length > 0 ? (
-                                                    <span className="text-xs ml-2 opacity-70">
-                                                        ({JSON.stringify(log.details).slice(0, 50)}...)
-                                                    </span>
-                                                ) : null}
-                                            </p>
+                                <div className="space-y-4">
+                                    {auditLogs.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500">
+                                            Nenhum registro de auditoria encontrado.
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {auditLogs.map((log) => (
+                                                <div key={log.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="font-medium text-gray-900">
+                                                            {log.profiles?.full_name || log.profiles?.email || 'Sistema'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {new Date(log.created_at).toLocaleString('pt-BR')}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-gray-600">
+                                                        <span className="font-medium text-teal-700 uppercase text-xs mr-2 px-1.5 py-0.5 bg-teal-50 rounded">
+                                                            {log.action}
+                                                        </span>
+                                                        {(log.details as any)?.description || 'Ação registrada'}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
+                        </TabsContent>
+                    )}
+
+                    <TabsContent value="security" className="mt-4">
+                        <div className="space-y-6">
+                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 flex items-start gap-3">
+                                <Shield className="w-5 h-5 text-orange-600 mt-0.5" />
+                                <div>
+                                    <h4 className="font-medium text-orange-900">Segurança da Conta</h4>
+                                    <p className="text-sm text-orange-700 mt-1">
+                                        Mantenha sua conta segura usando uma senha forte com letras, números e símbolos.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-password">Nova Senha</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="new-password"
+                                            type="password"
+                                            placeholder="Digite sua nova senha"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            className="pl-10"
+                                        />
+                                        <Eye className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="confirm-password"
+                                            type="password"
+                                            placeholder="Confirme sua nova senha"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="pl-10"
+                                        />
+                                        <Eye className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                                    </div>
+                                </div>
+
+                                <Button
+                                    onClick={handlePasswordChange}
+                                    disabled={loadingPassword || !newPassword || !confirmPassword}
+                                    className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                                >
+                                    {loadingPassword ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Alterando...
+                                        </>
+                                    ) : (
+                                        'Alterar Senha'
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                     </TabsContent>
                 </Tabs>
