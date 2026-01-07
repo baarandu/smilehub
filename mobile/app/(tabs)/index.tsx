@@ -83,7 +83,17 @@ export default function Dashboard() {
 
             if (profile) {
                 const p = profile as any;
-                setDisplayName(p.full_name || 'Usuário');
+                const fullName = p.full_name || session.user.user_metadata?.full_name || null;
+                const userGender = p.gender || session.user.user_metadata?.gender || null;
+
+                // Create display name with Dr./Dra. prefix (same logic as web)
+                if (fullName) {
+                    const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
+                    setDisplayName(`${prefix} ${fullName}`);
+                } else {
+                    setDisplayName('Usuário');
+                }
+
                 setIsAdmin(p.role === 'admin' || p.role === 'owner');
             }
             const clinicInfo = await profileService.getClinicInfo();
