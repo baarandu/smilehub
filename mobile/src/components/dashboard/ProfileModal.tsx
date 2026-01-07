@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image } from 'react-native';
 import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -61,7 +61,14 @@ export function ProfileModal({
                     <View className="flex-1 bg-gray-50">
                         {/* Header Profile Section */}
                         <View className="bg-teal-600 p-6 pt-12 pb-8 rounded-br-[40px]">
-                            <View className="flex-row justify-end mb-4">
+                            <View className="flex-row justify-between items-center mb-6">
+                                <View className="bg-white/20 p-2 rounded-xl">
+                                    <Image
+                                        source={require('../../../assets/logo-login.png')}
+                                        className="w-8 h-8"
+                                        resizeMode="contain"
+                                    />
+                                </View>
                                 <TouchableOpacity onPress={onClose} className="p-2 bg-white/20 rounded-full">
                                     <X size={20} color="#FFFFFF" />
                                 </TouchableOpacity>

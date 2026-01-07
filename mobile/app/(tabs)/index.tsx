@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu } from 'lucide-react-native';
@@ -250,7 +250,16 @@ export default function Dashboard() {
                 >
                     <View className="flex-row items-center justify-between">
                         <View className="flex-1 mr-4">
-                            <Text className="text-2xl font-bold text-white">Dashboard</Text>
+                            <View className="flex-row items-center gap-3">
+                                <View className="bg-white/20 p-1.5 rounded-xl">
+                                    <Image
+                                        source={require('../../assets/logo-login.png')}
+                                        className="w-8 h-8"
+                                        resizeMode="contain"
+                                    />
+                                </View>
+                                <Text className="text-2xl font-bold text-white">Painel de Controle</Text>
+                            </View>
                             <Text className="text-teal-50 mt-1 text-sm opacity-90">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
                         </View>
                         <TouchableOpacity
