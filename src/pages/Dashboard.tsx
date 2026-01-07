@@ -173,30 +173,32 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       {/* Header */}
-      <div className="bg-teal-600 rounded-2xl p-6 shadow-lg mb-2">
+      <div className="bg-gradient-to-r from-teal-50 to-transparent rounded-2xl p-6 mb-6 border border-teal-100">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-2 rounded-xl">
+            <div className="bg-white p-2.5 rounded-xl shadow-sm border border-teal-50">
               <img src="/logo-login.png" alt="Logo" className="w-10 h-10 object-contain" />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-white">Painel de Controle</h1>
-              <p className="text-teal-50 mt-1 opacity-90">
+              <h1 className="text-2xl lg:text-3xl font-bold text-teal-950">Painel de Controle</h1>
+              <p className="text-teal-600/80 mt-1 font-medium">
                 Bem-vinda de volta! Aqui está o resumo do dia.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Button
-              variant="default" // Changed to default but we need a custom style/ghost for white bg
+              variant="outline"
               size="icon"
               onClick={handleRefresh}
               disabled={isRefreshing}
-              className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white border-0"
+              className="h-10 w-10 bg-white border-teal-100 hover:bg-teal-50 hover:text-teal-600"
             >
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
-            <ProfileMenu className="text-white hover:bg-white/20" />
+            <div className="bg-white rounded-xl shadow-sm border border-teal-100">
+              <ProfileMenu />
+            </div>
           </div>
         </div>
       </div>
