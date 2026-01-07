@@ -59,15 +59,14 @@ export const auditService = {
         const userIds = [...new Set(logsData.map(log => log.user_id).filter(id => id !== null))];
         console.log('[AuditService] Found User IDs in logs:', userIds);
 
-        // 3. Fetch profiles for these users
+        // 3. Fetch profiles for these users directly from profiles table
         let profilesMap: Record<string, { full_name: string | null, email: string | null }> = {};
 
         if (userIds.length > 0) {
             const { data: profiles, error: profilesError } = await supabase
-                .rpc('get_profiles_for_users', { user_ids: userIds });
-
-            console.log('[AuditService] Fetched Profiles:', profiles);
-            console.log('[AuditService] Profile Error:', profilesError);
+                .from('profiles')
+                .select('id, full_name, email')
+                .in('id', userIds);
 
             if (!profilesError && profiles) {
                 profilesMap = (profiles as any[]).reduce((acc, profile) => {
