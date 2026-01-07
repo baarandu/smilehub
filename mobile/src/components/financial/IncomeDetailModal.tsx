@@ -58,10 +58,10 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
     };
 
     const hasDeductions =
-        (transaction.tax_amount && transaction.tax_amount > 0) ||
-        (transaction.card_fee_amount && transaction.card_fee_amount > 0) ||
-        ((transaction as any).anticipation_amount && (transaction as any).anticipation_amount > 0) ||
-        ((transaction as any).location_amount && (transaction as any).location_amount > 0);
+        ((transaction.tax_amount || 0) > 0) ||
+        ((transaction.card_fee_amount || 0) > 0) ||
+        (((transaction as any).anticipation_amount || 0) > 0) ||
+        (((transaction as any).location_amount || 0) > 0);
 
     return (
         <Modal visible={!!transaction} transparent animationType="fade" statusBarTranslucent>
@@ -137,7 +137,7 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                 </View>
                             </View>
 
-                            {/* Financial Breakdown */}
+
                             {hasDeductions && (
                                 <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
                                     <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 12 }}>Detalhamento Financeiro</Text>
@@ -145,22 +145,22 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                         <Text style={{ color: '#4b5563' }}>Valor Bruto</Text>
                                         <Text style={{ fontWeight: '600', color: '#111827' }}>{formatCurrency(transaction.amount)}</Text>
                                     </View>
-                                    {transaction.tax_amount && transaction.tax_amount > 0 && (
+                                    {(transaction.tax_amount || 0) > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                                             <Text style={{ color: '#6b7280', fontSize: 14 }}>Imposto ({transaction.tax_rate || 0}%)</Text>
-                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(transaction.tax_amount)}</Text>
+                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(transaction.tax_amount || 0)}</Text>
                                         </View>
                                     )}
-                                    {transaction.card_fee_amount && transaction.card_fee_amount > 0 && (
+                                    {(transaction.card_fee_amount || 0) > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                                             <Text style={{ color: '#6b7280', fontSize: 14 }}>Taxa do Cartão ({transaction.card_fee_rate || 0}%)</Text>
-                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(transaction.card_fee_amount)}</Text>
+                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency(transaction.card_fee_amount || 0)}</Text>
                                         </View>
                                     )}
-                                    {(transaction as any).anticipation_amount > 0 && (
+                                    {((transaction as any).anticipation_amount || 0) > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                                             <Text style={{ color: '#6b7280', fontSize: 14 }}>Antecipação ({(transaction as any).anticipation_rate || 0}%)</Text>
-                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((transaction as any).anticipation_amount)}</Text>
+                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((transaction as any).anticipation_amount || 0)}</Text>
                                         </View>
                                     )}
                                     {(transaction as any).location_amount > 0 && (
