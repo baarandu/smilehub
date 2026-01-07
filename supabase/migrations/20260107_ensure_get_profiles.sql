@@ -8,9 +8,10 @@ SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY
-  SELECT p.id, p.email, p.full_name
-  FROM profiles p
-  WHERE p.id = ANY(user_ids);
+  SELECT u.id, u.email::text, p.full_name
+  FROM auth.users u
+  LEFT JOIN profiles p ON p.id = u.id
+  WHERE u.id = ANY(user_ids);
 END;
 $$;
 

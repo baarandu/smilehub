@@ -170,6 +170,8 @@ export interface Database {
           location: string | null
           notes: string | null
           procedure_name: string | null
+          clinic_id: string | null
+          user_id: string | null
           created_at: string
           updated_at: string
         }
@@ -182,6 +184,8 @@ export interface Database {
           location?: string | null
           notes?: string | null
           procedure_name?: string | null
+          clinic_id?: string | null
+          user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -194,6 +198,8 @@ export interface Database {
           location?: string | null
           notes?: string | null
           procedure_name?: string | null
+          clinic_id?: string | null
+          user_id?: string | null
           created_at?: string
           updated_at?: string
         }

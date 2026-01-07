@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -248,8 +248,8 @@ export default function Dashboard() {
                         <Text className="text-2xl font-bold text-gray-900">Dashboard</Text>
                         <Text className="text-gray-500 mt-1">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
                     </View>
-                    <TouchableOpacity className="w-10 h-10 bg-teal-600 rounded-full items-center justify-center" onPress={() => setShowProfileModal(true)}>
-                        <User size={20} color="#FFFFFF" />
+                    <TouchableOpacity className="w-10 h-10 bg-white border border-gray-200 rounded-full items-center justify-center" onPress={() => setShowProfileModal(true)}>
+                        <Menu size={24} color="#374151" />
                     </TouchableOpacity>
                 </View>
 

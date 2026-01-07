@@ -529,59 +529,60 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                             {activeTab === 'audit' && renderAuditLogs()}
                         </ScrollView>
                     )}
-                </SafeAreaView>
-            </Modal>
-
-            {/* Role Selection Modal */}
-            <Modal visible={showRoleModal} animationType="fade" transparent>
-                <TouchableOpacity
-                    className="flex-1 bg-black/50 justify-center items-center px-6"
-                    activeOpacity={1}
-                    onPress={() => setShowRoleModal(false)}
-                >
-                    <View className="bg-white rounded-2xl p-5 w-full max-w-sm">
-                        <Text className="text-lg font-semibold text-gray-900 mb-1">Alterar Permissão</Text>
-                        <Text className="text-sm text-gray-500 mb-4">
-                            {selectedMember?.full_name}
-                        </Text>
-
-                        {(['admin', 'dentist', 'assistant', 'editor', 'viewer'] as Role[]).map((role) => (
+                    {/* Role Selection Overlay */}
+                    {showRoleModal && (
+                        <View className="absolute top-0 left-0 right-0 bottom-0 z-50">
                             <TouchableOpacity
-                                key={role}
-                                className={`flex-row items-center p-3 mb-2 rounded-xl border-2 ${selectedRole === role
-                                    ? 'border-teal-500 bg-teal-50'
-                                    : 'border-gray-200'
-                                    }`}
-                                onPress={() => setSelectedRole(role)}
-                            >
-                                <View className="flex-1">
-                                    <Text className={`font-medium ${selectedRole === role ? 'text-teal-700' : 'text-gray-900'}`}>
-                                        {ROLE_CONFIG[role].label}
-                                    </Text>
-                                    <Text className="text-xs text-gray-500">{ROLE_CONFIG[role].description}</Text>
-                                </View>
-                                {selectedRole === role && (
-                                    <Check size={20} color="#14b8a6" />
-                                )}
-                            </TouchableOpacity>
-                        ))}
-
-                        <View className="flex-row gap-2 mt-4">
-                            <TouchableOpacity
-                                className="flex-1 py-3 bg-gray-100 rounded-lg"
+                                className="flex-1 bg-black/50 justify-center items-center px-6"
+                                activeOpacity={1}
                                 onPress={() => setShowRoleModal(false)}
                             >
-                                <Text className="text-center text-gray-600">Cancelar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                className="flex-1 py-3 bg-teal-600 rounded-lg"
-                                onPress={confirmRoleChange}
-                            >
-                                <Text className="text-center text-white font-medium">Confirmar</Text>
+                                <View className="bg-white rounded-2xl p-5 w-full max-w-sm">
+                                    <Text className="text-lg font-semibold text-gray-900 mb-1">Alterar Permissão</Text>
+                                    <Text className="text-sm text-gray-500 mb-4">
+                                        {selectedMember?.full_name}
+                                    </Text>
+
+                                    {(['admin', 'dentist', 'assistant', 'editor', 'viewer'] as Role[]).map((role) => (
+                                        <TouchableOpacity
+                                            key={role}
+                                            className={`flex-row items-center p-3 mb-2 rounded-xl border-2 ${selectedRole === role
+                                                ? 'border-teal-500 bg-teal-50'
+                                                : 'border-gray-200'
+                                                }`}
+                                            onPress={() => setSelectedRole(role)}
+                                        >
+                                            <View className="flex-1">
+                                                <Text className={`font-medium ${selectedRole === role ? 'text-teal-700' : 'text-gray-900'}`}>
+                                                    {ROLE_CONFIG[role].label}
+                                                </Text>
+                                                <Text className="text-xs text-gray-500">{ROLE_CONFIG[role].description}</Text>
+                                            </View>
+                                            {selectedRole === role && (
+                                                <Check size={20} color="#14b8a6" />
+                                            )}
+                                        </TouchableOpacity>
+                                    ))}
+
+                                    <View className="flex-row gap-2 mt-4">
+                                        <TouchableOpacity
+                                            className="flex-1 py-3 bg-gray-100 rounded-lg"
+                                            onPress={() => setShowRoleModal(false)}
+                                        >
+                                            <Text className="text-center text-gray-600">Cancelar</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            className="flex-1 py-3 bg-teal-600 rounded-lg"
+                                            onPress={confirmRoleChange}
+                                        >
+                                            <Text className="text-center text-white font-medium">Confirmar</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </TouchableOpacity>
+                    )}
+                </SafeAreaView>
             </Modal>
         </>
     );

@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, Modal, TouchableOpacity } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2 } from 'lucide-react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Modal, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -25,73 +25,127 @@ export function ProfileModal({
     onOpenTeam
 }: ProfileModalProps) {
     const router = useRouter();
+    const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
+
+    useEffect(() => {
+        if (visible) {
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            Animated.timing(slideAnim, {
+                toValue: -Dimensions.get('window').width,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [visible]);
 
     return (
-        <Modal visible={visible} animationType="fade" transparent>
-            <TouchableOpacity
-                className="flex-1 bg-black/50 justify-end"
-                activeOpacity={1}
-                onPress={onClose}
-            >
-                <View className="bg-white rounded-t-3xl p-6">
-                    <View className="items-center mb-6">
-                        <View className="w-16 h-16 bg-teal-600 rounded-full items-center justify-center mb-3">
-                            <User size={32} color="#FFFFFF" />
+        <Modal visible={visible} transparent onRequestClose={onClose}>
+            <View className="flex-1">
+                {/* Backdrop */}
+                <TouchableOpacity
+                    className="absolute top-0 bottom-0 left-0 right-0 bg-black/50"
+                    activeOpacity={1}
+                    onPress={onClose}
+                />
+
+                {/* Sidebar Drawer */}
+                <Animated.View
+                    style={{ transform: [{ translateX: slideAnim }] }}
+                    className="absolute top-0 bottom-0 left-0 w-[80%] bg-white shadow-xl"
+                >
+                    <View className="flex-1 bg-gray-50">
+                        {/* Header Profile Section */}
+                        <View className="bg-teal-600 p-6 pt-12 pb-8 rounded-br-[40px]">
+                            <View className="flex-row justify-end mb-4">
+                                <TouchableOpacity onPress={onClose} className="p-2 bg-white/20 rounded-full">
+                                    <X size={20} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View className="flex-row items-center gap-4">
+                                <View className="w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg border-2 border-teal-100">
+                                    <User size={30} color="#0D9488" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-white text-lg font-bold" numberOfLines={1}>{displayName || 'Usuário'}</Text>
+                                    <Text className="text-teal-100 text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
+                                </View>
+                            </View>
                         </View>
-                        <Text className="text-xl font-bold text-gray-900">{displayName || 'Usuário'}</Text>
-                        <Text className="text-gray-500">{clinicName || 'Minha Clínica'}</Text>
+
+                        {/* Menu Items */}
+                        <View className="p-6 gap-2">
+                            {/* AI Secretary - Valid for all users or just admin? Assuming all for now */}
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
+                                onPress={() => {
+                                    onClose();
+                                    // TODO: Navigate to AI Secretary screen when ready
+                                }}
+                            >
+                                <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
+                                    <Bot size={22} color="#0D9488" />
+                                </View>
+                                <View>
+                                    <Text className="text-gray-900 font-bold">Secretária IA</Text>
+                                    <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Gerenciamento</Text>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/settings/clinic');
+                                }}
+                            >
+                                <Building2 size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Minha Clínica</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={onOpenLocations}
+                            >
+                                <MapPin size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Gerenciar Locais</Text>
+                            </TouchableOpacity>
+
+                            {isAdmin && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                    onPress={onOpenTeam}
+                                >
+                                    <Users2 size={20} color="#6B7280" />
+                                    <Text className="text-gray-700 font-medium">Gerenciar Equipe</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Conta</Text>
+
+                            <TouchableOpacity className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1">
+                                <Key size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Alterar Senha</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 mt-4 bg-red-50 rounded-xl border border-red-100"
+                                onPress={onLogout}
+                            >
+                                <LogOut size={20} color="#EF4444" />
+                                <Text className="text-red-600 font-medium">Sair da Conta</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-
-                    <TouchableOpacity
-                        className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
-                        onPress={() => {
-                            onClose();
-                            router.push('/settings/clinic');
-                        }}
-                    >
-                        <Building2 size={20} color="#6B7280" />
-                        <Text className="text-gray-700 font-medium">Minha Clínica</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3">
-                        <Key size={20} color="#6B7280" />
-                        <Text className="text-gray-700 font-medium">Alterar Senha</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
-                        onPress={onOpenLocations}
-                    >
-                        <MapPin size={20} color="#6B7280" />
-                        <Text className="text-gray-700 font-medium">Gerenciar Locais</Text>
-                    </TouchableOpacity>
-
-                    {isAdmin && (
-                        <TouchableOpacity
-                            className="flex-row items-center gap-4 p-4 bg-gray-50 rounded-xl mb-3"
-                            onPress={onOpenTeam}
-                        >
-                            <Users2 size={20} color="#6B7280" />
-                            <Text className="text-gray-700 font-medium">Gerenciar Equipe</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
-                        className="flex-row items-center gap-4 p-4 bg-red-50 rounded-xl"
-                        onPress={onLogout}
-                    >
-                        <LogOut size={20} color="#EF4444" />
-                        <Text className="text-red-600 font-medium">Sair</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        className="mt-4 p-4"
-                        onPress={onClose}
-                    >
-                        <Text className="text-center text-gray-500">Fechar</Text>
-                    </TouchableOpacity>
-                </View>
-            </TouchableOpacity>
+                </Animated.View>
+            </View>
         </Modal>
     );
 }

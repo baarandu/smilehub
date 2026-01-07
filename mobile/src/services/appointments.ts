@@ -52,9 +52,27 @@ export const appointmentsService = {
   },
 
   async create(appointment: AppointmentInsert): Promise<Appointment> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) throw new Error('Usuário não autenticado');
+
+    // Get user's clinic
+    const { data: clinicUser } = await supabase
+      .from('clinic_users')
+      .select('clinic_id')
+      .eq('user_id', userData.user.id)
+      .single();
+
+    if (!clinicUser) throw new Error('Usuário não está associado a uma clínica');
+
+    const appointmentWithContext = {
+      ...appointment,
+      clinic_id: clinicUser.clinic_id,
+      user_id: userData.user.id
+    };
+
     const { data, error } = await supabase
       .from('appointments')
-      .insert(appointment as any)
+      .insert(appointmentWithContext as any)
       .select()
       .single();
 
