@@ -107,15 +107,13 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
 
             const typedData = membersData as ClinicUserRow[] | null;
 
-            // Get profiles for each user directly from profiles table
+            // Get profiles and emails for each user
             const memberIds = (typedData || []).map(m => m.user_id);
             let profilesMap: Record<string, any> = {};
 
             if (memberIds.length > 0) {
-                const { data: profiles } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, email')
-                    .in('id', memberIds);
+                const { data: profiles } = await (supabase as any)
+                    .rpc('get_profiles_for_users', { user_ids: memberIds });
 
                 if (profiles) {
                     profilesMap = (profiles as any[]).reduce((acc, profile) => {

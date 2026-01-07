@@ -27,14 +27,14 @@ export const auditService = {
 
             if (!clinicUser) return;
 
-            await supabase.from('audit_logs').insert({
+            await (supabase.from('audit_logs') as any).insert({
                 clinic_id: clinicUser.clinic_id,
                 user_id: user.id,
                 action,
                 entity,
                 entity_id: entityId,
                 details: details || {}
-            } as any);
+            });
         } catch (error) {
             console.error('Failed to log action:', error);
             // Non-blocking error
@@ -59,14 +59,15 @@ export const auditService = {
         const userIds = [...new Set(logsData.map(log => log.user_id).filter(id => id !== null))];
         console.log('[AuditService] Found User IDs in logs:', userIds);
 
-        // 3. Fetch profiles for these users directly from profiles table
+        // 3. Fetch profiles for these users
         let profilesMap: Record<string, { full_name: string | null, email: string | null }> = {};
 
         if (userIds.length > 0) {
-            const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('id, full_name, email')
-                .in('id', userIds);
+            const { data: profiles, error: profilesError } = await (supabase as any)
+                .rpc('get_profiles_for_users', { user_ids: userIds });
+
+            console.log('[AuditService] Fetched Profiles:', profiles);
+            console.log('[AuditService] Profile Error:', profilesError);
 
             if (!profilesError && profiles) {
                 profilesMap = (profiles as any[]).reduce((acc, profile) => {
