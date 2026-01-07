@@ -115,8 +115,6 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                 const { data: profiles, error } = await (supabase as any)
                     .rpc('get_profiles_for_users', { user_ids: memberIds });
 
-                console.log('[TeamManagement] RPC Response:', { profiles, error, memberIds });
-
                 if (profiles) {
                     profilesMap = (profiles as any[]).reduce((acc, profile) => {
                         acc[profile.id] = profile;

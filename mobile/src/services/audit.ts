@@ -66,9 +66,6 @@ export const auditService = {
             const { data: profiles, error: profilesError } = await (supabase as any)
                 .rpc('get_profiles_for_users', { user_ids: userIds });
 
-            console.log('[AuditService] Fetched Profiles:', profiles);
-            console.log('[AuditService] Profile Error:', profilesError, 'UserIDs:', userIds);
-
             if (!profilesError && profiles) {
                 profilesMap = (profiles as any[]).reduce((acc, profile) => {
                     acc[profile.id] = { full_name: profile.full_name, email: profile.email };
