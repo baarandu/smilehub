@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
 import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -84,8 +84,10 @@ export function ProfileModal({
                             <TouchableOpacity
                                 className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
                                 onPress={() => {
-                                    onClose();
-                                    router.push('/secretary');
+                                    // Navigation disabled temporarily
+                                    // onClose();
+                                    // router.push('/secretary');
+                                    Alert.alert("Em breve", "A Secretária IA estará disponível em breve!");
                                 }}
                             >
                                 <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">

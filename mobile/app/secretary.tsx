@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { ArrowLeft, Send, Bot, User, Sparkles } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../src/lib/supabase';
+import { supabase } from '../src/lib/supabase';
 
 // Message type definition
 type Message = {
@@ -24,7 +24,7 @@ const INITIAL_MESSAGE: Message = {
 };
 
 export default function AISecretaryScreen() {
-    const router = useRouter();
+    const navigation = useNavigation();
     const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -104,8 +104,8 @@ export default function AISecretaryScreen() {
 
                 <View
                     className={`max-w-[75%] px-4 py-3 rounded-2xl ${isUser
-                            ? 'bg-teal-600 rounded-tr-none'
-                            : 'bg-white rounded-tl-none border border-gray-100 shadow-sm'
+                        ? 'bg-teal-600 rounded-tr-none'
+                        : 'bg-white rounded-tl-none border border-gray-100 shadow-sm'
                         }`}
                 >
                     <Text className={`text-[15px] ${isUser ? 'text-white' : 'text-gray-800'}`}>
@@ -130,7 +130,7 @@ export default function AISecretaryScreen() {
             {/* Header */}
             <View className="flex-row items-center p-4 bg-white border-b border-gray-100 shadow-sm z-10">
                 <TouchableOpacity
-                    onPress={() => router.back()}
+                    onPress={() => navigation.goBack()}
                     className="p-2 -ml-2 rounded-full active:bg-gray-100"
                 >
                     <ArrowLeft size={24} color="#374151" />

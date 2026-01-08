@@ -1,9 +1,10 @@
 import "../global.css";
 import { useEffect } from 'react';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ClinicProvider } from '../src/contexts/ClinicContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootLayoutNav() {
     const { session, isLoading } = useAuth();
@@ -34,7 +35,15 @@ function RootLayoutNav() {
 
     return (
         <>
-            <Slot />
+            <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="secretary" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+                {/* Auth routes */}
+                <Stack.Screen name="login" />
+                <Stack.Screen name="signup" />
+                <Stack.Screen name="forgot-password" />
+                <Stack.Screen name="reset-password" />
+            </Stack>
             <StatusBar style="auto" />
         </>
     );
@@ -42,10 +51,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     return (
-        <AuthProvider>
-            <ClinicProvider>
-                <RootLayoutNav />
-            </ClinicProvider>
-        </AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <AuthProvider>
+                <ClinicProvider>
+                    <RootLayoutNav />
+                </ClinicProvider>
+            </AuthProvider>
+        </GestureHandlerRootView>
     );
 }
