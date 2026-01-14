@@ -271,11 +271,16 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-teal-600" />
-              Tratamentos Pendentes ({pendingBudgetsCount})
+              Orçamentos Pendentes ({pendingBudgetsCount})
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3 mt-4">
+            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm border border-blue-100 mb-4">
+              <p className="font-semibold mb-1">O que são esses orçamentos pendentes?</p>
+              Esta lista exibe orçamentos criados mas ainda <strong>não aprovados</strong> pelo paciente.
+              Use para acompanhar negociações em aberto e não perder oportunidades de venda.
+            </div>
             {pendingBudgets.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
                 Nenhum tratamento pendente
@@ -325,6 +330,11 @@ export default function Dashboard() {
           </DialogHeader>
 
           <div className="space-y-3 mt-4">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-lg text-sm border border-amber-100 mb-4">
+              <p className="font-semibold mb-1">Como funciona esta lista?</p>
+              Ela exibe procedimentos que estão <strong>Em andamento</strong> mas não tiveram nenhuma atualização nos últimos <strong>30 dias</strong>.
+              O objetivo é lembrar de pacientes que podem ter "sumido" antes de concluir o tratamento.
+            </div>
             {loadingPendingList ? (
               <div className="py-8 text-center">
                 <Skeleton className="h-20 w-full rounded-lg" />

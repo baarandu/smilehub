@@ -3,7 +3,7 @@
     "name": "Organiza Odonto",
     "slug": "organiza-odonto",
     "scheme": "organizaodonto",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,8 +16,12 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.organizaodonto",
+      "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "O Organiza Odonto precisa de acesso à câmera para que você possa tirar fotos de exames e documentos dos pacientes.",
+        "NSPhotoLibraryUsageDescription": "O Organiza Odonto precisa de acesso à sua galeria para que você possa enviar fotos de exames já salvos.",
+        "NSMicrophoneUsageDescription": "O Organiza Odonto precisa de acesso ao microfone para funcionalidades de vídeo, se necessário."
       }
     },
     "android": {
