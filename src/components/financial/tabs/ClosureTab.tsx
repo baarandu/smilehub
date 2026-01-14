@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { locationsService } from '@/services/locations';
+import { settingsService } from '@/services/settings';
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -42,6 +43,16 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
     const [filterOpen, setFilterOpen] = useState(false);
     const [locationFilter, setLocationFilter] = useState('all');
     const [methodFilter, setMethodFilter] = useState('all'); // Applies primarily to income logic
+
+    const { data: settings } = useQuery({
+        queryKey: ['financial_settings'],
+        queryFn: settingsService.getFinancialSettings
+    });
+
+    const { data: taxes = [] } = useQuery({
+        queryKey: ['taxes'],
+        queryFn: settingsService.getTaxes
+    });
 
     const { data: locations = [] } = useQuery({
         queryKey: ['locations'],
@@ -107,11 +118,40 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
     const activeFilterCount = (locationFilter !== 'all' ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0);
 
     const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
-    const totalNetIncome = income.reduce((sum, t) => sum + (t.net_amount || t.amount), 0);
+
+    // Tax Logic
+    const legacyTax = settings?.tax_rate || 0;
+    const taxesTotal = taxes.reduce((acc, t) => acc + t.rate, 0);
+    const taxRate = legacyTax + taxesTotal;
+    const totalTaxes = totalIncome * (taxRate / 100);
+
+    const totalCardFees = income.reduce((sum, t) => sum + (t.card_fee_amount || 0), 0);
+    const totalAnticipation = income.reduce((sum, t) => sum + ((t as any).anticipation_amount || 0), 0);
+
+    // Procedure Fees (Explicit + Implicit)
+    const totalProcedureFees = income.reduce((sum, t) => {
+        const gross = t.amount;
+        const net = t.net_amount || t.amount;
+        const explicit = (t as any).location_amount || 0;
+
+        const deductions =
+            (t.tax_amount || 0) +
+            (t.card_fee_amount || 0) +
+            ((t as any).anticipation_amount || 0) +
+            ((t as any).commission_amount || 0) +
+            explicit;
+
+        let implicit = gross - net - deductions;
+        if (implicit < 0.01) implicit = 0;
+
+        return sum + explicit + implicit;
+    }, 0);
+
     const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
 
-    const balance = totalIncome - totalExpenses;
-    const netBalance = totalNetIncome - totalExpenses;
+    // Final Net Result
+    const netResult = totalIncome - totalCardFees - totalAnticipation - totalProcedureFees - totalTaxes - totalExpenses;
+    const netBalance = netResult; // Alias to match previous usage logic if needed, but we will update UI to use netResult
 
     // Breakdown by Method (Income only)
     const byMethod = income.reduce((acc, t) => {
@@ -231,6 +271,63 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Financial Statement (Demonstrativo Financeiro) */}
+            <Card className="border-gray-200 shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold text-gray-900">Demonstrativo Financeiro</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-gray-900 font-medium">Receita Bruta</span>
+                            <span className="text-gray-900 font-bold">{formatCurrency(totalIncome)}</span>
+                        </div>
+                        <Progress value={100} className="h-1.5 bg-gray-100" />
+                        {/* Green bar override inside Progress component might be needed or use inline style for simple bar */}
+                        <div className="h-1.5 w-full bg-gray-100 rounded-full mt-1 overflow-hidden">
+                            <div className="h-full bg-green-500" style={{ width: '100%' }}></div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 mb-6 pl-2">
+                        <DeductionRow label="(-) Taxas de Cartão" value={totalCardFees} formatCurrency={formatCurrency} />
+                        <DeductionRow label="(-) Taxa de Antecipação" value={totalAnticipation} formatCurrency={formatCurrency} color="yellow" />
+                        <DeductionRow label="(-) Taxas de Procedimentos" value={totalProcedureFees} formatCurrency={formatCurrency} />
+                        <DeductionRow label={`(-) Impostos (${taxRate}%)`} value={totalTaxes} formatCurrency={formatCurrency} />
+
+                        <div className="pt-2">
+                            <div className="flex items-center gap-2 pl-2 border-l-2 border-red-100 mb-1">
+                                <span className="text-gray-500 text-sm font-medium">(-) Despesas Operacionais</span>
+                            </div>
+                            {Object.entries(expensesByCategory).sort(([, a], [, b]) => b - a).map(([cat, amount]) => (
+                                <div key={cat} className="flex justify-between items-center pl-4 py-0.5">
+                                    <span className="text-gray-400 text-xs">{cat}</span>
+                                    <span className="text-red-400 text-xs">{formatCurrency(amount)}</span>
+                                </div>
+                            ))}
+                            {totalExpenses === 0 && (
+                                <div className="flex justify-between items-center pl-4">
+                                    <span className="text-gray-400 text-xs">-</span>
+                                    <span className="text-gray-400 text-xs text-right">R$ 0,00</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-gray-200 mb-4 border-t border-dashed" />
+
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-gray-900 font-bold text-lg">Receita Líquida</span>
+                        <span className={`text-xl font-bold ${netResult >= 0 ? 'text-teal-600' : 'text-red-600'}`}>
+                            {formatCurrency(netResult)}
+                        </span>
+                    </div>
+                    <div className="text-right text-xs text-gray-400">
+                        (Bruto - Taxas - Impostos - Despesas)
+                    </div>
+                </CardContent>
+            </Card>
 
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Breakdown by Method */}
@@ -352,6 +449,21 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                     </div>
                 </DialogContent>
             </Dialog>
+        </div>
+    );
+}
+
+function DeductionRow({ label, value, formatCurrency, color = 'red' }: { label: string; value: number; formatCurrency: (v: number) => string; color?: 'red' | 'yellow' }) {
+    const textColor = value > 0 ? (color === 'yellow' ? "text-yellow-600" : "text-red-500") : "text-gray-400";
+
+    return (
+        <div className="flex justify-between items-center">
+            <div className={`flex items-center gap-2 pl-2 border-l-2 ${color === 'yellow' ? 'border-yellow-100' : 'border-red-100'}`}>
+                <span className="text-gray-500 text-sm">{label}</span>
+            </div>
+            <span className={`font-medium text-sm ${textColor}`}>
+                {value > 0 ? formatCurrency(value) : 'R$ 0,00'}
+            </span>
         </div>
     );
 }
