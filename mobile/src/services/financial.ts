@@ -9,7 +9,7 @@ export const financialService = {
 
         const { data, error } = await supabase
             .from('financial_transactions')
-            .select('*, patients(name), budgets:related_entity_id(notes, treatment)')
+            .select('*, patients(name)')
             .gte('date', startDate)
             .lte('date', endDate)
             .order('date', { ascending: false });
