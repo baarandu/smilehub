@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// import { ScrollArea } from '@/components/ui/scroll-area'; // Removed
 import { sanitizeForDisplay } from '@/utils/security';
 import {
   Dialog,
@@ -11,6 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+// ... (rest of imports)
+
+// ...
+
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -353,7 +358,7 @@ export function NewProcedureDialog({
           <DialogTitle>{procedure ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <div className="flex-1 overflow-y-auto pr-4">
           <form id="procedure-form" onSubmit={handleSubmit} className="space-y-6 mt-2">
 
             <ProcedureForm
@@ -387,7 +392,7 @@ export function NewProcedureDialog({
             </div>
 
           </form>
-        </ScrollArea>
+        </div>
 
         <div className="flex gap-3 pt-4 border-t mt-4 bg-white">
           {procedure && (
