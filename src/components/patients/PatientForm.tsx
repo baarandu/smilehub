@@ -85,7 +85,7 @@ export function PatientForm({
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="personal">Pessoal</TabsTrigger>
           <TabsTrigger value="contact">Contato</TabsTrigger>
-          <TabsTrigger value="health">Saúde</TabsTrigger>
+          <TabsTrigger value="health">Plano de Saúde</TabsTrigger>
           <TabsTrigger value="notes">Observações</TabsTrigger>
         </TabsList>
 
@@ -251,38 +251,6 @@ export function PatientForm({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="allergies">Alergias</Label>
-            <Textarea
-              id="allergies"
-              value={form.allergies}
-              onChange={(e) => updateField('allergies', e.target.value)}
-              placeholder="Liste alergias conhecidas (medicamentos, látex, etc.)"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="medications">Medicamentos em uso</Label>
-            <Textarea
-              id="medications"
-              value={form.medications}
-              onChange={(e) => updateField('medications', e.target.value)}
-              placeholder="Liste medicamentos que o paciente utiliza regularmente"
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="medicalHistory">Histórico Médico</Label>
-            <Textarea
-              id="medicalHistory"
-              value={form.medicalHistory}
-              onChange={(e) => updateField('medicalHistory', e.target.value)}
-              placeholder="Doenças pré-existentes, cirurgias anteriores, etc."
-              rows={4}
-            />
-          </div>
         </TabsContent>
 
         {/* Notes Tab */}
