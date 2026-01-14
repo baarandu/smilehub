@@ -8,3 +8,4 @@ COMMENT ON COLUMN appointments.location IS 'Local de atendimento da consulta';
 
 
 
+

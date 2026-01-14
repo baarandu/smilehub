@@ -38,3 +38,4 @@ INSERT INTO appointments (patient_id, date, time, status, notes) VALUES
 
 
 
+

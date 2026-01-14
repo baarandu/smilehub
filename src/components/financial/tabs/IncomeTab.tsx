@@ -323,7 +323,34 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     </div>
                                     <div>
                                         <p className="font-medium text-foreground">{t.patients?.name || 'Não identificado'}</p>
-                                        <p className="text-sm text-muted-foreground line-clamp-1" title={t.description}>{t.description}</p>
+                                        {(() => {
+                                            // Parse procedure from description
+                                            const installmentMatch = t.description.match(/\(\d+\/\d+\)/);
+                                            let workingDesc = t.description;
+                                            if (installmentMatch) workingDesc = workingDesc.replace(installmentMatch[0], '');
+                                            const methodMatch = workingDesc.match(/\((.*?)\)/);
+                                            if (methodMatch) workingDesc = workingDesc.replace(methodMatch[0], '');
+                                            const parts = workingDesc.split(' - ').map(p => p.trim()).filter(p => p && p.toLowerCase() !== (t.patients?.name?.toLowerCase() || ''));
+                                            const procedure = parts.length > 0 ? parts.join(' - ') : 'Procedimento';
+
+                                            let displayMethod = 'Não informado';
+                                            if (methodMatch) {
+                                                const methodParts = methodMatch[1].split(' - ');
+                                                let methodType = methodParts[0];
+                                                if (methodType.toLowerCase() === 'crédito' || methodType.toLowerCase() === 'credit') methodType = 'Cartão de Crédito';
+                                                if (methodType.toLowerCase() === 'débito' || methodType.toLowerCase() === 'debit') methodType = 'Cartão de Débito';
+                                                if (methodType.toLowerCase() === 'pix') methodType = 'Pix';
+                                                if (methodType.toLowerCase() === 'dinheiro' || methodType.toLowerCase() === 'cash') methodType = 'Dinheiro';
+                                                displayMethod = methodType;
+                                            }
+
+                                            return (
+                                                <>
+                                                    <p className="text-sm text-teal-700 font-medium line-clamp-1" title={procedure}>Procedimento: {procedure}</p>
+                                                    <p className="text-xs text-muted-foreground">Forma: {displayMethod}</p>
+                                                </>
+                                            );
+                                        })()}
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-xs text-slate-400">{new Date(t.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                                             {t.location && (

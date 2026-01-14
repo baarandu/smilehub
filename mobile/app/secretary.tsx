@@ -1,206 +1,697 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation } from 'expo-router';
-import { ArrowLeft, Send, Bot, User, Sparkles } from 'lucide-react-native';
+import {
+    ArrowLeft, Bot, MessageCircle, Clock, Settings, Zap, CheckCircle2, AlertCircle,
+    Calendar, Shield, MessageSquare, BarChart3, ChevronRight, X, Plus, Trash2, MapPin
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { createClient } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../src/lib/supabase';
+import { useClinic } from '../src/contexts/ClinicContext';
+import {
+    getSecretarySettings,
+    saveSecretarySettings,
+    updateSecretarySetting,
+    getBlockedNumbers,
+    addBlockedNumber,
+    removeBlockedNumber,
+    getSecretaryStats,
+    AISecretarySettings,
+    BlockedNumber,
+    AISecretaryStats,
+    getScheduleEntries,
+    addScheduleEntry,
+    deleteScheduleEntry,
+    createDefaultSchedule,
+    ScheduleEntry,
+    DAY_NAMES,
+    DAY_NAMES_FULL,
+} from '../src/services/secretary';
+import { locationsService, Location } from '../src/services/locations';
 
-// Message type definition
-type Message = {
-    id: string;
-    text: string;
-    sender: 'user' | 'ai';
-    timestamp: Date;
+type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
+
+// Settings Section Component
+const SettingsSection = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
+    <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
+        <View className="flex-row items-center gap-2 mb-4">
+            <Icon size={18} color="#0D9488" />
+            <Text className="text-sm font-semibold text-gray-900">{title}</Text>
+        </View>
+        {children}
+    </View>
+);
+
+// Collapsible Section
+const CollapsibleSection = ({ title, icon: Icon, children, defaultOpen = false }: { title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <View className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+            <TouchableOpacity
+                className="flex-row items-center justify-between p-4"
+                onPress={() => setIsOpen(!isOpen)}
+            >
+                <View className="flex-row items-center gap-2">
+                    <Icon size={18} color="#0D9488" />
+                    <Text className="text-sm font-semibold text-gray-900">{title}</Text>
+                </View>
+                <ChevronRight size={18} color="#9CA3AF" style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }} />
+            </TouchableOpacity>
+            {isOpen && <View className="px-4 pb-4 border-t border-gray-50 pt-4">{children}</View>}
+        </View>
+    );
 };
 
-// Initial welcome message
-const INITIAL_MESSAGE: Message = {
-    id: 'welcome',
-    text: 'Olá! Sou sua Secretária Virtual. Posso ajudar com informações sobre sua agenda, pacientes ou dúvidas gerais. Como posso ajudar hoje?',
-    sender: 'ai',
-    timestamp: new Date(),
-};
-
-export default function AISecretaryScreen() {
+export default function AISecretarySettingsScreen() {
     const navigation = useNavigation();
-    const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
-    const [inputText, setInputText] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const flatListRef = useRef<FlatList>(null);
+    const { clinicId } = useClinic();
 
-    // Auto-scroll to bottom directly when messages change
+    // Loading & Error
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Core Settings
+    const [settings, setSettings] = useState<AISecretarySettings | null>(null);
+    const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
+    const [stats, setStats] = useState<AISecretaryStats>({ total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 });
+
+    // Schedule
+    const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [newScheduleDay, setNewScheduleDay] = useState(1); // Monday
+    const [newScheduleStart, setNewScheduleStart] = useState('08:00');
+    const [newScheduleEnd, setNewScheduleEnd] = useState('18:00');
+    const [newScheduleLocation, setNewScheduleLocation] = useState<string | null>(null);
+
+    // UI State
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+    const [showMessageModal, setShowMessageModal] = useState<'greeting' | 'confirmation' | 'reminder' | null>(null);
+    const [tempMessage, setTempMessage] = useState('');
+
+    // Load data on mount
     useEffect(() => {
-        if (messages.length > 0) {
-            // Small timeout to ensure layout is ready
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
+        if (clinicId) {
+            loadData();
         }
-    }, [messages]);
+    }, [clinicId]);
 
-    const handleSend = async () => {
-        if (!inputText.trim()) return;
+    const loadData = async () => {
+        if (!clinicId) return;
 
-        const userMsg: Message = {
-            id: Date.now().toString(),
-            text: inputText.trim(),
-            sender: 'user',
-            timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, userMsg]);
-        setInputText('');
         setIsLoading(true);
-
         try {
-            // Call Supabase Edge Function
-            const { data, error } = await supabase.functions.invoke('ai-secretary', {
-                body: {
-                    message: userMsg.text,
-                    history: messages.slice(-5) // Send last 5 messages for context
-                }
-            });
+            const [settingsData, blockedData, statsData, scheduleData, locationsData] = await Promise.all([
+                getSecretarySettings(clinicId),
+                getBlockedNumbers(clinicId),
+                getSecretaryStats(clinicId),
+                getScheduleEntries(clinicId),
+                locationsService.getAll(),
+            ]);
 
-            if (error) throw error;
+            if (settingsData) {
+                setSettings(settingsData);
+                setConnectionStatus(settingsData.whatsapp_connected ? 'connected' : 'disconnected');
+            } else {
+                // No settings yet, use defaults
+                setSettings({
+                    clinic_id: clinicId,
+                    is_active: false,
+                    whatsapp_connected: false,
+                    tone: 'casual',
+                    work_hours_start: '08:00',
+                    work_hours_end: '18:00',
+                    work_days: { seg: true, ter: true, qua: true, qui: true, sex: true, sab: false, dom: false },
+                    min_advance_hours: 2,
+                    interval_minutes: 30,
+                    allowed_procedure_ids: [],
+                    greeting_message: 'Olá! Sou a assistente virtual. Como posso ajudar?',
+                    confirmation_message: 'Sua consulta foi agendada com sucesso! ✅',
+                    reminder_message: 'Lembrete: Você tem uma consulta amanhã às {hora}.',
+                    out_of_hours_message: 'Olá! Nosso atendimento é das {inicio} às {fim}. Retornaremos em breve!',
+                    message_limit_per_conversation: 20,
+                    human_keywords: ['atendente', 'humano', 'pessoa'],
+                });
+            }
 
-            // If function returns a message, display it
-            // Fallback response if no backend is active yet
-            const aiResponseText = data?.message || "Humm, ainda estou aprendendo a me conectar com meu cérebro (Edge Function). Por enquanto sou apenas uma interface bonita! 🧠✨";
-
-            const aiMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                text: aiResponseText,
-                sender: 'ai',
-                timestamp: new Date(),
-            };
-
-            setMessages(prev => [...prev, aiMsg]);
-
+            setBlockedNumbers(blockedData);
+            setStats(statsData);
+            setScheduleEntries(scheduleData);
+            setLocations(locationsData);
         } catch (error) {
-            console.error('Error sending message:', error);
-            const errorMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                text: 'Desculpe, tive um problema de conexão. Tente novamente.',
-                sender: 'ai',
-                timestamp: new Date(),
-            };
-            setMessages(prev => [...prev, errorMsg]);
+            console.error('Error loading data:', error);
+            Alert.alert('Erro', 'Não foi possível carregar as configurações.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const renderMessage = ({ item }: { item: Message }) => {
-        const isUser = item.sender === 'user';
-        return (
-            <View className={`flex-row mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
-                {!isUser && (
-                    <View className="w-8 h-8 rounded-full bg-teal-100 items-center justify-center mr-2 self-end mb-1">
-                        <Bot size={16} color="#0D9488" />
-                    </View>
-                )}
+    // Update a single setting
+    const updateSetting = async <K extends keyof AISecretarySettings>(field: K, value: AISecretarySettings[K]) => {
+        if (!clinicId || !settings) return;
 
-                <View
-                    className={`max-w-[75%] px-4 py-3 rounded-2xl ${isUser
-                        ? 'bg-teal-600 rounded-tr-none'
-                        : 'bg-white rounded-tl-none border border-gray-100 shadow-sm'
-                        }`}
-                >
-                    <Text className={`text-[15px] ${isUser ? 'text-white' : 'text-gray-800'}`}>
-                        {item.text}
-                    </Text>
-                    <Text className={`text-[10px] mt-1 ${isUser ? 'text-teal-200' : 'text-gray-400'} self-end`}>
-                        {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                </View>
+        // Optimistic update
+        setSettings(prev => prev ? { ...prev, [field]: value } : null);
 
-                {isUser && (
-                    <View className="w-8 h-8 rounded-full bg-teal-600 items-center justify-center ml-2 self-end mb-1">
-                        <User size={16} color="#FFFFFF" />
-                    </View>
-                )}
-            </View>
+        const success = await updateSecretarySetting(clinicId, field, value);
+        if (!success) {
+            // Revert on failure
+            loadData();
+            Alert.alert('Erro', 'Não foi possível salvar a configuração.');
+        }
+    };
+
+    const toggleActive = (value: boolean) => updateSetting('is_active', value);
+    const updateTone = (tone: 'casual' | 'formal') => updateSetting('tone', tone);
+
+    const toggleWorkDay = (day: keyof NonNullable<AISecretarySettings['work_days']>) => {
+        if (!settings?.work_days) return;
+        const updated = { ...settings.work_days, [day]: !settings.work_days[day] };
+        updateSetting('work_days', updated);
+    };
+
+    const handleLinkWhatsApp = () => {
+        Alert.alert(
+            "Vincular WhatsApp",
+            "Para vincular, você precisará escanear o QR Code gerado pelo sistema.\n\n(Funcionalidade a ser integrada com n8n)",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Simular Conexão",
+                    onPress: () => {
+                        setConnectionStatus('connected');
+                        updateSetting('whatsapp_connected', true);
+                    }
+                }
+            ]
         );
     };
+
+    const handleDisconnectWhatsApp = () => {
+        setConnectionStatus('disconnected');
+        updateSetting('whatsapp_connected', false);
+    };
+
+    const openMessageModal = (type: 'greeting' | 'confirmation' | 'reminder') => {
+        if (!settings) return;
+        const messages = {
+            greeting: settings.greeting_message,
+            confirmation: settings.confirmation_message,
+            reminder: settings.reminder_message,
+        };
+        setTempMessage(messages[type]);
+        setShowMessageModal(type);
+    };
+
+    const saveMessage = () => {
+        if (!showMessageModal) return;
+
+        const fieldMap = {
+            greeting: 'greeting_message',
+            confirmation: 'confirmation_message',
+            reminder: 'reminder_message',
+        } as const;
+
+        updateSetting(fieldMap[showMessageModal], tempMessage);
+        setShowMessageModal(null);
+    };
+
+    const handleAddBlockedNumber = () => {
+        if (typeof Alert.prompt === 'function') {
+            Alert.prompt(
+                'Bloquear Número',
+                'Digite o número com DDD:',
+                async (number) => {
+                    if (number && clinicId) {
+                        const result = await addBlockedNumber(clinicId, number);
+                        if (result) {
+                            setBlockedNumbers(prev => [result, ...prev]);
+                        }
+                    }
+                }
+            );
+        } else {
+            Alert.alert('Bloquear Número', 'Funcionalidade disponível apenas no iOS.');
+        }
+    };
+
+    const handleRemoveBlockedNumber = async (item: BlockedNumber) => {
+        if (!item.id) return;
+        const success = await removeBlockedNumber(item.id);
+        if (success) {
+            setBlockedNumbers(prev => prev.filter(n => n.id !== item.id));
+        }
+    };
+
+    // Schedule Handlers
+    const handleAddScheduleEntry = async () => {
+        if (!clinicId) return;
+        const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd, newScheduleLocation);
+        if (result) {
+            setScheduleEntries(prev => [...prev, result]);
+            setShowScheduleModal(false);
+            setNewScheduleStart('08:00');
+            setNewScheduleEnd('18:00');
+            setNewScheduleLocation(null);
+        } else {
+            Alert.alert('Erro', 'Não foi possível adicionar o horário.');
+        }
+    };
+
+    const handleDeleteScheduleEntry = async (entryId: string) => {
+        const success = await deleteScheduleEntry(entryId);
+        if (success) {
+            setScheduleEntries(prev => prev.filter(e => e.id !== entryId));
+        }
+    };
+
+    const handleCreateDefaultSchedule = async () => {
+        if (!clinicId) return;
+        const success = await createDefaultSchedule(clinicId);
+        if (success) {
+            loadData();
+        }
+    };
+
+    // Group schedule entries by day
+    const scheduleByDay = scheduleEntries.reduce((acc, entry) => {
+        const day = entry.day_of_week;
+        if (!acc[day]) acc[day] = [];
+        acc[day].push(entry);
+        return acc;
+    }, {} as Record<number, ScheduleEntry[]>);
+
+    if (isLoading) {
+        return (
+            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center" edges={['top']}>
+                <ActivityIndicator size="large" color="#0D9488" />
+                <Text className="text-gray-500 mt-4">Carregando configurações...</Text>
+            </SafeAreaView>
+        );
+    }
+
+    if (!settings) {
+        return (
+            <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center" edges={['top']}>
+                <Text className="text-gray-500">Erro ao carregar configurações</Text>
+                <TouchableOpacity onPress={loadData} className="mt-4 bg-teal-600 px-4 py-2 rounded-lg">
+                    <Text className="text-white font-medium">Tentar novamente</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
             {/* Header */}
             <View className="flex-row items-center p-4 bg-white border-b border-gray-100 shadow-sm z-10">
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    className="p-2 -ml-2 rounded-full active:bg-gray-100"
-                >
+                <TouchableOpacity onPress={() => navigation.goBack()} className="p-2 -ml-2 rounded-full active:bg-gray-100">
                     <ArrowLeft size={24} color="#374151" />
                 </TouchableOpacity>
-
                 <View className="flex-1 ml-2 flex-row items-center gap-3">
                     <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center border border-teal-100">
                         <Bot size={24} color="#0D9488" />
                     </View>
                     <View>
                         <Text className="text-lg font-bold text-gray-900">Secretária IA</Text>
-                        <View className="flex-row items-center gap-1">
-                            <View className="w-2 h-2 rounded-full bg-green-500" />
-                            <Text className="text-xs text-green-600 font-medium">Online</Text>
-                        </View>
+                        <Text className="text-xs text-gray-500">Configurações do Agente WhatsApp</Text>
                     </View>
                 </View>
             </View>
 
-            {/* Chat Area */}
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                keyExtractor={item => item.id}
-                renderItem={renderMessage}
-                contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-                className="flex-1"
-                showsVerticalScrollIndicator={false}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            />
+            <ScrollView className="flex-1 p-4" showsVerticalScrollIndicator={false}>
 
-            {/* Input Area */}
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-            >
-                <View className="p-4 bg-white border-t border-gray-100 pb-8">
-                    <View className="flex-row items-center gap-3">
-                        <View className="flex-1 flex-row items-center bg-gray-50 border border-gray-200 rounded-full px-4 py-2 min-h-[48px]">
-                            <TextInput
-                                className="flex-1 text-base text-gray-800 max-h-24 pt-0 pb-0"
-                                placeholder="Digite sua mensagem..."
-                                placeholderTextColor="#9CA3AF"
-                                value={inputText}
-                                onChangeText={setInputText}
-                                multiline
-                                maxLength={500}
-                                returnKeyType="default"
-                            />
+                {/* Main Toggle */}
+                <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
+                    <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center gap-3">
+                            <View className={`w-10 h-10 rounded-full items-center justify-center ${settings.is_active ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                <Zap size={20} color={settings.is_active ? '#16A34A' : '#6B7280'} />
+                            </View>
+                            <View>
+                                <Text className="text-base font-semibold text-gray-900">Status do Agente</Text>
+                                <Text className="text-xs text-gray-500">{settings.is_active ? 'Respondendo mensagens' : 'Agente pausado'}</Text>
+                            </View>
                         </View>
+                        <Switch
+                            trackColor={{ false: "#E5E7EB", true: "#0D9488" }}
+                            thumbColor={"#FFFFFF"}
+                            ios_backgroundColor="#E5E7EB"
+                            onValueChange={toggleActive}
+                            value={settings.is_active}
+                        />
+                    </View>
+                </View>
 
-                        <TouchableOpacity
-                            onPress={handleSend}
-                            disabled={!inputText.trim() || isLoading}
-                            className={`w-12 h-12 rounded-full items-center justify-center ${!inputText.trim() || isLoading ? 'bg-gray-200' : 'bg-teal-600 shadow-md'
-                                }`}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#FFFFFF" />
+                {/* Connection Status */}
+                <SettingsSection title="Conexão WhatsApp Business" icon={MessageCircle}>
+                    <View className="flex-row items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <View className="flex-row items-center gap-3">
+                            {connectionStatus === 'connected' ? (
+                                <View className="w-8 h-8 bg-green-100 rounded-full items-center justify-center">
+                                    <CheckCircle2 size={16} color="#16A34A" />
+                                </View>
                             ) : (
-                                <Send size={20} color={!inputText.trim() ? '#9CA3AF' : '#FFFFFF'} style={{ marginLeft: 2 }} />
+                                <View className="w-8 h-8 bg-amber-100 rounded-full items-center justify-center">
+                                    <AlertCircle size={16} color="#D97706" />
+                                </View>
                             )}
+                            <View>
+                                <Text className="text-sm font-medium text-gray-900">{connectionStatus === 'connected' ? 'Conectado' : 'Desconectado'}</Text>
+                                <Text className="text-xs text-gray-500">{connectionStatus === 'connected' ? 'Pronto para mensagens' : 'Vincule seu número'}</Text>
+                            </View>
+                        </View>
+                        {connectionStatus !== 'connected' ? (
+                            <TouchableOpacity onPress={handleLinkWhatsApp} className="bg-teal-600 px-3 py-2 rounded-lg">
+                                <Text className="text-xs font-semibold text-white">Vincular</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={handleDisconnectWhatsApp} className="bg-white border border-gray-200 px-3 py-2 rounded-lg">
+                                <Text className="text-xs font-semibold text-red-500">Desconectar</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </SettingsSection>
+
+                {/* Schedule Manager */}
+                <CollapsibleSection title="Horários e Disponibilidade" icon={Clock} defaultOpen={true}>
+                    {scheduleEntries.length === 0 ? (
+                        <View className="items-center py-4">
+                            <Text className="text-gray-500 text-sm mb-3">Nenhum horário configurado</Text>
+                            <TouchableOpacity
+                                onPress={handleCreateDefaultSchedule}
+                                className="bg-teal-600 px-4 py-2 rounded-lg"
+                            >
+                                <Text className="text-white font-medium text-sm">Criar Horário Padrão (Seg-Sex, 8h-18h)</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <View>
+                            {/* Schedule by Day */}
+                            {[1, 2, 3, 4, 5, 6, 0].map(day => {
+                                const entries = scheduleByDay[day] || [];
+                                return (
+                                    <View key={day} className="mb-3">
+                                        <Text className="text-xs font-semibold text-gray-700 mb-2">{DAY_NAMES_FULL[day]}</Text>
+                                        {entries.length === 0 ? (
+                                            <Text className="text-xs text-gray-400 italic">Sem atendimento</Text>
+                                        ) : (
+                                            entries.map(entry => (
+                                                <View key={entry.id} className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2">
+                                                    <View className="flex-row items-center gap-2">
+                                                        <Clock size={14} color="#6B7280" />
+                                                        <Text className="text-sm text-gray-800">{entry.start_time} - {entry.end_time}</Text>
+                                                        {entry.location_name && (
+                                                            <View className="flex-row items-center bg-blue-50 px-2 py-0.5 rounded">
+                                                                <MapPin size={10} color="#3B82F6" />
+                                                                <Text className="text-[10px] text-blue-600 ml-1">{entry.location_name}</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <TouchableOpacity onPress={() => entry.id && handleDeleteScheduleEntry(entry.id)}>
+                                                        <Trash2 size={16} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))
+                                        )}
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+                    <TouchableOpacity
+                        onPress={() => setShowScheduleModal(true)}
+                        className="flex-row items-center justify-center gap-2 bg-teal-50 border border-teal-200 p-3 rounded-lg mt-2"
+                    >
+                        <Plus size={16} color="#0D9488" />
+                        <Text className="text-teal-700 font-medium text-sm">Adicionar Horário</Text>
+                    </TouchableOpacity>
+                </CollapsibleSection>
+
+                {/* Scheduling Rules */}
+                <CollapsibleSection title="Regras de Agendamento" icon={Calendar}>
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Antecedência Mínima (horas)</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+                            value={String(settings.min_advance_hours)}
+                            onChangeText={(v) => updateSetting('min_advance_hours', parseInt(v) || 0)}
+                            keyboardType="numeric"
+                            placeholder="2"
+                        />
+                    </View>
+                    <View>
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Intervalo entre Consultas (minutos)</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+                            value={String(settings.interval_minutes)}
+                            onChangeText={(v) => updateSetting('interval_minutes', parseInt(v) || 0)}
+                            keyboardType="numeric"
+                            placeholder="30"
+                        />
+                    </View>
+                </CollapsibleSection>
+
+                {/* Custom Messages */}
+                <CollapsibleSection title="Mensagens Personalizadas" icon={MessageSquare}>
+                    <TouchableOpacity onPress={() => openMessageModal('greeting')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3">
+                        <View className="flex-1 mr-3">
+                            <Text className="text-xs font-medium text-gray-700">Saudação Inicial</Text>
+                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.greeting_message}</Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openMessageModal('confirmation')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3">
+                        <View className="flex-1 mr-3">
+                            <Text className="text-xs font-medium text-gray-700">Confirmação de Agendamento</Text>
+                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.confirmation_message}</Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openMessageModal('reminder')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <View className="flex-1 mr-3">
+                            <Text className="text-xs font-medium text-gray-700">Lembrete 24h Antes</Text>
+                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.reminder_message}</Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                </CollapsibleSection>
+
+                {/* Limits & Controls */}
+                <CollapsibleSection title="Controle e Limites" icon={Shield}>
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Limite de Mensagens por Conversa</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
+                            value={String(settings.message_limit_per_conversation)}
+                            onChangeText={(v) => updateSetting('message_limit_per_conversation', parseInt(v) || 20)}
+                            keyboardType="numeric"
+                            placeholder="20"
+                        />
+                    </View>
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Palavras-chave para Humano</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {settings.human_keywords?.map((kw, idx) => (
+                                <View key={idx} className="bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+                                    <Text className="text-xs text-amber-700">"{kw}"</Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                    <View>
+                        <View className="flex-row items-center justify-between mb-2">
+                            <Text className="text-xs font-medium text-gray-600">Números Bloqueados</Text>
+                            <TouchableOpacity onPress={handleAddBlockedNumber} className="bg-gray-100 p-1 rounded">
+                                <Plus size={14} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+                        {blockedNumbers.length === 0 ? (
+                            <Text className="text-xs text-gray-400">Nenhum número bloqueado</Text>
+                        ) : (
+                            <View className="gap-2">
+                                {blockedNumbers.map((item) => (
+                                    <View key={item.id} className="flex-row items-center justify-between bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
+                                        <Text className="text-xs text-red-700">{item.phone_number}</Text>
+                                        <TouchableOpacity onPress={() => handleRemoveBlockedNumber(item)}>
+                                            <Trash2 size={14} color="#EF4444" />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </CollapsibleSection>
+
+                {/* Reports/Stats */}
+                <CollapsibleSection title="Relatórios (Este Mês)" icon={BarChart3}>
+                    <View className="flex-row gap-3">
+                        <View className="flex-1 bg-teal-50 border border-teal-100 p-3 rounded-xl items-center">
+                            <Text className="text-2xl font-bold text-teal-700">{stats.total_appointments_created}</Text>
+                            <Text className="text-[10px] text-teal-600 mt-1">Agendamentos</Text>
+                        </View>
+                        <View className="flex-1 bg-blue-50 border border-blue-100 p-3 rounded-xl items-center">
+                            <Text className="text-2xl font-bold text-blue-700">{stats.total_conversations}</Text>
+                            <Text className="text-[10px] text-blue-600 mt-1">Conversas</Text>
+                        </View>
+                        <View className="flex-1 bg-amber-50 border border-amber-100 p-3 rounded-xl items-center">
+                            <Text className="text-2xl font-bold text-amber-700">{stats.transferred_conversations}</Text>
+                            <Text className="text-[10px] text-amber-600 mt-1">Transferências</Text>
+                        </View>
+                    </View>
+                </CollapsibleSection>
+
+                {/* Behavior */}
+                <SettingsSection title="Comportamento" icon={Settings}>
+                    <Text className="text-xs font-medium text-gray-600 mb-3">Tom de Voz</Text>
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity
+                            onPress={() => updateTone('casual')}
+                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'casual' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}
+                        >
+                            <Text className={`text-sm font-medium text-center ${settings.tone === 'casual' ? 'text-teal-700' : 'text-gray-600'}`}>Casual 😊</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => updateTone('formal')}
+                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'formal' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}
+                        >
+                            <Text className={`text-sm font-medium text-center ${settings.tone === 'formal' ? 'text-teal-700' : 'text-gray-600'}`}>Formal 👔</Text>
                         </TouchableOpacity>
                     </View>
-                    <Text className="text-center text-[10px] text-gray-400 mt-2">
-                        IA pode cometer erros. Verifique informações importantes.
-                    </Text>
+                </SettingsSection>
+
+                {/* Help Card */}
+                <View className="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-8">
+                    <View className="flex-row gap-3">
+                        <Bot size={20} color="#3B82F6" />
+                        <View className="flex-1">
+                            <Text className="text-sm font-bold text-blue-800 mb-1">Como funciona?</Text>
+                            <Text className="text-xs text-blue-600 leading-4">
+                                A secretária utiliza IA para responder mensagens no WhatsApp, consultar sua agenda e agendar consultas automaticamente. Todas as configurações são salvas no servidor.
+                            </Text>
+                        </View>
+                    </View>
                 </View>
-            </KeyboardAvoidingView>
+
+            </ScrollView>
+
+            {/* Message Edit Modal */}
+            <Modal visible={showMessageModal !== null} transparent animationType="slide">
+                <View className="flex-1 bg-black/50 justify-end">
+                    <View className="bg-white rounded-t-3xl p-6 pb-10">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-lg font-bold text-gray-900">
+                                {showMessageModal === 'greeting' ? 'Saudação Inicial' :
+                                    showMessageModal === 'confirmation' ? 'Confirmação' : 'Lembrete'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setShowMessageModal(null)}>
+                                <X size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[120px]"
+                            value={tempMessage}
+                            onChangeText={setTempMessage}
+                            multiline
+                            textAlignVertical="top"
+                            placeholder="Digite a mensagem..."
+                        />
+                        {showMessageModal === 'reminder' && (
+                            <Text className="text-[10px] text-gray-400 mt-2">Use {'{hora}'} para inserir o horário da consulta.</Text>
+                        )}
+                        <TouchableOpacity onPress={saveMessage} className="bg-teal-600 mt-4 p-4 rounded-xl">
+                            <Text className="text-white font-semibold text-center">Salvar Mensagem</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Add Schedule Modal */}
+            <Modal visible={showScheduleModal} transparent animationType="slide">
+                <View className="flex-1 bg-black/50 justify-end">
+                    <View className="bg-white rounded-t-3xl p-6 pb-10">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-lg font-bold text-gray-900">Adicionar Horário</Text>
+                            <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
+                                <X size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Day Selector */}
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Dia da Semana</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+                            <View className="flex-row gap-2">
+                                {[1, 2, 3, 4, 5, 6, 0].map(day => (
+                                    <TouchableOpacity
+                                        key={day}
+                                        onPress={() => setNewScheduleDay(day)}
+                                        className={`px-4 py-2 rounded-lg border ${newScheduleDay === day ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                    >
+                                        <Text className={`text-sm font-medium ${newScheduleDay === day ? 'text-teal-700' : 'text-gray-600'}`}>
+                                            {DAY_NAMES[day]}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+
+                        {/* Time Inputs */}
+                        <View className="flex-row gap-3 mb-4">
+                            <View className="flex-1">
+                                <Text className="text-xs font-medium text-gray-600 mb-2">Início</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-800"
+                                    value={newScheduleStart}
+                                    onChangeText={setNewScheduleStart}
+                                    placeholder="08:00"
+                                />
+                            </View>
+                            <View className="flex-1">
+                                <Text className="text-xs font-medium text-gray-600 mb-2">Fim</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-800"
+                                    value={newScheduleEnd}
+                                    onChangeText={setNewScheduleEnd}
+                                    placeholder="18:00"
+                                />
+                            </View>
+                        </View>
+
+                        {/* Location Selector */}
+                        {locations.length > 0 && (
+                            <View className="mb-4">
+                                <Text className="text-xs font-medium text-gray-600 mb-2">Local (opcional)</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    <View className="flex-row gap-2">
+                                        <TouchableOpacity
+                                            onPress={() => setNewScheduleLocation(null)}
+                                            className={`px-3 py-2 rounded-lg border ${newScheduleLocation === null ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                        >
+                                            <Text className={`text-xs font-medium ${newScheduleLocation === null ? 'text-teal-700' : 'text-gray-600'}`}>
+                                                Todos
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {locations.map(loc => (
+                                            <TouchableOpacity
+                                                key={loc.id}
+                                                onPress={() => setNewScheduleLocation(loc.id)}
+                                                className={`px-3 py-2 rounded-lg border ${newScheduleLocation === loc.id ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                            >
+                                                <Text className={`text-xs font-medium ${newScheduleLocation === loc.id ? 'text-teal-700' : 'text-gray-600'}`}>
+                                                    {loc.name}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </ScrollView>
+                            </View>
+                        )}
+
+                        <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-teal-600 mt-2 p-4 rounded-xl">
+                            <Text className="text-white font-semibold text-center">Adicionar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }

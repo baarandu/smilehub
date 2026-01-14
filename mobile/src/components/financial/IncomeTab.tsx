@@ -285,8 +285,8 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                         {transaction.patients?.name || 'Paciente não identificado'}
                                                     </Text>
                                                     <View className="mt-1">
-                                                        <Text className="text-xs text-gray-600 font-medium" numberOfLines={1}>
-                                                            {parsed.displayDescription}
+                                                        <Text className="text-xs text-teal-700 font-semibold" numberOfLines={1}>
+                                                            Procedimento: {parsed.displayDescription}
                                                         </Text>
                                                         <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
                                                             Forma: {parsed.displayMethod}

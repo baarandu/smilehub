@@ -84,10 +84,8 @@ export function ProfileModal({
                             <TouchableOpacity
                                 className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
                                 onPress={() => {
-                                    // Navigation disabled temporarily
-                                    // onClose();
-                                    // router.push('/secretary');
-                                    Alert.alert("Em breve", "A Secretária IA estará disponível em breve!");
+                                    onClose();
+                                    router.push('/secretary');
                                 }}
                             >
                                 <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
@@ -153,7 +151,7 @@ export function ProfileModal({
                         </View>
                     </View>
                 </Animated.View>
-            </View>
-        </Modal>
+            </View >
+        </Modal >
     );
 }

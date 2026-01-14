@@ -156,7 +156,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         await financialService.createTransaction({
           type: 'income',
           amount: txAmount, // Store GROSS
-          description: `Recebimento - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
+          description: `${selectedItem.tooth.treatments.join(', ')} - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
           category: 'Tratamento',
           date: formatLocalDate(date),
           patient_id: patientId,
@@ -355,6 +355,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     </div>
   );
 }
+
 
 
 
