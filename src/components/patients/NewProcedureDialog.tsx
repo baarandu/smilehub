@@ -354,7 +354,7 @@ export function NewProcedureDialog({
         </DialogHeader>
 
         <ScrollArea className="flex-1 pr-4">
-          <form onSubmit={handleSubmit} className="space-y-6 mt-2">
+          <form id="procedure-form" onSubmit={handleSubmit} className="space-y-6 mt-2">
 
             <ProcedureForm
               form={form}
@@ -386,43 +386,45 @@ export function NewProcedureDialog({
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
-              {procedure && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  disabled={isLoading}
-                >
-                  Excluir
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-teal-600 hover:bg-teal-700"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  'Salvar'
-                )}
-              </Button>
-            </div>
           </form>
         </ScrollArea>
+
+        <div className="flex gap-3 pt-4 border-t mt-4 bg-white">
+          {procedure && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="flex-1"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={isLoading}
+            >
+              Excluir
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form="procedure-form"
+            className="flex-1 bg-teal-600 hover:bg-teal-700"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar'
+            )}
+          </Button>
+        </div>
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
