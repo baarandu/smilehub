@@ -15,9 +15,10 @@ interface BudgetViewModalProps {
     onClose: () => void;
     onUpdate: () => void;
     patientName?: string;
+    onNavigateToPayments?: () => void;
 }
 
-export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientName }: BudgetViewModalProps) {
+export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientName, onNavigateToPayments }: BudgetViewModalProps) {
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
     const [budgetLocation, setBudgetLocation] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -213,6 +214,20 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </Text>
                     </View>
+
+                    {/* Pay Button */}
+                    {(budget.status === 'approved' || approvedItems.length > 0) && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                onClose();
+                                onNavigateToPayments?.();
+                            }}
+                            className="bg-teal-600 rounded-xl p-4 mb-4 flex-row items-center justify-center"
+                        >
+                            <CreditCard size={20} color="#FFFFFF" />
+                            <Text className="text-white font-bold ml-2">Pagar</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {/* Generate PDF Button */}
                     <TouchableOpacity

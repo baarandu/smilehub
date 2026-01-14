@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown, Eye } from 'lucide-react';
+import { Calendar, CheckCircle, MapPin, Calculator, X, Pencil, Trash2, FileDown, Eye, CreditCard } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
 import { profileService } from '@/services/profile';
 import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry, calculateBudgetStatus } from '@/utils/budgetUtils';
@@ -19,9 +19,10 @@ interface BudgetViewDialogProps {
     onClose: () => void;
     onUpdate: () => void;
     patientName?: string;
+    onNavigateToPayments?: () => void;
 }
 
-export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName }: BudgetViewDialogProps) {
+export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName, onNavigateToPayments }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const [updating, setUpdating] = useState(false);
 
@@ -232,6 +233,18 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName 
                         Excluir
                     </Button>
                     <div className="flex gap-2">
+                        {(budget.status === 'approved' || approvedItems.length > 0) && (
+                            <Button
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => {
+                                    onClose();
+                                    onNavigateToPayments?.();
+                                }}
+                            >
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Pagar
+                            </Button>
+                        )}
                         <Button variant="outline" onClick={handleExportPDF} disabled={generatingPdf}>
                             <Eye className="w-4 h-4 mr-2" />
                             Visualizar PDF

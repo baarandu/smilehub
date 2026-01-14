@@ -129,7 +129,11 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="budgets" className="mt-6">
-          <BudgetsTab patientId={patient.id} patientName={patient.name} />
+          <BudgetsTab
+            patientId={patient.id}
+            patientName={patient.name}
+            onNavigateToPayments={() => handleTabChange('payments')}
+          />
         </TabsContent>
 
         <TabsContent value="procedures" className="mt-6">

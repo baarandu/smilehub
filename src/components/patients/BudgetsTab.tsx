@@ -13,9 +13,10 @@ import { NewBudgetDialog } from './NewBudgetDialog';
 interface BudgetsTabProps {
     patientId: string;
     patientName?: string;
+    onNavigateToPayments?: () => void;
 }
 
-export function BudgetsTab({ patientId, patientName }: BudgetsTabProps) {
+export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: BudgetsTabProps) {
     const { toast } = useToast();
     const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
     const [loading, setLoading] = useState(true);
@@ -198,6 +199,7 @@ export function BudgetsTab({ patientId, patientName }: BudgetsTabProps) {
                 onClose={() => setViewDialogOpen(false)}
                 onUpdate={loadBudgets}
                 patientName={patientName}
+                onNavigateToPayments={onNavigateToPayments}
             />
 
             <NewBudgetDialog

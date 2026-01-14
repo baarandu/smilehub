@@ -287,7 +287,14 @@ export default function PatientDetail() {
                 value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
                 locationRate={selectedPaymentItem ? getLocationRate(selectedPaymentItem) : 0}
             />
-            <BudgetViewModal visible={showBudgetViewModal} budget={viewBudget} onClose={() => { setShowBudgetViewModal(false); setViewBudget(null); }} onUpdate={loadBudgets} patientName={patient.name} />
+            <BudgetViewModal
+                visible={showBudgetViewModal}
+                budget={viewBudget}
+                onClose={() => { setShowBudgetViewModal(false); setViewBudget(null); }}
+                onUpdate={loadBudgets}
+                patientName={patient.name}
+                onNavigateToPayments={() => setActiveTab('payments')}
+            />
             <NewProcedureModal visible={showProcedureModal} patientId={patient.id} onClose={() => { setShowProcedureModal(false); setSelectedProcedure(null); }} onSuccess={() => { loadProcedures(); loadExams(); }} procedure={selectedProcedure} />
             <NewExamModal visible={showExamModal} patientId={id!} onClose={() => { setShowExamModal(false); setSelectedExam(null); }} onSuccess={loadExams} exam={selectedExam} />
             <ImageViewing images={previewImage ? [{ uri: previewImage }] : []} imageIndex={0} visible={isImageViewVisible} onRequestClose={() => setIsImageViewVisible(false)} />
