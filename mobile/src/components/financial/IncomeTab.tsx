@@ -269,6 +269,46 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                     transaction.patients?.name || ''
                                 );
 
+                                // Extract treatment info from linked budget if available
+                                let treatmentDisplay = parsed.displayDescription;
+                                let paymentMethodFromBudget: string | null = null;
+
+                                const budgetData = (transaction as any).budgets;
+                                if (budgetData?.notes) {
+                                    try {
+                                        const budgetNotes = JSON.parse(budgetData.notes);
+                                        if (budgetNotes.teeth && Array.isArray(budgetNotes.teeth)) {
+                                            // Find the paid tooth matching this transaction
+                                            const paidTeeth = budgetNotes.teeth.filter((t: any) => t.status === 'paid' || t.status === 'completed');
+                                            if (paidTeeth.length > 0) {
+                                                // Get treatments from the first paid tooth
+                                                const tooth = paidTeeth[0];
+                                                if (tooth.treatments && tooth.treatments.length > 0) {
+                                                    const toothName = tooth.tooth.includes('Arcada') ? tooth.tooth : `Dente ${tooth.tooth}`;
+                                                    treatmentDisplay = `${tooth.treatments.join(', ')} - ${toothName}`;
+                                                }
+                                                // Get payment method if available
+                                                if (tooth.paymentMethod) {
+                                                    paymentMethodFromBudget = tooth.paymentMethod;
+                                                }
+                                            }
+                                        }
+                                    } catch (e) {
+                                        // JSON parse error, use parsed description
+                                    }
+                                }
+
+                                // Determine final payment method
+                                const finalPaymentMethod = (transaction as any).payment_method || paymentMethodFromBudget;
+                                let paymentMethodLabel = parsed.displayMethod;
+                                if (finalPaymentMethod) {
+                                    paymentMethodLabel = finalPaymentMethod === 'credit' ? 'Cartão de Crédito' :
+                                        finalPaymentMethod === 'debit' ? 'Cartão de Débito' :
+                                            finalPaymentMethod === 'pix' ? 'PIX' :
+                                                finalPaymentMethod === 'cash' ? 'Dinheiro' :
+                                                    finalPaymentMethod;
+                                }
+
                                 return (
                                     <TouchableOpacity
                                         key={transaction.id}
@@ -286,16 +326,10 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                     </Text>
                                                     <View className="mt-1">
                                                         <Text className="text-xs text-teal-700 font-semibold" numberOfLines={1}>
-                                                            {parsed.displayDescription}
+                                                            {treatmentDisplay}
                                                         </Text>
                                                         <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                            Forma: {(transaction as any).payment_method ?
-                                                                ((transaction as any).payment_method === 'credit' ? 'Cartão de Crédito' :
-                                                                    (transaction as any).payment_method === 'debit' ? 'Cartão de Débito' :
-                                                                        (transaction as any).payment_method === 'pix' ? 'PIX' :
-                                                                            (transaction as any).payment_method === 'cash' ? 'Dinheiro' :
-                                                                                (transaction as any).payment_method)
-                                                                : parsed.displayMethod}
+                                                            Forma: {paymentMethodLabel}
                                                         </Text>
                                                         {parsed.displayBrand && (
                                                             <Text className="text-xs text-gray-500 mt-0.5">

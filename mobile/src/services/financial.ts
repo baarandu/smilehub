@@ -7,11 +7,9 @@ export const financialService = {
         const startDate = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
         const endDate = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
 
-
-
         const { data, error } = await supabase
             .from('financial_transactions')
-            .select('*, patients(name)')
+            .select('*, patients(name), budgets:related_entity_id(notes, treatment)')
             .gte('date', startDate)
             .lte('date', endDate)
             .order('date', { ascending: false });

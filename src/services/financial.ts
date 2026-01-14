@@ -5,7 +5,7 @@ export const financialService = {
     async getTransactions(start: Date, end: Date): Promise<any[]> {
         const { data, error } = await supabase
             .from('financial_transactions')
-            .select('*, patients(name)')
+            .select('*, patients(name), budgets:related_entity_id(notes, treatment)')
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
             .order('date', { ascending: false })

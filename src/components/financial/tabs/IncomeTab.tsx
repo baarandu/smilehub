@@ -324,23 +324,45 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     <div>
                                         <p className="font-medium text-foreground">{t.patients?.name || 'Não identificado'}</p>
                                         {(() => {
-                                            // Parse procedure from description
+                                            // Parse procedure from description as fallback
                                             const installmentMatch = t.description.match(/\(\d+\/\d+\)/);
                                             let workingDesc = t.description;
                                             if (installmentMatch) workingDesc = workingDesc.replace(installmentMatch[0], '');
                                             const methodMatch = workingDesc.match(/\((.*?)\)/);
                                             if (methodMatch) workingDesc = workingDesc.replace(methodMatch[0], '');
                                             const parts = workingDesc.split(' - ').map(p => p.trim()).filter(p => p && p.toLowerCase() !== (t.patients?.name?.toLowerCase() || ''));
-                                            const procedure = parts.length > 0 ? parts.join(' - ') : 'Procedimento';
+                                            let procedure = parts.length > 0 ? parts.join(' - ') : 'Procedimento';
 
-                                            // Use payment_method from transaction if available, otherwise parse from description
+                                            // Extract treatment info from linked budget if available
+                                            let paymentMethodFromBudget: string | null = null;
+                                            const budgetData = (t as any).budgets;
+                                            if (budgetData?.notes) {
+                                                try {
+                                                    const budgetNotes = JSON.parse(budgetData.notes);
+                                                    if (budgetNotes.teeth && Array.isArray(budgetNotes.teeth)) {
+                                                        const paidTeeth = budgetNotes.teeth.filter((tooth: any) => tooth.status === 'paid' || tooth.status === 'completed');
+                                                        if (paidTeeth.length > 0) {
+                                                            const tooth = paidTeeth[0];
+                                                            if (tooth.treatments && tooth.treatments.length > 0) {
+                                                                const toothName = tooth.tooth.includes('Arcada') ? tooth.tooth : `Dente ${tooth.tooth}`;
+                                                                procedure = `${tooth.treatments.join(', ')} - ${toothName}`;
+                                                            }
+                                                            if (tooth.paymentMethod) {
+                                                                paymentMethodFromBudget = tooth.paymentMethod;
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (e) { /* JSON parse error */ }
+                                            }
+
+                                            // Determine final payment method
+                                            const finalPaymentMethod = (t as any).payment_method || paymentMethodFromBudget;
                                             let displayMethod = 'Não informado';
-                                            if ((t as any).payment_method) {
-                                                const pm = (t as any).payment_method;
-                                                displayMethod = pm === 'credit' ? 'Cartão de Crédito' :
-                                                    pm === 'debit' ? 'Cartão de Débito' :
-                                                        pm === 'pix' ? 'PIX' :
-                                                            pm === 'cash' ? 'Dinheiro' : pm;
+                                            if (finalPaymentMethod) {
+                                                displayMethod = finalPaymentMethod === 'credit' ? 'Cartão de Crédito' :
+                                                    finalPaymentMethod === 'debit' ? 'Cartão de Débito' :
+                                                        finalPaymentMethod === 'pix' ? 'PIX' :
+                                                            finalPaymentMethod === 'cash' ? 'Dinheiro' : finalPaymentMethod;
                                             } else if (methodMatch) {
                                                 const methodParts = methodMatch[1].split(' - ');
                                                 let methodType = methodParts[0];
