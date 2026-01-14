@@ -82,11 +82,10 @@ export function PatientForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="personal" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal">Pessoal</TabsTrigger>
           <TabsTrigger value="contact">Contato</TabsTrigger>
           <TabsTrigger value="health">Plano de Saúde</TabsTrigger>
-          <TabsTrigger value="notes">Observações</TabsTrigger>
         </TabsList>
 
         {/* Personal Tab */}
@@ -253,19 +252,7 @@ export function PatientForm({
 
         </TabsContent>
 
-        {/* Notes Tab */}
-        <TabsContent value="notes" className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações gerais</Label>
-            <Textarea
-              id="notes"
-              value={form.notes}
-              onChange={(e) => updateField('notes', e.target.value)}
-              placeholder="Outras informações relevantes sobre o paciente"
-              rows={8}
-            />
-          </div>
-        </TabsContent>
+
       </Tabs>
 
       <div className="flex gap-3 pt-4 border-t">
