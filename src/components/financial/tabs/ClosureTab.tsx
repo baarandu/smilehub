@@ -40,6 +40,7 @@ interface ClosureTabProps {
 }
 
 export function ClosureTab({ transactions, loading }: ClosureTabProps) {
+    const safeTransactions = transactions || [];
     const [filterOpen, setFilterOpen] = useState(false);
     const [locationFilter, setLocationFilter] = useState('all');
     const [methodFilter, setMethodFilter] = useState('all'); // Applies primarily to income logic
@@ -60,7 +61,8 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
     });
 
     // Helper to normalize methods (reused from IncomeTab logic basically)
-    const getNormalizedMethod = (description: string) => {
+    const getNormalizedMethod = (description?: string) => {
+        if (!description) return 'Outros';
         const desc = description.toLowerCase();
         if (desc.includes('pix')) return 'Pix';
         if (desc.includes('crédito') || desc.includes('credit')) return 'Cartão de Crédito';
@@ -71,16 +73,16 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
 
     const uniqueMethods = useMemo(() => {
         const methods = new Set<string>();
-        transactions.forEach(t => {
+        safeTransactions.forEach(t => {
             if (t.type === 'income') {
                 methods.add(getNormalizedMethod(t.description));
             }
         });
         return Array.from(methods).sort();
-    }, [transactions]);
+    }, [safeTransactions]);
 
     const filteredTransactions = useMemo(() => {
-        return transactions.filter(t => {
+        return safeTransactions.filter(t => {
             if (locationFilter !== 'all' && t.location !== locationFilter) return false;
 
             // Method filter usually applies to Income, but we can try to apply to expenses if they have method info in description?
@@ -105,7 +107,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
             }
             return true;
         });
-    }, [transactions, locationFilter, methodFilter]);
+    }, [safeTransactions, locationFilter, methodFilter]);
 
     const income = filteredTransactions.filter(t => {
         if (t.type !== 'income') return false;
