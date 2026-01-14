@@ -546,9 +546,15 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         <span className="font-medium text-yellow-600">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</span>
                                     </div>
                                 )}
+                                {(selectedTransaction as any).commission_amount !== undefined && (selectedTransaction as any).commission_amount > 0 && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Comissão ({(selectedTransaction as any).commission_rate || 0}%)</span>
+                                        <span className="font-medium text-red-500">- {formatCurrency((selectedTransaction as any).commission_amount)}</span>
+                                    </div>
+                                )}
                                 {selectedTransaction.location_amount !== undefined && selectedTransaction.location_amount !== null && selectedTransaction.location_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa do Procedimento ({(selectedTransaction as any).location_rate || 0}%)</span>
+                                        <span className="text-muted-foreground">Taxa da Clínica ({(selectedTransaction as any).location_rate || 0}%)</span>
                                         <span className="font-medium text-orange-500">- {formatCurrency(selectedTransaction.location_amount)}</span>
                                     </div>
                                 )}

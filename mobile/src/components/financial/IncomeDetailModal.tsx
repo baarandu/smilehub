@@ -61,6 +61,7 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
         ((transaction.tax_amount || 0) > 0) ||
         ((transaction.card_fee_amount || 0) > 0) ||
         (((transaction as any).anticipation_amount || 0) > 0) ||
+        (((transaction as any).commission_amount || 0) > 0) ||
         (((transaction as any).location_amount || 0) > 0);
 
     return (
@@ -185,9 +186,15 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                             <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((transaction as any).anticipation_amount || 0)}</Text>
                                         </View>
                                     )}
+                                    {((transaction as any).commission_amount || 0) > 0 && (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                            <Text style={{ color: '#6b7280', fontSize: 14 }}>Comissão ({(transaction as any).commission_rate || 0}%)</Text>
+                                            <Text style={{ color: '#ef4444', fontSize: 14 }}>- {formatCurrency((transaction as any).commission_amount || 0)}</Text>
+                                        </View>
+                                    )}
                                     {(transaction as any).location_amount > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 8 }}>
-                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Taxa do Procedimento ({(transaction as any).location_rate || 0}%):</Text>
+                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Taxa da Clínica ({(transaction as any).location_rate || 0}%):</Text>
                                             <Text style={{ fontSize: 14, color: '#EF4444', fontWeight: '500' }}>- {formatCurrency((transaction as any).location_amount)}</Text>
                                         </View>
                                     )}
