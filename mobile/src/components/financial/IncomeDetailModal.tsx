@@ -207,7 +207,9 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                     )}
                                     {showImplicitDeductions && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 8 }}>
-                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Outros Descontos</Text>
+                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>
+                                                {((transaction as any).location_amount || 0) > 0 ? 'Outros Descontos' : 'Taxa do Procedimento'}
+                                            </Text>
                                             <Text style={{ fontSize: 14, color: '#EF4444', fontWeight: '500' }}>- {formatCurrency(implicitDeductions)}</Text>
                                         </View>
                                     )}

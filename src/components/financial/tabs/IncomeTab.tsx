@@ -570,9 +570,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     const implicitDeductions = totalDifference - explicitDeductions;
 
                                     if (implicitDeductions > 0.01) {
+                                        const label = ((selectedTransaction as any).location_amount || 0) > 0 ? 'Outros Descontos' : 'Taxa do Procedimento';
                                         return (
                                             <div className="flex justify-between py-2 border-b">
-                                                <span className="text-muted-foreground">Outros Descontos</span>
+                                                <span className="text-muted-foreground">{label}</span>
                                                 <span className="font-medium text-red-500">- {formatCurrency(implicitDeductions)}</span>
                                             </div>
                                         );
