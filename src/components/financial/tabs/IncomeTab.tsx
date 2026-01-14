@@ -512,21 +512,43 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         </Badge>
                                     </div>
                                 )}
+                                <div className="flex justify-between py-2 border-b">
+                                    <span className="text-muted-foreground">Forma de Pagamento</span>
+                                    <span className="font-medium">
+                                        {(() => {
+                                            const pm = (selectedTransaction as any).payment_method;
+                                            if (pm) {
+                                                if (pm === 'credit') return 'Cartão de Crédito';
+                                                if (pm === 'debit') return 'Cartão de Débito';
+                                                if (pm === 'pix') return 'PIX';
+                                                if (pm === 'cash') return 'Dinheiro';
+                                                return pm;
+                                            }
+                                            return 'Não informado';
+                                        })()}
+                                    </span>
+                                </div>
+                                {(selectedTransaction.tax_amount !== undefined && selectedTransaction.tax_amount !== null && selectedTransaction.tax_amount > 0) && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Imposto ({selectedTransaction.tax_rate || 0}%)</span>
+                                        <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.tax_amount)}</span>
+                                    </div>
+                                )}
                                 {selectedTransaction.card_fee_amount !== null && selectedTransaction.card_fee_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa de Cartão</span>
+                                        <span className="text-muted-foreground">Taxa de Cartão ({selectedTransaction.card_fee_rate || 0}%)</span>
                                         <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.card_fee_amount)}</span>
                                     </div>
                                 )}
                                 {(selectedTransaction as any).anticipation_amount !== undefined && (selectedTransaction as any).anticipation_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa de Antecipação</span>
+                                        <span className="text-muted-foreground">Taxa de Antecipação ({(selectedTransaction as any).anticipation_rate || 0}%)</span>
                                         <span className="font-medium text-yellow-600">- {formatCurrency((selectedTransaction as any).anticipation_amount)}</span>
                                     </div>
                                 )}
                                 {selectedTransaction.location_amount !== undefined && selectedTransaction.location_amount !== null && selectedTransaction.location_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa do Procedimento</span>
+                                        <span className="text-muted-foreground">Taxa do Procedimento ({(selectedTransaction as any).location_rate || 0}%)</span>
                                         <span className="font-medium text-orange-500">- {formatCurrency(selectedTransaction.location_amount)}</span>
                                     </div>
                                 )}

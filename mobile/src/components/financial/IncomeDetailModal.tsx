@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Modal, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { TrendingUp, MapPin, Calendar, X, Trash2 } from 'lucide-react-native';
+import { TrendingUp, MapPin, Calendar, X, Trash2, CreditCard } from 'lucide-react-native';
 import { FinancialTransactionWithPatient } from '../../types/database';
 import { formatCurrency, formatDate, parseTransactionDescription } from '../../utils/financial';
 import { financialService } from '../../services/financial';
@@ -137,6 +137,28 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                 </View>
                             </View>
 
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16 }}>
+                                <View className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
+                                    <CreditCard size={20} color="#374151" />
+                                </View>
+                                <View>
+                                    <Text className="text-xs text-gray-500 uppercase tracking-wider">Forma de Pagamento</Text>
+                                    <Text className="text-gray-900 font-medium text-base">
+                                        {(() => {
+                                            const pm = (transaction as any).payment_method;
+                                            if (pm) {
+                                                if (pm === 'credit') return 'Cartão de Crédito';
+                                                if (pm === 'debit') return 'Cartão de Débito';
+                                                if (pm === 'pix') return 'PIX';
+                                                if (pm === 'cash') return 'Dinheiro';
+                                                return pm;
+                                            }
+                                            return 'Não informado';
+                                        })()}
+                                    </Text>
+                                </View>
+                            </View>
+
 
                             {hasDeductions && (
                                 <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
@@ -249,7 +271,7 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                         </TouchableOpacity>
                     </View>
                 </View>
-            </View>
-        </Modal>
+            </View >
+        </Modal >
     );
 };
