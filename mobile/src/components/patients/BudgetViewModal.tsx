@@ -216,7 +216,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                     </View>
 
                     {/* Pay Button */}
-                    {(budget.status === 'approved' || approvedItems.length > 0) && (
+                    {approvedItems.length > 0 && (
                         <TouchableOpacity
                             onPress={() => {
                                 onClose();

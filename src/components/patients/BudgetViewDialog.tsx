@@ -233,7 +233,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName,
                         Excluir
                     </Button>
                     <div className="flex gap-2">
-                        {(budget.status === 'approved' || approvedItems.length > 0) && (
+                        {approvedItems.length > 0 && (
                             <Button
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                                 onClick={() => {
