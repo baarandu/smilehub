@@ -333,8 +333,15 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                             const parts = workingDesc.split(' - ').map(p => p.trim()).filter(p => p && p.toLowerCase() !== (t.patients?.name?.toLowerCase() || ''));
                                             const procedure = parts.length > 0 ? parts.join(' - ') : 'Procedimento';
 
+                                            // Use payment_method from transaction if available, otherwise parse from description
                                             let displayMethod = 'Não informado';
-                                            if (methodMatch) {
+                                            if ((t as any).payment_method) {
+                                                const pm = (t as any).payment_method;
+                                                displayMethod = pm === 'credit' ? 'Cartão de Crédito' :
+                                                    pm === 'debit' ? 'Cartão de Débito' :
+                                                        pm === 'pix' ? 'PIX' :
+                                                            pm === 'cash' ? 'Dinheiro' : pm;
+                                            } else if (methodMatch) {
                                                 const methodParts = methodMatch[1].split(' - ');
                                                 let methodType = methodParts[0];
                                                 if (methodType.toLowerCase() === 'crédito' || methodType.toLowerCase() === 'credit') methodType = 'Cartão de Crédito';
@@ -346,18 +353,16 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
                                             return (
                                                 <>
-                                                    <p className="text-sm text-teal-700 font-medium line-clamp-1" title={procedure}>Procedimento: {procedure}</p>
+                                                    <p className="text-sm text-teal-700 font-medium line-clamp-1" title={procedure}>{procedure}</p>
                                                     <p className="text-xs text-muted-foreground">Forma: {displayMethod}</p>
+                                                    {t.location && (
+                                                        <p className="text-xs text-muted-foreground">Local: {t.location}</p>
+                                                    )}
                                                 </>
                                             );
                                         })()}
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-xs text-slate-400">{new Date(t.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
-                                            {t.location && (
-                                                <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-100">
-                                                    {t.location}
-                                                </Badge>
-                                            )}
                                         </div>
                                     </div>
                                 </div>

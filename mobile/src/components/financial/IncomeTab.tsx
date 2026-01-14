@@ -286,10 +286,16 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                     </Text>
                                                     <View className="mt-1">
                                                         <Text className="text-xs text-teal-700 font-semibold" numberOfLines={1}>
-                                                            Procedimento: {parsed.displayDescription}
+                                                            {parsed.displayDescription}
                                                         </Text>
                                                         <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                            Forma: {parsed.displayMethod}
+                                                            Forma: {(transaction as any).payment_method ?
+                                                                ((transaction as any).payment_method === 'credit' ? 'Cartão de Crédito' :
+                                                                    (transaction as any).payment_method === 'debit' ? 'Cartão de Débito' :
+                                                                        (transaction as any).payment_method === 'pix' ? 'PIX' :
+                                                                            (transaction as any).payment_method === 'cash' ? 'Dinheiro' :
+                                                                                (transaction as any).payment_method)
+                                                                : parsed.displayMethod}
                                                         </Text>
                                                         {parsed.displayBrand && (
                                                             <Text className="text-xs text-gray-500 mt-0.5">
@@ -301,17 +307,16 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                                 Parcela: {parsed.installmentInfo}
                                                             </Text>
                                                         )}
+                                                        {transaction.location && (
+                                                            <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
+                                                                Local: {transaction.location}
+                                                            </Text>
+                                                        )}
                                                     </View>
                                                     <View className="flex-row items-center gap-2 mt-1 flex-wrap">
                                                         <Text className="text-xs text-gray-400">
                                                             {formatDate(transaction.date)}
                                                         </Text>
-                                                        {transaction.location && (
-                                                            <View className="flex-row items-center gap-1 bg-teal-50 px-1.5 py-0.5 rounded">
-                                                                <MapPin size={10} color="#0D9488" />
-                                                                <Text className="text-xs text-teal-600">{transaction.location}</Text>
-                                                            </View>
-                                                        )}
                                                     </View>
                                                 </View>
                                             </View>

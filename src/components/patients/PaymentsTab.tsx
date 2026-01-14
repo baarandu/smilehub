@@ -147,6 +147,16 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         return `${year}-${month}-${day}`;
       };
 
+      // Get location from budget
+      const budgetLocation = parsed.location || null;
+
+      // Method labels
+      const methodLabels: Record<string, string> = {
+        credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
+      };
+      const methodLabel = methodLabels[method] || method;
+      const paymentTag = brand ? `(${methodLabel} - ${brand.toUpperCase()})` : `(${methodLabel})`;
+
       for (let i = 0; i < numTransactions; i++) {
         const date = new Date(today);
         if (!isAnticipated) {
@@ -156,11 +166,13 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         await financialService.createTransaction({
           type: 'income',
           amount: txAmount, // Store GROSS
-          description: `${selectedItem.tooth.treatments.join(', ')} - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
+          description: `${selectedItem.tooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedItem.tooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
           category: 'Tratamento',
           date: formatLocalDate(date),
           patient_id: patientId,
           related_entity_id: budget.id,
+          location: budgetLocation,
+          payment_method: method,
           // Deductions
           net_amount: netAmountPerTx,
           tax_rate: breakdown?.taxRate,
