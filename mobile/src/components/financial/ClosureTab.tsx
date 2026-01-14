@@ -41,10 +41,22 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
 
     const loadData = async () => {
         try {
-            const [locations, settings] = await Promise.all([locationsService.getAll(), settingsService.getFinancialSettings()]);
+            const [locations, settings, taxes] = await Promise.all([
+                locationsService.getAll(),
+                settingsService.getFinancialSettings(),
+                settingsService.getTaxes()
+            ]);
             setAvailableLocations(locations);
-            if (settings) setTaxRate(settings.tax_rate || 0);
-        } catch (e) { console.error(e); }
+
+            let totalTax = 0;
+            if (settings) totalTax += (settings.tax_rate || 0);
+            if (taxes && taxes.length > 0) {
+                totalTax += taxes.reduce((sum, t) => sum + t.rate, 0);
+            }
+            setTaxRate(totalTax);
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const uniqueLocations = useMemo(() => availableLocations.length > 0 ? availableLocations.map(l => l.name).sort() : Array.from(new Set(transactions.map(t => t.location).filter(Boolean) as string[])).sort(), [transactions, availableLocations]);
