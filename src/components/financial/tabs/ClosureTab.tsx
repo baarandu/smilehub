@@ -152,11 +152,29 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
     const totalForPercent = Object.values(byMethod).reduce((a, b) => a + b, 0) || 1;
 
     const feesByLocation = income
-        .filter(t => t.location && Number((t as any).location_amount || 0) > 0)
+        .filter(t => t.location)
         .reduce((acc, t) => {
             const loc = t.location!;
-            const amount = Number((t as any).location_amount || 0);
-            acc[loc] = (acc[loc] || 0) + amount;
+            const explicit = Number((t as any).location_amount || 0);
+
+            const gross = Number(t.amount || 0);
+            const net = Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : gross);
+
+            const deductions =
+                Number(t.tax_amount || 0) +
+                Number(t.card_fee_amount || 0) +
+                Number((t as any).anticipation_amount || 0) +
+                Number((t as any).commission_amount || 0) +
+                explicit;
+
+            let implicit = gross - net - deductions;
+            if (implicit < 0.01) implicit = 0;
+
+            const totalFee = explicit + implicit;
+
+            if (totalFee > 0) {
+                acc[loc] = (acc[loc] || 0) + totalFee;
+            }
             return acc;
         }, {} as Record<string, number>);
 
