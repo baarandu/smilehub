@@ -217,6 +217,8 @@ export interface Database {
           healing_problems_details: string | null
           current_medication: boolean
           current_medication_details: string | null
+          allergy: boolean
+          allergy_details: string | null
           local_anesthesia_history: boolean
           anesthesia_reaction: boolean
           anesthesia_reaction_details: string | null
@@ -254,6 +256,8 @@ export interface Database {
           healing_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
+          allergy?: boolean
+          allergy_details?: string | null
           local_anesthesia_history?: boolean
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null
@@ -291,6 +295,8 @@ export interface Database {
           healing_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
+          allergy?: boolean
+          allergy_details?: string | null
           local_anesthesia_history?: boolean
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null

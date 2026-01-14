@@ -34,24 +34,31 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
         setShowSummaryDialog(true);
     };
 
-    const getAnamnesePreview = (anamnese: Anamnese) => {
-        const items: string[] = [];
-        
-        if (anamnese.medical_treatment) items.push('Em tratamento');
-        if (anamnese.current_medication) items.push('Medicação');
-        if (anamnese.pregnant_or_breastfeeding) items.push('Gestante/Lactante');
-        if (anamnese.anesthesia_reaction) items.push('Reação anestesia');
-        if (anamnese.healing_problems) items.push('Cicatrização');
-        if (anamnese.diabetes) items.push('Diabetes');
-        if (anamnese.heart_disease) items.push('Doença cardíaca');
-        if (anamnese.hypertension) items.push('Hipertensão');
-        if (anamnese.infectious_disease) items.push('Doença infecciosa');
-        
-        if (items.length === 0) {
-            return 'Sem alertas';
-        }
-        
-        return items.slice(0, 3).join(', ') + (items.length > 3 ? '...' : '');
+    const getBadges = (anamnese: Anamnese) => {
+        const badges = [
+            { condition: anamnese.medical_treatment, label: 'Em Tratamento Médico', color: 'bg-blue-100 text-blue-800' },
+            { condition: anamnese.pregnant_or_breastfeeding, label: 'Gestante/Lactante', color: 'bg-pink-100 text-pink-800' },
+            { condition: anamnese.diabetes, label: 'Diabetes', color: 'bg-red-100 text-red-800' },
+            { condition: anamnese.hypertension, label: 'Hipertensão', color: 'bg-red-100 text-red-800' },
+            { condition: anamnese.heart_disease, label: 'Doença Cardíaca', color: 'bg-red-100 text-red-800' },
+            { condition: anamnese.pacemaker, label: 'Marcapasso', color: 'bg-purple-100 text-purple-800' },
+            { condition: anamnese.infectious_disease, label: 'Doença Infecciosa', color: 'bg-yellow-100 text-yellow-800' },
+            { condition: anamnese.anesthesia_reaction, label: 'Reação a Anestesia', color: 'bg-red-100 text-red-800' },
+            { condition: anamnese.smoker_or_drinker, label: 'Fumante/Etilista', color: 'bg-gray-100 text-gray-800' },
+            { condition: anamnese.healing_problems, label: 'Prob. Cicatrização', color: 'bg-orange-100 text-orange-800' },
+            { condition: anamnese.current_medication, label: 'Medicação em Uso', color: 'bg-blue-100 text-blue-800' },
+            { condition: anamnese.recent_surgery, label: 'Cirurgia Recente', color: 'bg-orange-100 text-orange-800' },
+            { condition: anamnese.depression_anxiety_panic, label: 'Ansiedade/Depressão', color: 'bg-purple-100 text-purple-800' },
+            { condition: anamnese.seizure_epilepsy, label: 'Epilepsia', color: 'bg-purple-100 text-purple-800' },
+            { condition: anamnese.arthritis, label: 'Artrite/Artrose', color: 'bg-orange-100 text-orange-800' },
+            { condition: anamnese.gastritis_reflux, label: 'Gastrite/Refluxo', color: 'bg-yellow-100 text-yellow-800' },
+            { condition: anamnese.local_anesthesia_history, label: 'Anestesia Local', color: 'bg-green-100 text-green-800' },
+            { condition: anamnese.fasting, label: 'Jejum', color: 'bg-blue-100 text-blue-800' },
+            { condition: anamnese.allergy, label: 'Alergia', color: 'bg-red-100 text-red-800' },
+            { condition: anamnese.drug_allergy, label: 'Alergia Medicamentosa', color: 'bg-red-100 text-red-800' },
+        ];
+
+        return badges.filter(b => b.condition);
     };
 
     const handleAddAnamnese = () => {
@@ -67,7 +74,7 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
 
     const handleDeleteAnamnese = async (e: React.MouseEvent, anamnese: Anamnese) => {
         e.stopPropagation();
-        
+
         if (!confirm('Tem certeza que deseja excluir esta anamnese?')) return;
 
         try {
@@ -119,9 +126,22 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
                                                     {formatDate(anamnese.date)}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-muted-foreground">
-                                                {getAnamnesePreview(anamnese)}
-                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {getBadges(anamnese).length > 0 ? (
+                                                    getBadges(anamnese).slice(0, 3).map((badge, index) => (
+                                                        <span key={index} className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
+                                                            {badge.label}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">Sem alertas</span>
+                                                )}
+                                                {getBadges(anamnese).length > 3 && (
+                                                    <span className="text-xs text-muted-foreground self-center">
+                                                        +{getBadges(anamnese).length - 3}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button

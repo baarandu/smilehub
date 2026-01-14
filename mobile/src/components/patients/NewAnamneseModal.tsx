@@ -82,6 +82,8 @@ export function NewAnamneseModal({
         healingProblemsDetails: '',
         currentMedication: false,
         currentMedicationDetails: '',
+        allergy: false,
+        allergyDetails: '',
         drugAllergy: false,
         drugAllergyDetails: '',
         continuousMedication: false,
@@ -130,6 +132,8 @@ export function NewAnamneseModal({
                     healingProblemsDetails: anamnese.healing_problems_details || '',
                     currentMedication: anamnese.current_medication,
                     currentMedicationDetails: anamnese.current_medication_details || '',
+                    allergy: anamnese.allergy || false,
+                    allergyDetails: anamnese.allergy_details || '',
                     drugAllergy: (anamnese as any).drug_allergy || false,
                     drugAllergyDetails: (anamnese as any).drug_allergy_details || '',
                     continuousMedication: (anamnese as any).continuous_medication || false,
@@ -228,6 +232,8 @@ export function NewAnamneseModal({
                 healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
                 current_medication: form.currentMedication,
                 current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
+                allergy: form.allergy,
+                allergy_details: form.allergy ? form.allergyDetails || null : null,
                 drug_allergy: form.drugAllergy,
                 drug_allergy_details: form.drugAllergy ? form.drugAllergyDetails || null : null,
                 continuous_medication: form.continuousMedication,
@@ -374,6 +380,15 @@ export function NewAnamneseModal({
                             details={form.currentMedicationDetails}
                             onDetailsChange={(t) => setForm({ ...form, currentMedicationDetails: t })}
                             detailsPlaceholder="Quais medicações?"
+                        />
+
+                        <QuestionField
+                            label="Tem alguma alergia?"
+                            value={form.allergy}
+                            onValueChange={(v) => setForm({ ...form, allergy: v })}
+                            details={form.allergyDetails}
+                            onDetailsChange={(t) => setForm({ ...form, allergyDetails: t })}
+                            detailsPlaceholder="Quais alergias?"
                         />
 
                         <QuestionField

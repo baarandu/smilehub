@@ -64,6 +64,8 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
       { condition: latestAnamnese.smoker_or_drinker, label: 'Fumante/Etilista', color: 'bg-gray-100 text-gray-800' },
       { condition: latestAnamnese.healing_problems, label: 'Prob. Cicatrização', color: 'bg-orange-100 text-orange-800' },
       { condition: latestAnamnese.current_medication, label: 'Medicação em Uso', color: 'bg-blue-100 text-blue-800' },
+      { condition: latestAnamnese.allergy, label: 'Alergia', color: 'bg-red-100 text-red-800' },
+      { condition: latestAnamnese.drug_allergy, label: 'Alergia Medicamentosa', color: 'bg-red-100 text-red-800' },
       { condition: latestAnamnese.recent_surgery, label: 'Cirurgia Recente', color: 'bg-orange-100 text-orange-800' },
       { condition: latestAnamnese.depression_anxiety_panic, label: 'Ansiedade/Depressão', color: 'bg-purple-100 text-purple-800' },
       { condition: latestAnamnese.seizure_epilepsy, label: 'Epilepsia', color: 'bg-purple-100 text-purple-800' },

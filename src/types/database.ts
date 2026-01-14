@@ -258,13 +258,22 @@ export interface Database {
           healing_problems_details: string | null
           current_medication: boolean
           current_medication_details: string | null
+          allergy: boolean
+          allergy_details: string | null
+          drug_allergy: boolean
+          drug_allergy_details: string | null
+          continuous_medication: boolean
+          continuous_medication_details: string | null
           local_anesthesia_history: boolean
+          local_anesthesia_history_details: string | null
           anesthesia_reaction: boolean
           anesthesia_reaction_details: string | null
           pregnant_or_breastfeeding: boolean
+          pregnant_or_breastfeeding_details: string | null
           smoker_or_drinker: boolean
           smoker_or_drinker_details: string | null
           fasting: boolean
+          fasting_details: string | null
           diabetes: boolean
           diabetes_details: string | null
           depression_anxiety_panic: boolean
@@ -274,11 +283,15 @@ export interface Database {
           heart_disease: boolean
           heart_disease_details: string | null
           hypertension: boolean
+          hypertension_details: string | null
           pacemaker: boolean
+          pacemaker_details: string | null
           infectious_disease: boolean
           infectious_disease_details: string | null
           arthritis: boolean
+          arthritis_details: string | null
           gastritis_reflux: boolean
+          gastritis_reflux_details: string | null
           notes: string | null
           created_at: string
           updated_at: string
@@ -295,13 +308,22 @@ export interface Database {
           healing_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
+          allergy?: boolean
+          allergy_details?: string | null
+          drug_allergy?: boolean
+          drug_allergy_details?: string | null
+          continuous_medication?: boolean
+          continuous_medication_details?: string | null
           local_anesthesia_history?: boolean
+          local_anesthesia_history_details?: string | null
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null
           pregnant_or_breastfeeding?: boolean
+          pregnant_or_breastfeeding_details?: string | null
           smoker_or_drinker?: boolean
           smoker_or_drinker_details?: string | null
           fasting?: boolean
+          fasting_details?: string | null
           diabetes?: boolean
           diabetes_details?: string | null
           depression_anxiety_panic?: boolean
@@ -311,11 +333,15 @@ export interface Database {
           heart_disease?: boolean
           heart_disease_details?: string | null
           hypertension?: boolean
+          hypertension_details?: string | null
           pacemaker?: boolean
+          pacemaker_details?: string | null
           infectious_disease?: boolean
           infectious_disease_details?: string | null
           arthritis?: boolean
+          arthritis_details?: string | null
           gastritis_reflux?: boolean
+          gastritis_reflux_details?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string
@@ -332,13 +358,22 @@ export interface Database {
           healing_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
+          allergy?: boolean
+          allergy_details?: string | null
+          drug_allergy?: boolean
+          drug_allergy_details?: string | null
+          continuous_medication?: boolean
+          continuous_medication_details?: string | null
           local_anesthesia_history?: boolean
+          local_anesthesia_history_details?: string | null
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null
           pregnant_or_breastfeeding?: boolean
+          pregnant_or_breastfeeding_details?: string | null
           smoker_or_drinker?: boolean
           smoker_or_drinker_details?: string | null
           fasting?: boolean
+          fasting_details?: string | null
           diabetes?: boolean
           diabetes_details?: string | null
           depression_anxiety_panic?: boolean
@@ -348,11 +383,15 @@ export interface Database {
           heart_disease?: boolean
           heart_disease_details?: string | null
           hypertension?: boolean
+          hypertension_details?: string | null
           pacemaker?: boolean
+          pacemaker_details?: string | null
           infectious_disease?: boolean
           infectious_disease_details?: string | null
           arthritis?: boolean
+          arthritis_details?: string | null
           gastritis_reflux?: boolean
+          gastritis_reflux_details?: string | null
           notes?: string | null
           created_at?: string
           updated_at?: string

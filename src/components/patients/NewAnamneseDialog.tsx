@@ -92,6 +92,8 @@ export function NewAnamneseDialog({
     healingProblemsDetails: '',
     currentMedication: false,
     currentMedicationDetails: '',
+    allergy: false,
+    allergyDetails: '',
     drugAllergy: false,
     drugAllergyDetails: '',
     continuousMedication: false,
@@ -140,6 +142,8 @@ export function NewAnamneseDialog({
           healingProblemsDetails: anamnese.healing_problems_details || '',
           currentMedication: anamnese.current_medication,
           currentMedicationDetails: anamnese.current_medication_details || '',
+          allergy: anamnese.allergy || false,
+          allergyDetails: anamnese.allergy_details || '',
           drugAllergy: (anamnese as any).drug_allergy || false,
           drugAllergyDetails: (anamnese as any).drug_allergy_details || '',
           continuousMedication: (anamnese as any).continuous_medication || false,
@@ -185,6 +189,8 @@ export function NewAnamneseDialog({
           healingProblemsDetails: '',
           currentMedication: false,
           currentMedicationDetails: '',
+          allergy: false,
+          allergyDetails: '',
           drugAllergy: false,
           drugAllergyDetails: '',
           continuousMedication: false,
@@ -238,6 +244,8 @@ export function NewAnamneseDialog({
         healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
         current_medication: form.currentMedication,
         current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
+        allergy: form.allergy,
+        allergy_details: form.allergy ? form.allergyDetails || null : null,
         drug_allergy: form.drugAllergy,
         drug_allergy_details: form.drugAllergy ? form.drugAllergyDetails || null : null,
         continuous_medication: form.continuousMedication,
@@ -346,6 +354,16 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, currentMedication: value })}
               details={form.currentMedicationDetails}
               onDetailsChange={(text) => setForm({ ...form, currentMedicationDetails: text })}
+            />
+
+            {/* Alergia Geral */}
+            <QuestionField
+              label="Tem alguma alergia?"
+              value={form.allergy}
+              onValueChange={(value) => setForm({ ...form, allergy: value })}
+              details={form.allergyDetails}
+              onDetailsChange={(text) => setForm({ ...form, allergyDetails: text })}
+              detailsPlaceholder="Quais alergias?"
             />
 
             {/* Alergia Medicamentosa */}
