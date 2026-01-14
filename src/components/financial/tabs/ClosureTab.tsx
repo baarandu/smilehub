@@ -352,7 +352,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                 {/* Breakdown by Fees */}
                 <Card className="md:col-span-1 border-red-100 bg-red-50/10">
                     <CardHeader>
-                        <CardTitle className="text-base text-red-900">Taxas por Unidade</CardTitle>
+                        <CardTitle className="text-base text-red-900">Taxas por Local</CardTitle>
                         <CardDescription>Valores retidos na fonte</CardDescription>
                     </CardHeader>
                     <CardContent>
