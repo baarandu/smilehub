@@ -73,7 +73,13 @@ export function NewAnamneseModal({
 }: NewAnamneseModalProps) {
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: (() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        })(),
         medicalTreatment: false,
         medicalTreatmentDetails: '',
         recentSurgery: false,
@@ -170,7 +176,13 @@ export function NewAnamneseModal({
                 });
             } else {
                 setForm({
-                    date: new Date().toISOString().split('T')[0],
+                    date: (() => {
+                        const today = new Date();
+                        const year = today.getFullYear();
+                        const month = String(today.getMonth() + 1).padStart(2, '0');
+                        const day = String(today.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    })(),
                     medicalTreatment: false,
                     medicalTreatmentDetails: '',
                     recentSurgery: false,
@@ -315,7 +327,10 @@ export function NewAnamneseModal({
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
                                     value={form.date.includes('-')
-                                        ? new Date(form.date + 'T00:00:00').toLocaleDateString('pt-BR')
+                                        ? (() => {
+                                            const [year, month, day] = form.date.split('-');
+                                            return `${day}/${month}/${year}`;
+                                        })()
                                         : form.date}
                                     onChangeText={(text) => {
                                         const numbers = text.replace(/\D/g, '');

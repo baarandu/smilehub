@@ -22,11 +22,10 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
     const [editingAnamnese, setEditingAnamnese] = useState<Anamnese | null>(null);
 
     const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('pt-BR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-        });
+        if (!date) return '';
+        // Handle YYYY-MM-DD string directly to avoid timezone issues
+        const [year, month, day] = date.split('-');
+        return `${day}/${month}/${year}`;
     };
 
     const handleCardClick = (anamnese: Anamnese) => {

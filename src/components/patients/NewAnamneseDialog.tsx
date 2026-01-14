@@ -83,7 +83,13 @@ export function NewAnamneseDialog({
   const updateAnamnese = useUpdateAnamnese();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     medicalTreatment: false,
     medicalTreatmentDetails: '',
     recentSurgery: false,
@@ -180,7 +186,13 @@ export function NewAnamneseDialog({
         });
       } else {
         setForm({
-          date: new Date().toISOString().split('T')[0],
+          date: (() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          })(),
           medicalTreatment: false,
           medicalTreatmentDetails: '',
           recentSurgery: false,
