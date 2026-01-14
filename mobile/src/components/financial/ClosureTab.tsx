@@ -80,9 +80,30 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
     const totalAnticipation = filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + ((t as any).anticipation_amount || 0), 0);
     const totalExpenses = filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const expensesByLocation = filteredTransactions.filter(t => t.type === 'expense' && t.location).reduce((acc, t) => { acc[t.location!] = (acc[t.location!] || 0) + t.amount; return acc; }, {} as Record<string, number>);
-    const feesByLocation = filteredTransactions.filter(t => t.location && (t.location_amount || 0) > 0).reduce((acc, t) => { acc[t.location!] = (acc[t.location!] || 0) + (t.location_amount || 0); return acc; }, {} as Record<string, number>);
+    const feesByLocation = filteredTransactions.filter(t => t.location).reduce((acc, t) => {
+        const explicit = (t.location_amount || 0);
+
+        // Calculate implicit fee for this transaction
+        const gross = t.amount;
+        const net = t.net_amount || t.amount;
+        const deductions =
+            (t.tax_amount || 0) +
+            (t.card_fee_amount || 0) +
+            ((t as any).anticipation_amount || 0) +
+            ((t as any).commission_amount || 0) +
+            explicit; // include location_amount in explicit to subtract from diff
+
+        let implicit = gross - net - deductions;
+        if (implicit < 0.01) implicit = 0;
+
+        acc[t.location!] = (acc[t.location!] || 0) + explicit + implicit;
+        return acc;
+    }, {} as Record<string, number>);
     const expensesByCategory = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => { const cat = t.category || 'Outros'; acc[cat] = (acc[cat] || 0) + t.amount; return acc; }, {} as Record<string, number>);
     const totalFees = Object.values(feesByLocation).reduce((sum, v) => sum + v, 0);
+    // Recalculate netResult to ensure consistency, although implicit fees are part of the 'gap' between gross and net
+    // netResult logic uses loaded Net amounts, so it is already correct regarding the final balance.
+    // We just needed to update totalFees so the Breakdown matches the gap.
     const netResult = totalIncome - totalCardFees - totalAnticipation - totalFees - totalTaxes - totalExpenses;
     const profitMargin = totalIncome > 0 ? ((netResult / totalIncome) * 100).toFixed(1) : '0';
 
