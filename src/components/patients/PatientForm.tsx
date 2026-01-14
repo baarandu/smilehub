@@ -82,6 +82,11 @@ export function PatientForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <Tabs defaultValue="personal" className="w-full">
+
+        <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-md text-sm mb-4 border border-blue-100">
+          Campos marcados com <strong>*</strong> são obrigatórios (Nome Completo e Telefone).
+        </div>
+
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="personal">Pessoal</TabsTrigger>
           <TabsTrigger value="contact">Contato</TabsTrigger>
