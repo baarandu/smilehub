@@ -554,10 +554,31 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 )}
                                 {selectedTransaction.location_amount !== undefined && selectedTransaction.location_amount !== null && selectedTransaction.location_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa da Clínica ({(selectedTransaction as any).location_rate || 0}%)</span>
+                                        <span className="text-muted-foreground">Taxa do Procedimento ({(selectedTransaction as any).location_rate || 0}%)</span>
                                         <span className="font-medium text-orange-500">- {formatCurrency(selectedTransaction.location_amount)}</span>
                                     </div>
                                 )}
+                                {(() => {
+                                    const explicitDeductions =
+                                        (selectedTransaction.tax_amount || 0) +
+                                        (selectedTransaction.card_fee_amount || 0) +
+                                        ((selectedTransaction as any).anticipation_amount || 0) +
+                                        ((selectedTransaction as any).commission_amount || 0) +
+                                        ((selectedTransaction as any).location_amount || 0);
+
+                                    const totalDifference = selectedTransaction.amount - (selectedTransaction.net_amount || selectedTransaction.amount);
+                                    const implicitDeductions = totalDifference - explicitDeductions;
+
+                                    if (implicitDeductions > 0.01) {
+                                        return (
+                                            <div className="flex justify-between py-2 border-b">
+                                                <span className="text-muted-foreground">Outros Descontos</span>
+                                                <span className="font-medium text-red-500">- {formatCurrency(implicitDeductions)}</span>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
                         </div>
                     )}

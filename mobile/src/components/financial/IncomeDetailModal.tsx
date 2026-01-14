@@ -57,12 +57,19 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
         );
     };
 
-    const hasDeductions =
-        ((transaction.tax_amount || 0) > 0) ||
-        ((transaction.card_fee_amount || 0) > 0) ||
-        (((transaction as any).anticipation_amount || 0) > 0) ||
-        (((transaction as any).commission_amount || 0) > 0) ||
-        (((transaction as any).location_amount || 0) > 0);
+    const explicitDeductions =
+        (transaction.tax_amount || 0) +
+        (transaction.card_fee_amount || 0) +
+        ((transaction as any).anticipation_amount || 0) +
+        ((transaction as any).commission_amount || 0) +
+        ((transaction as any).location_amount || 0);
+
+    const totalDifference = transaction.amount - (transaction.net_amount || transaction.amount);
+    // Use a small epsilon for float comparison to avoid display of "0.00"
+    const implicitDeductions = totalDifference - explicitDeductions;
+    const showImplicitDeductions = implicitDeductions > 0.01;
+
+    const hasDeductions = explicitDeductions > 0 || showImplicitDeductions;
 
     return (
         <Modal visible={!!transaction} transparent animationType="fade" statusBarTranslucent>
@@ -194,8 +201,14 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                     )}
                                     {(transaction as any).location_amount > 0 && (
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 8 }}>
-                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Taxa da Clínica ({(transaction as any).location_rate || 0}%):</Text>
+                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Taxa do Procedimento ({(transaction as any).location_rate || 0}%):</Text>
                                             <Text style={{ fontSize: 14, color: '#EF4444', fontWeight: '500' }}>- {formatCurrency((transaction as any).location_amount)}</Text>
+                                        </View>
+                                    )}
+                                    {showImplicitDeductions && (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4, marginTop: 8 }}>
+                                            <Text style={{ fontSize: 14, color: '#6B7280' }}>Outros Descontos</Text>
+                                            <Text style={{ fontSize: 14, color: '#EF4444', fontWeight: '500' }}>- {formatCurrency(implicitDeductions)}</Text>
                                         </View>
                                     )}
                                     <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', marginTop: 8, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
