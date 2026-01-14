@@ -40,11 +40,16 @@ interface ClosureTabProps {
 }
 
 export function ClosureTab({ transactions, loading }: ClosureTabProps) {
-    const safeTransactions = transactions || [];
+    // Ensure transactions is an array and filter out any invalid items
+    const safeTransactions = useMemo(() => {
+        return (transactions || []).filter(t => t && typeof t === 'object');
+    }, [transactions]);
+
     const [filterOpen, setFilterOpen] = useState(false);
     const [locationFilter, setLocationFilter] = useState('all');
-    const [methodFilter, setMethodFilter] = useState('all'); // Applies primarily to income logic
+    const [methodFilter, setMethodFilter] = useState('all');
 
+    // Use query logic
     const { data: settings } = useQuery({
         queryKey: ['financial_settings'],
         queryFn: settingsService.getFinancialSettings
@@ -60,7 +65,6 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         queryFn: locationsService.getAll
     });
 
-    // Helper to normalize methods (reused from IncomeTab logic basically)
     const getNormalizedMethod = (description?: string) => {
         if (!description) return 'Outros';
         const desc = description.toLowerCase();
@@ -85,62 +89,45 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         return safeTransactions.filter(t => {
             if (locationFilter !== 'all' && t.location !== locationFilter) return false;
 
-            // Method filter usually applies to Income, but we can try to apply to expenses if they have method info in description?
-            // Usually expenses don't have the same "Method" structure in description.
-            // Let's apply Method filter ONLY to Income transactions for now, or if it's 'all'.
             if (methodFilter !== 'all') {
                 if (t.type === 'income') {
                     const method = getNormalizedMethod(t.description);
                     if (method !== methodFilter) return false;
-                } else {
-                    // For expenses, if a payment method filter is active, should we hide them?
-                    // "Fechamento" balance usually implies (Income - Expense).
-                    // If I filter Income by "Credit Card", does it make sense to subtract ALL expenses?
-                    // Or only expenses paid by credit card? (We don't track expense payment method well yet).
-                    // Let's decide: Method filter only affects Income. Expenses remain filtered ONLY by Location.
-                    // Actually, if I want to see "Cash Balance", I might want (Cash Income - Cash Expenses).
-                    // But if expenses don't have method, we can't filter them.
-                    // SAFE BET: Apply Method filter to Income only. Expenses are unaffected by Method filter.
-                    // OR: If Method filter is active, maybe we shouldn't show Balance?
-                    // Let's keep it simple: Filter Income by Method. Filter Expenses by Location (always).
                 }
             }
             return true;
         });
     }, [safeTransactions, locationFilter, methodFilter]);
 
-    const income = filteredTransactions.filter(t => {
-        if (t.type !== 'income') return false;
-        if (methodFilter !== 'all' && getNormalizedMethod(t.description) !== methodFilter) return false;
-        return true;
-    });
-
+    const income = filteredTransactions.filter(t => t.type === 'income');
     const expenses = filteredTransactions.filter(t => t.type === 'expense');
 
     const activeFilterCount = (locationFilter !== 'all' ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0);
 
-    const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
+    // Explicit Number() casting for safety
+    const totalIncome = income.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalNetIncome = income.reduce((sum, t) => sum + Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount), 0);
 
     // Tax Logic
-    const legacyTax = settings?.tax_rate || 0;
-    const taxesTotal = taxes.reduce((acc, t) => acc + t.rate, 0);
+    const legacyTax = Number(settings?.tax_rate || 0);
+    const taxesTotal = taxes.reduce((acc, t) => acc + Number(t.rate || 0), 0);
     const taxRate = legacyTax + taxesTotal;
     const totalTaxes = totalIncome * (taxRate / 100);
 
-    const totalCardFees = income.reduce((sum, t) => sum + (t.card_fee_amount || 0), 0);
-    const totalAnticipation = income.reduce((sum, t) => sum + ((t as any).anticipation_amount || 0), 0);
+    const totalCardFees = income.reduce((sum, t) => sum + Number(t.card_fee_amount || 0), 0);
+    const totalAnticipation = income.reduce((sum, t) => sum + Number((t as any).anticipation_amount || 0), 0);
 
     // Procedure Fees (Explicit + Implicit)
     const totalProcedureFees = income.reduce((sum, t) => {
-        const gross = t.amount;
-        const net = t.net_amount || t.amount;
-        const explicit = (t as any).location_amount || 0;
+        const gross = Number(t.amount || 0);
+        const net = Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : gross);
+        const explicit = Number((t as any).location_amount || 0);
 
         const deductions =
-            (t.tax_amount || 0) +
-            (t.card_fee_amount || 0) +
-            ((t as any).anticipation_amount || 0) +
-            ((t as any).commission_amount || 0) +
+            Number(t.tax_amount || 0) +
+            Number(t.card_fee_amount || 0) +
+            Number((t as any).anticipation_amount || 0) +
+            Number((t as any).commission_amount || 0) +
             explicit;
 
         let implicit = gross - net - deductions;
@@ -149,43 +136,42 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         return sum + explicit + implicit;
     }, 0);
 
-    const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
     // Final Net Result
     const netResult = totalIncome - totalCardFees - totalAnticipation - totalProcedureFees - totalTaxes - totalExpenses;
-    const netBalance = netResult; // Alias to match previous usage logic if needed, but we will update UI to use netResult
+    const netBalance = netResult;
 
-    // Breakdown by Method (Income only)
+    // Breakdown by Method
     const byMethod = income.reduce((acc, t) => {
         const method = getNormalizedMethod(t.description);
-        acc[method] = (acc[method] || 0) + (t.net_amount || t.amount);
+        acc[method] = (acc[method] || 0) + Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount);
         return acc;
     }, {} as Record<string, number>);
-
-
-
 
     const totalForPercent = Object.values(byMethod).reduce((a, b) => a + b, 0) || 1;
 
     const feesByLocation = income
-        .filter(t => t.location && (t.location_amount || 0) > 0)
+        .filter(t => t.location && Number((t as any).location_amount || 0) > 0)
         .reduce((acc, t) => {
             const loc = t.location!;
-            const amount = (t as any).location_amount || 0;
+            const amount = Number((t as any).location_amount || 0);
             acc[loc] = (acc[loc] || 0) + amount;
             return acc;
         }, {} as Record<string, number>);
 
     const expensesByCategory = expenses.reduce((acc, t) => {
         const cat = t.category || 'Outros';
-        acc[cat] = (acc[cat] || 0) + t.amount;
+        acc[cat] = (acc[cat] || 0) + Number(t.amount || 0);
         return acc;
     }, {} as Record<string, number>);
 
-
-    const formatCurrency = (val: number) => {
-        return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const formatCurrency = (val: number | undefined | null) => {
+        const num = Number(val);
+        if (isNaN(num)) return 'R$ 0,00';
+        return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
+
 
     const getIcon = (method: string) => {
         switch (method) {
