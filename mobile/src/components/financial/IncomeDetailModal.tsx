@@ -91,7 +91,7 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                         <View className="mt-4">
                             <Text className="text-teal-50 text-sm opacity-90">{parsed.displayDescription}</Text>
                             <Text className="text-teal-100 text-xs mt-1">
-                                {parsed.displayMethod}{parsed.displayBrand ? ` - ${parsed.displayBrand}` : ''}{parsed.installmentInfo ? ` (${parsed.installmentInfo})` : ''}
+                                {parsed.installmentInfo ? `(Parcela ${parsed.installmentInfo})` : ''}
                             </Text>
                         </View>
                     </View>
