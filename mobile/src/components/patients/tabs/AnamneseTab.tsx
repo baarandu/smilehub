@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { ClipboardList, Edit3, Trash2, Plus } from 'lucide-react-native';
+import { ClipboardList, Edit3, Trash2, Plus, Calendar } from 'lucide-react-native';
 import type { Anamnese } from '../../../types/database';
 
 interface AnamneseTabProps {
@@ -36,7 +36,16 @@ export function AnamneseTab({ anamneses, onAdd, onEdit, onDelete, onView }: Anam
                                 className="p-4 border-b border-gray-50"
                             >
                                 <View className="flex-row items-center justify-between mb-2">
-                                    <Text className="text-sm text-gray-500">{formatAnamneseDate(anamnese.created_at)}</Text>
+                                    <View className="flex-row items-center">
+                                        <Calendar size={16} color="#6B7280" />
+                                        <Text className="text-gray-500 ml-2">
+                                            {(() => {
+                                                if (!anamnese.date) return '';
+                                                const [year, month, day] = anamnese.date.split('-');
+                                                return `${day}/${month}/${year}`;
+                                            })()}
+                                        </Text>
+                                    </View>
                                     <View className="flex-row gap-2">
                                         <TouchableOpacity
                                             onPress={(e) => { e.stopPropagation(); onEdit(anamnese); }}
