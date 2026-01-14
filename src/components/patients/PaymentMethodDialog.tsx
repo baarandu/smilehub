@@ -96,9 +96,19 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
         setLoading(true);
         try {
             const settings = await settingsService.getFinancialSettings();
+            let totalTax = 0;
             if (settings) {
-                setTaxRate(settings.tax_rate || 0);
+                totalTax += (settings.tax_rate || 0);
             }
+
+            // Load multiple taxes (ISS, etc)
+            const taxes = await settingsService.getTaxes();
+            if (taxes && taxes.length > 0) {
+                const taxesTotal = taxes.reduce((sum, tax) => sum + tax.rate, 0);
+                totalTax += taxesTotal;
+            }
+
+            setTaxRate(totalTax);
             const fees = await settingsService.getCardFees();
             if (fees) {
                 setCardFees(fees);
