@@ -301,7 +301,7 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                             {parsed.displayDescription}
                                                         </Text>
                                                         <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                            Forma: {paymentMethodLabel}
+                                                            Forma de Pagamento: {paymentMethodLabel}
                                                         </Text>
                                                         {parsed.displayBrand && (
                                                             <Text className="text-xs text-gray-500 mt-0.5">
@@ -314,9 +314,12 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                                             </Text>
                                                         )}
                                                         {transaction.location && (
-                                                            <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                                Local: {transaction.location}
-                                                            </Text>
+                                                            <View className="flex-row items-center mt-0.5">
+                                                                <MapPin size={12} color="#6B7280" />
+                                                                <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
+                                                                    {transaction.location}
+                                                                </Text>
+                                                            </View>
                                                         )}
                                                     </View>
                                                     <View className="flex-row items-center gap-2 mt-1 flex-wrap">

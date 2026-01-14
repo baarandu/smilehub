@@ -354,9 +354,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                             return (
                                                 <>
                                                     <p className="text-sm text-teal-700 font-medium line-clamp-1" title={procedure}>{procedure}</p>
-                                                    <p className="text-xs text-muted-foreground">Forma: {displayMethod}</p>
+                                                    <p className="text-xs text-muted-foreground">Forma de Pagamento: {displayMethod}</p>
                                                     {t.location && (
-                                                        <p className="text-xs text-muted-foreground">Local: {t.location}</p>
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3" />
+                                                            {t.location}
+                                                        </p>
                                                     )}
                                                 </>
                                             );
