@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { TrendingUp, ArrowUpRight, MapPin, Filter } from 'lucide-react-native';
 import { FinancialTransactionWithPatient } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
@@ -7,17 +7,20 @@ import { FilterState, INITIAL_FILTERS, COMMON_METHODS } from '../../types/financ
 import { formatCurrency, formatDate, getPaymentMethod, parseTransactionDescription } from '../../utils/financial';
 import { IncomeFilterModal } from './IncomeFilterModal';
 import { IncomeDetailModal } from './IncomeDetailModal';
+import { SwipeableTransactionItem } from './SwipeableTransactionItem';
+import { financialService } from '../../services/financial';
 
 interface IncomeTabProps {
     transactions: FinancialTransactionWithPatient[];
     loading: boolean;
+    onEdit?: (transaction: FinancialTransactionWithPatient) => void;
     onRefresh?: () => void;
     refreshing?: boolean;
 }
 
 type IncomeSubTab = 'gross' | 'net';
 
-export function IncomeTab({ transactions, loading, onRefresh, refreshing }: IncomeTabProps) {
+export function IncomeTab({ transactions, loading, onEdit, onRefresh, refreshing }: IncomeTabProps) {
     const [selectedTransaction, setSelectedTransaction] = useState<FinancialTransactionWithPatient | null>(null);
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
@@ -282,11 +285,14 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
 
 
                                 return (
-                                    <TouchableOpacity
+                                    <SwipeableTransactionItem
                                         key={transaction.id}
+                                        transaction={transaction}
                                         onPress={() => setSelectedTransaction(transaction)}
-                                        className="p-4 border-b border-gray-50 flex-row items-center justify-between active:bg-gray-50"
+                                        onEdit={() => handleEditIncome(transaction)}
+                                        onDelete={() => handleDeleteIncome(transaction)}
                                     >
+                                        <View className="p-4 border-b border-gray-50 flex-row items-center justify-between bg-white">
                                         <View className="flex-1 mr-4">
                                             <View className="flex-row items-start gap-3">
                                                 <View className="w-10 h-10 rounded-lg items-center justify-center bg-green-100">
@@ -333,7 +339,8 @@ export function IncomeTab({ transactions, loading, onRefresh, refreshing }: Inco
                                         <Text className="font-bold text-green-600 text-base whitespace-nowrap">
                                             + {formatCurrency(subTab === 'gross' ? transaction.amount : (transaction.net_amount || transaction.amount))}
                                         </Text>
-                                    </TouchableOpacity>
+                                    </View>
+                                </SwipeableTransactionItem>
                                 );
                             })
                     )}

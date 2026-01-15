@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { TrendingDown, ArrowDownRight, MapPin, Filter, CreditCard, Receipt, Package, Eye } from 'lucide-react-native';
 import { FinancialTransaction } from '../../types/database';
 import { locationsService, Location } from '../../services/locations';
@@ -8,6 +8,8 @@ import { ExpenseFilterModal, FilterState } from './ExpenseFilterModal';
 import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { formatCurrency as formatCurrencyUtil } from '../../utils/expense';
 import { formatDate } from '../../utils/financial';
+import { SwipeableTransactionItem } from './SwipeableTransactionItem';
+import { financialService } from '../../services/financial';
 
 interface ExpensesTabProps {
     transactions: FinancialTransaction[];
@@ -83,6 +85,36 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
         } else { setMaterialItems([]); }
     };
 
+    const handleEditExpense = (transaction: FinancialTransaction) => {
+        onEdit(transaction);
+    };
+
+    const handleDeleteExpense = (transaction: FinancialTransaction) => {
+        Alert.alert(
+            'Excluir Despesa',
+            `Tem certeza que deseja excluir "${transaction.description}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            if (transaction.category === 'Materiais' && (transaction as any).related_entity_id) {
+                                await financialService.deleteExpenseAndRevertMaterials(transaction.id);
+                            } else {
+                                await financialService.delete(transaction.id);
+                            }
+                            onRefresh();
+                        } catch (error: any) {
+                            Alert.alert('Erro', error?.message || 'Não foi possível excluir a despesa.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     return (
         <View className="flex-1">
             <View className="flex-row items-center justify-end px-4 mt-4 mb-2">
@@ -151,26 +183,34 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
                         <View className="p-8 items-center"><Text className="text-gray-400 italic">Nenhuma despesa encontrada</Text></View>
                     ) : (
                         filteredExpenses.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((transaction) => (
-                            <TouchableOpacity key={transaction.id} className="p-4 border-b border-gray-50 flex-row items-center justify-between active:bg-gray-50" onPress={() => handleExpensePress(transaction)}>
-                                <View className="flex-1 mr-4">
-                                    <View className="flex-row items-start gap-3">
-                                        <View className={`w-10 h-10 rounded-lg items-center justify-center ${transaction.category === 'Materiais' ? 'bg-orange-100' : 'bg-red-100'}`}>
-                                            {transaction.category === 'Materiais' ? <Package size={20} color="#F97316" /> : <ArrowDownRight size={20} color="#EF4444" />}
-                                        </View>
-                                        <View className="flex-1">
-                                            <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
-                                            <View className="flex-row items-center gap-2 mt-1">
-                                                <Text className="text-gray-400 text-xs">{formatDate(transaction.date)}</Text>
-                                                <View className="flex-row items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"><Text className="text-xs text-gray-500">{transaction.category || 'Geral'}</Text></View>
+                            <SwipeableTransactionItem
+                                key={transaction.id}
+                                transaction={transaction}
+                                onPress={() => handleExpensePress(transaction)}
+                                onEdit={() => handleEditExpense(transaction)}
+                                onDelete={() => handleDeleteExpense(transaction)}
+                            >
+                                <View className="p-4 border-b border-gray-50 flex-row items-center justify-between bg-white">
+                                    <View className="flex-1 mr-4">
+                                        <View className="flex-row items-start gap-3">
+                                            <View className={`w-10 h-10 rounded-lg items-center justify-center ${transaction.category === 'Materiais' ? 'bg-orange-100' : 'bg-red-100'}`}>
+                                                {transaction.category === 'Materiais' ? <Package size={20} color="#F97316" /> : <ArrowDownRight size={20} color="#EF4444" />}
+                                            </View>
+                                            <View className="flex-1">
+                                                <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
+                                                <View className="flex-row items-center gap-2 mt-1">
+                                                    <Text className="text-gray-400 text-xs">{formatDate(transaction.date)}</Text>
+                                                    <View className="flex-row items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"><Text className="text-xs text-gray-500">{transaction.category || 'Geral'}</Text></View>
+                                                </View>
                                             </View>
                                         </View>
                                     </View>
+                                    <View className="flex-row items-center gap-2">
+                                        <Text className="font-semibold text-red-500 whitespace-nowrap">- {formatCurrency(transaction.amount)}</Text>
+                                        <Eye size={16} color="#9CA3AF" />
+                                    </View>
                                 </View>
-                                <View className="flex-row items-center gap-2">
-                                    <Text className="font-semibold text-red-500 whitespace-nowrap">- {formatCurrency(transaction.amount)}</Text>
-                                    <Eye size={16} color="#9CA3AF" />
-                                </View>
-                            </TouchableOpacity>
+                            </SwipeableTransactionItem>
                         ))
                     )}
                 </View>
