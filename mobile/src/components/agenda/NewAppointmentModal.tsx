@@ -96,29 +96,55 @@ export function NewAppointmentModal({
       return;
     }
 
-    if (appointmentToEdit && onUpdate) {
-      await onUpdate(appointmentToEdit.id, {
-        patient_id: newAppointment.patientId,
-        time: newAppointment.time,
-        location: newAppointment.location,
-        notes: newAppointment.notes,
-        procedure_name: newAppointment.procedure,
-        date: appointmentToEdit.date, // Preserve date or allow change? Assuming same date for now or passed elsewhere
-      });
-    } else {
-      await onCreateAppointment({
-        patientId: newAppointment.patientId,
-        time: newAppointment.time,
-        location: newAppointment.location,
-        notes: newAppointment.notes,
-        procedure: newAppointment.procedure,
-      });
-    }
+    try {
+      if (appointmentToEdit && onUpdate) {
+        await onUpdate(appointmentToEdit.id, {
+          patient_id: newAppointment.patientId,
+          time: newAppointment.time,
+          location: newAppointment.location,
+          notes: newAppointment.notes,
+          procedure_name: newAppointment.procedure,
+          date: appointmentToEdit.date, // Preserve date or allow change? Assuming same date for now or passed elsewhere
+        });
+      } else {
+        await onCreateAppointment({
+          patientId: newAppointment.patientId,
+          time: newAppointment.time,
+          location: newAppointment.location,
+          notes: newAppointment.notes,
+          procedure: newAppointment.procedure,
+        });
+      }
 
-    // Reset handled by useEffect on prop change, but safe to clear here
-    if (!appointmentToEdit) {
-      setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
-      setPatientSearch('');
+      // Reset handled by useEffect on prop change, but safe to clear here
+      if (!appointmentToEdit) {
+        setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+        setPatientSearch('');
+      }
+    } catch (error: any) {
+      console.error('=== ERRO NO MODAL handleCreate ===');
+      console.error('Error type:', typeof error);
+      console.error('Error object:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error details:', error?.details);
+      console.error('Full error:', JSON.stringify(error, null, 2));
+      
+      let errorMessage = 'Não foi possível agendar a consulta';
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.details) {
+        errorMessage = `Erro: ${error.details}`;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.toString && typeof error.toString === 'function') {
+        errorMessage = error.toString();
+      } else {
+        errorMessage = `Erro desconhecido: ${JSON.stringify(error)}`;
+      }
+      
+      console.log('Mensagem de erro que será exibida no modal:', errorMessage);
+      Alert.alert('Erro', errorMessage);
     }
   };
 

@@ -139,8 +139,12 @@ export default function Agenda() {
         }
 
         try {
+            console.log('=== INICIANDO CRIAÇÃO DE AGENDAMENTO ===');
+            console.log('Appointment data:', appointment);
             const dateStr = selectedDate.toISOString().split('T')[0];
-            await appointmentsService.create({
+            console.log('Date string:', dateStr);
+            
+            const result = await appointmentsService.create({
                 patient_id: appointment.patientId,
                 date: dateStr,
                 time: appointment.time,
@@ -149,15 +153,40 @@ export default function Agenda() {
                 notes: appointment.notes || null,
                 procedure_name: appointment.procedure || null,
             });
+            
+            console.log('=== AGENDAMENTO CRIADO COM SUCESSO ===');
+            console.log('Result:', result);
 
             setShowModal(false);
             setEditingAppointment(null);
             loadAppointments();
             loadMonthDates();
             Alert.alert('Sucesso', 'Consulta agendada com sucesso!');
-        } catch (error) {
-            console.error('Error creating appointment:', error);
-            Alert.alert('Erro', 'Não foi possível agendar a consulta');
+        } catch (error: any) {
+            console.error('=== ERRO AO CRIAR AGENDAMENTO ===');
+            console.error('Error type:', typeof error);
+            console.error('Error object:', error);
+            console.error('Error message:', error?.message);
+            console.error('Error code:', error?.code);
+            console.error('Error details:', error?.details);
+            console.error('Error hint:', error?.hint);
+            console.error('Full error:', JSON.stringify(error, null, 2));
+            
+            let errorMessage = 'Não foi possível agendar a consulta';
+            if (error?.message) {
+                errorMessage = error.message;
+            } else if (error?.details) {
+                errorMessage = `Erro: ${error.details}`;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error?.toString && typeof error.toString === 'function') {
+                errorMessage = error.toString();
+            } else {
+                errorMessage = `Erro desconhecido: ${JSON.stringify(error)}`;
+            }
+            
+            console.log('Mensagem de erro que será exibida:', errorMessage);
+            Alert.alert('Erro', errorMessage);
         }
     };
 
