@@ -1,5 +1,5 @@
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, Switch, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { X, CreditCard, Layers, Trash, Check } from 'lucide-react-native';
+import { X, CreditCard, Layers, Trash, Check, Calendar } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 import { financialService } from '../../services/financial';
 import { FinancialTransaction } from '../../types/database';
@@ -18,6 +18,7 @@ import {
     extractPaymentMethod,
     parseExpenseDescription
 } from '../../utils/expense';
+import { DatePickerModal } from '../common/DatePickerModal';
 
 interface NewExpenseModalProps {
     visible: boolean;
@@ -44,6 +45,9 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
 
     // Edit Mode State
     const [updateAllRecurring, setUpdateAllRecurring] = useState(false);
+    
+    // Date Picker State
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -78,7 +82,9 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
 
     const resetForm = () => {
         setDescription('');
-        setDate('');
+        const today = new Date();
+        const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        setDate(todayStr);
         setValue('');
         setObservations('');
         setIsInstallment(false);
@@ -90,6 +96,24 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
     };
 
     const handleClose = () => { resetForm(); onClose(); };
+
+    const handleDateSelect = (selectedDate: Date) => {
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const year = selectedDate.getFullYear();
+        setDate(`${day}/${month}/${year}`);
+    };
+
+    const getDateFromString = (dateStr: string): Date => {
+        if (!dateStr || dateStr.length !== 10) {
+            return new Date();
+        }
+        const [day, month, year] = dateStr.split('/').map(Number);
+        if (day && month && year) {
+            return new Date(year, month - 1, day);
+        }
+        return new Date();
+    };
 
     const handleValueChange = (text: string) => {
         const rawValue = text.replace(/\D/g, '');
@@ -290,7 +314,15 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-sm font-semibold text-gray-700 mb-2">Data</Text>
-                                    <TextInput className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-900" placeholder="DD/MM/AAAA" keyboardType="numeric" maxLength={10} value={date} onChangeText={t => setDate(applyDateMask(t))} />
+                                    <TouchableOpacity
+                                        onPress={() => setShowDatePicker(true)}
+                                        className="bg-gray-50 border border-gray-200 rounded-xl p-3 flex-row items-center justify-between"
+                                    >
+                                        <Text className={`text-gray-900 ${!date ? 'text-gray-400' : ''}`}>
+                                            {date || 'DD/MM/AAAA'}
+                                        </Text>
+                                        <Calendar size={20} color="#6B7280" />
+                                    </TouchableOpacity>
                                 </View>
                             </View>
                         ) : (
@@ -369,6 +401,14 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                     </View>
                 </KeyboardAvoidingView>
             </View>
+            
+            {/* Date Picker Modal */}
+            <DatePickerModal
+                visible={showDatePicker}
+                onClose={() => setShowDatePicker(false)}
+                onSelectDate={handleDateSelect}
+                initialDate={date ? getDateFromString(date) : new Date()}
+            />
         </Modal>
     );
 }
