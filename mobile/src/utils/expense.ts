@@ -1,5 +1,6 @@
 export const EXPENSE_CATEGORIES: string[] = [
     'Materiais',
+    'Equipamento',
     'Laboratório',
     'Manutenção',
     'Aluguel/Condomínio',

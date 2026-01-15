@@ -58,28 +58,99 @@
 | **Variáveis de ambiente** | Usar `.env` para todas as credenciais (Supabase URL, keys). |
 
 ## 6️⃣ Funcionalidades Adicionais (Sugestões)
-| Funcionalidade | Descrição | Benefício |
-|----------------|-----------|-----------|
-| **Suporte Offline (Mobile)** | Cachear dados localmente e sincronizar quando online. | Uso em áreas com conexão instável. |
-| **Exportação de dados** | Permitir exportar pacientes, consultas e finanças para CSV/PDF. | Relatórios e backup local. |
-| **Busca global** | Barra de busca unificada para pacientes, consultas e procedimentos. | Navegação mais rápida. |
-| **Notificações Push** | Lembrar consultas e aniversários via notificação no dispositivo. | Engajamento e retenção. |
-| **Integração com calendário** | Sincronizar consultas com Google Calendar / Apple Calendar. | Evitar conflitos de agenda. |
-| **Multi-usuário / Clínicas** | Permitir múltiplos profissionais com permissões diferentes. | Escalabilidade para clínicas maiores. |
-| **Relatórios e Analytics** | Dashboard com gráficos de receita, pacientes atendidos, procedimentos mais realizados. | Tomada de decisão baseada em dados. |
-| **Impressão de orçamentos** | Gerar PDF do orçamento para entregar ao paciente. | Profissionalismo no atendimento. |
+| Funcionalidade | Descrição | Benefício | Status |
+|----------------|-----------|-----------|--------|
+| **Suporte Offline (Mobile)** | Cachear dados localmente e sincronizar quando online. | Uso em áreas com conexão instável. | ⏳ Pendente |
+| **Exportação de dados** | Permitir exportar pacientes, consultas e finanças para CSV/PDF. | Relatórios e backup local. | ⏳ Pendente |
+| **Busca global** | Barra de busca unificada para pacientes, consultas e procedimentos. | Navegação mais rápida. | ⏳ Pendente |
+| **Notificações Push** | Lembrar consultas e aniversários via notificação no dispositivo. | Engajamento e retenção. | ⏳ Pendente |
+| **Integração com calendário** | Sincronizar consultas com Google Calendar / Apple Calendar. | Evitar conflitos de agenda. | ⏳ Pendente |
+| **Multi-usuário / Clínicas** | ✅ Feito | Sistema multi-tenant implementado com `clinic_id` e RLS. | ✅ Implementado |
+| **Relatórios e Analytics** | Dashboard com gráficos de receita, pacientes atendidos, procedimentos mais realizados. | Tomada de decisão baseada em dados. | ⏳ Pendente |
+| **Impressão de orçamentos** | Gerar PDF do orçamento para entregar ao paciente. | Profissionalismo no atendimento. | ⏳ Pendente |
+| **Swipe para editar/excluir** | ✅ Feito | Gestos de swipe em despesas/receitas (estilo WhatsApp). | ✅ Implementado |
+| **Calendário para seleção de data** | ✅ Feito | DatePickerModal para facilitar seleção de datas. | ✅ Implementado |
+| **Modal de pagamento para despesas** | ✅ Feito | ExpensePaymentModal simplificado (sem descontos/taxas). | ✅ Implementado |
+| **Parcelamento de despesas** | ✅ Feito | Suporte a parcelamento (até 50x) com juros para Crédito e Boleto. | ✅ Implementado |
+| **Exibição de informações de pagamento** | ✅ Feito | Cards mostram forma de pagamento e parcela (ex: 1/3, 2/3). | ✅ Implementado |
 
 ---
 
 ## 📌 Próximos passos recomendados (prioridade)
+
+### ✅ Funcionalidades Recentes Implementadas
+- ✅ **Swipe para editar/excluir** - Gestos de swipe em despesas e receitas
+- ✅ **Calendário de seleção de data** - DatePickerModal para facilitar entrada de datas
+- ✅ **Modal de pagamento para despesas** - ExpensePaymentModal simplificado
+- ✅ **Parcelamento de despesas** - Suporte a até 50 parcelas com juros
+- ✅ **Exibição de informações de pagamento** - Cards mostram forma de pagamento e parcela
+
+### 🔄 Melhorias Prioritárias
+
 1. ~~**Segurança**~~ ✅ (Concluída: Sanitização, RLS, Env Vars, Audit).
-2. **Acessibilidade** – Corrigir contraste, adicionar atributos ARIA e garantir navegação por teclado.
-3. **Performance** – Implementar lazy loading de rotas, cachear dados com react-query, adicionar paginação.
-4. **Qualidade de código** – Centralizar tratamento de erros, extrair utilitários, reduzir duplicação web/mobile.
-5. **Testes** – Criar suite de testes unitários e de integração para componentes críticos.
-6. **CI/CD** – Configurar pipeline de lint, testes e deploy automático (Expo + Vercel).
-7. **UX refinado** – Implementar Dark Mode, dividir formulários extensos, melhorar feedback visual.
-8. **Documentação** – Atualizar README, organizar migrações Supabase, documentar arquitetura.
+2. **Validação Estrita** – Ativar `STRICT_VALIDATION = true` em `validation.ts` após testes completos.
+3. **Acessibilidade** – Corrigir contraste, adicionar atributos ARIA e garantir navegação por teclado.
+4. **Performance** – Implementar lazy loading de rotas, cachear dados com react-query, adicionar paginação.
+5. **Qualidade de código** – Centralizar tratamento de erros, extrair utilitários, reduzir duplicação web/mobile.
+6. **Testes** – Criar suite de testes unitários e de integração para componentes críticos.
+7. **CI/CD** – Configurar pipeline de lint, testes e deploy automático (Expo + Vercel).
+8. **UX refinado** – Implementar Dark Mode, dividir formulários extensos, melhorar feedback visual.
+9. **Documentação** – Atualizar README, organizar migrações Supabase, documentar arquitetura.
+
+### 🎯 Melhorias de Performance Específicas
+- [ ] **Paginação nas listas** - Implementar paginação em pacientes, despesas, receitas
+- [ ] **Cache de imagens** - Otimizar carregamento de imagens de exames/documentos
+- [ ] **Lazy loading** - Carregar componentes pesados sob demanda
+- [ ] **Pull-to-refresh** - Adicionar em todas as listas principais
+
+### 🎨 Melhorias de UX/UI
+- [ ] **Feedback visual consistente** - Loading states uniformes em todos os botões
+- [ ] **Animações de transição** - Transições suaves entre telas
+- [ ] **Busca/filtro avançado** - Filtros mais robustos em listas grandes
+- [ ] **Modo offline básico** - Cache local para funcionalidades críticas
+
+### 🔒 Melhorias de Segurança e Validação
+- [ ] **Ativar validação estrita** - `STRICT_VALIDATION = true` após testes
+- [ ] **Validação de CPF/CNPJ robusta** - Implementar algoritmo de validação completo
+- [ ] **Validação de email rigorosa** - Regex mais específica
+- [ ] **Sanitização de inputs** - Garantir que todos os inputs sejam sanitizados
+
+### 📊 Funcionalidades Adicionais
+- [ ] **Exportação de relatórios** - PDF/Excel para relatórios financeiros
+- [ ] **Backup automático** - Backup periódico de dados críticos
+- [ ] **Notificações push** - Lembretes de consultas e aniversários
+- [ ] **Busca global** - Busca unificada em pacientes, consultas, procedimentos
+- [ ] **Analytics básico** - Métricas de uso e performance (opcional)
+
+### 🧪 Testes e Qualidade
+- [ ] **Testes unitários** - Funções críticas (formatação, validação, cálculos)
+- [ ] **Testes de integração** - Fluxos principais (criar paciente, agendar consulta)
+- [ ] **Testes E2E** - Cenários críticos end-to-end
+- [ ] **Testes de dispositivos** - iOS/Android, diferentes tamanhos de tela
+
+### 📝 Documentação
+- [ ] **README atualizado** - Instruções de setup completas
+- [ ] **Documentação de API** - Se houver endpoints customizados
+- [ ] **Guia de uso** - Para usuários finais
+- [ ] **Changelog** - Histórico de mudanças e versões
+
+### 🐛 Ajustes Finais
+- [ ] **Tratamento de erros de rede** - Retry automático, mensagens claras
+- [ ] **Logs estruturados** - Para debugging em produção
+- [ ] **Performance com muitos dados** - Otimizar queries e renderização
+- [ ] **Cenários de erro** - Testar sem internet, timeout, dados inválidos
+
+---
+
+## 📅 Histórico de Implementações Recentes
+
+### Dezembro 2024
+- ✅ **Swipe para editar/excluir** - Implementado gesto de swipe em despesas e receitas (estilo WhatsApp)
+- ✅ **Calendário de seleção de data** - DatePickerModal criado para facilitar entrada de datas em despesas
+- ✅ **Modal de pagamento para despesas** - ExpensePaymentModal simplificado (sem descontos/taxas, apenas forma de pagamento)
+- ✅ **Parcelamento de despesas** - Suporte a até 50 parcelas com juros para Crédito e Boleto
+- ✅ **Exibição de informações de pagamento** - Cards mostram forma de pagamento e parcela (ex: 1/3, 2/3, 3/3)
+- ✅ **Integração de pagamento no fluxo de materiais** - Modal de pagamento abre automaticamente ao confirmar compra de materiais
 
 ---
 
