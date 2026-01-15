@@ -4,6 +4,7 @@ import { X, Calendar, Tag, Receipt, Package, Pencil, Trash2 } from 'lucide-react
 import { FinancialTransaction } from '../../types/database';
 import { financialService } from '../../services/financial';
 import { formatCurrency } from '../../utils/expense';
+import { formatDate } from '../../utils/financial';
 
 interface ExpenseDetailModalProps {
     visible: boolean;
@@ -80,7 +81,7 @@ export function ExpenseDetailModal({
                             <View className="flex-row items-center gap-3">
                                 <Calendar size={16} color="#6B7280" />
                                 <Text className="text-sm text-gray-700">
-                                    {new Date(expense.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                    {formatDate(expense.date)}
                                 </Text>
                             </View>
                             {expense.category && (

@@ -7,6 +7,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { ExpenseFilterModal, FilterState } from './ExpenseFilterModal';
 import { ExpenseDetailModal } from './ExpenseDetailModal';
 import { formatCurrency as formatCurrencyUtil } from '../../utils/expense';
+import { formatDate } from '../../utils/financial';
 
 interface ExpensesTabProps {
     transactions: FinancialTransaction[];
@@ -159,7 +160,7 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
                                         <View className="flex-1">
                                             <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
                                             <View className="flex-row items-center gap-2 mt-1">
-                                                <Text className="text-gray-400 text-xs">{new Date(transaction.date).toLocaleDateString('pt-BR')}</Text>
+                                                <Text className="text-gray-400 text-xs">{formatDate(transaction.date)}</Text>
                                                 <View className="flex-row items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"><Text className="text-xs text-gray-500">{transaction.category || 'Geral'}</Text></View>
                                             </View>
                                         </View>

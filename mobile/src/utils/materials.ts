@@ -16,6 +16,15 @@ export const formatDate = (dateStr: string) => {
     });
 };
 
+// Get local date in YYYY-MM-DD format (without timezone conversion)
+export const getLocalDateString = (date?: Date): string => {
+    const d = date || new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 export const formatCurrencyInput = (text: string) => {
     const raw = text.replace(/\D/g, '');
     const val = Number(raw) / 100;

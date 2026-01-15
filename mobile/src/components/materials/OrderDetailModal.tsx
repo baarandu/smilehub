@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, Modal, ScrollView, TouchableOpacity } from 'react-native';
-import { X, Store } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { X, Store, Package } from 'lucide-react-native';
 import { ShoppingOrder } from '../../types/materials';
 import { formatCurrency, formatDate } from '../../utils/materials';
 import { materialsStyles as styles } from '../../styles/materials';
@@ -9,14 +9,22 @@ interface OrderDetailModalProps {
     visible: boolean;
     onClose: () => void;
     order: ShoppingOrder | null;
+    onReopenOrder?: (order: ShoppingOrder) => Promise<void>;
+    hasExpense?: boolean;
+    checkingExpense?: boolean;
 }
 
 export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     visible,
     onClose,
-    order
+    order,
+    onReopenOrder,
+    hasExpense = false,
+    checkingExpense = false
 }) => {
     if (!order) return null;
+
+    const showReopenButton = order.status === 'completed' && onReopenOrder;
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
@@ -79,6 +87,28 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 </View>
                             </View>
                         ))}
+
+                        {/* Reopen Order Button - Only for completed orders */}
+                        {showReopenButton && (
+                            <View style={{ marginTop: 16, marginBottom: 8 }}>
+                                {checkingExpense ? (
+                                    <View style={[styles.recreateButton, { opacity: 0.6, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }]}>
+                                        <ActivityIndicator size="small" color="#0D9488" />
+                                        <Text style={styles.recreateButtonText}>Verificando...</Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity 
+                                        onPress={() => onReopenOrder?.(order)} 
+                                        style={[styles.recreateButton, { backgroundColor: '#0D9488' }]}
+                                    >
+                                        <Package size={18} color="#FFFFFF" />
+                                        <Text style={styles.recreateButtonText}>
+                                            {hasExpense ? 'Reabrir e Editar Pedido' : 'Reabrir Pedido'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
 
                         <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
                             <Text style={styles.cancelButtonText}>Fechar</Text>

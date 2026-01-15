@@ -13,7 +13,7 @@ import { OrderCard, AddItemModal, CheckoutModal, OrderDetailModal } from '../../
 
 // Types, Utils and Styles
 import { ShoppingItem, ShoppingOrder } from '../../src/types/materials';
-import { formatCurrency } from '../../src/utils/materials';
+import { formatCurrency, getLocalDateString } from '../../src/utils/materials';
 import { materialsStyles as styles } from '../../src/styles/materials';
 
 export default function Materials() {
@@ -40,6 +40,10 @@ export default function Materials() {
     // Checkout State
     const [loading, setLoading] = useState(false);
     const [excludedItemIds, setExcludedItemIds] = useState<Set<string>>(new Set());
+    
+    // Expense check state
+    const [hasExpense, setHasExpense] = useState(false);
+    const [checkingExpense, setCheckingExpense] = useState(false);
 
     // Load Orders
     const loadOrders = useCallback(async () => {
@@ -217,6 +221,92 @@ export default function Materials() {
         ]);
     };
 
+    const checkIfExpenseExists = async (orderId: string): Promise<boolean> => {
+        try {
+            const { data, error } = await supabase
+                .from('financial_transactions')
+                .select('id')
+                .eq('related_entity_id', orderId)
+                .eq('category', 'Materiais')
+                .eq('type', 'expense')
+                .maybeSingle();
+            
+            if (error) {
+                console.error('Error checking expense:', error);
+                return false;
+            }
+            
+            return !!data;
+        } catch (error) {
+            console.error('Error checking expense:', error);
+            return false;
+        }
+    };
+
+    const handleReopenOrder = async (order: ShoppingOrder) => {
+        try {
+            setLoading(true);
+            
+            // Check if expense already exists
+            const expenseExists = await checkIfExpenseExists(order.id);
+            if (expenseExists) {
+                Alert.alert(
+                    'Aviso', 
+                    'Já existe uma despesa associada a este pedido. Deseja mesmo reabrir o pedido?',
+                    [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                            text: 'Reabrir',
+                            onPress: async () => {
+                                await reopenOrderToPending(order);
+                            }
+                        }
+                    ]
+                );
+                return;
+            }
+
+            await reopenOrderToPending(order);
+        } catch (error: any) {
+            console.error('Error reopening order:', error);
+            Alert.alert('Erro', error?.message || 'Falha ao reabrir pedido.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const reopenOrderToPending = async (order: ShoppingOrder) => {
+        try {
+            // Revert order to pending status
+            await (supabase.from('shopping_orders') as any)
+                .update({
+                    status: 'pending',
+                    completed_at: null
+                })
+                .eq('id', order.id);
+
+            // Load order items into editing state
+            setItems(order.items);
+            setCurrentOrderId(order.id);
+            
+            // Switch to pending tab
+            setActiveTab('pending');
+            
+            // Close detail modal
+            setDetailModalVisible(false);
+            setSelectedOrder(null);
+            setHasExpense(false);
+            
+            // Reload orders to update the lists
+            await loadOrders();
+            
+            Alert.alert('Sucesso', 'Pedido reaberto! Você pode editar os itens e confirmar a compra novamente.');
+        } catch (error: any) {
+            console.error('Error reopening order:', error);
+            throw error;
+        }
+    };
+
     const handleToggleExcludedItem = (itemId: string) => {
         setExcludedItemIds(prev => {
             const newSet = new Set(prev);
@@ -276,9 +366,8 @@ export default function Materials() {
                 }
             }
 
-            // Create expense
-            const today = new Date();
-            const dbDate = today.toISOString().split('T')[0];
+            // Create expense - use local date to avoid timezone issues
+            const dbDate = getLocalDateString();
             const itemsDesc = purchasedItems.map(i =>
                 `${i.name} (${i.quantity}x ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
             ).join(' | ');
@@ -451,9 +540,16 @@ export default function Materials() {
                         <OrderCard
                             order={item}
                             showDelete={true}
-                            onPress={() => {
+                            onPress={async () => {
                                 setSelectedOrder(item);
                                 setDetailModalVisible(true);
+                                // Check if expense exists when opening modal
+                                if (item.status === 'completed') {
+                                    setCheckingExpense(true);
+                                    const exists = await checkIfExpenseExists(item.id);
+                                    setHasExpense(exists);
+                                    setCheckingExpense(false);
+                                }
                             }}
                             onDelete={() => handleDeleteOrder(item.id)}
                         />
@@ -556,8 +652,12 @@ export default function Materials() {
                 onClose={() => {
                     setDetailModalVisible(false);
                     setSelectedOrder(null);
+                    setHasExpense(false);
                 }}
                 order={selectedOrder}
+                onReopenOrder={handleReopenOrder}
+                hasExpense={hasExpense}
+                checkingExpense={checkingExpense}
             />
         </SafeAreaView>
     );

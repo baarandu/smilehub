@@ -79,4 +79,6 @@ export const materialsStyles = StyleSheet.create({
     detailItemInfo: { alignItems: 'center' },
     detailItemLabel: { fontSize: 12, color: '#6b7280' },
     detailItemValue: { fontSize: 14, color: '#111827' },
+    recreateButton: { padding: 16, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    recreateButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
 });
