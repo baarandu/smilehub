@@ -25,6 +25,11 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "vitor_cb@hotmail.com",
+        "ascAppId": "6756842105"
+      }
+    }
   }
 }
