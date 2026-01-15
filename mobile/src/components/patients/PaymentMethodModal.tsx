@@ -4,7 +4,7 @@ import { X, CreditCard, Banknote, Wallet, Landmark, ArrowRight, Calendar, PiggyB
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig, FinancialSettings } from '../../types/database';
 
-interface PaymentTransaction {
+export interface PaymentTransaction {
     date: string; // YYYY-MM-DD
     amount: number;
     method: string;
@@ -242,6 +242,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'pix', label: 'PIX', icon: Banknote },
         { id: 'cash', label: 'Dinheiro', icon: Wallet },
         { id: 'transfer', label: 'Transf.', icon: Landmark },
+        { id: 'boleto', label: 'Boleto', icon: Receipt },
     ];
 
     const allBrands = [

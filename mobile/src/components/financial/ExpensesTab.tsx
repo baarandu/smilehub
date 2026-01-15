@@ -198,9 +198,42 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
                                             </View>
                                             <View className="flex-1">
                                                 <Text className="font-medium text-gray-900" numberOfLines={1}>{transaction.description}</Text>
-                                                <View className="flex-row items-center gap-2 mt-1">
+                                                <View className="flex-row items-center gap-2 mt-1 flex-wrap">
                                                     <Text className="text-gray-400 text-xs">{formatDate(transaction.date)}</Text>
                                                     <View className="flex-row items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"><Text className="text-xs text-gray-500">{transaction.category || 'Geral'}</Text></View>
+                                                    {(transaction as any).payment_method && (
+                                                        <View className="flex-row items-center gap-1 bg-blue-100 px-1.5 py-0.5 rounded">
+                                                            <Text className="text-xs text-blue-700">
+                                                                {((transaction as any).payment_method === 'credit' ? 'Crédito' :
+                                                                  (transaction as any).payment_method === 'debit' ? 'Débito' :
+                                                                  (transaction as any).payment_method === 'pix' ? 'PIX' :
+                                                                  (transaction as any).payment_method === 'cash' ? 'Dinheiro' :
+                                                                  (transaction as any).payment_method === 'transfer' ? 'Transferência' :
+                                                                  (transaction as any).payment_method === 'boleto' ? 'Boleto' :
+                                                                  (transaction as any).payment_method) || ''}
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                    {(transaction as any).recurrence_id && (() => {
+                                                        // Extract installment info from description (format: " (1/3)" or " (1/3) - VISA")
+                                                        const installmentMatch = transaction.description.match(/\((\d+)\/(\d+)\)/);
+                                                        if (installmentMatch) {
+                                                            const current = installmentMatch[1];
+                                                            const total = installmentMatch[2];
+                                                            return (
+                                                                <View className="flex-row items-center gap-1 bg-purple-100 px-1.5 py-0.5 rounded">
+                                                                    <Text className="text-xs text-purple-700 font-medium">
+                                                                        {current}/{total}
+                                                                    </Text>
+                                                                </View>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <View className="flex-row items-center gap-1 bg-purple-100 px-1.5 py-0.5 rounded">
+                                                                <Text className="text-xs text-purple-700">Parcelado</Text>
+                                                            </View>
+                                                        );
+                                                    })()}
                                                 </View>
                                             </View>
                                         </View>

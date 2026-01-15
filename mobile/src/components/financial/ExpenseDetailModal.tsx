@@ -92,6 +92,34 @@ export function ExpenseDetailModal({
                                     </View>
                                 </View>
                             )}
+                            {(expense as any).payment_method && (
+                                <View className="flex-row items-center gap-3">
+                                    <Receipt size={16} color="#6B7280" />
+                                    <View className="bg-blue-100 px-2 py-1 rounded">
+                                        <Text className="text-xs text-blue-700 font-medium">
+                                            Forma de Pagamento: {
+                                                (expense as any).payment_method === 'credit' ? 'Crédito' :
+                                                (expense as any).payment_method === 'debit' ? 'Débito' :
+                                                (expense as any).payment_method === 'pix' ? 'PIX' :
+                                                (expense as any).payment_method === 'cash' ? 'Dinheiro' :
+                                                (expense as any).payment_method === 'transfer' ? 'Transferência' :
+                                                (expense as any).payment_method === 'boleto' ? 'Boleto' :
+                                                (expense as any).payment_method
+                                            }
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
+                            {(expense as any).recurrence_id && (
+                                <View className="flex-row items-center gap-3">
+                                    <Calendar size={16} color="#6B7280" />
+                                    <View className="bg-purple-100 px-2 py-1 rounded">
+                                        <Text className="text-xs text-purple-700 font-medium">
+                                            Compra Parcelada
+                                        </Text>
+                                    </View>
+                                </View>
+                            )}
                             <View className="flex-row items-center gap-3">
                                 <Receipt size={16} color="#6B7280" />
                                 <Text className="text-sm text-gray-700 flex-1">
