@@ -42,6 +42,8 @@ export default function Alerts() {
     const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
 
+    const [customTemplates, setCustomTemplates] = useState<{ id: string; title: string; message: string }[]>([]);
+
     useEffect(() => {
         loadData();
         loadTemplates();
@@ -58,9 +60,14 @@ export default function Alerts() {
             const storedBirthday = await AsyncStorage.getItem('TEMPLATE_BIRTHDAY');
             const storedReturn = await AsyncStorage.getItem('TEMPLATE_RETURN');
             const storedConfirmation = await AsyncStorage.getItem('TEMPLATE_CONFIRMATION');
+            const storedCustom = await AsyncStorage.getItem('TEMPLATE_CUSTOM');
+
             setBirthdayTemplate(storedBirthday || DEFAULT_BIRTHDAY_MSG);
             setReturnTemplate(storedReturn || DEFAULT_RETURN_MSG);
             setConfirmationTemplate(storedConfirmation || DEFAULT_CONFIRMATION_MSG);
+            if (storedCustom) {
+                setCustomTemplates(JSON.parse(storedCustom));
+            }
         } catch (error) {
             console.error('Error loading templates:', error);
         }
@@ -71,6 +78,7 @@ export default function Alerts() {
             await AsyncStorage.setItem('TEMPLATE_BIRTHDAY', birthdayTemplate);
             await AsyncStorage.setItem('TEMPLATE_RETURN', returnTemplate);
             await AsyncStorage.setItem('TEMPLATE_CONFIRMATION', confirmationTemplate);
+            await AsyncStorage.setItem('TEMPLATE_CUSTOM', JSON.stringify(customTemplates));
             setShowTemplatesModal(false);
             RNAlert.alert('Sucesso', 'Mensagens salvas com sucesso!');
         } catch (error) {
@@ -560,6 +568,8 @@ export default function Alerts() {
                 setReturnTemplate={setReturnTemplate}
                 confirmationTemplate={confirmationTemplate}
                 setConfirmationTemplate={setConfirmationTemplate}
+                customTemplates={customTemplates}
+                setCustomTemplates={setCustomTemplates}
                 onSendTemplate={initiateSendMessage}
             />
 

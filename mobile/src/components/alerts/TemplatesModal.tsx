@@ -1,7 +1,13 @@
 import React from 'react';
-import { View, Text, Modal, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Modal, TextInput, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Gift, Clock, Bell, MessageCircle } from 'lucide-react-native';
+import { Gift, Clock, Bell, MessageCircle, Plus, Trash2, FileText } from 'lucide-react-native';
+
+export interface CustomTemplate {
+    id: string;
+    title: string;
+    message: string;
+}
 
 interface TemplatesModalProps {
     visible: boolean;
@@ -13,6 +19,8 @@ interface TemplatesModalProps {
     setReturnTemplate: (value: string) => void;
     confirmationTemplate: string;
     setConfirmationTemplate: (value: string) => void;
+    customTemplates: CustomTemplate[];
+    setCustomTemplates: (templates: CustomTemplate[]) => void;
     onSendTemplate: (template: string) => void;
 }
 
@@ -26,8 +34,42 @@ export function TemplatesModal({
     setReturnTemplate,
     confirmationTemplate,
     setConfirmationTemplate,
+    customTemplates,
+    setCustomTemplates,
     onSendTemplate
 }: TemplatesModalProps) {
+    const handleAddTemplate = () => {
+        const newTemplate: CustomTemplate = {
+            id: Date.now().toString(),
+            title: '',
+            message: ''
+        };
+        setCustomTemplates([...customTemplates, newTemplate]);
+    };
+
+    const handleUpdateTemplate = (id: string, field: 'title' | 'message', value: string) => {
+        setCustomTemplates(customTemplates.map(t =>
+            t.id === id ? { ...t, [field]: value } : t
+        ));
+    };
+
+    const handleDeleteTemplate = (id: string) => {
+        Alert.alert(
+            'Excluir modelo',
+            'Tem certeza que deseja excluir este modelo?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: () => {
+                        setCustomTemplates(customTemplates.filter(t => t.id !== id));
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <Modal
             visible={visible}
@@ -52,6 +94,69 @@ export function TemplatesModal({
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-6">
+                        {/* Mensagens Personalizadas */}
+                        <View className="mb-8">
+                            <View className="flex-row justify-between items-center mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Mensagens Personalizadas</Text>
+                                <TouchableOpacity
+                                    onPress={handleAddTemplate}
+                                    className="flex-row items-center gap-1 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100"
+                                >
+                                    <Plus size={16} color="#0D9488" />
+                                    <Text className="text-teal-700 font-bold text-xs">Nova Mensagem</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {customTemplates.length === 0 ? (
+                                <View className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-6 items-center justify-center mb-4">
+                                    <Text className="text-gray-400 text-center text-sm">
+                                        Crie modelos personalizados para agilizar sua comunicação.
+                                    </Text>
+                                </View>
+                            ) : (
+                                <View className="gap-4">
+                                    {customTemplates.map((template) => (
+                                        <View key={template.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                                            <View className="flex-row items-center gap-2 mb-3">
+                                                <FileText size={18} color="#6B7280" />
+                                                <TextInput
+                                                    className="flex-1 font-bold text-gray-900 border-b border-gray-200 py-1"
+                                                    placeholder="Título da mensagem (ex: Orientações pós-cirurgia)"
+                                                    value={template.title}
+                                                    onChangeText={(text) => handleUpdateTemplate(template.id, 'title', text)}
+                                                />
+                                                <TouchableOpacity onPress={() => handleDeleteTemplate(template.id)} className="p-1">
+                                                    <Trash2 size={18} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            </View>
+
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-gray-900 h-24 text-top mb-3"
+                                                multiline
+                                                textAlignVertical="top"
+                                                value={template.message}
+                                                onChangeText={(text) => handleUpdateTemplate(template.id, 'message', text)}
+                                                placeholder="Digite o conteúdo da mensagem..."
+                                            />
+
+                                            <View className="flex-row justify-end">
+                                                <TouchableOpacity
+                                                    onPress={() => onSendTemplate(template.message)}
+                                                    className="bg-teal-100 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+                                                    disabled={!template.message.trim()}
+                                                >
+                                                    <MessageCircle size={14} color="#0D9488" />
+                                                    <Text className="text-xs font-bold text-teal-700">Testar Envio</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+
+                        <View className="h-px bg-gray-200 mb-6" />
+
                         <View className="mb-6">
                             <View className="flex-row justify-between items-center mb-2">
                                 <Text className="text-sm font-bold text-gray-900 flex-row items-center gap-2">
