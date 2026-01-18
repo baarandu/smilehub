@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useReturnAlerts } from '@/hooks/useConsultations';
-import { useAppointmentsByDate } from '@/hooks/useAppointments';
+import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders, useDismissAlert } from '@/hooks/useAlerts';
 import { remindersService, Reminder } from '@/services/reminders';
 import { getPatients } from '@/services/patients';
@@ -33,6 +33,7 @@ export default function Alerts() {
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const dismissAlert = useDismissAlert();
   const { data: tomorrowAppointments, isLoading: loadingTomorrow } = useAppointmentsByDate(tomorrowStr);
+  const updateAppointmentStatus = useUpdateAppointmentStatus();
 
   // Template State
   const [birthdayTemplate, setBirthdayTemplate] = useState('');
@@ -659,14 +660,38 @@ export default function Alerts() {
                       <p className="text-sm text-muted-foreground">{appointment.patients?.phone}</p>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    className="bg-teal-500 hover:bg-teal-600 border-teal-600 gap-2 text-white"
-                    onClick={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Confirmar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-teal-200 text-teal-700 hover:bg-teal-50 gap-2"
+                      onClick={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Enviar Mensagem
+                    </Button>
+                    {appointment.status !== 'confirmed' && (
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 gap-2 text-white"
+                        onClick={() => {
+                          if (confirm(`Deseja confirmar a consulta de ${appointment.patients?.name}?`)) {
+                            updateAppointmentStatus.mutate({ id: appointment.id, status: 'confirmed' }, {
+                              onSuccess: () => toast.success('Consulta confirmada!')
+                            });
+                          }
+                        }}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Confirmar
+                      </Button>
+                    )}
+                    {appointment.status === 'confirmed' && (
+                      <span className="text-xs font-semibold text-green-600 px-2 py-1 bg-green-50 rounded-full flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Confirmada
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

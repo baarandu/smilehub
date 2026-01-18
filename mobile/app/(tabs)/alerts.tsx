@@ -384,37 +384,44 @@ export default function Alerts() {
                                                     onPress={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
                                                 >
                                                     <MessageCircle size={18} color="white" />
-                                                    <Text className="text-white font-medium">WhatsApp</Text>
+                                                    <Text className="text-white font-medium">Enviar Mensagem</Text>
                                                 </TouchableOpacity>
 
-                                                <TouchableOpacity
-                                                    className="flex-1 bg-green-600 rounded-lg py-2 flex-row justify-center items-center gap-2"
-                                                    onPress={() => {
-                                                        RNAlert.alert(
-                                                            'Confirmar Presença',
-                                                            'Deseja confirmar o agendamento deste paciente?',
-                                                            [
-                                                                { text: 'Cancelar', style: 'cancel' },
-                                                                {
-                                                                    text: 'Confirmar',
-                                                                    onPress: async () => {
-                                                                        try {
-                                                                            await appointmentsService.update(appointment.id, { status: 'confirmed' });
-                                                                            RNAlert.alert('Sucesso', 'Agendamento confirmado!');
-                                                                            loadData(); // Refresh list to remove the confirmed item if needed, or update UI
-                                                                        } catch (error) {
-                                                                            console.error('Error confirming appointment:', error);
-                                                                            RNAlert.alert('Erro', 'Não foi possível confirmar o agendamento.');
+                                                {appointment.status !== 'confirmed' ? (
+                                                    <TouchableOpacity
+                                                        className="flex-1 bg-green-600 rounded-lg py-2 flex-row justify-center items-center gap-2"
+                                                        onPress={() => {
+                                                            RNAlert.alert(
+                                                                'Confirmar Presença',
+                                                                'Deseja confirmar o agendamento deste paciente?',
+                                                                [
+                                                                    { text: 'Cancelar', style: 'cancel' },
+                                                                    {
+                                                                        text: 'Confirmar',
+                                                                        onPress: async () => {
+                                                                            try {
+                                                                                await appointmentsService.update(appointment.id, { status: 'confirmed' });
+                                                                                RNAlert.alert('Sucesso', 'Agendamento confirmado!');
+                                                                                loadData();
+                                                                            } catch (error) {
+                                                                                console.error('Error confirming appointment:', error);
+                                                                                RNAlert.alert('Erro', 'Não foi possível confirmar o agendamento.');
+                                                                            }
                                                                         }
                                                                     }
-                                                                }
-                                                            ]
-                                                        );
-                                                    }}
-                                                >
-                                                    <CheckCircle size={18} color="white" />
-                                                    <Text className="text-white font-medium">Confirmar</Text>
-                                                </TouchableOpacity>
+                                                                ]
+                                                            );
+                                                        }}
+                                                    >
+                                                        <CheckCircle size={18} color="white" />
+                                                        <Text className="text-white font-medium">Confirmar</Text>
+                                                    </TouchableOpacity>
+                                                ) : (
+                                                    <View className="flex-1 bg-green-50 border border-green-200 rounded-lg py-2 flex-row justify-center items-center gap-2">
+                                                        <CheckCircle size={18} color="#059669" />
+                                                        <Text className="text-green-700 font-bold">Confirmada</Text>
+                                                    </View>
+                                                )}
                                             </View>
                                         </View>
                                     ))}
