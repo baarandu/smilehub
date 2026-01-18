@@ -79,7 +79,7 @@ export function usePatientPayments(
     };
 
     const handleConfirmPayment = async (
-        selectedPaymentItem: { budgetId: string; toothIndex: number; tooth: ToothEntry },
+        selectedPaymentItem: { budgetId: string; toothIndex: number; tooth: ToothEntry; budgetDate?: string },
         method: string,
         transactions?: Transaction[],
         brand?: string,
@@ -121,7 +121,11 @@ export function usePatientPayments(
                 credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
             };
             const methodLabel = methodLabels[method] || method;
-            const paymentTag = brand ? `(${methodLabel} - ${brand.toUpperCase()})` : `(${methodLabel})`;
+
+            const isCard = method === 'credit' || method === 'debit';
+            const displayBrand = isCard && brand ? brand : null;
+
+            const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
             const descriptionBase = `${selectedTooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedTooth.tooth)} - ${patient?.name}`;
 
             if (transactions && transactions.length > 0) {
@@ -191,12 +195,15 @@ export function usePatientPayments(
                     };
                 }
 
+                const budgetDate = selectedPaymentItem.budgetDate ? new Date(selectedPaymentItem.budgetDate + 'T12:00:00') : new Date();
+                const dateStr = isNaN(budgetDate.getTime()) ? new Date().toISOString().split('T')[0] : budgetDate.toISOString().split('T')[0];
+
                 await financialService.create({
                     type: 'income',
                     amount: itemTotal,
                     description: descriptionBase,
                     category: 'Procedimento',
-                    date: new Date().toISOString().split('T')[0],
+                    date: dateStr,
                     location: budgetLocation,
                     patient_id: patient?.id,
                     related_entity_id: budget.id,

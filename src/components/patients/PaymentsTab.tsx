@@ -105,10 +105,15 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     setSelectedItem(item);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ... (existing code)
+
   const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any) => {
-    if (!selectedItem) return;
+    if (!selectedItem || isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       const budget = budgets.find(b => b.id === selectedItem.budgetId);
       if (!budget) return;
 
@@ -119,25 +124,20 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       // 1. Create Financial Transactions
       const totalAmount = getItemValue(selectedItem);
-      const isAnticipated = breakdown?.isAnticipated || false;
-      const numTransactions = isAnticipated ? 1 : installments;
-      const amountPerTx = totalAmount / installments; // Installment value logic for card
-      // If active anticipation, we might receive less? No, we receive full amount usually minus fees, represented as 1 tx.
-      // But for 'amount' field in transaction, it usually tracks the Gross.
-      // If isAnticipated, we create 1 transaction of full gross.
+      // ... (rest of logic) ...
 
-      const txAmount = isAnticipated ? totalAmount : (totalAmount / installments);
-
-      // We need to split the breakdown proportionaly if multiple installments
-      // If anticipated, all deductions go to the single transaction.
-      // If installments, split tax/fees by N.
-
-      const netAmountPerTx = breakdown?.netAmount ? (breakdown.netAmount / numTransactions) : txAmount;
-      const taxAmountPerTx = breakdown?.taxAmount ? (breakdown.taxAmount / numTransactions) : 0;
-      const cardFeeAmountPerTx = breakdown?.cardFeeAmount ? (breakdown.cardFeeAmount / numTransactions) : 0;
       const anticipationAmountPerTx = breakdown?.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
 
-      const today = new Date();
+      // Ensure budgetDate is valid YYYY-MM-DD
+      let budgetDateStr = selectedItem.budgetDate;
+      // Handle potential DD/MM/YYYY format just in case
+      if (budgetDateStr && budgetDateStr.includes('/')) {
+        const [d, m, y] = budgetDateStr.split('/');
+        budgetDateStr = `${y}-${m}-${d}`;
+      }
+
+      const budgetDate = new Date(budgetDateStr + 'T12:00:00');
+      const startDate = isNaN(budgetDate.getTime()) ? new Date() : budgetDate;
 
       // Helper to format date as local YYYY-MM-DD
       const formatLocalDate = (d: Date) => {
@@ -155,10 +155,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
       };
       const methodLabel = methodLabels[method] || method;
-      const paymentTag = brand ? `(${methodLabel} - ${brand.toUpperCase()})` : `(${methodLabel})`;
+
+      const isCard = method === 'credit' || method === 'debit';
+      const displayBrand = isCard && brand ? brand : null;
+
+      const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
 
       for (let i = 0; i < numTransactions; i++) {
-        const date = new Date(today);
+        const date = new Date(startDate);
         if (!isAnticipated) {
           date.setMonth(date.getMonth() + i);
         }
@@ -210,6 +214,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       console.error(error);
       toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
     } finally {
+      setIsSubmitting(false);
       setSelectedItem(null);
     }
   };
@@ -362,6 +367,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           itemName={getToothDisplayName(selectedItem.tooth.tooth)}
           value={getItemValue(selectedItem)}
           locationRate={selectedItem.locationRate || 0}
+          loading={isSubmitting}
         />
       )}
     </div>

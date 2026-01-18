@@ -12,7 +12,7 @@ interface PaymentItem {
 
 interface PaymentsTabProps {
     paymentItems: PaymentItem[];
-    onPaymentClick: (budgetId: string, toothIndex: number, tooth: ToothEntry) => void;
+    onPaymentClick: (budgetId: string, toothIndex: number, tooth: ToothEntry, budgetDate: string) => void;
 }
 
 export function PaymentsTab({
@@ -75,7 +75,7 @@ export function PaymentsTab({
                                         </Text>
                                     </View>
                                     <TouchableOpacity
-                                        onPress={() => onPaymentClick(item.budgetId, item.toothIndex, item.tooth)}
+                                        onPress={() => onPaymentClick(item.budgetId, item.toothIndex, item.tooth, item.budgetDate)}
                                         className="bg-teal-500 px-4 py-2 rounded-lg flex-row items-center gap-1"
                                     >
                                         <Banknote size={16} color="#FFFFFF" />

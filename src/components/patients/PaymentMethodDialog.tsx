@@ -31,32 +31,19 @@ interface PaymentMethodDialogProps {
     itemName: string;
     value: number;
     locationRate?: number;
+    loading?: boolean;
 }
 
-const PAYMENT_METHODS = [
-    { id: 'cash', label: 'Dinheiro', icon: Banknote, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
-    { id: 'credit', label: 'Crédito', icon: CreditCard, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
-    { id: 'debit', label: 'Débito', icon: CreditCard, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' },
-    { id: 'pix', label: 'PIX', icon: Smartphone, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-200' },
-];
+// ... imports and constants ...
 
-const CARD_BRANDS = [
-    { id: 'visa', label: 'Visa' },
-    { id: 'mastercard', label: 'Mastercard' },
-    { id: 'elo', label: 'Elo' },
-    { id: 'hipercard', label: 'Hipercard' },
-    { id: 'amex', label: 'Amex' },
-    { id: 'others', label: 'Outras Bandeiras' },
-];
-
-export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0 }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0, loading = false }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
     const [anticipate, setAnticipate] = useState(false);
 
     // Financial Settings
-    const [loading, setLoading] = useState(true);
+    const [isLoadingSettings, setIsLoadingSettings] = useState(true);
     const [taxRate, setTaxRate] = useState(0);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 
@@ -93,7 +80,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
     }, [availableBrands, selectedBrand]);
 
     const loadSettings = async () => {
-        setLoading(true);
+        setIsLoadingSettings(true);
         try {
             const settings = await settingsService.getFinancialSettings();
             let totalTax = 0;
@@ -116,7 +103,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
         } catch (error) {
             console.error('Error loading financial settings:', error);
         } finally {
-            setLoading(false);
+            setIsLoadingSettings(false);
         }
     };
 
@@ -219,7 +206,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                     <DialogTitle className="text-center">Registrar Pagamento</DialogTitle>
                 </DialogHeader>
 
-                {loading ? (
+                {isLoadingSettings ? (
                     <div className="flex justify-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
                     </div>
@@ -364,11 +351,20 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
 
                         <Button
                             className="w-full h-12 mt-2 bg-teal-600 hover:bg-teal-700 text-lg"
-                            disabled={!selectedMethod}
+                            disabled={!selectedMethod || loading || isLoadingSettings}
                             onClick={handleConfirm}
                         >
-                            Confirmar
-                            <ArrowRight className="w-5 h-5 ml-2" />
+                            {loading ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                    Processando...
+                                </>
+                            ) : (
+                                <>
+                                    Confirmar
+                                    <ArrowRight className="w-5 h-5 ml-2" />
+                                </>
+                            )}
                         </Button>
                     </div>
                 )}

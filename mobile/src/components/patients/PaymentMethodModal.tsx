@@ -31,9 +31,11 @@ interface PaymentMethodModalProps {
     itemName: string;
     value: number;
     locationRate?: number;
+    budgetDate?: string;
+    loading?: boolean;
 }
 
-export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value, locationRate = 0 }: PaymentMethodModalProps) {
+export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value, locationRate = 0, budgetDate, loading = false }: PaymentMethodModalProps) {
     const [loadingSettings, setLoadingSettings] = useState(false);
 
     // Settings State
@@ -92,11 +94,14 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         const baseAmount = Math.floor((value / count) * 100) / 100;
         let remainder = value - (baseAmount * count);
         remainder = Math.round(remainder * 100) / 100;
-        const today = new Date(); // Or start from next month? Usually today + 30 days. Keeping simplistic as requested.
+
+        // Use budgetDate if available, otherwise today
+        const startDate = budgetDate ? new Date(budgetDate + 'T12:00:00') : new Date();
+        const baseDate = isNaN(startDate.getTime()) ? new Date() : startDate;
 
         for (let i = 0; i < count; i++) {
-            const date = new Date(today);
-            date.setMonth(today.getMonth() + i);
+            const date = new Date(baseDate);
+            date.setMonth(baseDate.getMonth() + i);
             const displayDate = date.toLocaleDateString('pt-BR');
             let amount = baseAmount;
             if (i === count - 1) amount += remainder;
@@ -203,13 +208,17 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         // Force anticipation logic for cards here too
         const effectiveIsAnticipated = isAnticipated || selectedMethod === 'credit' || selectedMethod === 'debit';
 
+        // Use budgetDate if available
+        const startDate = budgetDate ? new Date(budgetDate + 'T12:00:00') : new Date();
+        const baseDateStr = isNaN(startDate.getTime()) ? new Date().toISOString().split('T')[0] : startDate.toISOString().split('T')[0];
+
         if (effectiveIsAnticipated) {
             transactions = [{
                 method: selectedMethod,
                 amount: value, // We save Gross amount in the transaction amount usually? 
                 // Or do we save Net? 
                 // Standard: Amount = Gross. Net_Amount = Net.
-                date: new Date().toISOString().split('T')[0] // Today
+                date: baseDateStr
             }];
         } else if (isInstallments) {
             const totalPlanned = getTotalPlanned();
@@ -229,7 +238,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             transactions = [{
                 method: selectedMethod,
                 amount: value,
-                date: new Date().toISOString().split('T')[0]
+                date: baseDateStr
             }];
         }
 
@@ -489,13 +498,22 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                     <View className="p-4 border-t border-gray-100 bg-white">
                         <TouchableOpacity
                             onPress={handleConfirm}
-                            disabled={!selectedMethod}
-                            className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${selectedMethod ? 'bg-teal-500' : 'bg-gray-200'}`}
+                            disabled={!selectedMethod || loading}
+                            className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${selectedMethod && !loading ? 'bg-teal-500' : 'bg-gray-200'}`}
                         >
-                            <Text className={`font-semibold text-lg ${selectedMethod ? 'text-white' : 'text-gray-400'}`}>
-                                Confirmar Pagamento
-                            </Text>
-                            {selectedMethod && <ArrowRight size={20} color="#FFF" />}
+                            {loading ? (
+                                <>
+                                    <ActivityIndicator size="small" color="#9CA3AF" />
+                                    <Text className="font-semibold text-lg text-gray-400 ml-2">Processando...</Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Text className={`font-semibold text-lg ${selectedMethod ? 'text-white' : 'text-gray-400'}`}>
+                                        Confirmar Pagamento
+                                    </Text>
+                                    {selectedMethod && <ArrowRight size={20} color="#FFF" />}
+                                </>
+                            )}
                         </TouchableOpacity>
                     </View>
                 </View>
