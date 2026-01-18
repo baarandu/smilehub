@@ -1,3 +1,4 @@
+```typescript
 import { useState, useEffect } from 'react';
 import {
     Dialog,
@@ -12,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { FileText, Calendar, Search } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { useProcedures } from '@/hooks/useProcedures';
 import { useExams } from '@/hooks/useExams';
 import { generatePatientReport } from '@/utils/patientReportGenerator';
@@ -30,7 +31,6 @@ export function ReportGenerationModal({
     onOpenChange,
     patient,
 }: ReportGenerationModalProps) {
-    const { user } = useAuth();
     const { data: procedures = [], isLoading: loadingProcedures } = useProcedures(patient.id);
     const { data: exams = [], isLoading: loadingExams } = useExams(patient.id);
 
@@ -69,6 +69,7 @@ export function ReportGenerationModal({
             );
             const examsToInclude = exams.filter((e) => selectedExams.includes(e.id));
 
+            const { data: { user } } = await supabase.auth.getUser();
             const metadata = user?.user_metadata || {};
 
             await generatePatientReport({
@@ -111,7 +112,7 @@ export function ReportGenerationModal({
 
             if (sections.length >= 3) {
                 // Keep only Treatment and Tooth
-                sanitizedLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+                sanitizedLines.push(`${ sections[0].trim() } - ${ sections[1].trim() } `);
             } else if (!cleanLine.startsWith('Obs:')) {
                 sanitizedLines.push(cleanLine);
             }
