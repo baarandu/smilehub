@@ -1,253 +1,278 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import type { BudgetWithItems } from '../types/database';
-import { getToothDisplayName, formatMoney, type ToothEntry } from '../components/patients/budgetUtils';
+import { printToFileAsync } from 'expo-print';
+import { shareAsync } from 'expo-sharing';
+import type { Procedure, Exam, Patient } from '../types/database';
+import { getAccessibleUrl } from './storage';
 
-interface BudgetPDFData {
-    budget: BudgetWithItems;
-    patientName: string;
+interface ReportOptions {
+    patient: Patient;
+    procedures: Procedure[];
+    exams: Exam[];
+    includeHeader: boolean;
+    notes?: string;
     clinicName?: string;
-    dentistName?: string | null;
-    logoUrl?: string | null;
-    letterheadUrl?: string | null;
+    clinicLogo?: string;
 }
 
-// Helper to load image as base64 for PDF embedding
-async function loadImageAsBase64(url: string | null): Promise<string | null> {
-    if (!url) return null;
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error) {
-        console.error('Error loading image as base64:', error);
-        return null;
-    }
-}
+export const generatePatientReport = async ({
+    patient,
+    procedures,
+    exams,
+    includeHeader,
+    notes,
+    clinicName = 'Smile Care Hub',
+    clinicLogo
+}: ReportOptions) => {
 
-function formatDisplayDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('pt-BR');
-}
+    const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
 
-// Generate HTML string for preview
-export function generateBudgetPDFHtml(data: BudgetPDFData): string {
-    const { budget, patientName, clinicName, dentistName, logoUrl, letterheadUrl } = data;
+    // Process exams to resolve image URLs
+    const examsWithImages = await Promise.all(exams.map(async (exam) => {
+        // Collect all potential paths first to deduplicate
+        const uniquePaths = new Set<string>();
 
-    // Parse teeth from notes
-    const parsedNotes = JSON.parse(budget.notes || '{}');
-    const teeth: ToothEntry[] = parsedNotes.teeth || [];
+        if (exam.file_url) uniquePaths.add(exam.file_url);
+        if (exam.file_urls && exam.file_urls.length > 0) {
+            exam.file_urls.forEach(url => uniquePaths.add(url));
+        }
 
-    // Generate items HTML
-    const itemsHtml = teeth.map((tooth, index) => {
-        const toothName = getToothDisplayName(tooth.tooth);
-        const treatments = tooth.treatments.join(', ');
-        const itemValue = Object.values(tooth.values).reduce(
-            (sum, val) => sum + (parseFloat(val as string) || 0) / 100,
-            0
-        );
+        const images: string[] = [];
 
-        return `
-            <tr style="background-color: ${index % 2 === 0 ? '#fafafa' : 'white'}">
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee;">${toothName}</td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee;">${treatments}</td>
-                <td style="padding: 10px 8px; border-bottom: 1px solid #eee; text-align: right;">R$ ${formatMoney(itemValue)}</td>
-            </tr>
-        `;
-    }).join('');
+        const isImage = (url: string) => {
+            if (!url) return false;
+            const lowerUrl = url.toLowerCase();
+            // Check if it's NOT a PDF and has an image extension (allowing query params)
+            if (lowerUrl.includes('.pdf') && !lowerUrl.includes('.pdf?')) return false; // Basic pdf check
 
-    const backgroundHtml = letterheadUrl
-        ? `<div style="position: fixed; top: 0; left: 0; right: 0; margin-left: auto; margin-right: auto; width: 210mm; height: 297mm; z-index: -1;">
-             <img src="${letterheadUrl}" style="width: 100%; height: 100%; object-fit: fill; border: none; padding: 0; margin: 0; display: block;" />
-           </div>`
-        : '';
+            // If explicit type is photo, trust it
+            if (exam.file_type === 'photo') return true;
 
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @page {
-            size: A4;
-            margin: 0;
+            // Otherwise check extension, allowing for query params like ?token=...
+            // Matches .ext followed by end of string OR ?
+            return /\.(jpg|jpeg|png|webp|heic)(\?|$)/i.test(url);
+        };
+
+        // Resolve URLs for unique paths only
+        for (const path of uniquePaths) {
+            const url = await getAccessibleUrl(path);
+            if (url && isImage(url)) {
+                images.push(url);
+            }
         }
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            min-height: 297mm;
-            box-sizing: border-box;
-            color: #000;
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
-            background: transparent !important;
-        }
-        .container {
-            width: 210mm;
-            padding: 60mm 20mm 30mm;
-            box-sizing: border-box;
-            margin: 0 auto;
-        }
-        .header-content {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        .clinic-name {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-        .dentist-name {
-            font-size: 13px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        .title {
-            text-align: center;
-            margin-bottom: 25px;
-            font-size: 18px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 13px;
-        }
-        .label {
-            font-weight: bold;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 12px;
-        }
-        th {
-            background-color: #f5f5f5;
-            padding: 12px 8px;
-            text-align: left;
-            font-weight: bold;
-        }
-        th:last-child {
-            text-align: right;
-        }
-        .total-row {
-            margin-top: 25px;
-            padding: 15px 0;
-            border-top: 1.5px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .total-label {
-            font-weight: bold;
-            font-size: 15px;
-        }
-        .total-value {
-            font-weight: bold;
-            color: #10B981;
-            font-size: 20px;
-        }
-        .footer {
-            margin-top: 40px;
-            font-size: 11px;
-            color: #666;
-            font-style: italic;
-            text-align: justify;
-        }
-    </style>
-</head>
-<body>
-    ${backgroundHtml}
-    <div class="container">
-        ${!letterheadUrl ? `
-        <div class="header-content">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                ${logoUrl ? `<img src="${logoUrl}" style="width: 50px; height: 50px; object-fit: contain;" />` : ''}
-                <div>
-                    <div class="clinic-name">${clinicName || 'Clínica Odontológica'}</div>
-                    ${dentistName ? `<div class="dentist-name">${dentistName}</div>` : ''}
-                </div>
+
+        return { ...exam, resolvedImages: images };
+    }));
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Relatório do Paciente</title>
+        <style>
+            body { 
+                font-family: 'Helvetica', 'Arial', sans-serif; 
+                padding: 40px; 
+                color: #333; 
+                line-height: 1.5;
+            }
+            .header { 
+                display: flex; 
+                align-items: center; 
+                border-bottom: 2px solid #0d9488; 
+                padding-bottom: 20px; 
+                margin-bottom: 30px; 
+            }
+            .logo { 
+                width: 80px; 
+                height: 80px; 
+                margin-right: 20px; 
+                background-color: #f0fdfa;
+                border-radius: 10px;
+                object-fit: contain;
+            }
+            .clinic-info { 
+                flex: 1; 
+            }
+            .clinic-name { 
+                font-size: 24px; 
+                font-weight: bold; 
+                color: #0d9488; 
+                margin: 0; 
+            }
+            .doc-title {
+                text-align: center;
+                font-size: 20px;
+                font-weight: bold;
+                text-transform: uppercase;
+                margin-bottom: 30px;
+                color: #1f2937;
+            }
+            .section { 
+                margin-bottom: 30px; 
+                break-inside: avoid;
+            }
+            .section-title { 
+                font-size: 16px; 
+                font-weight: bold; 
+                color: #115e59; 
+                margin-bottom: 15px; 
+                border-bottom: 1px solid #ccfbf1; 
+                padding-bottom: 5px; 
+            }
+            .patient-name {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 10px; 
+            }
+            th, td { 
+                text-align: left; 
+                padding: 10px; 
+                border-bottom: 1px solid #e5e7eb; 
+                font-size: 14px; 
+            }
+            th { 
+                color: #115e59; 
+                font-weight: 600; 
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            .exam-item {
+                margin-bottom: 20px;
+                border: 1px solid #e5e7eb;
+                padding: 15px;
+                border-radius: 8px;
+                background-color: #fafafa;
+            }
+            .exam-header {
+                font-weight: bold;
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: space-between;
+            }
+            .exam-images {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .exam-img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 4px;
+                border: 1px solid #ddd;
+                max-height: 400px;
+                object-fit: contain;
+            }
+            .notes-box {
+                background-color: #f9fafb;
+                border: 1px solid #e5e7eb;
+                padding: 15px;
+                border-radius: 8px;
+                font-size: 14px;
+                white-space: pre-wrap;
+            }
+            .footer {
+                margin-top: 50px;
+                text-align: center;
+                font-size: 12px;
+                color: #9ca3af;
+                border-top: 1px solid #e5e7eb;
+                padding-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        ${includeHeader ? `
+        <div class="header">
+            ${clinicLogo ? `<img src="${clinicLogo}" class="logo" />` : ''}
+            <div class="clinic-info">
+                <h1 class="clinic-name">${clinicName}</h1>
+                <p>Relatório Clínico Odontológico</p>
             </div>
         </div>
         ` : ''}
 
-        <div class="title">ORÇAMENTO ODONTOLÓGICO</div>
+        <div class="doc-title">Relatório de Procedimentos e Exames</div>
 
-        <div class="info-row">
-            <span><span class="label">Paciente:</span> ${patientName}</span>
-            <span><span class="label">Data:</span> ${formatDisplayDate(budget.date)}</span>
+        <div class="section">
+            <div class="section-title">Paciente</div>
+            <div class="patient-name">${patient.name}</div>
         </div>
 
-        <div class="info-row">
-            <span><span class="label">Tratamento Proposto:</span> ${budget.treatment || 'Tratamento Odontológico'}</span>
+        ${procedures.length > 0 ? `
+        <div class="section">
+            <div class="section-title">Procedimentos Realizados</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Data</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${procedures.map(p => `
+                    <tr>
+                        <td>${formatDate(p.date)}</td>
+                        <td>${p.description}${p.location ? ` (${p.location})` : ''}</td>
+                    </tr>
+                    `).join('')}
+                </tbody>
+            </table>
         </div>
+        ` : ''}
 
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 25%">Item</th>
-                    <th style="width: 50%">Procedimentos</th>
-                    <th style="width: 25%; text-align: right;">Valor</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsHtml}
-            </tbody>
-        </table>
-
-        <div class="total-row">
-            <span class="total-label">VALOR TOTAL:</span>
-            <span class="total-value">R$ ${formatMoney(budget.value)}</span>
+        ${examsWithImages.length > 0 ? `
+        <div class="section">
+            <div class="section-title">Exames</div>
+            ${examsWithImages.map(e => `
+            <div class="exam-item">
+                <div class="exam-header">
+                    <span>${e.name}</span>
+                    <span style="font-weight: normal; color: #666;">${formatDate(e.order_date)}</span>
+                </div>
+                ${e.resolvedImages && e.resolvedImages.length > 0 ? `
+                <div class="exam-images">
+                    ${e.resolvedImages.map(img => `<img src="${img}" class="exam-img" />`).join('')}
+                </div>
+                ` : '<div style="font-style: italic; color: #888;">Sem imagens disponíveis (apenas documento ou pendente)</div>'}
+            </div>
+            `).join('')}
         </div>
+        ` : ''}
+
+        ${notes ? `
+        <div class="section">
+            <div class="section-title">Observações</div>
+            <div class="notes-box">
+                ${notes}
+            </div>
+        </div>
+        ` : ''}
 
         <div class="footer">
-            <p>Este orçamento tem validade de 30 dias. Os valores podem sofrer alterações após este período.</p>
+            Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}<br>
+            ${clinicName}
         </div>
-    </div>
-</body>
-</html>
+    </body>
+    </html>
     `;
-}
 
-// Generate PDF file and return URI (without sharing)
-export async function generateBudgetPDFFile(data: BudgetPDFData): Promise<string> {
-    const letterheadBase64 = await loadImageAsBase64(data.letterheadUrl || null);
-    const html = generateBudgetPDFHtml({
-        ...data,
-        letterheadUrl: letterheadBase64 || data.letterheadUrl
-    });
-    const { uri } = await Print.printToFileAsync({ html });
-    return uri;
-}
-
-// Share an existing PDF file
-export async function sharePDF(uri: string): Promise<void> {
-    if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-            mimeType: 'application/pdf',
-            dialogTitle: 'Compartilhar Orçamento',
-            UTI: 'com.adobe.pdf'
+    try {
+        const { uri } = await printToFileAsync({
+            html: htmlContent,
+            base64: false
         });
+
+        await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        throw error;
     }
-}
-
-// Legacy function: Generate PDF and share directly (for backwards compatibility)
-export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
-    const uri = await generateBudgetPDFFile(data);
-    await sharePDF(uri);
-}
-
+};

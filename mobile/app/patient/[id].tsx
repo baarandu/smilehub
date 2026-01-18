@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X } from 'lucide-react-native';
 import { deletePatient } from '../../src/services/patients';
-import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal } from '../../src/components/patients';
+import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
 import { usePatientData } from '../../src/hooks/usePatientData';
@@ -31,10 +31,9 @@ export default function PatientDetail() {
     const { handleDeleteAnamnese, handleDeleteBudget, handleDeleteProcedure, handleDeleteExam } = usePatientHandlers({
         loadAnamneses, loadBudgets, loadProcedures, loadExams, exams
     });
-
-    // UI State
     const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) || 'anamnese');
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
     const [showAnamneseSummaryModal, setShowAnamneseSummaryModal] = useState(false);
     const [summaryAnamnese, setSummaryAnamnese] = useState<Anamnese | null>(null);
@@ -166,6 +165,11 @@ export default function PatientDetail() {
                     <ArrowLeft size={24} color="#0D9488" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>
+
+                <TouchableOpacity onPress={() => setShowReportModal(true)} className="bg-blue-50 p-2 rounded-lg mr-2">
+                    <FileText size={20} color="#3B82F6" />
+                </TouchableOpacity>
+
                 <TouchableOpacity onPress={() => setShowEditModal(true)} className="bg-teal-50 p-2 rounded-lg mr-2">
                     <Edit3 size={20} color="#0D9488" />
                 </TouchableOpacity>
@@ -302,6 +306,7 @@ export default function PatientDetail() {
             />
             <NewProcedureModal visible={showProcedureModal} patientId={patient.id} onClose={() => { setShowProcedureModal(false); setSelectedProcedure(null); }} onSuccess={() => { loadProcedures(); loadExams(); }} procedure={selectedProcedure} />
             <NewExamModal visible={showExamModal} patientId={id!} onClose={() => { setShowExamModal(false); setSelectedExam(null); }} onSuccess={loadExams} exam={selectedExam} />
+            <ReportGenerationModal visible={showReportModal} onClose={() => setShowReportModal(false)} patient={patient} procedures={procedures} exams={exams} />
             <ImageViewing images={previewImage ? [{ uri: previewImage }] : []} imageIndex={0} visible={isImageViewVisible} onRequestClose={() => setIsImageViewVisible(false)} />
 
             {/* PDF Modal */}
