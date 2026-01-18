@@ -16,6 +16,12 @@ import { Patient } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+interface CustomTemplate {
+  id: string;
+  title: string;
+  message: string;
+}
+
 export default function Alerts() {
   // Get tomorrow's date
   const tomorrow = new Date();
@@ -32,6 +38,7 @@ export default function Alerts() {
   const [birthdayTemplate, setBirthdayTemplate] = useState('');
   const [returnTemplate, setReturnTemplate] = useState('');
   const [confirmationTemplate, setConfirmationTemplate] = useState('');
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>([]);
   const [showSettings, setShowSettings] = useState(false);
 
   // Reminders State
@@ -58,9 +65,19 @@ export default function Alerts() {
     const loadedBirthday = localStorage.getItem('birthdayTemplate');
     const loadedReturn = localStorage.getItem('returnTemplate');
     const loadedConfirmation = localStorage.getItem('confirmationTemplate');
+    const loadedCustom = localStorage.getItem('customTemplates');
+
     setBirthdayTemplate(loadedBirthday || "Parabéns {name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.");
     setReturnTemplate(loadedReturn || "Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?");
     setConfirmationTemplate(loadedConfirmation || "Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.");
+
+    if (loadedCustom) {
+      try {
+        setCustomTemplates(JSON.parse(loadedCustom));
+      } catch (e) {
+        console.error('Error parsing custom templates:', e);
+      }
+    }
 
     loadReminders();
   }, []);
@@ -140,7 +157,23 @@ export default function Alerts() {
     localStorage.setItem('birthdayTemplate', birthdayTemplate);
     localStorage.setItem('returnTemplate', returnTemplate);
     localStorage.setItem('confirmationTemplate', confirmationTemplate);
+    localStorage.setItem('customTemplates', JSON.stringify(customTemplates));
     setShowSettings(false);
+    toast.success('Configurações salvas!');
+  };
+
+  const handleAddCustomTemplate = () => {
+    setCustomTemplates([...customTemplates, { id: Date.now().toString(), title: '', message: '' }]);
+  };
+
+  const handleUpdateCustomTemplate = (id: string, updates: Partial<CustomTemplate>) => {
+    setCustomTemplates(customTemplates.map(t => t.id === id ? { ...t, ...updates } : t));
+  };
+
+  const handleDeleteCustomTemplate = (id: string) => {
+    if (confirm('Deseja excluir esta mensagem personalizada?')) {
+      setCustomTemplates(customTemplates.filter(t => t.id !== id));
+    }
   };
 
   const handleWhatsApp = (
@@ -299,46 +332,113 @@ export default function Alerts() {
               <DialogHeader>
                 <DialogTitle>Modelos de Mensagem</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4 max-h-[400px] overflow-y-auto">
-                <div className="space-y-2">
-                  <Label>Mensagem de Aniversário</Label>
-                  <Textarea
-                    value={birthdayTemplate}
-                    onChange={(e) => setBirthdayTemplate(e.target.value)}
-                    rows={3}
-                    placeholder="Use {name} para o nome do paciente"
-                  />
-                  <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
-                </div>
-                <div className="space-y-2">
+              <div className="space-y-6 py-4 max-h-[500px] overflow-y-auto pr-2">
+                {/* Custom Templates */}
+                <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <Label>Mensagem de Retorno (6 meses)</Label>
-                    <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
-                      <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                    <div>
+                      <Label className="text-base font-semibold">Mensagens Personalizadas</Label>
+                      <p className="text-xs text-muted-foreground">Crie seus próprios modelos de mensagem</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-2 h-8 border-teal-200 text-teal-700 hover:bg-teal-50" onClick={handleAddCustomTemplate}>
+                      <Plus className="w-4 h-4" /> Novo Modelo
                     </Button>
                   </div>
-                  <Textarea
-                    value={returnTemplate}
-                    onChange={(e) => setReturnTemplate(e.target.value)}
-                    rows={3}
-                    placeholder="Use {name} para o nome do paciente"
-                  />
-                  <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+
+                  {customTemplates.length === 0 ? (
+                    <div className="text-center py-8 bg-muted/30 rounded-lg border border-dashed border-border">
+                      <p className="text-sm text-muted-foreground">Nenhuma mensagem personalizada.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {customTemplates.map((template) => (
+                        <div key={template.id} className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50 transition-colors hover:border-teal-200/50">
+                          <div className="flex justify-between items-center gap-2">
+                            <Input
+                              placeholder="Título (ex: Pós-operatório)"
+                              value={template.title}
+                              onChange={(e) => handleUpdateCustomTemplate(template.id, { title: e.target.value })}
+                              className="h-9 text-sm font-semibold bg-background"
+                            />
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                onClick={() => initiateSendMessage(template.message)}
+                                title="Enviar para um paciente"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-red-50"
+                                onClick={() => handleDeleteCustomTemplate(template.id)}
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <Textarea
+                            value={template.message}
+                            onChange={(e) => handleUpdateCustomTemplate(template.id, { message: e.target.value })}
+                            rows={3}
+                            className="bg-background text-sm resize-none"
+                            placeholder="Sua mensagem aqui... Use {name} para o nome do paciente."
+                          />
+                          <p className="text-[10px] text-muted-foreground font-medium">Variável disponível: {'{name}'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label>Mensagem de Confirmação de Consulta</Label>
-                    <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
-                      <MessageCircle className="w-4 h-4 mr-1" /> Enviar
-                    </Button>
+
+                <hr className="border-border" />
+
+                {/* Standard Templates */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Mensagem de Aniversário</Label>
+                    <Textarea
+                      value={birthdayTemplate}
+                      onChange={(e) => setBirthdayTemplate(e.target.value)}
+                      rows={3}
+                      placeholder="Use {name} para o nome do paciente"
+                    />
+                    <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
                   </div>
-                  <Textarea
-                    value={confirmationTemplate}
-                    onChange={(e) => setConfirmationTemplate(e.target.value)}
-                    rows={3}
-                    placeholder="Use {name} para o nome do paciente"
-                  />
-                  <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>Mensagem de Retorno (6 meses)</Label>
+                      <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
+                        <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={returnTemplate}
+                      onChange={(e) => setReturnTemplate(e.target.value)}
+                      rows={3}
+                      placeholder="Use {name} para o nome do paciente"
+                    />
+                    <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>Mensagem de Confirmação de Consulta</Label>
+                      <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
+                        <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={confirmationTemplate}
+                      onChange={(e) => setConfirmationTemplate(e.target.value)}
+                      rows={3}
+                      placeholder="Use {name} para o nome do paciente"
+                    />
+                    <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
