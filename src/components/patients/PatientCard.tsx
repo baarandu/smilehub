@@ -1,4 +1,4 @@
-import { Phone, Mail, ChevronRight } from 'lucide-react';
+import { Phone, Mail, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Patient } from '@/types/database';
 
@@ -32,7 +32,12 @@ export function PatientCard({ patient, index }: PatientCardProps) {
           </span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-foreground truncate">{patient.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-foreground truncate">{patient.name}</p>
+            {patient.return_alert_flag && (
+              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+            )}
+          </div>
           <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">
             <Phone className="w-3.5 h-3.5" />
             <span className="truncate">{patient.phone}</span>

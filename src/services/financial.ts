@@ -16,9 +16,20 @@ export const financialService = {
     },
 
     async createTransaction(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+
         const { data, error } = await supabase
             .from('financial_transactions')
-            .insert(transaction as any)
+            .insert({ ...transaction, clinic_id: clinicUser.clinic_id } as any)
             .select()
             .single();
 
@@ -34,6 +45,17 @@ export const financialService = {
         location?: string | null;
         related_entity_id?: string | null;
     }): Promise<FinancialTransaction> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+
         const { data, error } = await supabase
             .from('financial_transactions')
             .insert({
@@ -44,6 +66,7 @@ export const financialService = {
                 date: expense.date,
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
+                clinic_id: clinicUser.clinic_id
             } as any)
             .select()
             .single();

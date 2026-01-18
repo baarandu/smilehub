@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw } from 'lucide-react-native';
+import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw, AlertTriangle } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { budgetsService } from '../../src/services/budgets';
 import { DocumentsModal } from '../../components/DocumentsModal';
@@ -324,9 +324,12 @@ export default function Patients() {
                                         </Text>
                                     </View>
                                     <View className="flex-1">
-                                        <Text className="font-semibold text-gray-900 text-base">
-                                            {patient.name}
-                                        </Text>
+                                        <View className="flex-row items-center gap-2">
+                                            <Text className="font-semibold text-gray-900 text-base">
+                                                {patient.name}
+                                            </Text>
+                                            {patient.return_alert_flag && <AlertTriangle size={16} color="#EA580C" />}
+                                        </View>
                                         <View className="flex-row items-center gap-2 mt-1">
                                             <Phone size={14} color="#9CA3AF" />
                                             <Text className="text-gray-500 text-sm">{patient.phone}</Text>

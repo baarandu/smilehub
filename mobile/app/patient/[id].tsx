@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X } from 'lucide-react-native';
-import { deletePatient } from '../../src/services/patients';
+import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle } from 'lucide-react-native';
+import { deletePatient, patientsService } from '../../src/services/patients';
 import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
@@ -134,6 +134,35 @@ export default function PatientDetail() {
         ]);
     };
 
+    const handleToggleReturnAlert = () => {
+        if (!patient) return;
+
+        const toggle = async () => {
+            try {
+                const newState = !patient.return_alert_flag;
+                await patientsService.toggleReturnAlert(patient.id, newState);
+                Alert.alert('Sucesso', newState ? 'Alerta de retorno importante ativado' : 'Alerta removido');
+                loadPatient();
+            } catch (error) {
+                console.error(error);
+                Alert.alert('Erro', 'Erro ao atualizar alerta');
+            }
+        };
+
+        if (!patient.return_alert_flag) {
+            Alert.alert(
+                'Alertar Retorno Importante?',
+                'Deseja marcar este paciente para um retorno importante? Um alerta será gerado automaticamente daqui a 6 meses.',
+                [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Confirmar', onPress: toggle }
+                ]
+            );
+        } else {
+            toggle();
+        }
+    };
+
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50">
@@ -166,6 +195,13 @@ export default function PatientDetail() {
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>
 
+                <TouchableOpacity
+                    onPress={handleToggleReturnAlert}
+                    className={`p-2 rounded-lg mr-2 ${patient.return_alert_flag ? 'bg-orange-100' : 'bg-gray-100'}`}
+                >
+                    <AlertTriangle size={20} color={patient.return_alert_flag ? "#EA580C" : "#6B7280"} />
+                </TouchableOpacity>
+
                 <TouchableOpacity onPress={() => setShowReportModal(true)} className="bg-blue-50 p-2 rounded-lg mr-2">
                     <FileText size={20} color="#3B82F6" />
                 </TouchableOpacity>
@@ -196,7 +232,10 @@ export default function PatientDetail() {
                             <Text className="text-white font-bold text-xl">{getInitials(patient.name)}</Text>
                         </View>
                         <View className="flex-1">
-                            <Text className="text-xl font-bold text-gray-900">{patient.name}</Text>
+                            <View className="flex-row items-center gap-2">
+                                <Text className="text-xl font-bold text-gray-900">{patient.name}</Text>
+                                {patient.return_alert_flag && <AlertTriangle size={18} color="#EA580C" />}
+                            </View>
                             {patient.occupation && <Text className="text-gray-500 mt-1">{patient.occupation}</Text>}
                         </View>
                     </View>

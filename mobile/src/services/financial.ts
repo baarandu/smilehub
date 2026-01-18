@@ -41,10 +41,22 @@ export const financialService = {
             throw new Error('Usuário não autenticado');
         }
 
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) {
+            console.error('[FinancialService] Clinic not found for user.');
+            throw new Error('Clínica não encontrada');
+        }
+
         // Ensure payload matches the Insert type
         const payload: FinancialTransactionInsert = {
             ...transaction,
-            user_id: user.id
+            user_id: user.id,
+            clinic_id: clinicUser.clinic_id
         };
 
         // Casting to any to avoid "Argument of type ... is not assignable to never"

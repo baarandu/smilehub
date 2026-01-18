@@ -1,284 +1,406 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Plus, Trash2, Calendar as CalendarIcon, Check, CreditCard, Layers } from 'lucide-react';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
+import {
+    EXPENSE_CATEGORIES,
+    PAYMENT_METHODS,
+    PaymentMethod,
+    InstallmentItem,
+    generateUUID,
+    applyDateMask,
+    formatCurrency,
+    getNumericValue,
+    dateToDbFormat,
+    dbDateToDisplay,
+    generateInstallments,
+    extractPaymentMethod,
+    parseExpenseDescription
+} from '@/utils/expense';
+import { cn } from '@/lib/utils';
 
 interface NewExpenseFormProps {
     onSuccess: () => void;
-    transactionToEdit?: any; // Replace with proper type
-}
-
-interface InstallmentInput {
-    count: string;
-    value: string; // total value
+    transactionToEdit?: any;
 }
 
 export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormProps) {
-    const isEdit = !!transactionToEdit;
-    const [form, setForm] = useState({
-        description: transactionToEdit?.description || '',
-        amount: transactionToEdit ? (transactionToEdit.amount * 100).toFixed(0) : '',
-        date: transactionToEdit ? transactionToEdit.date.split('T')[0] : new Date().toISOString().split('T')[0],
-        category: transactionToEdit?.category || ''
-    });
-
-    const [isInstallment, setIsInstallment] = useState(false);
-    const [installmentData, setInstallmentData] = useState<InstallmentInput>({ count: '2', value: '' });
-    const [updateAllRecurring, setUpdateAllRecurring] = useState(false);
-
+    const [loading, setLoading] = useState(false);
     const queryClient = useQueryClient();
 
-    const createMutation = useMutation({
-        mutationFn: async () => {
-            const amount = parseFloat(form.amount.replace(/\./g, '').replace(',', '.'));
+    // Form State
+    const [description, setDescription] = useState('');
+    const [date, setDate] = useState('');
+    const [category, setCategory] = useState<string>('Outros');
+    const [value, setValue] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Pix');
+    const [observations, setObservations] = useState('');
 
-            // 1. Handle Re-parceling (Edit -> Installment) OR New Installment
-            if (isInstallment) {
-                const totalValue = parseFloat(installmentData.value.replace(/\./g, '').replace(',', '.'));
-                const count = parseInt(installmentData.count);
-                const installmentValue = totalValue / count;
-                const recurrenceId = crypto.randomUUID();
+    // Installments
+    const [isInstallment, setIsInstallment] = useState(false);
+    const [numInstallmentsStr, setNumInstallmentsStr] = useState('2');
+    const [installmentList, setInstallmentList] = useState<InstallmentItem[]>([]);
 
-                // If editing, we must delete the old one first (Re-parceling)
-                if (isEdit) {
+    // Edit Mode State
+    const [updateAllRecurring, setUpdateAllRecurring] = useState(false);
+
+    useEffect(() => {
+        if (transactionToEdit) {
+            const parsed = parseExpenseDescription(transactionToEdit.description);
+            setDescription(parsed.description);
+            setObservations(parsed.observations);
+            setDate(dbDateToDisplay(transactionToEdit.date)); // Now using DD/MM/YYYY
+            setCategory(transactionToEdit.category || 'Outros');
+            setValue(formatCurrency(transactionToEdit.amount));
+            const method = extractPaymentMethod(transactionToEdit.description);
+            if (method) setPaymentMethod(method);
+            setIsInstallment(false);
+            setUpdateAllRecurring(false);
+        } else {
+            resetForm();
+        }
+    }, [transactionToEdit]);
+
+    useEffect(() => {
+        if (!isInstallment) {
+            setInstallmentList([]);
+            return;
+        }
+        const count = parseInt(numInstallmentsStr) || 1;
+        if (count < 2) return;
+        const totalVal = getNumericValue(value);
+        const items = generateInstallments(totalVal, count, date);
+        setInstallmentList(items);
+    }, [isInstallment, numInstallmentsStr, value, date]);
+
+    const resetForm = () => {
+        setDescription('');
+        const today = new Date();
+        const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        setDate(todayStr);
+        setValue('');
+        setObservations('');
+        setIsInstallment(false);
+        setNumInstallmentsStr('2');
+        setInstallmentList([]);
+        setCategory('Outros');
+        setPaymentMethod('Pix');
+        setUpdateAllRecurring(false);
+    };
+
+    const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = e.target.value.replace(/\D/g, '');
+        const numberValue = Number(rawValue) / 100;
+        setValue(formatCurrency(numberValue));
+    };
+
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDate(applyDateMask(e.target.value));
+    };
+
+    const updateInstallment = (index: number, field: 'date' | 'value', text: string) => {
+        const newList = [...installmentList];
+        if (field === 'date') {
+            newList[index].date = applyDateMask(text);
+        } else {
+            const raw = text.replace(/\D/g, '');
+            const val = Number(raw) / 100;
+            newList[index].value = formatCurrency(val);
+            newList[index].rawValue = val;
+        }
+        setInstallmentList(newList);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!description) { toast.error('Informe a descrição.'); return; }
+        if (!value) { toast.error('Informe o valor.'); return; }
+        if (!date || date.length !== 10) { toast.error('Informe uma data válida.'); return; }
+
+        setLoading(true);
+        try {
+            if (transactionToEdit) {
+                // Edit Logic
+                if (isInstallment) {
+                    if (!confirm('Ao salvar, a despesa original será excluída e um novo parcelamento será criado. Deseja continuar?')) {
+                        setLoading(false);
+                        return;
+                    }
                     if (transactionToEdit.recurrence_id) {
                         await financialService.deleteRecurrence(transactionToEdit.recurrence_id);
                     } else {
                         await financialService.deleteTransaction(transactionToEdit.id);
                     }
-                }
-
-                // Create new series
-                const promises = [];
-                let currentDate = new Date(form.date);
-
-                for (let i = 0; i < count; i++) {
-                    // Calculate date (monthly)
-                    const dateStr = currentDate.toISOString().split('T')[0];
-
-                    promises.push(financialService.createTransaction({
-                        description: `${form.description} (${i + 1}/${count})`,
-                        amount: parseFloat(installmentValue.toFixed(2)),
-                        type: 'expense',
-                        date: dateStr,
-                        category: form.category || null,
-                        payment_method: 'Dinheiro',
-                        recurrence_id: recurrenceId
-                    }));
-
-                    // Next month
-                    currentDate.setMonth(currentDate.getMonth() + 1);
-                }
-
-                await Promise.all(promises);
-            }
-
-            // 2. Handle Simple Edit
-            if (isEdit) {
-                if (updateAllRecurring && transactionToEdit.recurrence_id) {
-                    // Update All logic
-                    // Fetch all items to update description preserving index?
-                    // For simplicity, let's just update common fields. 
-                    // Challenge: Description usually has index (1/3). If we change description to "Paper", all become "Paper"?
-                    // Mobile logic preserves index: "New Desc (x/y)".
-                    // Let's implement smart update.
-                    const siblings = await financialService.getByRecurrenceId(transactionToEdit.recurrence_id);
-                    const updatePromises = siblings.map(t => {
-                        const indexMatch = t.description.match(/\(\d+\/\d+\)/);
-                        const suffix = indexMatch ? ` ${indexMatch[0]}` : '';
-                        const newDesc = form.description + suffix;
-
-                        return financialService.updateTransaction(t.id, {
-                            description: newDesc,
-                            amount: amount,
-                            category: form.category || null,
-                            date: t.id === transactionToEdit.id ? form.date : t.date // Only update date of THIS installment? Or shift all? Mobile only updates this date? 
-                            // Mobile logic: "Update All" updates Amount, Category, Description. Date is usually ignored for bulk updates unless shifted.
-                            // Let's keep date update only for current item or not update date for others.
-                        });
-                    });
-                    await Promise.all(updatePromises);
+                    await createInstallments();
+                    toast.success('Novo parcelamento criado!');
+                    onSuccess();
                 } else {
-                    // Update Single
-                    await financialService.updateTransaction(transactionToEdit.id, {
-                        description: form.description,
-                        amount: amount,
-                        type: 'expense',
-                        date: form.date,
-                        category: form.category || null,
-                    });
+                    const dbDate = dateToDbFormat(date);
+                    let finalDesc = `${description} (${paymentMethod})`;
+
+                    if (updateAllRecurring && transactionToEdit.recurrence_id) {
+                        const allRecurrence = await financialService.getByRecurrenceId(transactionToEdit.recurrence_id);
+                        await Promise.all(allRecurrence.map(t => {
+                            const indexMatch = t.description.match(/ \(\d+\/\d+\)/);
+                            const indexSuffix = indexMatch ? indexMatch[0] : '';
+                            let newFullDesc = `${description} (${paymentMethod})${indexSuffix}`;
+                            if (observations) newFullDesc += ` - ${observations}`;
+                            return financialService.updateTransaction(t.id, { description: newFullDesc, amount: getNumericValue(value), category });
+                        }));
+                    } else {
+                        await financialService.updateTransaction(transactionToEdit.id, {
+                            description: finalDesc + (observations ? ` - ${observations}` : ''),
+                            amount: getNumericValue(value),
+                            date: dbDate,
+                            category,
+                            payment_method: paymentMethod
+                        });
+                    }
+                    toast.success('Despesa atualizada!');
+                    onSuccess();
                 }
-                return;
+            } else {
+                // Create Logic
+                if (!isInstallment) {
+                    const dbDate = dateToDbFormat(date);
+                    const finalDesc = `${description} (${paymentMethod})` + (observations ? ` - ${observations}` : '');
+                    await financialService.createExpense({
+                        amount: getNumericValue(value),
+                        description: finalDesc,
+                        category,
+                        date: dbDate,
+                        location: null
+                        // clinic_id is handled in service now
+                    });
+                } else {
+                    await createInstallments();
+                }
+                toast.success('Despesa salva com sucesso!');
+                onSuccess();
             }
-
-            // 3. Normal Create Single
-            await financialService.createTransaction({
-                description: form.description,
-                amount,
-                type: 'expense',
-                date: form.date,
-                category: form.category || null,
-                payment_method: 'Dinheiro', // Default
-            });
-        },
-        onSuccess: () => {
-            toast.success(isEdit ? 'Despesa atualizada com sucesso' : 'Despesa registrada com sucesso');
             queryClient.invalidateQueries({ queryKey: ['financial'] });
-            onSuccess();
-        },
-        onError: (err) => {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             toast.error('Erro ao salvar despesa');
+        } finally {
+            setLoading(false);
         }
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!form.description || !form.amount || !form.date) {
-            toast.error('Preencha os campos obrigatórios');
-            return;
-        }
-        createMutation.mutate();
     };
 
-    const formatCurrency = (value: string) => {
-        const numbers = value.replace(/\D/g, '');
-        if (!numbers) return '';
-        const amount = parseFloat(numbers) / 100;
-        return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-
-    const toggleInstallment = (checked: boolean) => {
-        setIsInstallment(checked);
-        // If turning ON, prepopulate value from current amount
-        if (checked && form.amount) {
-            setInstallmentData(prev => ({ ...prev, value: form.amount }));
-        }
+    const createInstallments = async () => {
+        const recurrenceId = generateUUID();
+        const numInstallments = parseInt(numInstallmentsStr);
+        await Promise.all(installmentList.map((item, i) => {
+            const dbDate = dateToDbFormat(item.date);
+            let finalDesc = `${description} (${paymentMethod}) (${i + 1}/${numInstallments})`;
+            if (observations) finalDesc += ` - ${observations}`;
+            return financialService.createTransaction({
+                type: 'expense',
+                amount: Number(item.rawValue.toFixed(2)),
+                description: finalDesc,
+                category,
+                date: dbDate,
+                location: null,
+                recurrence_id: recurrenceId,
+                payment_method: paymentMethod
+                // clinic_id is handled in service now
+            });
+        }));
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1">
+            {transactionToEdit?.recurrence_id && (
+                <div className="mb-4 bg-blue-50 p-3 rounded-xl border border-blue-100 flex flex-wrao items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1">
+                        <Layers className="h-5 w-5 text-blue-600" />
+                        <div>
+                            <p className="text-blue-800 font-bold text-sm">Despesa Parcelada</p>
+                            <p className="text-blue-600 text-xs">Aplicar a todas as parcelas?</p>
+                        </div>
+                    </div>
+                    <Switch checked={updateAllRecurring} onCheckedChange={setUpdateAllRecurring} />
+                </div>
+            )}
+
+            {/* Description */}
             <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">Descrição / Nome</Label>
                 <Input
                     id="description"
-                    value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="Ex: Material de Escritório"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Ex: Aluguel..."
+                    className="bg-slate-50 border-slate-200"
                     required
                 />
             </div>
 
+            {/* Category */}
+            <div className="space-y-2">
+                <Label>Categoria</Label>
+                <div className="flex flex-wrap gap-2">
+                    {EXPENSE_CATEGORIES.map(cat => (
+                        <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setCategory(cat)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5",
+                                category === cat
+                                    ? "bg-red-50 border-red-200 text-red-700"
+                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            {category === cat && <Check className="h-3 w-3" />}
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Value and Date */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="amount">Valor (R$)</Label>
+                    <Label htmlFor="amount">Valor {isInstallment ? 'Total' : ''}</Label>
                     <Input
                         id="amount"
-                        value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: formatCurrency(e.target.value) })}
-                        placeholder="0,00"
+                        value={value}
+                        onChange={handleValueChange}
+                        placeholder="R$ 0,00"
+                        className="bg-slate-50 border-slate-200 font-semibold"
                         required
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="date">Data</Label>
-                    <Input
-                        id="date"
-                        type="date"
-                        value={form.date}
-                        onChange={(e) => setForm({ ...form, date: e.target.value })}
-                        required
-                    />
+                    <Label htmlFor="date">{isInstallment ? '1º Vencimento' : 'Data'}</Label>
+                    <div className="relative">
+                        <Input
+                            id="date"
+                            value={date}
+                            onChange={handleDateChange}
+                            maxLength={10}
+                            placeholder="DD/MM/AAAA"
+                            className="bg-slate-50 border-slate-200 pl-9"
+                            required
+                        />
+                        <CalendarIcon className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                    </div>
                 </div>
             </div>
 
-            {/* Installment Toggle */}
-            <div className="flex items-center space-x-2 border p-3 rounded-md bg-slate-50">
-                <input
-                    type="checkbox"
-                    id="isInstallment"
-                    checked={isInstallment}
-                    onChange={(e) => toggleInstallment(e.target.checked)}
-                    className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <Label htmlFor="isInstallment" className="cursor-pointer">
-                    É uma despesa parcelada?
-                </Label>
+            {/* Payment Method */}
+            <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <div className="flex flex-wrap gap-2">
+                    {PAYMENT_METHODS.map(method => (
+                        <button
+                            key={method}
+                            type="button"
+                            onClick={() => setPaymentMethod(method)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5",
+                                paymentMethod === method
+                                    ? "bg-blue-50 border-blue-200 text-blue-700"
+                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            {paymentMethod === method && <Check className="h-3 w-3" />}
+                            {method}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {
-                isInstallment && (
-                    <div className="grid grid-cols-2 gap-4 p-3 border rounded-md bg-slate-50">
-                        <div className="space-y-2">
-                            <Label>Valor Total (R$)</Label>
+            {/* Installments Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-slate-600" />
+                    <span className="font-medium text-slate-700 text-sm">
+                        {transactionToEdit ? 'Refazer Parcelamento?' : 'Pagamento Parcelado?'}
+                    </span>
+                </div>
+                <Switch checked={isInstallment} onCheckedChange={setIsInstallment} />
+            </div>
+
+            {/* Installment List */}
+            {isInstallment && (
+                <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                        <Label>Configurar Parcelas</Label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Qtd:</span>
                             <Input
-                                value={installmentData.value}
-                                onChange={(e) => setInstallmentData({ ...installmentData, value: formatCurrency(e.target.value) })}
-                                placeholder="0,00"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Qtd. Parcelas</Label>
-                            <Input
+                                value={numInstallmentsStr}
+                                onChange={(e) => setNumInstallmentsStr(e.target.value)}
+                                className="w-16 h-8 text-center bg-white"
                                 type="number"
-                                value={installmentData.count}
-                                onChange={(e) => setInstallmentData({ ...installmentData, count: e.target.value })}
-                                min="2"
-                                max="60"
+                                maxLength={2}
                             />
                         </div>
-                        <div className="col-span-2 text-xs text-muted-foreground">
-                            Serão criadas {installmentData.count} despesas de aprox. R$ {installmentData.value && installmentData.count ? (parseFloat(installmentData.value.replace(/\./g, '').replace(',', '.')) / parseInt(installmentData.count)).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
-                        </div>
                     </div>
-                )
-            }
 
-            {
-                isEdit && transactionToEdit.recurrence_id && !isInstallment && (
-                    <div className="flex items-center space-x-2 border p-3 rounded-md bg-blue-50">
-                        <input
-                            type="checkbox"
-                            id="updateAll"
-                            checked={updateAllRecurring}
-                            onChange={(e) => setUpdateAllRecurring(e.target.checked)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <Label htmlFor="updateAll" className="cursor-pointer text-blue-900">
-                            Atualizar todas as parcelas (Valor, Categoria, Nome)
-                        </Label>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {installmentList.length > 0 ? (
+                            installmentList.map((item, index) => (
+                                <div key={item.id} className="flex gap-2 items-center">
+                                    <span className="text-xs text-muted-foreground w-6 font-medium">{index + 1}x</span>
+                                    <Input
+                                        value={item.date}
+                                        onChange={(e) => updateInstallment(index, 'date', e.target.value)}
+                                        className="h-8 text-xs bg-white text-center flex-1"
+                                        placeholder="Data"
+                                        maxLength={10}
+                                    />
+                                    <Input
+                                        value={item.value}
+                                        onChange={(e) => updateInstallment(index, 'value', e.target.value)}
+                                        className="h-8 text-xs bg-white text-center flex-1 font-medium"
+                                        placeholder="Valor"
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic text-center py-2">
+                                Preencha valor e data inicial para gerar.
+                            </p>
+                        )}
                     </div>
-                )
-            }
+                </div>
+            )}
 
+            {/* Observations */}
             <div className="space-y-2">
-                <Label htmlFor="category">Categoria (Opcional)</Label>
-                <Input
-                    id="category"
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    placeholder="Ex: Administrativo"
+                <Label htmlFor="observations">Observações</Label>
+                <Textarea
+                    id="observations"
+                    value={observations}
+                    onChange={(e) => setObservations(e.target.value)}
+                    placeholder="Detalhes adicionais..."
+                    className="bg-slate-50 border-slate-200 resize-none h-24"
                 />
             </div>
 
             <Button
                 type="submit"
                 className="w-full bg-red-600 hover:bg-red-700"
-                disabled={createMutation.isPending}
+                disabled={loading}
             >
-                {createMutation.isPending ? (
+                {loading ? (
                     <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Salvando...
+                        Processando...
                     </>
                 ) : (
-                    isEdit ? (isInstallment ? 'Refazer Parcelamento' : 'Salvar Alterações') : 'Registrar Despesa'
+                    transactionToEdit ? 'Salvar Alterações' : 'Salvar Despesa'
                 )}
             </Button>
-        </form >
+        </form>
     );
 }

@@ -2,14 +2,15 @@ import { supabase } from '../lib/supabase';
 import type { Patient } from '../types/database';
 
 export interface Alert {
-    type: 'procedure_return' | 'birthday';
+    type: 'procedure_return' | 'birthday' | 'important_return';
     patient: {
         id: string;
         name: string;
         phone: string;
     };
-    date: string; // Last procedure date OR birth date
+    date: string; // Last procedure date OR birth date OR flagged date
     daysSince?: number; // For return alerts
+    dueDate?: string; // For important return alerts
 }
 
 export type AlertActionType = 'messaged' | 'scheduled' | 'dismissed';
@@ -131,8 +132,45 @@ export const alertsService = {
         return alerts.sort((a, b) => (b.daysSince || 0) - (a.daysSince || 0));
     },
 
+    async getImportantReturnAlerts(): Promise<Alert[]> {
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: patients, error } = await supabase
+            .from('patients')
+            .select('id, name, phone, return_alert_flag, return_alert_date')
+            .eq('return_alert_flag', true)
+            .lte('return_alert_date', today);
+
+        if (error) throw error;
+
+        // Get dismissed alerts
+        const dismissed = await this.getDismissedAlerts();
+
+        const alerts: Alert[] = [];
+
+        (patients || []).forEach((p: any) => {
+            if (!p.return_alert_date) return;
+
+            const key = `important_return:${p.id}:${p.return_alert_date}`;
+            if (dismissed.has(key)) return;
+
+            alerts.push({
+                type: 'important_return',
+                patient: {
+                    id: p.id,
+                    name: p.name,
+                    phone: p.phone,
+                },
+                date: p.return_alert_date,
+                dueDate: p.return_alert_date // Date it was scheduled for
+            });
+        });
+
+        return alerts;
+    },
+
     async dismissAlert(
-        alertType: 'birthday' | 'procedure_return',
+        alertType: 'birthday' | 'procedure_return' | 'important_return',
         patientId: string,
         alertDate: string,
         action: AlertActionType
@@ -160,13 +198,14 @@ export const alertsService = {
         const { appointmentsService } = await import('./appointments');
         const { consultationsService } = await import('./consultations');
 
-        const [birthdays, procedureReturns, tomorrowAppointments, scheduledReturns] = await Promise.all([
+        const [birthdays, procedureReturns, importantReturns, tomorrowAppointments, scheduledReturns] = await Promise.all([
             this.getBirthdayAlerts(),
             this.getProcedureReminders(),
+            this.getImportantReturnAlerts(),
             appointmentsService.getTomorrow().catch(() => []),
             consultationsService.getReturnAlerts().catch(() => [])
         ]);
 
-        return birthdays.length + procedureReturns.length + tomorrowAppointments.length + scheduledReturns.length;
+        return birthdays.length + procedureReturns.length + importantReturns.length + tomorrowAppointments.length + scheduledReturns.length;
     }
 };

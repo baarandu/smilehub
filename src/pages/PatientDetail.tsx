@@ -89,6 +89,7 @@ export default function PatientDetail() {
         patient={patient}
         onEdit={() => setShowEditDialog(true)}
         onDelete={handleDelete}
+        onRefresh={refetch}
       />
 
       {/* Edit Dialog */}

@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
+import { toggleReturnAlert } from '@/services/patients';
+import { toast } from 'sonner';
 import { ReportGenerationModal } from './ReportGenerationModal';
 import {
   AlertDialog,
@@ -14,16 +16,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface PatientHeaderProps {
   patient: Patient;
   onEdit?: () => void;
   onDelete?: () => void;
+  onRefresh?: () => void;
 }
 
-export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps) {
+export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAlertConfirm, setShowAlertConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [togglingAlert, setTogglingAlert] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -92,6 +103,30 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
     }
   };
 
+  const handleAlertClick = () => {
+    if (!patient.return_alert_flag) {
+      setShowAlertConfirm(true);
+    } else {
+      executeToggleAlert();
+    }
+  };
+
+  const executeToggleAlert = async () => {
+    try {
+      setTogglingAlert(true);
+      const newState = !patient.return_alert_flag;
+      await toggleReturnAlert(patient.id, newState);
+      toast.success(newState ? 'Alerta de retorno importante ativado' : 'Alerta removido');
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Error toggling alert:', error);
+      toast.error('Erro ao atualizar alerta');
+    } finally {
+      setTogglingAlert(false);
+      setShowAlertConfirm(false);
+    }
+  };
+
   return (
     <>
       <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
@@ -104,12 +139,51 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{patient.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  {patient.name}
+                  {patient.return_alert_flag && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Retorno Importante Sinalizado</p>
+                          <p className="text-xs text-muted-foreground">
+                            Para: {new Date(patient.return_alert_date!).toLocaleDateString('pt-BR')}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </h1>
                 {patient.occupation && (
                   <p className="text-muted-foreground mt-1">{patient.occupation}</p>
                 )}
               </div>
               <div className="flex gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={patient.return_alert_flag ? "default" : "outline"}
+                        size="sm"
+                        className={`gap-2 ${patient.return_alert_flag ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' : ''}`}
+                        onClick={handleAlertClick}
+                        disabled={togglingAlert}
+                      >
+                        <AlertTriangle className={`w-4 h-4 ${patient.return_alert_flag ? 'fill-current' : ''}`} />
+                        <span className="hidden sm:inline">
+                          {patient.return_alert_flag ? 'Sinalizado' : 'Sinalizar'}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Sinalizar retorno importante em 6 meses</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowReportModal(true)}>
                   <FileText className="w-4 h-4" />
                   Relatório
@@ -192,6 +266,23 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showAlertConfirm} onOpenChange={setShowAlertConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alertar Retorno Importante?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja marcar este paciente para um retorno importante? Um alerta será gerado automaticamente daqui a 6 meses.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={executeToggleAlert}>
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

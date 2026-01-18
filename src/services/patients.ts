@@ -162,6 +162,23 @@ export async function searchPatients(query: string): Promise<Patient[]> {
   return data || [];
 }
 
+export async function toggleReturnAlert(patientId: string, active: boolean): Promise<Patient> {
+  const updates: any = {
+    return_alert_flag: active,
+    return_alert_date: active ? new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0] : null
+  };
+
+  const { data, error } = await supabase
+    .from('patients')
+    .update(updates)
+    .eq('id', patientId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // Convert Patient to PatientFormData
 export function patientToFormData(patient: Patient): PatientFormData {
   return {

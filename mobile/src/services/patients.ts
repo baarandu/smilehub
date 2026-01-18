@@ -117,4 +117,20 @@ export const patientsService = {
   update: updatePatient,
   delete: deletePatient,
   count: getPatientsCount,
+  toggleReturnAlert: async (patientId: string, active: boolean) => {
+    const updates: any = {
+      return_alert_flag: active,
+      return_alert_date: active ? new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0] : null
+    };
+
+    const { data, error } = await (supabase
+      .from('patients') as any)
+      .update(updates)
+      .eq('id', patientId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 };
