@@ -161,6 +161,9 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                                                 if (pm === 'cash') return 'Dinheiro';
                                                 return pm;
                                             }
+                                            // Fallback to parsed description (matches Card logic)
+                                            if (parsed.displayMethod) return parsed.displayMethod;
+
                                             return 'Não informado';
                                         })()}
                                     </Text>
