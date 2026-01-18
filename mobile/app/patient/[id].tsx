@@ -232,10 +232,19 @@ export default function PatientDetail() {
                             <Text className="text-white font-bold text-xl">{getInitials(patient.name)}</Text>
                         </View>
                         <View className="flex-1">
-                            <View className="flex-row items-center gap-2">
-                                <Text className="text-xl font-bold text-gray-900">{patient.name}</Text>
-                                {patient.return_alert_flag && <AlertTriangle size={18} color="#EA580C" />}
-                            </View>
+                            <Text className="text-xl font-bold text-gray-900">{patient.name}</Text>
+
+                            {patient.return_alert_flag && (
+                                <View className="flex-row items-center gap-1 mt-1 self-start bg-orange-50 px-2 py-0.5 rounded-full">
+                                    <AlertTriangle size={12} color="#EA580C" />
+                                    {patient.return_alert_date && (
+                                        <Text className="text-[10px] font-bold text-orange-700">
+                                            {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
+                                        </Text>
+                                    )}
+                                </View>
+                            )}
+
                             {patient.occupation && <Text className="text-gray-500 mt-1">{patient.occupation}</Text>}
                         </View>
                     </View>

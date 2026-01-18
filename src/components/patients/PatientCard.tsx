@@ -35,7 +35,14 @@ export function PatientCard({ patient, index }: PatientCardProps) {
           <div className="flex items-center gap-2">
             <p className="font-semibold text-foreground truncate">{patient.name}</p>
             {patient.return_alert_flag && (
-              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+              <div className="flex items-center gap-1 bg-orange-50 px-1.5 py-0.5 rounded-full">
+                <AlertTriangle className="w-3 h-3 text-orange-600" />
+                {patient.return_alert_date && (
+                  <span className="text-[10px] font-bold text-orange-700">
+                    {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
+                  </span>
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2 mt-1.5 text-sm text-muted-foreground">

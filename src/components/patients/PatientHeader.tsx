@@ -144,14 +144,18 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   {patient.return_alert_flag && (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger>
-                          <AlertTriangle className="w-5 h-5 text-orange-500" />
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1.5 bg-orange-50 px-2 py-0.5 rounded-full cursor-help">
+                            <AlertTriangle className="w-4 h-4 text-orange-600" />
+                            {patient.return_alert_date && (
+                              <span className="text-xs font-bold text-orange-700">
+                                {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Retorno Importante Sinalizado</p>
-                          <p className="text-xs text-muted-foreground">
-                            Para: {new Date(patient.return_alert_date!).toLocaleDateString('pt-BR')}
-                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

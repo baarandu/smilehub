@@ -324,16 +324,26 @@ export default function Patients() {
                                         </Text>
                                     </View>
                                     <View className="flex-1">
-                                        <View className="flex-row items-center gap-2">
-                                            <Text className="font-semibold text-gray-900 text-base">
-                                                {patient.name}
-                                            </Text>
-                                            {patient.return_alert_flag && <AlertTriangle size={16} color="#EA580C" />}
-                                        </View>
+                                        <Text className="font-semibold text-gray-900 text-base">
+                                            {patient.name}
+                                        </Text>
+
                                         <View className="flex-row items-center gap-2 mt-1">
                                             <Phone size={14} color="#9CA3AF" />
                                             <Text className="text-gray-500 text-sm">{patient.phone}</Text>
                                         </View>
+
+                                        {patient.return_alert_flag && (
+                                            <View className="flex-row items-center gap-1 mt-1 self-start bg-orange-50 px-2 py-0.5 rounded-full">
+                                                <AlertTriangle size={12} color="#EA580C" />
+                                                {patient.return_alert_date && (
+                                                    <Text className="text-[10px] font-bold text-orange-700">
+                                                        {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
+                                                    </Text>
+                                                )}
+                                            </View>
+                                        )}
+
                                         {patient.email && (
                                             <View className="flex-row items-center gap-2 mt-1">
                                                 <Mail size={14} color="#9CA3AF" />
