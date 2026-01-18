@@ -61,7 +61,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                 exams: examsToInclude,
                 includeHeader,
                 notes: notes.trim(),
-                clinicName: metadata.clinic_name || 'Smile Care Hub',
+                clinicName: metadata.clinic_name || 'Organiza Odonto',
                 dentistName: metadata.full_name || '',
                 accountType: metadata.account_type as 'solo' | 'clinic' || 'solo',
             });

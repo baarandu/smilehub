@@ -21,7 +21,7 @@ export const generatePatientReport = async ({
     exams,
     includeHeader,
     notes,
-    clinicName = 'Smile Care Hub',
+    clinicName = 'Organiza Odonto',
     clinicLogo,
     dentistName,
     accountType = 'solo'
