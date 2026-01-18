@@ -68,7 +68,11 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               toothIndex: index,
               tooth,
               budgetDate: budget.date,
-              locationRate: parsed.locationRate ? parseFloat(parsed.locationRate) : 0
+              // Mobile-aligned logic for locationRate
+              // 1. Item specific override
+              // 2. Budget column (cast to any if type missing)
+              // 3. Notes global fallback
+              locationRate: (tooth as any).locationRate ?? (budget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0)
             };
 
             if (tooth.status === 'approved') {
@@ -124,9 +128,41 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       // 1. Create Financial Transactions
       const totalAmount = getItemValue(selectedItem);
-      // ... (rest of logic) ...
 
-      const anticipationAmountPerTx = breakdown?.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
+      const numTransactions = installments || 1;
+      const txAmount = totalAmount / numTransactions;
+      const isAnticipated = breakdown?.anticipationRate ? true : false;
+
+      // Calculate Deductions (Per Transaction)
+      let netAmountPerTx = txAmount;
+      let taxAmountPerTx = 0;
+      let cardFeeAmountPerTx = 0;
+      let anticipationAmountPerTx = 0;
+      let locationAmountPerTx = 0;
+
+      const targetLocationRate = selectedItem.locationRate || 0;
+
+      if (breakdown) {
+        netAmountPerTx = breakdown.netAmount / numTransactions;
+        taxAmountPerTx = breakdown.taxAmount / numTransactions;
+        cardFeeAmountPerTx = breakdown.cardFeeAmount / numTransactions;
+        anticipationAmountPerTx = breakdown.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
+
+        if (breakdown.locationAmount) {
+          locationAmountPerTx = breakdown.locationAmount / numTransactions;
+        } else if (targetLocationRate > 0) {
+          // Fallback if breakdown existed but missed location (e.g. manual rate on item but not passed to dialog properly?)
+          locationAmountPerTx = (txAmount * targetLocationRate) / 100;
+          netAmountPerTx -= locationAmountPerTx;
+        }
+      } else {
+        // No breakdown (Cash/Transfer/Pix without fees explicitly loaded?)
+        // Deduct Location Rate
+        if (targetLocationRate > 0) {
+          locationAmountPerTx = (txAmount * targetLocationRate) / 100;
+          netAmountPerTx = txAmount - locationAmountPerTx;
+        }
+      }
 
       // Ensure budgetDate is valid YYYY-MM-DD
       let budgetDateStr = selectedItem.budgetDate;
@@ -184,7 +220,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           card_fee_rate: breakdown?.cardFeeRate,
           card_fee_amount: cardFeeAmountPerTx,
           anticipation_rate: breakdown?.anticipationRate,
-          anticipation_amount: anticipationAmountPerTx
+          anticipation_amount: anticipationAmountPerTx,
+          location_rate: targetLocationRate,
+          location_amount: locationAmountPerTx
         } as any);
       }
 

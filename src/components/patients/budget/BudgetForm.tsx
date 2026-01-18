@@ -6,8 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 import {
     TEETH,
     TREATMENTS,
@@ -123,11 +127,28 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label>Data do Orçamento</Label>
-                        <Input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                        />
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {date ? format(parseISO(date), "dd/MM/yyyy") : <span>Selecione uma data</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={date ? parseISO(date) : undefined}
+                                    onSelect={(d) => d && setDate(format(d, 'yyyy-MM-dd'))}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
                     <div className="space-y-2">
                         <Label>Taxa Clínica (%)</Label>
