@@ -148,6 +148,40 @@ export function IncomeTab({ transactions, loading, onEdit, onRefresh, refreshing
         setFilterModalVisible(false);
     };
 
+    const handleEditIncome = (transaction: FinancialTransactionWithPatient) => {
+        if (onEdit) {
+            onEdit(transaction);
+        } else {
+            Alert.alert('Info', 'Edição não disponível neste contexto.');
+        }
+    };
+
+    const handleDeleteIncome = (transaction: FinancialTransactionWithPatient) => {
+        Alert.alert(
+            'Excluir Receita',
+            'Tem certeza que deseja excluir esta receita?\n\nSe houver orçamentos vinculados, eles voltarão ao status "pendente".',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await financialService.deleteIncomeAndRevertBudget(transaction.id);
+                            if (onRefresh) {
+                                onRefresh();
+                            }
+                            Alert.alert('Sucesso', 'Receita excluída.');
+                        } catch (error) {
+                            console.error('Error deleting:', error);
+                            Alert.alert('Erro', 'Falha ao excluir receita.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View className="flex-1">
             {/* Header / Filter Bar */}
@@ -289,8 +323,8 @@ export function IncomeTab({ transactions, loading, onEdit, onRefresh, refreshing
                                         key={transaction.id}
                                         transaction={transaction}
                                         onPress={() => setSelectedTransaction(transaction)}
-                                        onEdit={() => handleEditIncome(transaction)}
                                         onDelete={() => handleDeleteIncome(transaction)}
+                                        editable={false}
                                     >
                                         <View className="p-4 border-b border-gray-50 flex-row items-center justify-between bg-white">
                                             <View className="flex-1 mr-4">

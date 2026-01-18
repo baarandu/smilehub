@@ -72,8 +72,15 @@ export default function Financial() {
     }, [loadData]);
 
     const handleEditTransaction = (transaction: FinancialTransaction) => {
-        setEditingTransaction(transaction);
-        setShowNewExpenseModal(true);
+        if (transaction.type === 'expense') {
+            setEditingTransaction(transaction);
+            setShowNewExpenseModal(true);
+        } else {
+            Alert.alert(
+                'Edição de Receita',
+                'Para editar uma receita vinculada a um tratamento, acesse o cadastro do paciente.\n\nReceitas manuais poderão ser editadas em breve.'
+            );
+        }
     };
 
     // Navigation Handlers

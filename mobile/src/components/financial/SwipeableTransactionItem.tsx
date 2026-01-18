@@ -7,9 +7,10 @@ import { FinancialTransaction, FinancialTransactionWithPatient } from '../../typ
 interface SwipeableTransactionItemProps {
     transaction: FinancialTransaction | FinancialTransactionWithPatient;
     onPress: () => void;
-    onEdit: () => void;
+    onEdit?: () => void;
     onDelete: () => void;
     children: React.ReactNode;
+    editable?: boolean;
 }
 
 export function SwipeableTransactionItem({
@@ -17,7 +18,8 @@ export function SwipeableTransactionItem({
     onPress,
     onEdit,
     onDelete,
-    children
+    children,
+    editable = true
 }: SwipeableTransactionItemProps) {
     const swipeableRef = useRef<Swipeable>(null);
 
@@ -36,26 +38,28 @@ export function SwipeableTransactionItem({
 
         return (
             <View style={styles.rightActions}>
-                <Animated.View
-                    style={[
-                        styles.actionButton,
-                        styles.editButton,
-                        {
-                            transform: [{ scale }, { translateX }],
-                        },
-                    ]}
-                >
-                    <TouchableOpacity
-                        style={styles.actionButtonContent}
-                        onPress={() => {
-                            swipeableRef.current?.close();
-                            onEdit();
-                        }}
+                {editable && onEdit && (
+                    <Animated.View
+                        style={[
+                            styles.actionButton,
+                            styles.editButton,
+                            {
+                                transform: [{ scale }, { translateX }],
+                            },
+                        ]}
                     >
-                        <Pencil size={20} color="#FFFFFF" />
-                        <Text style={styles.actionButtonText}>Editar</Text>
-                    </TouchableOpacity>
-                </Animated.View>
+                        <TouchableOpacity
+                            style={styles.actionButtonContent}
+                            onPress={() => {
+                                swipeableRef.current?.close();
+                                onEdit();
+                            }}
+                        >
+                            <Pencil size={20} color="#FFFFFF" />
+                            <Text style={styles.actionButtonText}>Editar</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                )}
                 <Animated.View
                     style={[
                         styles.actionButton,
