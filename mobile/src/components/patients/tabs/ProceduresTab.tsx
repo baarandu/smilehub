@@ -47,7 +47,7 @@ export function ProceduresTab({
         const obsPart = parts.length > 1 ? parts[1] : (itemsPart.startsWith('Obs: ') ? itemsPart.replace('Obs: ', '') : null);
 
         const lines = itemsPart.split('\n');
-        const structuredItems: { treatment: string; tooth: string; value: string }[] = [];
+        const structuredItems: { treatment: string; tooth: string }[] = [];
         const unstructuredLines: string[] = [];
 
         lines.forEach(line => {
@@ -63,7 +63,7 @@ export function ProceduresTab({
                 structuredItems.push({
                     treatment: sections[0].trim(),
                     tooth: sections[1].trim(),
-                    value: sections.slice(2).join(' - ').trim()
+                    // value: sections.slice(2).join(' - ').trim() // Removed value
                 });
             } else if (!cleanLine.startsWith('Obs:')) {
                 unstructuredLines.push(line);
@@ -139,7 +139,7 @@ export function ProceduresTab({
                                                                     <Text className="font-bold text-gray-900 text-base mb-1">{item.tooth}</Text>
                                                                     <View className="flex-row flex-wrap">
                                                                         <Text className="text-gray-600 text-sm">
-                                                                            {item.treatment} <Text className="font-bold text-teal-600">- {item.value}</Text>
+                                                                            {item.treatment}
                                                                         </Text>
                                                                     </View>
                                                                 </View>
@@ -167,11 +167,7 @@ export function ProceduresTab({
                                     {/* Value and Payment */}
                                     <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-50">
                                         <View>
-                                            {procedure.value != null && (
-                                                <Text className="text-lg font-bold text-teal-600">
-                                                    R$ {procedure.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </Text>
-                                            )}
+                                            {/* Value removed as requested */}
                                         </View>
                                         {procedure.payment_method && (
                                             <View className="bg-gray-100 px-2 py-1 rounded">

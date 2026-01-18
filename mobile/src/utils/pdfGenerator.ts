@@ -11,6 +11,8 @@ interface ReportOptions {
     notes?: string;
     clinicName?: string;
     clinicLogo?: string;
+    dentistName?: string;
+    accountType?: 'solo' | 'clinic';
 }
 
 export const generatePatientReport = async ({
@@ -20,7 +22,9 @@ export const generatePatientReport = async ({
     includeHeader,
     notes,
     clinicName = 'Smile Care Hub',
-    clinicLogo
+    clinicLogo,
+    dentistName,
+    accountType = 'solo'
 }: ReportOptions) => {
 
     const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
@@ -62,6 +66,41 @@ export const generatePatientReport = async ({
         return { ...exam, resolvedImages: images };
     }));
 
+    // Helper to sanitize description removing values
+    const sanitizeDescription = (description: string) => {
+        if (!description) return '';
+
+        // Split potential Obs part
+        const parts = description.split('\n\nObs: ');
+        const itemsPart = parts[0];
+        const obsPart = parts.length > 1 ? parts[1] : (itemsPart.startsWith('Obs: ') ? itemsPart.replace('Obs: ', '') : null);
+
+        const lines = itemsPart.split('\n');
+        const sanitizedLines: string[] = [];
+
+        lines.forEach(line => {
+            const cleanLine = line.trim().replace(/^•\s*/, '');
+            if (!cleanLine) return;
+
+            // Check for structure like "Treatment | Tooth | Value" or "Treatment - Tooth - Value"
+            let sections = cleanLine.split(' | ');
+            if (sections.length < 3) {
+                sections = cleanLine.split(' - ');
+            }
+
+            if (sections.length >= 3) {
+                // Keep only Treatment and Tooth, discard Value
+                sanitizedLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+            } else if (!cleanLine.startsWith('Obs:')) {
+                // Keep unstructured lines as is
+                sanitizedLines.push(line);
+            }
+        });
+
+        const result = sanitizedLines.join('\n');
+        return obsPart ? `${result}\n\nObs: ${obsPart}` : result;
+    };
+
     const htmlContent = `
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -70,6 +109,7 @@ export const generatePatientReport = async ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório do Paciente</title>
         <style>
+            /* ... (styles remain same) ... */
             body { 
                 font-family: 'Helvetica', 'Arial', sans-serif; 
                 padding: 40px; 
@@ -94,11 +134,25 @@ export const generatePatientReport = async ({
             .clinic-info { 
                 flex: 1; 
             }
-            .clinic-name { 
+            .clinic-title { 
                 font-size: 24px; 
                 font-weight: bold; 
                 color: #0d9488; 
                 margin: 0; 
+                line-height: 1.2;
+            }
+            .dentist-title { 
+                font-size: 24px; 
+                font-weight: bold; 
+                color: #000000; 
+                margin: 0; 
+                line-height: 1.2;
+            }
+            .sub-title {
+                font-size: 16px;
+                color: #555;
+                margin-top: 5px;
+                font-weight: 500;
             }
             .doc-title {
                 text-align: center;
@@ -193,8 +247,12 @@ export const generatePatientReport = async ({
         <div class="header">
             ${clinicLogo ? `<img src="${clinicLogo}" class="logo" />` : ''}
             <div class="clinic-info">
-                <h1 class="clinic-name">${clinicName}</h1>
-                <p>Relatório Clínico Odontológico</p>
+                ${accountType === 'clinic' ? `
+                    <h1 class="clinic-title">${clinicName}</h1>
+                    ${dentistName ? `<div class="sub-title">Dr(a). ${dentistName}</div>` : ''}
+                ` : `
+                    <h1 class="dentist-title">Dr(a). ${dentistName || 'Dentista'}</h1>
+                `}
             </div>
         </div>
         ` : ''}
@@ -220,7 +278,7 @@ export const generatePatientReport = async ({
                     ${procedures.map(p => `
                     <tr>
                         <td>${formatDate(p.date)}</td>
-                        <td>${p.description}${p.location ? ` (${p.location})` : ''}</td>
+                        <td>${sanitizeDescription(p.description)}</td>
                     </tr>
                     `).join('')}
                 </tbody>

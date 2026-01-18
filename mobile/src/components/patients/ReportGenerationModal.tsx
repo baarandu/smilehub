@@ -4,6 +4,7 @@ import { X, FileText, CheckSquare, Square, Printer } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Procedure, Exam, Patient } from '../../types/database';
 import { generatePatientReport } from '../../utils/pdfGenerator';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ReportGenerationModalProps {
     visible: boolean;
@@ -14,6 +15,7 @@ interface ReportGenerationModalProps {
 }
 
 export function ReportGenerationModal({ visible, onClose, patient, procedures, exams }: ReportGenerationModalProps) {
+    const { user } = useAuth();
     const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [includeHeader, setIncludeHeader] = useState(true);
@@ -51,12 +53,17 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
             const proceduresToInclude = procedures.filter(p => selectedProcedures.includes(p.id));
             const examsToInclude = exams.filter(e => selectedExams.includes(e.id));
 
+            const metadata = user?.user_metadata || {};
+
             await generatePatientReport({
                 patient,
                 procedures: proceduresToInclude,
                 exams: examsToInclude,
                 includeHeader,
-                notes: notes.trim()
+                notes: notes.trim(),
+                clinicName: metadata.clinic_name || 'Smile Care Hub',
+                dentistName: metadata.full_name || '',
+                accountType: metadata.account_type as 'solo' | 'clinic' || 'solo',
             });
             onClose();
         } catch (error) {
@@ -65,6 +72,40 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
         } finally {
             setGenerating(false);
         }
+    };
+
+    const sanitizeDescription = (description: string) => {
+        if (!description) return '';
+
+        // Remove Obs part for the list view to keep it clean, or keep it if needed. 
+        // For the modal list, just main info is usually enough, but let's keep consistent with PDF logic minus Obs for compactness?
+        // Actually user wants to see what they are selecting. Let's keep it similar to PDF sanitizer.
+
+        const parts = description.split('\n\nObs: ');
+        const itemsPart = parts[0];
+
+        const lines = itemsPart.split('\n');
+        const sanitizedLines: string[] = [];
+
+        lines.forEach(line => {
+            // Remove bullet point if exists to standardization
+            const cleanLine = line.trim().replace(/^•\s*/, '');
+            if (!cleanLine) return;
+
+            let sections = cleanLine.split(' | ');
+            if (sections.length < 3) {
+                sections = cleanLine.split(' - ');
+            }
+
+            if (sections.length >= 3) {
+                // Keep only Treatment and Tooth
+                sanitizedLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+            } else if (!cleanLine.startsWith('Obs:')) {
+                sanitizedLines.push(cleanLine);
+            }
+        });
+
+        return sanitizedLines.join('\n');
     };
 
     return (
@@ -126,8 +167,8 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                                     {selectedProcedures.includes(proc.id) ? <CheckSquare size={20} color="#0D9488" /> : <Square size={20} color="#9CA3AF" />}
                                                 </View>
                                                 <View className="flex-1">
-                                                    <Text className="text-gray-900 font-medium">{proc.description}</Text>
-                                                    <Text className="text-gray-500 text-xs mt-0.5">{new Date(proc.date).toLocaleDateString()} • {proc.location || 'Geral'}</Text>
+                                                    <Text className="text-gray-900 font-medium">{sanitizeDescription(proc.description)}</Text>
+                                                    <Text className="text-gray-500 text-xs mt-0.5">{new Date(proc.date).toLocaleDateString()}</Text>
                                                 </View>
                                             </TouchableOpacity>
                                         ))}
