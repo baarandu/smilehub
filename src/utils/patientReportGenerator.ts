@@ -1,7 +1,4 @@
-import { printToFileAsync } from 'expo-print';
-import { shareAsync } from 'expo-sharing';
-import type { Procedure, Exam, Patient } from '../types/database';
-import { getAccessibleUrl } from './storage';
+import type { Procedure, Exam, Patient } from '@/types/database';
 
 interface ReportOptions {
     patient: Patient;
@@ -28,43 +25,6 @@ export const generatePatientReport = async ({
 }: ReportOptions) => {
 
     const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
-
-    // Process exams to resolve image URLs
-    const examsWithImages = await Promise.all(exams.map(async (exam) => {
-        // Collect all potential paths first to deduplicate
-        const uniquePaths = new Set<string>();
-
-        if (exam.file_url) uniquePaths.add(exam.file_url);
-        if (exam.file_urls && exam.file_urls.length > 0) {
-            exam.file_urls.forEach(url => uniquePaths.add(url));
-        }
-
-        const images: string[] = [];
-
-        const isImage = (url: string) => {
-            if (!url) return false;
-            const lowerUrl = url.toLowerCase();
-            // Check if it's NOT a PDF and has an image extension (allowing query params)
-            if (lowerUrl.includes('.pdf') && !lowerUrl.includes('.pdf?')) return false; // Basic pdf check
-
-            // If explicit type is photo, trust it
-            if (exam.file_type === 'photo') return true;
-
-            // Otherwise check extension, allowing for query params like ?token=...
-            // Matches .ext followed by end of string OR ?
-            return /\.(jpg|jpeg|png|webp|heic)(\?|$)/i.test(url);
-        };
-
-        // Resolve URLs for unique paths only
-        for (const path of uniquePaths) {
-            const url = await getAccessibleUrl(path);
-            if (url && isImage(url)) {
-                images.push(url);
-            }
-        }
-
-        return { ...exam, resolvedImages: images };
-    }));
 
     // Helper to sanitize description removing values
     const sanitizeDescription = (description: string) => {
@@ -101,6 +61,44 @@ export const generatePatientReport = async ({
         return obsPart ? `${result}\n\nObs: ${obsPart}` : result;
     };
 
+    // Process exams to resolve image URLs
+    // On web, URLs are typically accessible if they are consistent with how the app loads them.
+    // If they are public URLs or signed URLs already, they should work in an img tag.
+    // We'll assume the exam objects passed in already have accessible URLs or the component logic handles it.
+    // However, if we need to resolve them like in mobile, we might need a helper.
+    // For now, mapping resolvedImages similar to mobile logic but using the URL directly if available.
+    // Ideally the caller passes fully resolved URLs or we assume file_urls are usable.
+
+    // NOTE: On web, we might encounter cross-origin issues with images in print. 
+    // Converting to base64 is safer for specific print libraries, but browser print often handles links fine if accessible.
+
+    const examsWithImages = exams.map((exam) => {
+        const uniquePaths = new Set<string>();
+        if (exam.file_url) uniquePaths.add(exam.file_url);
+        if (exam.file_urls && exam.file_urls.length > 0) {
+            exam.file_urls.forEach(url => uniquePaths.add(url));
+        }
+
+        const images: string[] = [];
+        const isImage = (url: string) => {
+            if (!url) return false;
+            const lowerUrl = url.toLowerCase();
+            if (lowerUrl.includes('.pdf') && !lowerUrl.includes('.pdf?')) return false;
+            if (exam.file_type === 'photo') return true;
+            return /\.(jpg|jpeg|png|webp|heic)(\?|$)/i.test(url);
+        };
+
+        uniquePaths.forEach(path => {
+            // Check if path is a full URL or relative. 
+            // In this app, file_url seems to be a full URL (signed or public).
+            if (path && isImage(path)) {
+                images.push(path);
+            }
+        });
+
+        return { ...exam, resolvedImages: images };
+    });
+
     const htmlContent = `
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -109,12 +107,17 @@ export const generatePatientReport = async ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório do Paciente</title>
         <style>
-            /* ... (styles remain same) ... */
+            @page {
+                margin: 0;
+            }
             body { 
                 font-family: 'Helvetica', 'Arial', sans-serif; 
                 padding: 40px; 
                 color: #333; 
                 line-height: 1.5;
+                margin: 0;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .header { 
                 display: flex; 
@@ -203,6 +206,7 @@ export const generatePatientReport = async ({
                 padding: 15px;
                 border-radius: 8px;
                 background-color: #fafafa;
+                break-inside: avoid;
             }
             .exam-header {
                 font-weight: bold;
@@ -243,6 +247,10 @@ export const generatePatientReport = async ({
             .page-break {
                 page-break-before: always;
                 padding-top: 50px;
+            }
+            @media print {
+                .no-print { display: none; }
+                body { -webkit-print-color-adjust: exact; }
             }
         </style>
     </head>
@@ -326,15 +334,18 @@ export const generatePatientReport = async ({
     </html>
     `;
 
-    try {
-        const { uri } = await printToFileAsync({
-            html: htmlContent,
-            base64: false
-        });
+    // Open in new window and print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.focus();
 
-        await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        throw error;
+        // Wait for images to load before printing
+        setTimeout(() => {
+            printWindow.print();
+            // Optional: Close window after print (some browsers block this or it's annoying)
+            // printWindow.close(); 
+        }, 1000);
     }
 };

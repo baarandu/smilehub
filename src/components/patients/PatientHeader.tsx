@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2 } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
+import { ReportGenerationModal } from './ReportGenerationModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,7 @@ interface PatientHeaderProps {
 
 export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const getInitials = (name: string) => {
     return name
@@ -108,6 +110,10 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
                 )}
               </div>
               <div className="flex gap-2">
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowReportModal(true)}>
+                  <FileText className="w-4 h-4" />
+                  Relatório
+                </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
                   <Edit className="w-4 h-4" />
                   Editar
@@ -190,6 +196,12 @@ export function PatientHeader({ patient, onEdit, onDelete }: PatientHeaderProps)
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReportGenerationModal
+        open={showReportModal}
+        onOpenChange={setShowReportModal}
+        patient={patient}
+      />
     </>
   );
 }
