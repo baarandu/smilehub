@@ -34,6 +34,7 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
         { label: 'Em tratamento médico', value: anamnese.medical_treatment, details: anamnese.medical_treatment_details },
         { label: 'Cirurgia recente', value: anamnese.recent_surgery, details: anamnese.recent_surgery_details },
         { label: 'Problemas de cicatrização', value: anamnese.healing_problems, details: anamnese.healing_problems_details },
+        { label: 'Doença respiratória', value: (anamnese as any).respiratory_problems, details: (anamnese as any).respiratory_problems_details },
         { label: 'Medicação atual', value: anamnese.current_medication, details: anamnese.current_medication_details },
         { label: 'Histórico de anestesia local', value: anamnese.local_anesthesia_history },
         { label: 'Reação à anestesia', value: anamnese.anesthesia_reaction, details: anamnese.anesthesia_reaction_details },

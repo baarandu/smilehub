@@ -256,6 +256,8 @@ export interface Database {
           recent_surgery_details: string | null
           healing_problems: boolean
           healing_problems_details: string | null
+          respiratory_problems: boolean
+          respiratory_problems_details: string | null
           current_medication: boolean
           current_medication_details: string | null
           allergy: boolean
@@ -307,6 +309,8 @@ export interface Database {
           recent_surgery_details?: string | null
           healing_problems?: boolean
           healing_problems_details?: string | null
+          respiratory_problems?: boolean
+          respiratory_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
           allergy?: boolean
@@ -358,6 +362,8 @@ export interface Database {
           recent_surgery_details?: string | null
           healing_problems?: boolean
           healing_problems_details?: string | null
+          respiratory_problems?: boolean
+          respiratory_problems_details?: string | null
           current_medication?: boolean
           current_medication_details?: string | null
           allergy?: boolean

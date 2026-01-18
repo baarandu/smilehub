@@ -86,6 +86,8 @@ export function NewAnamneseModal({
         recentSurgeryDetails: '',
         healingProblems: false,
         healingProblemsDetails: '',
+        respiratoryProblems: false,
+        respiratoryProblemsDetails: '',
         currentMedication: false,
         currentMedicationDetails: '',
         allergy: false,
@@ -137,6 +139,8 @@ export function NewAnamneseModal({
                     recentSurgeryDetails: anamnese.recent_surgery_details || '',
                     healingProblems: anamnese.healing_problems,
                     healingProblemsDetails: anamnese.healing_problems_details || '',
+                    respiratoryProblems: (anamnese as any).respiratory_problems || false,
+                    respiratoryProblemsDetails: (anamnese as any).respiratory_problems_details || '',
                     currentMedication: anamnese.current_medication,
                     currentMedicationDetails: anamnese.current_medication_details || '',
                     allergy: anamnese.allergy || false,
@@ -191,6 +195,8 @@ export function NewAnamneseModal({
                     recentSurgeryDetails: '',
                     healingProblems: false,
                     healingProblemsDetails: '',
+                    respiratoryProblems: false,
+                    respiratoryProblemsDetails: '',
                     currentMedication: false,
                     currentMedicationDetails: '',
                     drugAllergy: false,
@@ -245,6 +251,8 @@ export function NewAnamneseModal({
                 recent_surgery_details: form.recentSurgery ? form.recentSurgeryDetails || null : null,
                 healing_problems: form.healingProblems,
                 healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
+                respiratory_problems: form.respiratoryProblems,
+                respiratory_problems_details: form.respiratoryProblems ? form.respiratoryProblemsDetails || null : null,
                 current_medication: form.currentMedication,
                 current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
                 allergy: form.allergy,
@@ -387,6 +395,15 @@ export function NewAnamneseModal({
                             details={form.healingProblemsDetails}
                             onDetailsChange={(t) => setForm({ ...form, healingProblemsDetails: t })}
                             detailsPlaceholder="Descreva o problema"
+                        />
+
+                        <QuestionField
+                            label="Tem doença respiratória?"
+                            value={form.respiratoryProblems}
+                            onValueChange={(v) => setForm({ ...form, respiratoryProblems: v })}
+                            details={form.respiratoryProblemsDetails}
+                            onDetailsChange={(t) => setForm({ ...form, respiratoryProblemsDetails: t })}
+                            detailsPlaceholder="Qual problema?"
                         />
 
                         {/* Seção: Medicação e Anestesia */}

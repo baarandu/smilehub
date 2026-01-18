@@ -96,6 +96,8 @@ export function NewAnamneseDialog({
     recentSurgeryDetails: '',
     healingProblems: false,
     healingProblemsDetails: '',
+    respiratoryProblems: false,
+    respiratoryProblemsDetails: '',
     currentMedication: false,
     currentMedicationDetails: '',
     allergy: false,
@@ -147,6 +149,8 @@ export function NewAnamneseDialog({
           recentSurgeryDetails: anamnese.recent_surgery_details || '',
           healingProblems: anamnese.healing_problems,
           healingProblemsDetails: anamnese.healing_problems_details || '',
+          respiratoryProblems: (anamnese as any).respiratory_problems || false,
+          respiratoryProblemsDetails: (anamnese as any).respiratory_problems_details || '',
           currentMedication: anamnese.current_medication,
           currentMedicationDetails: anamnese.current_medication_details || '',
           allergy: anamnese.allergy || false,
@@ -201,6 +205,8 @@ export function NewAnamneseDialog({
           recentSurgeryDetails: '',
           healingProblems: false,
           healingProblemsDetails: '',
+          respiratoryProblems: false,
+          respiratoryProblemsDetails: '',
           currentMedication: false,
           currentMedicationDetails: '',
           allergy: false,
@@ -257,6 +263,8 @@ export function NewAnamneseDialog({
         recent_surgery_details: form.recentSurgery ? form.recentSurgeryDetails || null : null,
         healing_problems: form.healingProblems,
         healing_problems_details: form.healingProblems ? form.healingProblemsDetails || null : null,
+        respiratory_problems: form.respiratoryProblems,
+        respiratory_problems_details: form.respiratoryProblems ? form.respiratoryProblemsDetails || null : null,
         current_medication: form.currentMedication,
         current_medication_details: form.currentMedication ? form.currentMedicationDetails || null : null,
         allergy: form.allergy,
@@ -361,6 +369,16 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, healingProblems: value })}
               details={form.healingProblemsDetails}
               onDetailsChange={(text) => setForm({ ...form, healingProblemsDetails: text })}
+            />
+
+            {/* Problemas Respiratórios */}
+            <QuestionField
+              label="Tem doença respiratória?"
+              value={form.respiratoryProblems}
+              onValueChange={(value) => setForm({ ...form, respiratoryProblems: value })}
+              details={form.respiratoryProblemsDetails}
+              onDetailsChange={(text) => setForm({ ...form, respiratoryProblemsDetails: text })}
+              detailsPlaceholder="Qual problema?"
             />
 
             {/* Medicação Atual */}
