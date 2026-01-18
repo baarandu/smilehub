@@ -119,6 +119,20 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                         </View>
                     )}
 
+                    {/* Observations */}
+                    {anamnese.observations && anamnese.observations.trim() && (
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
+                            <View className="p-3 border-b border-gray-100 bg-teal-50">
+                                <Text className="font-semibold text-teal-800">Observações</Text>
+                            </View>
+                            <View className="p-4">
+                                <View className="pl-4 border-l-2 border-teal-200">
+                                    <Text className="text-sm text-gray-600">{anamnese.observations}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
                     <View className="h-8" />
                 </ScrollView>
             </View>

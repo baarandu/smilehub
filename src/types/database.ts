@@ -293,6 +293,7 @@ export interface Database {
           gastritis_reflux: boolean
           gastritis_reflux_details: string | null
           notes: string | null
+          observations: string | null
           created_at: string
           updated_at: string
         }
@@ -343,6 +344,7 @@ export interface Database {
           gastritis_reflux?: boolean
           gastritis_reflux_details?: string | null
           notes?: string | null
+          observations?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -393,6 +395,7 @@ export interface Database {
           gastritis_reflux?: boolean
           gastritis_reflux_details?: string | null
           notes?: string | null
+          observations?: string | null
           created_at?: string
           updated_at?: string
         }

@@ -133,6 +133,7 @@ export function NewAnamneseDialog({
     gastritisReflux: false,
     gastritisRefluxDetails: '',
     notes: '',
+    observations: '',
   });
 
   useEffect(() => {
@@ -183,6 +184,7 @@ export function NewAnamneseDialog({
           gastritisReflux: anamnese.gastritis_reflux,
           gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
           notes: anamnese.notes || '',
+          observations: anamnese.observations || '',
         });
       } else {
         setForm({
@@ -236,6 +238,7 @@ export function NewAnamneseDialog({
           gastritisReflux: false,
           gastritisRefluxDetails: '',
           notes: '',
+          observations: '',
         });
       }
     }
@@ -291,6 +294,7 @@ export function NewAnamneseDialog({
         gastritis_reflux: form.gastritisReflux,
         gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
         notes: form.notes || null,
+        observations: form.observations || null,
       };
 
       if (anamnese) {
@@ -533,6 +537,17 @@ export function NewAnamneseDialog({
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 placeholder="Descreva a queixa principal do paciente..."
+                className="min-h-[100px]"
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={form.observations}
+                onChange={(e) => setForm({ ...form, observations: e.target.value })}
+                placeholder="Outras observações relevantes..."
                 className="min-h-[100px]"
               />
             </div>

@@ -241,6 +241,7 @@ export interface Database {
           arthritis: boolean
           gastritis_reflux: boolean
           notes: string | null
+          observations: string | null
           created_at: string
           updated_at: string
         }
@@ -280,6 +281,7 @@ export interface Database {
           arthritis?: boolean
           gastritis_reflux?: boolean
           notes?: string | null
+          observations?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -319,6 +321,7 @@ export interface Database {
           arthritis?: boolean
           gastritis_reflux?: boolean
           notes?: string | null
+          observations?: string | null
           created_at?: string
           updated_at?: string
         }

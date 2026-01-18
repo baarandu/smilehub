@@ -117,6 +117,21 @@ export function AnamneseSummaryDialog({
                                 </div>
                             </>
                         )}
+
+                        {/* Observações */}
+                        {anamnese.observations && anamnese.observations.trim() && (
+                            <>
+                                <Separator />
+                                <div className="space-y-2">
+                                    <h3 className="font-semibold text-foreground">Observações</h3>
+                                    <div className="pl-4 border-l-2 border-primary/20">
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                            {anamnese.observations}
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </ScrollArea>
             </DialogContent>

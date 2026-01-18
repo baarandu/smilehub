@@ -123,6 +123,7 @@ export function NewAnamneseModal({
         gastritisReflux: false,
         gastritisRefluxDetails: '',
         notes: '',
+        observations: '',
     });
 
     useEffect(() => {
@@ -173,6 +174,7 @@ export function NewAnamneseModal({
                     gastritisReflux: anamnese.gastritis_reflux,
                     gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
                     notes: anamnese.notes || '',
+                    observations: anamnese.observations || '',
                 });
             } else {
                 setForm({
@@ -224,6 +226,7 @@ export function NewAnamneseModal({
                     gastritisReflux: false,
                     gastritisRefluxDetails: '',
                     notes: '',
+                    observations: '',
                 });
             }
         }
@@ -279,6 +282,7 @@ export function NewAnamneseModal({
                 gastritis_reflux: form.gastritisReflux,
                 gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
                 notes: form.notes || null,
+                observations: form.observations || null,
             } as any;
 
             if (anamnese) {
@@ -567,6 +571,22 @@ export function NewAnamneseModal({
                                     value={form.notes}
                                     onChangeText={(t) => setForm({ ...form, notes: t })}
                                     placeholder="Descreva a queixa principal do paciente..."
+                                    placeholderTextColor="#9CA3AF"
+                                    multiline
+                                    textAlignVertical="top"
+                                />
+                            </View>
+                        </View>
+
+                        {/* Observations */}
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3">
+                            <View className="p-4">
+                                <Text className="text-gray-900 font-medium mb-2">Observações</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 min-h-[80px]"
+                                    value={form.observations}
+                                    onChangeText={(t) => setForm({ ...form, observations: t })}
+                                    placeholder="Outras observações relevantes..."
                                     placeholderTextColor="#9CA3AF"
                                     multiline
                                     textAlignVertical="top"
