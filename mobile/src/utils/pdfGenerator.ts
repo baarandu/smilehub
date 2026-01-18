@@ -112,83 +112,83 @@ export const generatePatientReport = async ({
             /* ... (styles remain same) ... */
             body { 
                 font-family: 'Helvetica', 'Arial', sans-serif; 
-                padding: 40px; 
+                padding: 20px; 
                 color: #333; 
-                line-height: 1.5;
+                line-height: 1.4;
             }
             .header { 
                 display: flex; 
                 align-items: center; 
                 border-bottom: 2px solid #0d9488; 
-                padding-bottom: 20px; 
-                margin-bottom: 30px; 
+                padding-bottom: 10px; 
+                margin-bottom: 20px; 
             }
             .logo { 
-                width: 80px; 
-                height: 80px; 
-                margin-right: 20px; 
+                width: 60px; 
+                height: 60px; 
+                margin-right: 15px; 
                 background-color: #f0fdfa;
-                border-radius: 10px;
+                border-radius: 8px;
                 object-fit: contain;
             }
             .clinic-info { 
                 flex: 1; 
             }
             .clinic-title { 
-                font-size: 24px; 
+                font-size: 20px; 
                 font-weight: bold; 
                 color: #0d9488; 
                 margin: 0; 
                 line-height: 1.2;
             }
             .dentist-title { 
-                font-size: 24px; 
+                font-size: 20px; 
                 font-weight: bold; 
                 color: #000000; 
                 margin: 0; 
                 line-height: 1.2;
             }
             .sub-title {
-                font-size: 16px;
+                font-size: 14px;
                 color: #555;
-                margin-top: 5px;
+                margin-top: 2px;
                 font-weight: 500;
             }
             .doc-title {
                 text-align: center;
-                font-size: 20px;
+                font-size: 18px;
                 font-weight: bold;
                 text-transform: uppercase;
-                margin-bottom: 30px;
+                margin-bottom: 20px;
                 color: #1f2937;
             }
             .section { 
-                margin-bottom: 30px; 
+                margin-bottom: 20px; 
                 break-inside: avoid;
             }
             .section-title { 
-                font-size: 16px; 
+                font-size: 14px; 
                 font-weight: bold; 
                 color: #115e59; 
-                margin-bottom: 15px; 
+                margin-bottom: 10px; 
                 border-bottom: 1px solid #ccfbf1; 
                 padding-bottom: 5px; 
             }
             .patient-name {
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: bold;
-                margin-bottom: 20px;
+                margin-bottom: 15px;
             }
             table { 
                 width: 100%; 
                 border-collapse: collapse; 
-                margin-top: 10px; 
+                margin-top: 5px; 
             }
             th, td { 
                 text-align: left; 
-                padding: 10px; 
+                padding: 8px; 
                 border-bottom: 1px solid #e5e7eb; 
-                font-size: 14px; 
+                font-size: 12px; 
             }
             th { 
                 color: #115e59; 
@@ -198,47 +198,49 @@ export const generatePatientReport = async ({
                 border-bottom: none;
             }
             .exam-item {
-                margin-bottom: 20px;
+                margin-bottom: 15px;
                 border: 1px solid #e5e7eb;
-                padding: 15px;
+                padding: 10px;
                 border-radius: 8px;
                 background-color: #fafafa;
+                break-inside: avoid;
             }
             .exam-header {
                 font-weight: bold;
-                margin-bottom: 10px;
+                margin-bottom: 5px;
                 display: flex;
                 justify-content: space-between;
+                font-size: 12px;
             }
             .exam-images {
                 display: flex;
                 flex-wrap: wrap;
-                gap: 10px;
-                margin-top: 10px;
+                gap: 8px;
+                margin-top: 5px;
             }
             .exam-img {
                 max-width: 100%;
                 height: auto;
                 border-radius: 4px;
                 border: 1px solid #ddd;
-                max-height: 400px;
+                max-height: 250px;
                 object-fit: contain;
             }
             .notes-box {
                 background-color: #f9fafb;
                 border: 1px solid #e5e7eb;
-                padding: 15px;
+                padding: 10px;
                 border-radius: 8px;
-                font-size: 14px;
+                font-size: 12px;
                 white-space: pre-wrap;
             }
             .footer {
-                margin-top: 50px;
+                margin-top: 30px;
                 text-align: center;
-                font-size: 12px;
-                color: #9ca3af;
+                font-size: 10px;
+                color: #6b7280;
                 border-top: 1px solid #e5e7eb;
-                padding-top: 20px;
+                padding-top: 15px;
             }
             .page-break {
                 page-break-before: always;

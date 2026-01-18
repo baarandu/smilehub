@@ -240,7 +240,7 @@ export const generatePatientReport = async ({
                 margin-top: 50px;
                 text-align: center;
                 font-size: 12px;
-                color: #9ca3af;
+                color: #6b7280;
                 border-top: 1px solid #e5e7eb;
                 padding-top: 20px;
             }
