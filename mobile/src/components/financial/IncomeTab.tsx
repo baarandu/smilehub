@@ -293,54 +293,54 @@ export function IncomeTab({ transactions, loading, onEdit, onRefresh, refreshing
                                         onDelete={() => handleDeleteIncome(transaction)}
                                     >
                                         <View className="p-4 border-b border-gray-50 flex-row items-center justify-between bg-white">
-                                        <View className="flex-1 mr-4">
-                                            <View className="flex-row items-start gap-3">
-                                                <View className="w-10 h-10 rounded-lg items-center justify-center bg-green-100">
-                                                    <ArrowUpRight size={20} color="#22C55E" />
-                                                </View>
-                                                <View className="flex-1">
-                                                    <Text className="font-semibold text-gray-900" numberOfLines={1}>
-                                                        {transaction.patients?.name || 'Paciente não identificado'}
-                                                    </Text>
-                                                    <View className="mt-1">
-                                                        <Text className="text-xs text-teal-700 font-semibold" numberOfLines={1}>
-                                                            {parsed.displayDescription}
-                                                        </Text>
-                                                        <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
-                                                            Forma de Pagamento: {paymentMethodLabel}
-                                                        </Text>
-                                                        {parsed.displayBrand && (
-                                                            <Text className="text-xs text-gray-500 mt-0.5">
-                                                                Bandeira: {parsed.displayBrand}
-                                                            </Text>
-                                                        )}
-                                                        {parsed.installmentInfo && (
-                                                            <Text className="text-xs text-gray-500 mt-0.5">
-                                                                Parcela: {parsed.installmentInfo}
-                                                            </Text>
-                                                        )}
-                                                        {transaction.location && (
-                                                            <View className="flex-row items-center mt-0.5">
-                                                                <MapPin size={12} color="#6B7280" />
-                                                                <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
-                                                                    {transaction.location}
-                                                                </Text>
-                                                            </View>
-                                                        )}
+                                            <View className="flex-1 mr-4">
+                                                <View className="flex-row items-start gap-3">
+                                                    <View className="w-10 h-10 rounded-lg items-center justify-center bg-green-100">
+                                                        <ArrowUpRight size={20} color="#22C55E" />
                                                     </View>
-                                                    <View className="flex-row items-center gap-2 mt-1 flex-wrap">
-                                                        <Text className="text-xs text-gray-400">
-                                                            {formatDate(transaction.date)}
+                                                    <View className="flex-1">
+                                                        <Text className="font-semibold text-gray-900" numberOfLines={1}>
+                                                            {transaction.patients?.name || 'Paciente não identificado'}
                                                         </Text>
+                                                        <View className="mt-1">
+                                                            <Text className="text-xs text-teal-700 font-semibold" numberOfLines={1}>
+                                                                {parsed.displayDescription}
+                                                            </Text>
+                                                            <Text className="text-xs text-gray-500 mt-0.5" numberOfLines={1}>
+                                                                Forma de Pagamento: {paymentMethodLabel}
+                                                            </Text>
+                                                            {parsed.displayBrand && (paymentMethodLabel.toLowerCase().includes('cartão') || paymentMethodLabel.toLowerCase().includes('credit') || paymentMethodLabel.toLowerCase().includes('debit')) && (
+                                                                <Text className="text-xs text-gray-500 mt-0.5">
+                                                                    Bandeira: {parsed.displayBrand}
+                                                                </Text>
+                                                            )}
+                                                            {parsed.installmentInfo && (
+                                                                <Text className="text-xs text-gray-500 mt-0.5">
+                                                                    Parcela: {parsed.installmentInfo}
+                                                                </Text>
+                                                            )}
+                                                            {transaction.location && (
+                                                                <View className="flex-row items-center mt-0.5">
+                                                                    <MapPin size={12} color="#6B7280" />
+                                                                    <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
+                                                                        {transaction.location}
+                                                                    </Text>
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                        <View className="flex-row items-center gap-2 mt-1 flex-wrap">
+                                                            <Text className="text-xs text-gray-400">
+                                                                {formatDate(transaction.date)}
+                                                            </Text>
+                                                        </View>
                                                     </View>
                                                 </View>
                                             </View>
+                                            <Text className="font-bold text-green-600 text-base whitespace-nowrap">
+                                                + {formatCurrency(subTab === 'gross' ? transaction.amount : (transaction.net_amount || transaction.amount))}
+                                            </Text>
                                         </View>
-                                        <Text className="font-bold text-green-600 text-base whitespace-nowrap">
-                                            + {formatCurrency(subTab === 'gross' ? transaction.amount : (transaction.net_amount || transaction.amount))}
-                                        </Text>
-                                    </View>
-                                </SwipeableTransactionItem>
+                                    </SwipeableTransactionItem>
                                 );
                             })
                     )}
