@@ -48,9 +48,22 @@ export function AppLayout({ children }: AppLayoutProps) {
           .eq('id', user.id)
           .single() as { data: { is_super_admin: boolean } | null };
         setIsSuperAdmin(!!profile?.is_super_admin);
+      } else {
+        setIsSuperAdmin(false);
       }
     };
+
+    // Initial check
     checkAdmin();
+
+    // Listen for auth changes (login, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        checkAdmin();
+      } else {
+        setIsSuperAdmin(false);
+      }
+    });
 
     const loadCount = async () => {
       try {
@@ -69,9 +82,14 @@ export function AppLayout({ children }: AppLayoutProps) {
       } catch (e) { console.error(e); }
     };
     loadCount();
+
     // Poll every minute or listen to custom event if better reliability needed
     const interval = setInterval(loadCount, 60000);
-    return () => clearInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
