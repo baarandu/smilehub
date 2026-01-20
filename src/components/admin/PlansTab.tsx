@@ -50,6 +50,8 @@ export function PlansTab() {
         sort_order: 0
     });
     const [featuresText, setFeaturesText] = useState('');
+    const [priceMonthlyInput, setPriceMonthlyInput] = useState('');
+    const [priceYearlyInput, setPriceYearlyInput] = useState('');
 
     useEffect(() => {
         loadPlans();
@@ -90,6 +92,10 @@ export function PlansTab() {
             // Convert JSON features to newline separated string for textarea
             const feats = Array.isArray(plan.features) ? plan.features : [];
             setFeaturesText(feats.join('\n'));
+
+            // Set price inputs (convert cents to reais)
+            setPriceMonthlyInput((plan.price_monthly / 100).toFixed(2));
+            setPriceYearlyInput(plan.price_yearly ? (plan.price_yearly / 100).toFixed(2) : '');
         } else {
             setEditingPlan(null);
             setFormData({
@@ -106,6 +112,8 @@ export function PlansTab() {
                 sort_order: 0
             });
             setFeaturesText('');
+            setPriceMonthlyInput('');
+            setPriceYearlyInput('');
         }
         setDialogOpen(true);
     };
@@ -262,12 +270,18 @@ export function PlansTab() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Preço Mensal (Centavos)</Label>
+                                <Label>Preço Mensal (R$)</Label>
                                 <div className="flex items-center gap-2">
                                     <Input
                                         type="number"
-                                        value={formData.price_monthly}
-                                        onChange={e => setFormData({ ...formData, price_monthly: Number(e.target.value) })}
+                                        step="0.01"
+                                        placeholder="0,00"
+                                        value={priceMonthlyInput}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setPriceMonthlyInput(val);
+                                            setFormData({ ...formData, price_monthly: Math.round(Number(val) * 100) });
+                                        }}
                                     />
                                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                                         = {formatCurrency(Number(formData.price_monthly || 0))}
@@ -275,12 +289,18 @@ export function PlansTab() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>Preço Anual (Centavos)</Label>
+                                <Label>Preço Anual (R$)</Label>
                                 <div className="flex items-center gap-2">
                                     <Input
                                         type="number"
-                                        value={formData.price_yearly || ''}
-                                        onChange={e => setFormData({ ...formData, price_yearly: Number(e.target.value) })}
+                                        step="0.01"
+                                        placeholder="0,00"
+                                        value={priceYearlyInput}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setPriceYearlyInput(val);
+                                            setFormData({ ...formData, price_yearly: val ? Math.round(Number(val) * 100) : 0 });
+                                        }}
                                     />
                                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                                         = {formatCurrency(Number(formData.price_yearly || 0))}
