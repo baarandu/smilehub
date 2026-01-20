@@ -148,11 +148,11 @@ export function PlansTab() {
 
             setDialogOpen(false);
             loadPlans();
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             toast({
                 title: "Erro ao salvar",
-                description: "Verifique os dados e tente novamente.",
+                description: error.message || "Verifique os dados e tente novamente.",
                 variant: "destructive"
             });
         } finally {
