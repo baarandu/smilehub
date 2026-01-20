@@ -14,6 +14,7 @@ type AuthContextType = {
     signUp: (email: string, password: string, name?: string, accountType?: 'solo' | 'clinic', clinicName?: string, gender?: 'male' | 'female') => Promise<void>;
     signOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
+    refreshSubscription: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
     signUp: async () => { },
     signOut: async () => { },
     resetPassword: async () => { },
+    refreshSubscription: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -169,8 +171,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const refreshSubscription = async () => {
+        if (session?.user) {
+            await checkSubscription(session.user.id);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ session, user, isLoading, role, hasActiveSubscription, signIn, signUp, signOut, resetPassword }}>
+        <AuthContext.Provider value={{ session, user, isLoading, role, hasActiveSubscription, signIn, signUp, signOut, resetPassword, refreshSubscription }}>
             {children}
         </AuthContext.Provider>
     );

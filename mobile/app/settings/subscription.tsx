@@ -12,7 +12,7 @@ type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 
 export default function SubscriptionScreen() {
     const router = useRouter();
-    const { session } = useAuth();
+    const { session, refreshSubscription } = useAuth();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const [plans, setPlans] = useState<Plan[]>([]);
@@ -100,7 +100,8 @@ export default function SubscriptionScreen() {
 
             // 2. Initialize Payment Sheet
             const { error: initError } = await initPaymentSheet({
-                paymentIntentClientSecret: result.clientSecret,
+                paymentIntentClientSecret: result.type === 'payment' ? result.clientSecret : undefined,
+                setupIntentClientSecret: result.type === 'setup' ? result.clientSecret : undefined,
                 merchantDisplayName: 'Organiza Odonto',
                 defaultBillingDetails: {
                     email: session.user.email,
@@ -123,8 +124,13 @@ export default function SubscriptionScreen() {
             }
 
             // 4. Success
-            Alert.alert('Sucesso!', 'Assinatura realizada com sucesso.');
-            loadData(); // Refresh state
+            Alert.alert('Sucesso!', 'Assinatura realizada com sucesso. Aproveite seu período de teste!');
+
+            // Wait a moment for webhook to process
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            await refreshSubscription(); // Force update context
+            router.replace('/(tabs)'); // Navigate back to home
 
         } catch (error: any) {
             console.error(error);
@@ -177,9 +183,15 @@ export default function SubscriptionScreen() {
                     </View>
                 ) : (
                     <>
-                        <Text className="text-gray-500 text-center mb-6">
+                        <Text className="text-gray-500 text-center mb-2">
                             Escolha o melhor plano para sua clínica crescer.
                         </Text>
+                        <View className="bg-teal-50 p-4 rounded-xl mb-6 items-center">
+                            <Text className="text-teal-800 font-bold text-center">30 Dias Grátis no Plano Mensal!</Text>
+                            <Text className="text-teal-600 text-xs text-center mt-1">
+                                Cancele a qualquer momento. A cobrança só ocorre após o período de teste.
+                            </Text>
+                        </View>
 
                         <View className="gap-6">
                             {plans.map((plan) => {

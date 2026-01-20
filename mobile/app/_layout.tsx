@@ -1,7 +1,7 @@
 import "../global.css";
 import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ClinicProvider } from '../src/contexts/ClinicContext';
@@ -61,6 +61,16 @@ function RootLayoutNav() {
             router.replace('/login');
         }
     }, [session, isLoading, hasActiveSubscription, role, segments]);
+
+    // Declarative Redirection for Paywall Enforcement
+    const firstSegment = segments[0];
+    const isSubscriptionRoute = segments.join('/') === 'settings/subscription';
+
+    // If logged in, not loading, no subscription, and not already on subscription page -> Redirect
+    if (!isLoading && session && !hasActiveSubscription && !isSubscriptionRoute) {
+        console.log('ROOT_LAYOUT: Blocking access, redirecting to subscription.');
+        return <Redirect href="/settings/subscription" />;
+    }
 
     if (isLoading) {
         return (

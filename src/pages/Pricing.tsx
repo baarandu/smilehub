@@ -17,6 +17,7 @@ export default function Pricing() {
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
     const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [paymentType, setPaymentType] = useState<'payment' | 'setup'>('payment');
     const [processing, setProcessing] = useState(false);
     const { toast } = useToast();
 
@@ -100,12 +101,17 @@ export default function Pricing() {
 
             if (result && result.clientSecret) {
                 setClientSecret(result.clientSecret);
+                setPaymentType(result.type === 'setup' ? 'setup' : 'payment');
                 setPaymentModalOpen(true);
             } else {
                 throw new Error('Falha ao iniciar pagamento');
             }
 
         } catch (error: any) {
+            console.error('Subscription Flow Error:', error);
+            // Show explicit alert for debugging
+            alert(`Erro ao iniciar assinatura: ${error.message || 'Erro desconhecido'}`);
+
             toast({
                 variant: 'destructive',
                 title: 'Erro ao iniciar assinatura',
@@ -150,7 +156,12 @@ export default function Pricing() {
         <div className="container mx-auto py-12 px-4">
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold tracking-tight mb-4">Planos e Assinaturas</h1>
-                <p className="text-lg text-muted-foreground">Gerencie seu plano atual ou faça upgrades conforme sua clínica cresce.</p>
+                <p className="text-lg text-muted-foreground mb-6">Gerencie seu plano atual ou faça upgrades conforme sua clínica cresce.</p>
+
+                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 max-w-2xl mx-auto">
+                    <h3 className="text-teal-800 font-bold text-lg">30 Dias Grátis no Plano Mensal! 🎁</h3>
+                    <p className="text-teal-700">Cancelamento grátis a qualquer momento. A cobrança do cartão só acontece após o período de teste.</p>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -207,10 +218,42 @@ export default function Pricing() {
                 clientSecret={clientSecret}
                 planName={selectedPlan?.name || ''}
                 price={selectedPlan?.price_monthly || 0}
-                onSuccess={() => {
+                type={paymentType}
+                onSuccess={async () => {
                     setPaymentModalOpen(false);
-                    toast({ title: 'Sucesso!', description: 'Assinatura realizada com sucesso.' });
-                    // Redirect or refresh state
+                    setProcessing(true); // Keep loading state
+                    toast({ title: 'Pagamento Confirmado!', description: 'Aguarde enquanto ativamos sua conta...' });
+
+                    // Poll for subscription activation (up to 15s)
+                    let attempts = 0;
+                    const maxAttempts = 15;
+
+                    const checkInterval = setInterval(async () => {
+                        attempts++;
+                        try {
+                            // We need the clinicId here. If it's missing, just redirect after delay.
+                            if (!clinicId) {
+                                clearInterval(checkInterval);
+                                window.location.href = '/';
+                                return;
+                            }
+
+                            const status = await subscriptionService.getCurrentSubscription(clinicId);
+                            console.log('Polling subscription status:', status);
+
+                            if (status.isActive || status.isTrialing) {
+                                clearInterval(checkInterval);
+                                toast({ title: 'Sucesso!', description: 'Assinatura ativada com sucesso! 🚀' });
+                                window.location.href = '/';
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(checkInterval);
+                                // Timeout: Redirect anyway, user might need to refresh manually later
+                                window.location.href = '/';
+                            }
+                        } catch (err) {
+                            console.error('Polling error:', err);
+                        }
+                    }, 1000);
                 }}
             />
         </div>

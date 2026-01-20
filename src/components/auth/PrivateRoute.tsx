@@ -61,9 +61,10 @@ export function PrivateRoute() {
                     .select('status, plan_id')
                     .eq('clinic_id', clinicUser.clinic_id)
                     .in('status', ['active', 'trialing'])
-                    .single();
+                    .in('status', ['active', 'trialing'])
+                    .limit(1);
 
-                const hasActiveSubscription = !!subscription;
+                const hasActiveSubscription = subscription && subscription.length > 0;
 
                 if (mounted) {
                     setIsAllowed(hasActiveSubscription);

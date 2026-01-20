@@ -27,9 +27,10 @@ interface PaymentModalProps {
     onSuccess: () => void;
     planName: string;
     price: number;
+    type?: 'payment' | 'setup';
 }
 
-const CheckoutForm = ({ onSuccess, price }: { onSuccess: () => void; price: number }) => {
+const CheckoutForm = ({ onSuccess, price, type }: { onSuccess: () => void; price: number; type: 'payment' | 'setup' }) => {
     const stripe = useStripe();
     const elements = useElements();
     const [loading, setLoading] = useState(false);
@@ -42,24 +43,41 @@ const CheckoutForm = ({ onSuccess, price }: { onSuccess: () => void; price: numb
 
         setLoading(true);
 
-        const result = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                return_url: window.location.origin + '/admin/planos?status=success',
-            },
-            redirect: 'if_required', // Important: avoids redirect if not 3DS
-        });
+        try {
+            let result;
 
-        if (result.error) {
-            toast({
-                variant: 'destructive',
-                title: 'Erro no pagamento',
-                description: result.error.message || 'Ocorreu um erro desconhecido.',
-            });
+            if (type === 'setup') {
+                result = await stripe.confirmSetup({
+                    elements,
+                    confirmParams: {
+                        return_url: window.location.origin + '/admin/planos?status=success',
+                    },
+                    redirect: 'if_required',
+                });
+            } else {
+                result = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: window.location.origin + '/admin/planos?status=success',
+                    },
+                    redirect: 'if_required',
+                });
+            }
+
+            if (result.error) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro no pagamento',
+                    description: result.error.message || 'Ocorreu um erro desconhecido.',
+                });
+                setLoading(false);
+            } else {
+                // Succeeded
+                onSuccess();
+            }
+        } catch (error) {
+            console.error(error);
             setLoading(false);
-        } else {
-            // Payment succeeded
-            onSuccess();
         }
     };
 
@@ -95,7 +113,8 @@ export function PaymentModal({
     clientSecret,
     onSuccess,
     planName,
-    price
+    price,
+    type = 'payment'
 }: PaymentModalProps) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,7 +129,7 @@ export function PaymentModal({
 
                 {clientSecret && (
                     <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
-                        <CheckoutForm onSuccess={onSuccess} price={price} />
+                        <CheckoutForm onSuccess={onSuccess} price={price} type={type} />
                     </Elements>
                 )}
             </DialogContent>
