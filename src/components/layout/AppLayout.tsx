@@ -137,19 +137,21 @@ export function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         {isSuperAdmin && (
-          <NavLink
-            to="/admin/planos"
-            onClick={() => setSidebarOpen(false)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-              location.pathname === '/admin/planos'
-                ? "bg-purple-100 text-purple-700"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-purple-600")} />
-            <span className="flex-1">Planos & Preços</span>
-          </NavLink>
+          <div className="px-4">
+            <NavLink
+              to="/admin/planos"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                location.pathname === '/admin/planos'
+                  ? "bg-teal-100 text-teal-700"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-teal-600")} />
+              <span className="flex-1">Planos & Preços</span>
+            </NavLink>
+          </div>
         )}
 
         {/* Secretária IA - Apenas para Super Admins (Em desenvolvimento) */}
