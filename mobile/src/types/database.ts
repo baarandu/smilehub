@@ -9,6 +9,41 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      subscriptions: {
+        Row: {
+          id: string
+          clinic_id: string
+          plan_id: string
+          status: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          plan_id: string
+          status?: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start?: string
+          current_period_end: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          plan_id?: string
+          status?: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       patients: {
         Row: {
           id: string

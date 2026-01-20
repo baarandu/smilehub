@@ -73,9 +73,9 @@ export const remindersService = {
     },
 
     async update(id: string, update: ReminderUpdate): Promise<Reminder> {
-        const { data, error } = await supabase
-            .from('reminders')
-            .update(update as any)
+        const { data, error } = await (supabase
+            .from('reminders') as any)
+            .update(update)
             .eq('id', id)
             .select()
             .single();

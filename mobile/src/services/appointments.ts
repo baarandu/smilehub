@@ -64,7 +64,7 @@ export const appointmentsService = {
       .from('clinic_users')
       .select('clinic_id')
       .eq('user_id', userData.user.id)
-      .single();
+      .single() as { data: { clinic_id: string } | null, error: any };
 
     if (clinicError) {
       console.error('Error fetching clinic_user:', clinicError);
@@ -111,8 +111,8 @@ export const appointmentsService = {
   },
 
   async update(id: string, updates: Partial<AppointmentInsert>): Promise<Appointment> {
-    const { data, error } = await supabase
-      .from('appointments')
+    const { data, error } = await (supabase
+      .from('appointments') as any)
       .update(updates as any)
       .eq('id', id)
       .select()

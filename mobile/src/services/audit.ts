@@ -23,7 +23,7 @@ export const auditService = {
                 .from('clinic_users')
                 .select('clinic_id')
                 .eq('user_id', user.id)
-                .single();
+                .single() as { data: { clinic_id: string } | null, error: any };
 
             if (!clinicUser) return;
 

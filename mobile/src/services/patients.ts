@@ -32,7 +32,7 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     .from('clinic_users')
     .select('clinic_id')
     .eq('user_id', user.id)
-    .single();
+    .single() as any;
 
   if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
 
@@ -128,7 +128,7 @@ export const patientsService = {
       .update(updates)
       .eq('id', patientId)
       .select()
-      .single();
+      .single() as any;
 
     if (error) throw error;
     return data;

@@ -182,6 +182,8 @@ export function NewAnamneseModal({
                 });
             } else {
                 setForm({
+                    allergy: false,
+                    allergyDetails: '',
                     date: (() => {
                         const today = new Date();
                         const year = today.getFullYear();

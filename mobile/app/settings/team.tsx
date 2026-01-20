@@ -11,7 +11,9 @@ import {
 import { Stack } from 'expo-router';
 import { Lock, UserPlus, Shield, Edit3, Eye, ChevronDown, Trash2 } from 'lucide-react-native';
 import { useClinic } from '../../src/contexts/ClinicContext';
-import { supabase } from '../../src/lib/supabase';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { SubscriptionGuard } from '../../components/SubscriptionGuard';
 
 type Role = 'admin' | 'editor' | 'viewer';
 
@@ -81,9 +83,9 @@ export default function TeamScreen() {
     const handleRoleChange = async (memberId: string, newRole: Role) => {
         try {
             const { error } = await (supabase
-                .from('clinic_users')
-                .update({ role: newRole } as any)
-                .eq('id', memberId) as any);
+                .from('clinic_users') as any)
+                .update({ role: newRole })
+                .eq('id', memberId);
 
             if (error) throw error;
 
@@ -166,13 +168,29 @@ export default function TeamScreen() {
 
                 {/* Invite Button */}
                 {!showInvite ? (
-                    <TouchableOpacity
-                        className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-center mb-4"
-                        onPress={() => setShowInvite(true)}
+                    <SubscriptionGuard
+                        feature="max_users"
+                        currentUsage={members.length}
+                        fallback={
+                            <View className="bg-gray-100 rounded-xl p-4 mb-4 border border-gray-200">
+                                <View className="flex-row items-center justify-center">
+                                    <Lock size={20} color="#9ca3af" />
+                                    <Text className="text-gray-500 font-medium ml-2">Limite de membros atingido</Text>
+                                </View>
+                                <Text className="text-gray-400 text-xs text-center mt-2">
+                                    Faça upgrade para adicionar mais membros.
+                                </Text>
+                            </View>
+                        }
                     >
-                        <UserPlus size={20} color="#14b8a6" />
-                        <Text className="text-teal-600 font-medium ml-2">Convidar Membro</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-center mb-4"
+                            onPress={() => setShowInvite(true)}
+                        >
+                            <UserPlus size={20} color="#14b8a6" />
+                            <Text className="text-teal-600 font-medium ml-2">Convidar Membro</Text>
+                        </TouchableOpacity>
+                    </SubscriptionGuard>
                 ) : (
                     <View className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
                         <TextInput

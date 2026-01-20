@@ -34,7 +34,6 @@ export const generatePatientReport = async ({
         // Collect all potential paths first to deduplicate
         const uniquePaths = new Set<string>();
 
-        if (exam.file_url) uniquePaths.add(exam.file_url);
         if (exam.file_urls && exam.file_urls.length > 0) {
             exam.file_urls.forEach(url => uniquePaths.add(url));
         }
@@ -48,7 +47,7 @@ export const generatePatientReport = async ({
             if (lowerUrl.includes('.pdf') && !lowerUrl.includes('.pdf?')) return false; // Basic pdf check
 
             // If explicit type is photo, trust it
-            if (exam.file_type === 'photo') return true;
+            if (exam.type === 'photo') return true;
 
             // Otherwise check extension, allowing for query params like ?token=...
             // Matches .ext followed by end of string OR ?
@@ -339,4 +338,91 @@ export const generatePatientReport = async ({
         console.error('Error generating PDF:', error);
         throw error;
     }
+};
+
+interface BudgetPDFData {
+    budget: any;
+    patientName: string;
+    clinicName?: string;
+    dentistName?: string | null;
+    logoUrl?: string | null;
+    letterheadUrl?: string | null;
+    clinicAddress?: string;
+    clinicPhone?: string;
+}
+
+export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
+    const { budget, patientName, clinicName, dentistName, logoUrl } = data;
+
+    return `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Orçamento</title>
+        <style>
+            body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { max-height: 80px; margin-bottom: 10px; }
+            .title { font-size: 24px; font-weight: bold; color: #0d9488; }
+            .meta { margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            .table th, .table td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+            .table th { color: #0f766e; }
+            .total { margin-top: 30px; text-align: right; font-size: 18px; font-weight: bold; color: #0d9488; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            ${logoUrl ? `<img src="${logoUrl}" class="logo" />` : ''}
+            <div class="title">${clinicName || 'Orçamento Odontológico'}</div>
+            ${dentistName ? `<div>Dr(a). ${dentistName}</div>` : ''}
+        </div>
+
+        <div class="meta">
+            <p><strong>Paciente:</strong> ${patientName}</p>
+            <p><strong>Data:</strong> ${new Date(budget.date).toLocaleDateString('pt-BR')}</p>
+            <p><strong>Tratamento:</strong> ${budget.treatment}</p>
+        </div>
+
+        <h3>Itens do Orçamento</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Dente</th>
+                    <th>Procedimentos</th>
+                    <th style="text-align: right;">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                 ${JSON.parse(budget.notes || '{"teeth":[]}').teeth?.map((t: any) => `
+                    <tr>
+                        <td>${t.tooth}</td>
+                        <td>${t.treatments.join(', ')}</td>
+                        <td style="text-align: right;">R$ ${(Object.values(t.values as object).reduce((a: any, b: any) => a + Number(b), 0) / 100).toFixed(2).replace('.', ',')}</td>
+                    </tr>
+                 `).join('') || ''}
+            </tbody>
+        </table>
+
+        <div class="total">
+            Valor Total: R$ ${(budget.value / 100).toFixed(2).replace('.', ',')}
+        </div>
+    </body>
+    </html>
+    `;
+};
+
+export const generateBudgetPDFFile = async (data: BudgetPDFData) => {
+    const html = generateBudgetPDFHtml(data);
+    const { uri } = await printToFileAsync({
+        html,
+        base64: false
+    });
+    return uri;
+};
+
+export const sharePDF = async (uri: string) => {
+    await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
 };

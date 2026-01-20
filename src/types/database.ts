@@ -9,6 +9,41 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      subscriptions: {
+        Row: {
+          id: string
+          clinic_id: string
+          plan_id: string
+          status: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          plan_id: string
+          status?: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start?: string
+          current_period_end: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          plan_id?: string
+          status?: 'active' | 'past_due' | 'canceled' | 'trialing'
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       patients: {
         Row: {
           id: string
@@ -756,23 +791,121 @@ export interface Database {
         }
       }
     }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      get_profiles_for_users: {
-        Args: { user_ids: string[] }
-        Returns: {
-          id: string
-          email: string
-          full_name: string
-        }[]
+    subscription_plans: {
+      Row: {
+        id: string
+        name: string
+        slug: string
+        description: string | null
+        price_monthly: number
+        price_yearly: number | null
+        max_users: number
+        max_patients: number | null
+        max_locations: number | null
+        features: Json
+        is_active: boolean
+        sort_order: number
+        created_at: string
+        updated_at: string
+      }
+      Insert: {
+        id?: string
+        name: string
+        slug: string
+        description?: string | null
+        price_monthly: number
+        price_yearly?: number | null
+        max_users?: number
+        max_patients?: number | null
+        max_locations?: number | null
+        features?: Json
+        is_active?: boolean
+        sort_order?: number
+        created_at?: string
+        updated_at?: string
+      }
+      Update: {
+        id?: string
+        name?: string
+        slug?: string
+        description?: string | null
+        price_monthly?: number
+        price_yearly?: number | null
+        max_users?: number
+        max_patients?: number | null
+        max_locations?: number | null
+        features?: Json
+        is_active?: boolean
+        sort_order?: number
+        created_at?: string
+        updated_at?: string
       }
     }
-    Enums: {
-      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
+    discount_coupons: {
+      Row: {
+        id: string
+        code: string
+        description: string | null
+        discount_type: 'percentage' | 'fixed'
+        discount_value: number
+        max_uses: number | null
+        used_count: number
+        valid_from: string
+        valid_until: string
+        applicable_plan_ids: string[] | null
+        is_active: boolean
+        created_at: string
+        updated_at: string
+      }
+      Insert: {
+        id?: string
+        code: string
+        description?: string | null
+        discount_type: 'percentage' | 'fixed'
+        discount_value: number
+        max_uses?: number | null
+        used_count?: number
+        valid_from: string
+        valid_until: string
+        applicable_plan_ids?: string[] | null
+        is_active?: boolean
+        created_at?: string
+        updated_at?: string
+      }
+      Update: {
+        id?: string
+        code?: string
+        description?: string | null
+        discount_type?: 'percentage' | 'fixed'
+        discount_value?: number
+        max_uses?: number | null
+        used_count?: number
+        valid_from?: string
+        valid_until?: string
+        applicable_plan_ids?: string[] | null
+        is_active?: boolean
+        created_at?: string
+        updated_at?: string
+      }
     }
   }
+  Views: {
+    [_ in never]: never
+  }
+  Functions: {
+    get_profiles_for_users: {
+      Args: { user_ids: string[] }
+      Returns: {
+        id: string
+        email: string
+        full_name: string
+      }[]
+    }
+  }
+  Enums: {
+    appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
+  }
+}
 }
 
 // Helper types for easier usage
@@ -819,6 +952,14 @@ export type FinancialSettingsUpdate = Database['public']['Tables']['financial_se
 export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
 export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
 export type CardFeeConfigUpdate = Database['public']['Tables']['card_fee_config']['Update']
+
+export type SubscriptionPlan = Database['public']['Tables']['subscription_plans']['Row']
+export type SubscriptionPlanInsert = Database['public']['Tables']['subscription_plans']['Insert']
+export type SubscriptionPlanUpdate = Database['public']['Tables']['subscription_plans']['Update']
+
+export type DiscountCoupon = Database['public']['Tables']['discount_coupons']['Row']
+export type DiscountCouponInsert = Database['public']['Tables']['discount_coupons']['Insert']
+export type DiscountCouponUpdate = Database['public']['Tables']['discount_coupons']['Update']
 
 export type TaxConfig = Database['public']['Tables']['tax_config']['Row']
 export type TaxConfigInsert = Database['public']['Tables']['tax_config']['Insert']

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
+import { AdminRoute } from "@/components/auth/AdminRoute";
 import { ClinicProvider } from "@/contexts/ClinicContext";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +23,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const AdminPlans = lazy(() => import("./pages/AdminPlans"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -80,6 +82,11 @@ const AppContent = () => (
         <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
         <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
         <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+      </Route>
+
+      {/* Admin Routes */}
+      <Route element={<AdminRoute />}>
+        <Route path="/admin/planos" element={<AppLayout><AdminPlans /></AppLayout>} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

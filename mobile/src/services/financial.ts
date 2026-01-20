@@ -45,7 +45,7 @@ export const financialService = {
             .from('clinic_users')
             .select('clinic_id')
             .eq('user_id', user.id)
-            .single();
+            .single() as { data: { clinic_id: string } | null, error: any };
 
         if (!clinicUser?.clinic_id) {
             console.error('[FinancialService] Clinic not found for user.');
@@ -56,14 +56,14 @@ export const financialService = {
         const payload: FinancialTransactionInsert = {
             ...transaction,
             user_id: user.id,
-            clinic_id: clinicUser.clinic_id
-        };
+            clinic_id: clinicUser.clinic_id as string
+        } as any;
 
         // Casting to any to avoid "Argument of type ... is not assignable to never"
         // This usually happens if table types are not fully inferred by Supabase client
         const { data, error } = await (supabase
             .from('financial_transactions') as any)
-            .insert(payload)
+            .insert(payload as any)
             .select()
             .single();
 
