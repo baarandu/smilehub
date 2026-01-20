@@ -12,7 +12,7 @@ import { Stack } from 'expo-router';
 import { Lock, UserPlus, Shield, Edit3, Eye, ChevronDown, Trash2 } from 'lucide-react-native';
 import { useClinic } from '../../src/contexts/ClinicContext';
 import { supabase } from '../../src/lib/supabase';
-import { useAuth } from '../../src/context/AuthContext';
+import { useAuth } from '../../src/contexts/AuthContext';
 import { SubscriptionGuard } from '../../src/components/SubscriptionGuard';
 
 type Role = 'admin' | 'editor' | 'viewer';
