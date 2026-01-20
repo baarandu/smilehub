@@ -5,7 +5,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw, AlertTriangle } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { budgetsService } from '../../src/services/budgets';
-import { DocumentsModal } from '../../components/DocumentsModal';
+import { DocumentsModal } from '../../src/components/DocumentsModal';
 import type { Patient, PatientFormData } from '../../src/types/database';
 
 interface PendingItem {
