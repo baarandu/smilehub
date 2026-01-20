@@ -34,7 +34,22 @@ interface PaymentMethodDialogProps {
     loading?: boolean;
 }
 
-// ... imports and constants ...
+// Payment method icons and labels
+const PAYMENT_METHODS = [
+    { id: 'pix', label: 'PIX', icon: Smartphone, color: 'text-emerald-600' },
+    { id: 'credit', label: 'Crédito', icon: CreditCard, color: 'text-blue-600' },
+    { id: 'debit', label: 'Débito', icon: CreditCard, color: 'text-purple-600' },
+    { id: 'cash', label: 'Dinheiro', icon: Banknote, color: 'text-green-600' },
+];
+
+// Default card brands (used when no settings are configured)
+const CARD_BRANDS = [
+    { id: 'visa', label: 'Visa' },
+    { id: 'mastercard', label: 'Mastercard' },
+    { id: 'elo', label: 'Elo' },
+    { id: 'amex', label: 'American Express' },
+    { id: 'hipercard', label: 'Hipercard' },
+];
 
 export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0, loading = false }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
