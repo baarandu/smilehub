@@ -35,22 +35,31 @@ export default function Pricing() {
 
     const getCurrentUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log('PRICING_PAGE: Current user:', user?.id, user?.email);
+
         if (user) {
             setUserId(user.id);
             setUserEmail(user.email ?? '');
 
             // Fetch User's Clinic to check subscription
-            const { data: clinicUser } = await supabase
+            const { data: clinicUser, error: clinicError } = await supabase
                 .from('clinic_users')
                 .select('clinic_id')
                 .eq('user_id', user.id)
                 .single();
 
+            console.log('PRICING_PAGE: clinic_users query result:', { clinicUser, clinicError });
+
             if (clinicUser) {
                 setClinicId(clinicUser.clinic_id);
+                console.log('PRICING_PAGE: Fetching subscription for clinic:', clinicUser.clinic_id);
+
                 const subStatus = await subscriptionService.getCurrentSubscription(clinicUser.clinic_id);
-                if (subStatus.isActive && subStatus.plan) {
-                    setCurrentPlanId(subStatus.plan.id);
+                console.log('PRICING_PAGE: Subscription status:', subStatus);
+
+                if (subStatus.isActive || subStatus.isTrialing) {
+                    console.log('PRICING_PAGE: Setting currentPlanId to:', subStatus.plan?.id);
+                    setCurrentPlanId(subStatus.plan?.id || null);
                 }
             }
         }

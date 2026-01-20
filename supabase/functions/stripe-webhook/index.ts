@@ -34,9 +34,10 @@ serve(async (req) => {
             undefined,
             cryptoProvider
         )
-    } catch (err) {
-        console.error(`[stripe-webhook] Signature verification failed: ${err.message}`)
-        return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        console.error(`[stripe-webhook] Signature verification failed: ${message}`)
+        return new Response(`Webhook Error: ${message}`, { status: 400 })
     }
 
     console.log(`[stripe-webhook] Received event: ${event.type}`)
@@ -77,7 +78,7 @@ function safeTimestampToISO(timestamp: number | null | undefined): string | null
     }
     try {
         return new Date(timestamp * 1000).toISOString()
-    } catch {
+    } catch (_e) {
         return null
     }
 }

@@ -16,17 +16,20 @@ export const subscriptionService = {
      * Get the current subscription for a clinic
      */
     async getCurrentSubscription(clinicId: string): Promise<SubscriptionStatus> {
-        const { data: subscription, error } = await supabase
+        const { data: subscriptions, error } = await supabase
             .from('subscriptions')
             .select('*')
             .eq('clinic_id', clinicId)
             .in('status', ['active', 'trialing'])
-            .single();
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
+        if (error) {
             console.error('Error fetching subscription:', error);
             return { subscription: null, plan: null, isActive: false, isTrialing: false };
         }
+
+        const subscription = subscriptions?.[0] || null;
 
         if (!subscription) {
             return { subscription: null, plan: null, isActive: false, isTrialing: false };
