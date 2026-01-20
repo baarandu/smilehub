@@ -5,7 +5,15 @@ import { ChevronDown, X, Calendar } from 'lucide-react-native';
 import { Location } from '../../../services/locations';
 import { formatDisplayDate } from '../budgetUtils';
 
-// ... (props interface)
+interface BudgetFormProps {
+    date: string;
+    onDateChange: (text: string) => void;
+    location: string;
+    onLocationChange: (location: string) => void;
+    locations: Location[];
+    showLocationPicker: boolean;
+    setShowLocationPicker: (show: boolean) => void;
+}
 
 export function BudgetForm({
     date,

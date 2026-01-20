@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.organizaodonto",
-      "buildNumber": "2",
+      "buildNumber": "17",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "O Organiza Odonto precisa de acesso à câmera para que você possa tirar fotos de exames e documentos dos pacientes.",
@@ -31,7 +31,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.organizaodonto"
+      "package": "com.anonymous.organizaodonto",
+      "versionCode": 17
     },
     "web": {
       "favicon": "./assets/favicon.png"
