@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -38,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -72,7 +72,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     // Poll every minute or listen to custom event if better reliability needed
     const interval = setInterval(loadCount, 60000);
     return () => clearInterval(interval);
-  });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
