@@ -11,7 +11,7 @@ import {
 import { Stack } from 'expo-router';
 import { Lock, UserPlus, Shield, Edit3, Eye, ChevronDown, Trash2 } from 'lucide-react-native';
 import { useClinic } from '../../src/contexts/ClinicContext';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../src/lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { SubscriptionGuard } from '../../components/SubscriptionGuard';
 

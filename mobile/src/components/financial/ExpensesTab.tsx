@@ -205,12 +205,12 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
                                                         <View className="flex-row items-center gap-1 bg-blue-100 px-1.5 py-0.5 rounded">
                                                             <Text className="text-xs text-blue-700">
                                                                 {((transaction as any).payment_method === 'credit' ? 'Crédito' :
-                                                                  (transaction as any).payment_method === 'debit' ? 'Débito' :
-                                                                  (transaction as any).payment_method === 'pix' ? 'PIX' :
-                                                                  (transaction as any).payment_method === 'cash' ? 'Dinheiro' :
-                                                                  (transaction as any).payment_method === 'transfer' ? 'Transferência' :
-                                                                  (transaction as any).payment_method === 'boleto' ? 'Boleto' :
-                                                                  (transaction as any).payment_method) || ''}
+                                                                    (transaction as any).payment_method === 'debit' ? 'Débito' :
+                                                                        (transaction as any).payment_method === 'pix' ? 'PIX' :
+                                                                            (transaction as any).payment_method === 'cash' ? 'Dinheiro' :
+                                                                                (transaction as any).payment_method === 'transfer' ? 'Transferência' :
+                                                                                    (transaction as any).payment_method === 'boleto' ? 'Boleto' :
+                                                                                        (transaction as any).payment_method) || ''}
                                                             </Text>
                                                         </View>
                                                     )}
