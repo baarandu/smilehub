@@ -38,6 +38,7 @@ export default function Dashboard() {
     const [displayName, setDisplayName] = useState('');
     const [clinicName, setClinicName] = useState('');
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [showTeamModal, setShowTeamModal] = useState(false);
 
     // Locations
@@ -96,6 +97,7 @@ export default function Dashboard() {
             }
 
             setIsAdmin(userRole === 'admin' || userRole === 'owner');
+            setIsSuperAdmin(!!p.is_super_admin);
             const clinicInfo = await profileService.getClinicInfo();
             setClinicName(clinicInfo.clinicName || 'Minha Clínica');
         } catch (e) { console.error(e); }
@@ -381,6 +383,7 @@ export default function Dashboard() {
                 displayName={displayName}
                 clinicName={clinicName}
                 isAdmin={isAdmin}
+                isSuperAdmin={isSuperAdmin}
                 onLogout={handleLogout}
                 onOpenLocations={openLocationsModal}
                 onOpenTeam={() => { setShowProfileModal(false); setShowTeamModal(true); }}

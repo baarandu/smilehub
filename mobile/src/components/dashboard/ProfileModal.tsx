@@ -9,6 +9,7 @@ interface ProfileModalProps {
     displayName: string;
     clinicName: string;
     isAdmin: boolean;
+    isSuperAdmin?: boolean;
     onLogout: () => void;
     onOpenLocations: () => void;
     onOpenTeam: () => void;
@@ -20,6 +21,7 @@ export function ProfileModal({
     displayName,
     clinicName,
     isAdmin,
+    isSuperAdmin = false,
     onLogout,
     onOpenLocations,
     onOpenTeam
@@ -80,22 +82,24 @@ export function ProfileModal({
 
                         {/* Menu Items */}
                         <View className="p-6 gap-2">
-                            {/* AI Secretary - Valid for all users or just admin? Assuming all for now */}
-                            <TouchableOpacity
-                                className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
-                                onPress={() => {
-                                    onClose();
-                                    router.push('/secretary');
-                                }}
-                            >
-                                <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
-                                    <Bot size={22} color="#0D9488" />
-                                </View>
-                                <View>
-                                    <Text className="text-gray-900 font-bold">Secretária IA</Text>
-                                    <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
-                                </View>
-                            </TouchableOpacity>
+                            {/* AI Secretary - Apenas para Super Admins (Em desenvolvimento) */}
+                            {isSuperAdmin && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/secretary');
+                                    }}
+                                >
+                                    <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
+                                        <Bot size={22} color="#0D9488" />
+                                    </View>
+                                    <View>
+                                        <Text className="text-gray-900 font-bold">Secretária IA</Text>
+                                        <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Gerenciamento</Text>
 

@@ -152,18 +152,21 @@ export function AppLayout({ children }: AppLayoutProps) {
           </NavLink>
         )}
 
-        <div className="px-4 pb-4">
-          <button
-            onClick={() => alert("Em breve: A Secretária IA estará disponível para ajudar você!")}
-            className={cn(
-              "flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-              "text-muted-foreground hover:bg-muted hover:text-foreground hover:bg-teal-50 hover:text-teal-700"
-            )}
-          >
-            <Bot className="w-5 h-5" />
-            <span className="flex-1 text-left">Secretária IA</span>
-          </button>
-        </div>
+        {/* Secretária IA - Apenas para Super Admins (Em desenvolvimento) */}
+        {isSuperAdmin && (
+          <div className="px-4 pb-4">
+            <button
+              onClick={() => alert("Em breve: A Secretária IA estará disponível para ajudar você!")}
+              className={cn(
+                "flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                "text-muted-foreground hover:bg-muted hover:text-foreground hover:bg-teal-50 hover:text-teal-700"
+              )}
+            >
+              <Bot className="w-5 h-5" />
+              <span className="flex-1 text-left">Secretária IA</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Overlay */}
