@@ -46,7 +46,7 @@ export default function Pricing() {
                 .from('clinic_users')
                 .select('clinic_id')
                 .eq('user_id', user.id)
-                .single();
+                .single() as { data: { clinic_id: string } | null; error: unknown };
 
             console.log('PRICING_PAGE: clinic_users query result:', { clinicUser, clinicError });
 

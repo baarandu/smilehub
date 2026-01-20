@@ -789,123 +789,122 @@ export interface Database {
           details?: Json
           created_at?: string
         }
+      },
+      subscription_plans: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          price_monthly: number
+          price_yearly: number | null
+          max_users: number
+          max_patients: number | null
+          max_locations: number | null
+          features: Json
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          price_monthly: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          price_monthly?: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      discount_coupons: {
+        Row: {
+          id: string
+          code: string
+          description: string | null
+          discount_type: 'percentage' | 'fixed'
+          discount_value: number
+          max_uses: number | null
+          used_count: number
+          valid_from: string
+          valid_until: string
+          applicable_plan_ids: string[] | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          description?: string | null
+          discount_type: 'percentage' | 'fixed'
+          discount_value: number
+          max_uses?: number | null
+          used_count?: number
+          valid_from: string
+          valid_until: string
+          applicable_plan_ids?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          description?: string | null
+          discount_type?: 'percentage' | 'fixed'
+          discount_value?: number
+          max_uses?: number | null
+          used_count?: number
+          valid_from?: string
+          valid_until?: string
+          applicable_plan_ids?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
-    subscription_plans: {
-      Row: {
-        id: string
-        name: string
-        slug: string
-        description: string | null
-        price_monthly: number
-        price_yearly: number | null
-        max_users: number
-        max_patients: number | null
-        max_locations: number | null
-        features: Json
-        is_active: boolean
-        sort_order: number
-        created_at: string
-        updated_at: string
-      }
-      Insert: {
-        id?: string
-        name: string
-        slug: string
-        description?: string | null
-        price_monthly: number
-        price_yearly?: number | null
-        max_users?: number
-        max_patients?: number | null
-        max_locations?: number | null
-        features?: Json
-        is_active?: boolean
-        sort_order?: number
-        created_at?: string
-        updated_at?: string
-      }
-      Update: {
-        id?: string
-        name?: string
-        slug?: string
-        description?: string | null
-        price_monthly?: number
-        price_yearly?: number | null
-        max_users?: number
-        max_patients?: number | null
-        max_locations?: number | null
-        features?: Json
-        is_active?: boolean
-        sort_order?: number
-        created_at?: string
-        updated_at?: string
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      get_profiles_for_users: {
+        Args: { user_ids: string[] }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+        }[]
       }
     }
-    discount_coupons: {
-      Row: {
-        id: string
-        code: string
-        description: string | null
-        discount_type: 'percentage' | 'fixed'
-        discount_value: number
-        max_uses: number | null
-        used_count: number
-        valid_from: string
-        valid_until: string
-        applicable_plan_ids: string[] | null
-        is_active: boolean
-        created_at: string
-        updated_at: string
-      }
-      Insert: {
-        id?: string
-        code: string
-        description?: string | null
-        discount_type: 'percentage' | 'fixed'
-        discount_value: number
-        max_uses?: number | null
-        used_count?: number
-        valid_from: string
-        valid_until: string
-        applicable_plan_ids?: string[] | null
-        is_active?: boolean
-        created_at?: string
-        updated_at?: string
-      }
-      Update: {
-        id?: string
-        code?: string
-        description?: string | null
-        discount_type?: 'percentage' | 'fixed'
-        discount_value?: number
-        max_uses?: number | null
-        used_count?: number
-        valid_from?: string
-        valid_until?: string
-        applicable_plan_ids?: string[] | null
-        is_active?: boolean
-        created_at?: string
-        updated_at?: string
-      }
+    Enums: {
+      appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
     }
   }
-  Views: {
-    [_ in never]: never
-  }
-  Functions: {
-    get_profiles_for_users: {
-      Args: { user_ids: string[] }
-      Returns: {
-        id: string
-        email: string
-        full_name: string
-      }[]
-    }
-  }
-  Enums: {
-    appointment_status: 'scheduled' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' | 'rescheduled'
-  }
-}
 }
 
 // Helper types for easier usage
