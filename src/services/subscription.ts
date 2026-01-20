@@ -94,5 +94,18 @@ export const subscriptionService = {
         // 2. Check limit
         const result = await this.checkLimit(clinicId, 'max_users', count || 0);
         return result.allowed;
+    },
+
+    /**
+     * Call Supabase Edge Function to create a Stripe Subscription
+     */
+    async createSubscription(priceId: string, email: string, userId: string, planName: string, amount: number, customerId?: string) {
+        const { data, error } = await supabase.functions.invoke('create-subscription', {
+            body: { priceId, email, userId, planName, amount, customerId },
+        });
+
+        if (error) throw error;
+        return data;
     }
 };
+

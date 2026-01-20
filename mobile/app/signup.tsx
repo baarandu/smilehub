@@ -37,7 +37,7 @@ export default function SignUp() {
         setLoading(true);
         try {
             await signUp(email, password, name, accountType, clinicName || undefined, gender);
-            router.replace('/login');
+            // router.replace('/login'); // Removed: Let _layout handle redirection based on auth state
         } catch (error) {
             // Handled in context
         } finally {

@@ -10,10 +10,13 @@ import {
   Stethoscope,
   Package,
   DollarSign,
-  Bot
+  Bot,
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -26,14 +29,29 @@ const navItems = [
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
+  { to: '/planos', icon: CreditCard, label: 'Assinatura' },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useState(() => {
+    const checkAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_super_admin')
+          .eq('id', user.id)
+          .single();
+        setIsSuperAdmin(!!profile?.is_super_admin);
+      }
+    };
+    checkAdmin();
+
     const loadCount = async () => {
       try {
         const [{ remindersService }, { alertsService }] = await Promise.all([
@@ -117,6 +135,22 @@ export function AppLayout({ children }: AppLayoutProps) {
             );
           })}
         </nav>
+
+        {isSuperAdmin && (
+          <NavLink
+            to="/admin/planos"
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+              location.pathname === '/admin/planos'
+                ? "bg-purple-100 text-purple-700"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-purple-600")} />
+            <span className="flex-1">Planos & Preços</span>
+          </NavLink>
+        )}
 
         <div className="px-4 pb-4">
           <button

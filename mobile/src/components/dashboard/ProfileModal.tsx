@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X } from 'lucide-react-native';
+import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -108,6 +108,17 @@ export function ProfileModal({
                             >
                                 <Building2 size={20} color="#6B7280" />
                                 <Text className="text-gray-700 font-medium">Minha Clínica</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/settings/subscription');
+                                }}
+                            >
+                                <CreditCard size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Assinatura</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity

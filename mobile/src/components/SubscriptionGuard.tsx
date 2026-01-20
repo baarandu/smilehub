@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Alert } from 'react-native';
-import { subscriptionService } from '../../services/subscription';
-import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { subscriptionService } from '../services/subscription';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface SubscriptionGuardProps {
     children: React.ReactNode;
@@ -40,7 +40,7 @@ export function SubscriptionGuard({ children, fallback, feature, currentUsage }:
                 return;
             }
 
-            const result = await subscriptionService.checkLimit(clinicUser.clinic_id, feature, currentUsage || 0);
+            const result = await subscriptionService.checkLimit((clinicUser as any).clinic_id, feature, currentUsage || 0);
             setAllowed(result.allowed);
 
         } catch (error) {

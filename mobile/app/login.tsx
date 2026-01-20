@@ -57,7 +57,7 @@ export default function Login() {
             await signIn(email, password);
             // Reset rate limit on success
             await resetRateLimit();
-            router.replace('/(tabs)');
+            // router.replace('/(tabs)'); // Removed: Let _layout handle redirection based on auth state
         } catch (error: any) {
             // Record failed attempt
             const lockedOut = await recordFailedAttempt();

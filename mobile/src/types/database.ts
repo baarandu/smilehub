@@ -44,6 +44,56 @@ export interface Database {
           updated_at?: string
         }
       }
+      subscription_plans: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          price_monthly: number
+          price_yearly: number | null
+          max_users: number
+          max_patients: number | null
+          max_locations: number
+          features: Json
+          is_active: boolean
+          sort_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          price_monthly: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number
+          features?: Json
+          is_active?: boolean
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          price_monthly?: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number
+          features?: Json
+          is_active?: boolean
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       patients: {
         Row: {
           id: string
