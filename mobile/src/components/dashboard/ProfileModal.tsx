@@ -84,21 +84,39 @@ export function ProfileModal({
                         <View className="p-6 gap-2">
                             {/* AI Secretary - Apenas para Super Admins (Em desenvolvimento) */}
                             {isSuperAdmin && (
-                                <TouchableOpacity
-                                    className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
-                                    onPress={() => {
-                                        onClose();
-                                        router.push('/secretary');
-                                    }}
-                                >
-                                    <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
-                                        <Bot size={22} color="#0D9488" />
-                                    </View>
-                                    <View>
-                                        <Text className="text-gray-900 font-bold">Secretária IA</Text>
-                                        <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
-                                    </View>
-                                </TouchableOpacity>
+                                <>
+                                    <TouchableOpacity
+                                        className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
+                                        onPress={() => {
+                                            onClose();
+                                            router.push('/secretary');
+                                        }}
+                                    >
+                                        <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
+                                            <Bot size={22} color="#0D9488" />
+                                        </View>
+                                        <View>
+                                            <Text className="text-gray-900 font-bold">Secretária IA</Text>
+                                            <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        className="flex-row items-center gap-4 p-4 bg-white border border-purple-100 rounded-2xl shadow-sm mb-2"
+                                        onPress={() => {
+                                            onClose();
+                                            router.push('/settings/admin/plans');
+                                        }}
+                                    >
+                                        <View className="w-10 h-10 bg-purple-50 rounded-full items-center justify-center">
+                                            <CreditCard size={22} color="#7C3AED" />
+                                        </View>
+                                        <View>
+                                            <Text className="text-gray-900 font-bold">Planos e Preços (Admin)</Text>
+                                            <Text className="text-gray-500 text-xs">Gerenciar Assinaturas</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
                             )}
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Gerenciamento</Text>

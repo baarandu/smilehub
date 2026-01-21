@@ -40,6 +40,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkSubscription = async (userId: string) => {
         console.log('AUTH_CONTEXT: checkSubscription for user:', userId);
         try {
+            // First check if user is super admin
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_super_admin')
+                .eq('id', userId)
+                .single();
+
+            if (profile?.is_super_admin) {
+                console.log('AUTH_CONTEXT: checkSubscription - User is SUPER ADMIN. Bypassing checks.');
+                setRole('owner'); // Super admin acts as owner
+                setHasActiveSubscription(true);
+                setIsLoading(false);
+                return;
+            }
+
             const { data: clinicUser } = await supabase
                 .from('clinic_users')
                 .select('clinic_id, role')

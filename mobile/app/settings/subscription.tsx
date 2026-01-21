@@ -161,7 +161,7 @@ export default function SubscriptionScreen() {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <View className="flex-row items-center p-4 border-b border-gray-200 bg-white">
-                <TouchableOpacity onPress={() => router.back()} className="mr-4">
+                <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)')} className="mr-4">
                     <ArrowLeft size={24} color="#374151" />
                 </TouchableOpacity>
                 <Text className="text-xl font-bold text-gray-900">Planos e Assinaturas</Text>
@@ -180,6 +180,18 @@ export default function SubscriptionScreen() {
                             A assinatura da clínica está inativa ou pendente.
                             Entre em contato com o administrador para regularizar o acesso.
                         </Text>
+
+                        <TouchableOpacity
+                            onPress={async () => {
+                                setLoading(true);
+                                await refreshSubscription();
+                                await loadData();
+                                setLoading(false);
+                            }}
+                            className="mt-8 bg-teal-600 px-6 py-3 rounded-full"
+                        >
+                            <Text className="text-white font-bold">Verificar Novamente</Text>
+                        </TouchableOpacity>
                     </View>
                 ) : (
                     <>

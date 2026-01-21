@@ -29,6 +29,18 @@ export function SubscriptionGuard({ children, fallback, feature, currentUsage }:
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return; // Auth guard should handle this
 
+            // Check if user is super admin
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('is_super_admin')
+                .eq('id', user.id)
+                .single();
+
+            if (profile?.is_super_admin) {
+                setAllowed(true);
+                return;
+            }
+
             const { data: clinicUser } = await supabase
                 .from('clinic_users')
                 .select('clinic_id')
