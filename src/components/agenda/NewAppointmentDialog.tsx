@@ -29,6 +29,8 @@ export function NewAppointmentDialog({
   onAdd,
   onUpdate,
   appointmentToEdit,
+  onRequestCreatePatient,
+  preSelectedPatient,
 }: NewAppointmentDialogProps) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -60,6 +62,19 @@ export function NewAppointmentDialog({
       setShowPatientList(false);
     }
   }, [open, appointmentToEdit]);
+
+  // Handle pre-selected patient from patient creation flow
+  useEffect(() => {
+    if (preSelectedPatient) {
+      setForm(prev => ({
+        ...prev,
+        patientId: preSelectedPatient.id,
+        patientName: preSelectedPatient.name
+      }));
+      setPatientSearch('');
+      setShowPatientList(false);
+    }
+  }, [preSelectedPatient]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -183,10 +198,19 @@ export function NewAppointmentDialog({
                 )}
                 {showPatientList && patientSearch.length > 0 && filteredPatients.length === 0 && (
                   <div
-                    className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg p-4 text-center text-muted-foreground"
+                    className="absolute z-50 w-full mt-1 bg-amber-50 border border-amber-200 rounded-md shadow-lg p-4 text-center"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    Nenhum paciente encontrado
+                    <p className="text-amber-800 mb-3">Paciente "{patientSearch}" não encontrado.</p>
+                    {onRequestCreatePatient && (
+                      <Button
+                        size="sm"
+                        onClick={() => onRequestCreatePatient(patientSearch)}
+                        className="w-full"
+                      >
+                        + Cadastrar Novo Paciente
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

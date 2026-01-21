@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentsService } from '@/services/appointments';
-import { getPatients } from '@/services/patients';
+import { getPatients, createPatientFromForm } from '@/services/patients';
 import { locationsService, type Location } from '@/services/locations';
-import type { AppointmentWithPatient, Patient } from '@/types/database';
+import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +42,12 @@ export default function Agenda() {
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentWithPatient | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Patient creation flow
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false);
+  const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
+  const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
+  const [savingPatient, setSavingPatient] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -233,6 +241,51 @@ export default function Agenda() {
     }
   };
 
+  // Patient creation flow handlers
+  const handleRequestCreatePatient = (prefillName: string) => {
+    setDialogOpen(false); // Close appointment dialog
+    setPatientForm({ name: prefillName, phone: '' });
+    setTimeout(() => setPatientDialogOpen(true), 200);
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2');
+    }
+    return value;
+  };
+
+  const handleSavePatient = async () => {
+    if (!patientForm.name || !patientForm.phone) {
+      toast.error('Nome e telefone são obrigatórios');
+      return;
+    }
+    try {
+      setSavingPatient(true);
+      const newPatient = await createPatientFromForm({
+        name: patientForm.name,
+        phone: patientForm.phone,
+      } as PatientFormData);
+
+      await loadPatients();
+      setPreSelectedPatient(newPatient);
+      setPatientDialogOpen(false);
+      setPatientForm({ name: '', phone: '' });
+
+      // Reopen appointment dialog with pre-selected patient
+      setTimeout(() => setDialogOpen(true), 200);
+      toast.success(`Paciente "${newPatient.name}" cadastrado!`);
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      toast.error('Erro ao cadastrar paciente');
+    } finally {
+      setSavingPatient(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -257,7 +310,10 @@ export default function Agenda() {
             open={dialogOpen}
             onOpenChange={(open) => {
               setDialogOpen(open);
-              if (!open) setEditingAppointment(null);
+              if (!open) {
+                setEditingAppointment(null);
+                setPreSelectedPatient(null);
+              }
             }}
             patients={patients}
             locations={locations}
@@ -265,6 +321,8 @@ export default function Agenda() {
             onAdd={handleAddAppointment}
             onUpdate={handleUpdateAppointment}
             appointmentToEdit={editingAppointment}
+            onRequestCreatePatient={handleRequestCreatePatient}
+            preSelectedPatient={preSelectedPatient}
           />
         </div>
       </div>
@@ -331,6 +389,50 @@ export default function Agenda() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Quick Patient Creation Dialog */}
+      <AlertDialog open={patientDialogOpen} onOpenChange={setPatientDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cadastrar Paciente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cadastro rápido de paciente. Você poderá completar o perfil depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome completo *</Label>
+              <Input
+                placeholder="Nome do paciente"
+                value={patientForm.name}
+                onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone *</Label>
+              <Input
+                placeholder="(11) 99999-9999"
+                value={patientForm.phone}
+                onChange={(e) => setPatientForm({ ...patientForm, phone: formatPhone(e.target.value) })}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setPatientDialogOpen(false);
+              setPatientForm({ name: '', phone: '' });
+              // Reopen appointment dialog
+              setTimeout(() => setDialogOpen(true), 200);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleSavePatient} disabled={savingPatient}>
+              {savingPatient ? 'Salvando...' : 'Cadastrar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
