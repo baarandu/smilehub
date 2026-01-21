@@ -616,6 +616,14 @@ export default function Patients() {
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
+                        {/* Explainer */}
+                        <View className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-4">
+                            <Text className="text-orange-700 text-sm">
+                                Lista de tratamentos com itens ainda pendentes de execução.
+                                Toque para abrir o orçamento e atualizar o status.
+                            </Text>
+                        </View>
+
                         {pendingBudgets.length === 0 ? (
                             <View className="py-12 items-center">
                                 <FileText size={48} color="#D1D5DB" />

@@ -22,6 +22,8 @@ interface NewAppointmentModalProps {
   appointmentToEdit?: any; // Using any to avoid importing AppointmentWithPatient mismatch issues if not exported
   onUpdate?: (id: string, updates: any) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  onRequestCreatePatient?: (prefillName: string) => void;
+  preSelectedPatient?: Patient | null;
 }
 
 export function NewAppointmentModal({
@@ -33,7 +35,9 @@ export function NewAppointmentModal({
   onCreateAppointment,
   appointmentToEdit,
   onUpdate,
-  onDelete
+  onDelete,
+  onRequestCreatePatient,
+  preSelectedPatient
 }: NewAppointmentModalProps) {
   const router = useRouter();
   const [patientSearch, setPatientSearch] = React.useState('');
@@ -63,6 +67,18 @@ export function NewAppointmentModal({
       setPatientSearch('');
     }
   }, [appointmentToEdit]);
+
+  // Handle pre-selected patient from patient creation flow
+  React.useEffect(() => {
+    if (preSelectedPatient) {
+      setNewAppointment(prev => ({
+        ...prev,
+        patientId: preSelectedPatient.id,
+        patientName: preSelectedPatient.name
+      }));
+      setPatientSearch('');
+    }
+  }, [preSelectedPatient]);
 
 
   const filteredPatients = patientSearch.length > 0
@@ -129,7 +145,7 @@ export function NewAppointmentModal({
       console.error('Error code:', error?.code);
       console.error('Error details:', error?.details);
       console.error('Full error:', JSON.stringify(error, null, 2));
-      
+
       let errorMessage = 'Não foi possível agendar a consulta';
       if (error?.message) {
         errorMessage = error.message;
@@ -142,7 +158,7 @@ export function NewAppointmentModal({
       } else {
         errorMessage = `Erro desconhecido: ${JSON.stringify(error)}`;
       }
-      
+
       console.log('Mensagem de erro que será exibida no modal:', errorMessage);
       Alert.alert('Erro', errorMessage);
     }
@@ -255,8 +271,18 @@ export function NewAppointmentModal({
                   </View>
                 )}
                 {patientSearch.length > 0 && filteredPatients.length === 0 && (
-                  <View className="bg-gray-50 rounded-xl mt-2 p-4">
-                    <Text className="text-gray-500 text-center">Nenhum paciente encontrado</Text>
+                  <View className="bg-amber-50 border border-amber-200 rounded-xl mt-2 p-4">
+                    <Text className="text-amber-800 text-center mb-3">
+                      Paciente "{patientSearch}" não encontrado.
+                    </Text>
+                    {onRequestCreatePatient && (
+                      <TouchableOpacity
+                        onPress={() => onRequestCreatePatient(patientSearch)}
+                        className="bg-teal-600 py-3 rounded-xl"
+                      >
+                        <Text className="text-white font-semibold text-center">+ Cadastrar Novo Paciente</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )}
               </View>

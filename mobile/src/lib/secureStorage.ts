@@ -65,7 +65,8 @@ export const SecureStorageAdapter = {
 
             return null;
         } catch (error) {
-            console.error('SecureStorage getItem error:', error);
+            // Use warn instead of error to avoid RedBox on iOS when device is locked ("User interaction is not allowed")
+            console.warn('SecureStorage getItem error:', error);
             // Fallback to AsyncStorage if SecureStore fails
             return AsyncStorage.getItem(key);
         }
@@ -73,11 +74,13 @@ export const SecureStorageAdapter = {
 
     async setItem(key: string, value: string): Promise<void> {
         try {
-            await SecureStore.setItemAsync(key, value);
+            await SecureStore.setItemAsync(key, value, {
+                keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
+            });
             // Mark migration as complete when we successfully set a value
             await markMigrationComplete();
         } catch (error) {
-            console.error('SecureStorage setItem error:', error);
+            console.warn('SecureStorage setItem error:', error);
             // Fallback to AsyncStorage if SecureStore fails
             await AsyncStorage.setItem(key, value);
         }

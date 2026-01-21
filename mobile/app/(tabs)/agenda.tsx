@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, RefreshControl, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Calendar, Plus, MapPin } from 'lucide-react-native';
+import { Calendar, Plus, MapPin, X } from 'lucide-react-native';
 import { appointmentsService } from '../../src/services/appointments';
-import { getPatients } from '../../src/services/patients';
+import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { locationsService, type Location } from '../../src/services/locations';
 import { CalendarGrid, NewAppointmentModal } from '../../src/components/agenda';
-import type { AppointmentWithPatient, Patient } from '../../src/types/database';
+import type { AppointmentWithPatient, Patient, PatientFormData } from '../../src/types/database';
 
 export default function Agenda() {
     const router = useRouter();
@@ -24,6 +24,12 @@ export default function Agenda() {
     const [showStatusPicker, setShowStatusPicker] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithPatient | null>(null);
     const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
+
+    // Patient creation flow
+    const [showPatientModal, setShowPatientModal] = useState(false);
+    const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
+    const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
+    const [savingPatient, setSavingPatient] = useState(false);
 
     useEffect(() => {
         loadAppointments();
@@ -143,7 +149,7 @@ export default function Agenda() {
             console.log('Appointment data:', appointment);
             const dateStr = selectedDate.toISOString().split('T')[0];
             console.log('Date string:', dateStr);
-            
+
             const result = await appointmentsService.create({
                 patient_id: appointment.patientId,
                 date: dateStr,
@@ -153,7 +159,7 @@ export default function Agenda() {
                 notes: appointment.notes || null,
                 procedure_name: appointment.procedure || null,
             });
-            
+
             console.log('=== AGENDAMENTO CRIADO COM SUCESSO ===');
             console.log('Result:', result);
 
@@ -171,7 +177,7 @@ export default function Agenda() {
             console.error('Error details:', error?.details);
             console.error('Error hint:', error?.hint);
             console.error('Full error:', JSON.stringify(error, null, 2));
-            
+
             let errorMessage = 'Não foi possível agendar a consulta';
             if (error?.message) {
                 errorMessage = error.message;
@@ -184,7 +190,7 @@ export default function Agenda() {
             } else {
                 errorMessage = `Erro desconhecido: ${JSON.stringify(error)}`;
             }
-            
+
             console.log('Mensagem de erro que será exibida:', errorMessage);
             Alert.alert('Erro', errorMessage);
         }
@@ -265,6 +271,62 @@ export default function Agenda() {
         } catch (error) {
             console.error('Error updating status:', error);
             Alert.alert('Erro', 'Não foi possível atualizar o status');
+        }
+    };
+
+    // Patient creation flow handlers
+    const handleRequestCreatePatient = (prefillName: string) => {
+        console.log('handleRequestCreatePatient called with:', prefillName);
+        // Close appointment modal first (React Native can have issues with stacked modals)
+        setShowModal(false);
+        // Then open patient creation modal
+        setPatientForm({ name: prefillName, phone: '' });
+        setTimeout(() => {
+            setShowPatientModal(true);
+        }, 300); // Small delay to allow animation
+    };
+
+    const formatPhone = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        if (numbers.length <= 11) {
+            return numbers
+                .replace(/(\d{2})(\d)/, '($1) $2')
+                .replace(/(\d{5})(\d)/, '$1-$2');
+        }
+        return value;
+    };
+
+    const handleSavePatient = async () => {
+        if (!patientForm.name || !patientForm.phone) {
+            Alert.alert('Erro', 'Nome e telefone são obrigatórios');
+            return;
+        }
+        try {
+            setSavingPatient(true);
+            const newPatient = await createPatientFromForm({
+                name: patientForm.name,
+                phone: patientForm.phone,
+            } as PatientFormData);
+
+            // Refresh patients list
+            await loadPatients();
+
+            // Pre-select the new patient and close patient modal
+            setPreSelectedPatient(newPatient);
+            setShowPatientModal(false);
+            setPatientForm({ name: '', phone: '' });
+
+            // Reopen appointment modal with pre-selected patient
+            setTimeout(() => {
+                setShowModal(true);
+            }, 300);
+
+            Alert.alert('Sucesso', `Paciente "${newPatient.name}" cadastrado! Complete o agendamento.`);
+        } catch (error) {
+            console.error('Error creating patient:', error);
+            Alert.alert('Erro', 'Não foi possível cadastrar o paciente');
+        } finally {
+            setSavingPatient(false);
         }
     };
 
@@ -416,11 +478,14 @@ export default function Agenda() {
                 onClose={() => {
                     setShowModal(false);
                     setEditingAppointment(null);
+                    setPreSelectedPatient(null);
                 }}
                 onCreateAppointment={handleCreateAppointment}
                 appointmentToEdit={editingAppointment}
                 onUpdate={handleUpdateAppointment}
                 onDelete={handleDeleteAppointment}
+                onRequestCreatePatient={handleRequestCreatePatient}
+                preSelectedPatient={preSelectedPatient}
             />
 
             {/* Status Picker Modal */}
@@ -475,6 +540,63 @@ export default function Agenda() {
                         </TouchableOpacity>
                     </Pressable>
                 </Pressable>
+            </Modal>
+
+            {/* Inline Patient Creation Modal */}
+            <Modal visible={showPatientModal} animationType="slide" presentationStyle="pageSheet">
+                <SafeAreaView className="flex-1 bg-white">
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        className="flex-1"
+                    >
+                        <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-100">
+                            <TouchableOpacity onPress={() => {
+                                setShowPatientModal(false);
+                                setPatientForm({ name: '', phone: '' });
+                            }}>
+                                <X size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                            <Text className="text-lg font-semibold text-gray-900">Cadastrar Paciente</Text>
+                            <TouchableOpacity onPress={handleSavePatient} disabled={savingPatient}>
+                                <Text className={`font-semibold ${savingPatient ? 'text-gray-400' : 'text-teal-500'}`}>
+                                    {savingPatient ? 'Salvando...' : 'Salvar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView className="flex-1 px-4 py-6">
+                            <View className="bg-teal-50 border border-teal-100 rounded-xl p-4 mb-6">
+                                <Text className="text-teal-700 text-sm">
+                                    Cadastro rápido de paciente. Você poderá completar o perfil depois.
+                                </Text>
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Nome completo *</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                    placeholder="Nome do paciente"
+                                    placeholderTextColor="#9CA3AF"
+                                    value={patientForm.name}
+                                    onChangeText={(text) => setPatientForm({ ...patientForm, name: text })}
+                                    autoFocus
+                                />
+                            </View>
+
+                            <View className="mb-6">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Telefone *</Text>
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                    placeholder="(11) 99999-9999"
+                                    placeholderTextColor="#9CA3AF"
+                                    keyboardType="phone-pad"
+                                    value={patientForm.phone}
+                                    onChangeText={(text) => setPatientForm({ ...patientForm, phone: formatPhone(text) })}
+                                />
+                            </View>
+                        </ScrollView>
+                    </KeyboardAvoidingView>
+                </SafeAreaView>
             </Modal>
         </SafeAreaView>
     );

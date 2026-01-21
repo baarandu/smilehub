@@ -422,6 +422,14 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     </TouchableOpacity>
                                 </View>
 
+                                {/* Explainer */}
+                                <View className="bg-gray-100 p-3 rounded-xl mb-2">
+                                    <Text className="text-gray-600 text-sm">
+                                        Crie modelos personalizados de documentos (atestados, receitas, termos)
+                                        e gere PDFs automaticamente com os dados do paciente.
+                                    </Text>
+                                </View>
+
                                 <View className="bg-blue-50 p-3 rounded-xl">
                                     <Text className="text-blue-700 text-sm">
                                         <Text className="font-bold">Variáveis: </Text>
