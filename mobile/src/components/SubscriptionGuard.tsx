@@ -34,7 +34,7 @@ export function SubscriptionGuard({ children, fallback, feature, currentUsage }:
                 .from('profiles')
                 .select('is_super_admin')
                 .eq('id', user.id)
-                .single();
+                .single() as { data: { is_super_admin: boolean } | null, error: any };
 
             if (profile?.is_super_admin) {
                 setAllowed(true);

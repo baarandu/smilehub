@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .from('profiles')
                 .select('is_super_admin')
                 .eq('id', userId)
-                .single();
+                .single() as { data: { is_super_admin: boolean } | null, error: any };
 
             if (profile?.is_super_admin) {
                 console.log('AUTH_CONTEXT: checkSubscription - User is SUPER ADMIN. Bypassing checks.');
