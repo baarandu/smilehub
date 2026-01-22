@@ -384,6 +384,7 @@ export default function Dashboard() {
                 clinicName={clinicName}
                 isAdmin={isAdmin}
                 isSuperAdmin={isSuperAdmin}
+                userEmail={session?.user?.email || ''}
                 onLogout={handleLogout}
                 onOpenLocations={openLocationsModal}
                 onOpenTeam={() => { setShowProfileModal(false); setShowTeamModal(true); }}

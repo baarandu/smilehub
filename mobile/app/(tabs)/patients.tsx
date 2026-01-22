@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -70,6 +70,7 @@ export default function Patients() {
     const [form, setForm] = useState<PatientFormData>(emptyForm);
     const [saving, setSaving] = useState(false);
     const [syncingBudgets, setSyncingBudgets] = useState(false);
+    const [selectedPatientForBudgets, setSelectedPatientForBudgets] = useState<{ patientId: string; patientName: string; items: PendingItem[] } | null>(null);
 
     useEffect(() => {
         loadPatients();
@@ -122,6 +123,22 @@ export default function Patients() {
             setSyncingBudgets(false);
         }
     };
+
+    // Group pending budgets by patient
+    const groupedByPatient = useMemo(() => {
+        const groups: Record<string, { patientId: string; patientName: string; items: PendingItem[] }> = {};
+        pendingBudgets.forEach(item => {
+            if (!groups[item.patientId]) {
+                groups[item.patientId] = {
+                    patientId: item.patientId,
+                    patientName: item.patientName,
+                    items: []
+                };
+            }
+            groups[item.patientId].items.push(item);
+        });
+        return Object.values(groups);
+    }, [pendingBudgets]);
 
     const handleSave = async () => {
         if (!form.name || !form.phone) {
@@ -606,48 +623,61 @@ export default function Patients() {
             <Modal visible={showBudgetsModal} animationType="slide" presentationStyle="pageSheet">
                 <SafeAreaView className="flex-1 bg-gray-50">
                     <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-100">
-                        <TouchableOpacity onPress={() => setShowBudgetsModal(false)}>
+                        <TouchableOpacity onPress={() => {
+                            if (selectedPatientForBudgets) {
+                                setSelectedPatientForBudgets(null);
+                            } else {
+                                setShowBudgetsModal(false);
+                            }
+                        }}>
                             <X size={24} color="#6B7280" />
                         </TouchableOpacity>
                         <Text className="text-lg font-semibold text-gray-900">
-                            Tratamentos Pendentes ({pendingBudgetsCount})
+                            {selectedPatientForBudgets
+                                ? selectedPatientForBudgets.patientName
+                                : `Pacientes com Pendências (${pendingBudgetsCount})`
+                            }
                         </Text>
                         <View className="w-10" />
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
-                        {/* Explainer */}
-                        <View className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-4">
-                            <Text className="text-orange-700 text-sm">
-                                Lista de tratamentos com itens ainda pendentes de execução.
-                                Toque para abrir o orçamento e atualizar o status.
-                            </Text>
-                        </View>
-
-                        {pendingBudgets.length === 0 ? (
-                            <View className="py-12 items-center">
-                                <FileText size={48} color="#D1D5DB" />
-                                <Text className="text-gray-400 mt-4">Nenhum tratamento pendente</Text>
+                        {/* Explainer - only show in patient list view */}
+                        {!selectedPatientForBudgets && (
+                            <View className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-4">
+                                <Text className="text-orange-700 text-sm">
+                                    Pacientes com tratamentos pendentes de execução.
+                                    Toque em um paciente para ver os detalhes.
+                                </Text>
                             </View>
-                        ) : (
+                        )}
+
+                        {selectedPatientForBudgets ? (
+                            /* Detail view - show items for selected patient */
                             <View className="gap-3">
-                                {pendingBudgets.map((item, index) => (
+                                <TouchableOpacity
+                                    onPress={() => setSelectedPatientForBudgets(null)}
+                                    className="flex-row items-center gap-2 mb-2"
+                                >
+                                    <ChevronRight size={16} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+                                    <Text className="text-teal-600 font-medium">Voltar à lista</Text>
+                                </TouchableOpacity>
+
+                                {selectedPatientForBudgets.items.map((item, idx) => (
                                     <TouchableOpacity
-                                        key={`${item.budgetId}-${index}`}
+                                        key={`${item.budgetId}-${idx}`}
                                         onPress={() => {
                                             setShowBudgetsModal(false);
+                                            setSelectedPatientForBudgets(null);
                                             router.push(`/patient/${item.patientId}?tab=budgets`);
                                         }}
                                         className="bg-white p-4 rounded-xl border border-gray-100"
                                     >
                                         <View className="flex-row justify-between items-start mb-2">
-                                            <View className="flex-1">
-                                                <Text className="font-semibold text-gray-900">{item.patientName}</Text>
-                                                <Text className="text-sm text-gray-500">
-                                                    {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                                                </Text>
-                                            </View>
-                                            <ChevronRight size={20} color="#9CA3AF" />
+                                            <Text className="text-sm text-gray-500">
+                                                {new Date(item.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                            </Text>
+                                            <ChevronRight size={18} color="#9CA3AF" />
                                         </View>
                                         <View className="bg-yellow-50 p-3 rounded-lg">
                                             <Text className="font-medium text-yellow-800">
@@ -662,7 +692,48 @@ export default function Patients() {
                                         </View>
                                     </TouchableOpacity>
                                 ))}
+
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setShowBudgetsModal(false);
+                                        setSelectedPatientForBudgets(null);
+                                        router.push(`/patient/${selectedPatientForBudgets.patientId}?tab=budgets`);
+                                    }}
+                                    className="bg-teal-600 p-4 rounded-xl mt-2"
+                                >
+                                    <Text className="text-white font-bold text-center">
+                                        Abrir Ficha do Paciente
+                                    </Text>
+                                </TouchableOpacity>
                             </View>
+                        ) : (
+                            /* Patient list view */
+                            groupedByPatient.length === 0 ? (
+                                <View className="py-12 items-center">
+                                    <FileText size={48} color="#D1D5DB" />
+                                    <Text className="text-gray-400 mt-4">Nenhum tratamento pendente</Text>
+                                </View>
+                            ) : (
+                                <View className="gap-3">
+                                    {groupedByPatient.map((group) => (
+                                        <TouchableOpacity
+                                            key={group.patientId}
+                                            onPress={() => setSelectedPatientForBudgets(group)}
+                                            className="bg-white p-4 rounded-xl border border-gray-100 flex-row items-center justify-between"
+                                        >
+                                            <View className="flex-1">
+                                                <Text className="font-bold text-gray-900 text-base">{group.patientName}</Text>
+                                            </View>
+                                            <View className="flex-row items-center gap-2">
+                                                <View className="bg-orange-500 px-2.5 py-1 rounded-full">
+                                                    <Text className="text-white text-xs font-bold">{group.items.length}</Text>
+                                                </View>
+                                                <ChevronRight size={20} color="#9CA3AF" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )
                         )}
                     </ScrollView>
                 </SafeAreaView>

@@ -10,10 +10,17 @@ interface ProfileModalProps {
     clinicName: string;
     isAdmin: boolean;
     isSuperAdmin?: boolean;
+    userEmail?: string;
     onLogout: () => void;
     onOpenLocations: () => void;
     onOpenTeam: () => void;
 }
+
+// Emails with early access to AI Secretary (beta testers)
+const AI_SECRETARY_ALLOWED_EMAILS = [
+    'vitor_cb@hotmail.com',
+    'sorria@barbaraqueiroz.com.br',
+];
 
 export function ProfileModal({
     visible,
@@ -22,12 +29,16 @@ export function ProfileModal({
     clinicName,
     isAdmin,
     isSuperAdmin = false,
+    userEmail = '',
     onLogout,
     onOpenLocations,
     onOpenTeam
 }: ProfileModalProps) {
     const router = useRouter();
     const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
+
+    // Check if user has access to AI Secretary
+    const hasAISecretaryAccess = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
 
     useEffect(() => {
         if (visible) {
@@ -82,8 +93,8 @@ export function ProfileModal({
 
                         {/* Menu Items */}
                         <View className="p-6 gap-2">
-                            {/* AI Secretary - Apenas para Super Admins (Em desenvolvimento) */}
-                            {isSuperAdmin && (
+                            {/* AI Secretary - Only for whitelisted emails (Beta) */}
+                            {hasAISecretaryAccess && (
                                 <>
                                     <TouchableOpacity
                                         className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"

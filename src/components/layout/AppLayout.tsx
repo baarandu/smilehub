@@ -37,11 +37,21 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+
+  // Emails with early access to AI Secretary (beta testers)
+  const AI_SECRETARY_ALLOWED_EMAILS = [
+    'vitor_cb@hotmail.com',
+    'sorria@barbaraqueiroz.com.br',
+  ];
+
+  const hasAISecretaryAccess = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
 
   useEffect(() => {
     const checkAdmin = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUserEmail(user.email || '');
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_super_admin')
@@ -50,6 +60,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         setIsSuperAdmin(!!profile?.is_super_admin);
       } else {
         setIsSuperAdmin(false);
+        setUserEmail('');
       }
     };
 
@@ -172,8 +183,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         )}
 
-        {/* Secretária IA - Apenas para Super Admins (Em desenvolvimento) */}
-        {isSuperAdmin && (
+        {/* Secretária IA - Only for whitelisted emails (Beta) */}
+        {hasAISecretaryAccess && (
           <div className="px-4 pb-4">
             <button
               onClick={() => alert("Em breve: A Secretária IA estará disponível para ajudar você!")}

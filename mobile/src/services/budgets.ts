@@ -140,24 +140,28 @@ export const budgetsService = {
     async getPendingCount(): Promise<number> {
         const { data, error } = await supabase
             .from('budgets')
-            .select('notes');
+            .select('patient_id, notes');
 
         if (error) throw error;
 
-        let count = 0;
+        // Count unique patients with at least one pending item
+        const patientsWithPending = new Set<string>();
         (data || []).forEach((budget: any) => {
             if (!budget.notes) return;
             try {
                 const parsed = JSON.parse(budget.notes);
                 if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                    count += parsed.teeth.filter((tooth: any) => tooth.status === 'pending').length;
+                    const hasPending = parsed.teeth.some((tooth: any) => tooth.status === 'pending');
+                    if (hasPending) {
+                        patientsWithPending.add(budget.patient_id);
+                    }
                 }
             } catch (e) {
                 // Invalid JSON, skip
             }
         });
 
-        return count;
+        return patientsWithPending.size;
     },
 
     async reconcileAllStatuses(): Promise<void> {
