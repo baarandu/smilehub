@@ -190,7 +190,11 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                     </TouchableOpacity>
                 </View>
 
-                <ScrollView className="flex-1 p-4">
+                <ScrollView
+                    className="flex-1 p-4"
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                    showsVerticalScrollIndicator={true}
+                >
                     {/* Summary Cards */}
                     <View className="flex-row gap-2 mb-4">
                         <View className="flex-1 bg-yellow-50 rounded-xl p-3 border border-yellow-100">
@@ -347,8 +351,6 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             })}
                         </View>
                     )}
-
-                    <View className="h-8" />
                 </ScrollView>
             </View>
 

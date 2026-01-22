@@ -202,7 +202,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName,
                     <DialogTitle>Orçamento</DialogTitle>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 px-6">
+                <ScrollArea className="flex-1 px-6 max-h-[50vh] overflow-y-auto">
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h2 className="text-xl font-bold text-slate-900">{budget.treatment}</h2>
