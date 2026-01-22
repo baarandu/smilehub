@@ -229,7 +229,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                 </ScrollArea>
 
                 <div className="p-4 pt-3 border-t mt-auto flex flex-col gap-2">
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         <Button variant="outline" className="h-10 text-sm" onClick={handleExportPDF} disabled={generatingPdf}>
                             <Eye className="w-4 h-4 mr-1" />
                             PDF
@@ -246,7 +246,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                             <Trash2 className="w-4 h-4 mr-1" />
                             Excluir
                         </Button>
-                        <Button variant="outline" className="h-10 text-sm" onClick={onClose}>Fechar</Button>
                     </div>
                     {approvedItems.length > 0 && (
                         <Button
