@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { ChevronDown, Plus } from 'lucide-react-native';
+import { ChevronDown, Plus, Save, X } from 'lucide-react-native';
 import {
     FACES,
     TREATMENTS,
@@ -31,6 +31,8 @@ interface BudgetAddItemFormProps {
     locationRate: string;
 
     onAddTooth: () => void;
+    isEditing?: boolean;
+    onCancelEdit?: () => void;
 }
 
 export function BudgetAddItemForm({
@@ -49,13 +51,20 @@ export function BudgetAddItemForm({
     itemLocationRate,
     onItemLocationRateChange,
     locationRate,
-    onAddTooth
+    onAddTooth,
+    isEditing = false,
+    onCancelEdit
 }: BudgetAddItemFormProps) {
 
     return (
-        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-            <View className="p-4 border-b border-gray-100 bg-teal-50">
-                <Text className="text-teal-800 font-medium">Adicionar Dente ao Orçamento</Text>
+        <View className={`bg-white rounded-xl border ${isEditing ? 'border-teal-500' : 'border-gray-100'} overflow-hidden mb-4`}>
+            <View className={`p-4 border-b border-gray-100 ${isEditing ? 'bg-teal-100' : 'bg-teal-50'}`}>
+                <Text className="text-teal-800 font-medium">
+                    {isEditing ? 'Editando Item do Orçamento' : 'Adicionar Dente ao Orçamento'}
+                </Text>
+                {isEditing && (
+                    <Text className="text-teal-600 text-xs mt-1">Toque no item no resumo para selecionar outro</Text>
+                )}
             </View>
 
             {/* Tooth Selection */}
@@ -180,16 +189,35 @@ export function BudgetAddItemForm({
                 </View>
             )}
 
-            {/* Add Tooth Button */}
+            {/* Add/Update Tooth Button */}
             {selectedTooth && selectedTreatments.length > 0 && (
                 <View className="p-4">
-                    <TouchableOpacity
-                        onPress={onAddTooth}
-                        className="bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
-                    >
-                        <Plus size={18} color="#FFFFFF" />
-                        <Text className="text-white font-medium">Adicionar {selectedTooth.includes('Arcada') ? selectedTooth : `Dente ${selectedTooth}`} ao Orçamento</Text>
-                    </TouchableOpacity>
+                    {isEditing ? (
+                        <View className="flex-row gap-2">
+                            <TouchableOpacity
+                                onPress={onCancelEdit}
+                                className="flex-1 bg-gray-200 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
+                            >
+                                <X size={18} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={onAddTooth}
+                                className="flex-1 bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
+                            >
+                                <Save size={18} color="#FFFFFF" />
+                                <Text className="text-white font-medium">Salvar Alterações</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            onPress={onAddTooth}
+                            className="bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
+                        >
+                            <Plus size={18} color="#FFFFFF" />
+                            <Text className="text-white font-medium">Adicionar {selectedTooth.includes('Arcada') ? selectedTooth : `Dente ${selectedTooth}`} ao Orçamento</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
         </View>

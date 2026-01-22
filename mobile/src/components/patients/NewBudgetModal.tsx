@@ -61,6 +61,9 @@ export function NewBudgetModal({
     // Item specific rate
     const [itemLocationRate, setItemLocationRate] = useState('');
 
+    // Editing state
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
     useEffect(() => {
         if (visible) {
             loadLocations();
@@ -248,19 +251,46 @@ export function NewBudgetModal({
             treatments: [...selectedTreatments],
             values: { ...treatmentValues },
             materials: { ...treatmentMaterials },
-            status: 'pending',
+            status: editingIndex !== null ? teethList[editingIndex]?.status || 'pending' : 'pending',
             locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
         };
 
-        // Always add as new entry (allow multiple entries per tooth)
-        setTeethList([...teethList, newEntry]);
+        if (editingIndex !== null) {
+            // Update existing entry
+            const newList = [...teethList];
+            newList[editingIndex] = newEntry;
+            setTeethList(newList);
+            setEditingIndex(null);
+        } else {
+            // Add as new entry
+            setTeethList([...teethList, newEntry]);
+        }
 
         // Clear fields for next tooth
         resetCurrentTooth();
     };
 
+    const handleSelectItemForEdit = (item: ToothEntry, index: number) => {
+        setEditingIndex(index);
+        setSelectedTooth(item.tooth);
+        setSelectedFaces([...(item.faces || [])]);
+        setSelectedTreatments([...item.treatments]);
+        setTreatmentValues({ ...item.values });
+        setTreatmentMaterials({ ...(item.materials || {}) });
+        setItemLocationRate(item.locationRate ? item.locationRate.toString() : '');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingIndex(null);
+        resetCurrentTooth();
+    };
+
     const handleRemoveTooth = (index: number) => {
         setTeethList(teethList.filter((_, i) => i !== index));
+        if (editingIndex === index) {
+            setEditingIndex(null);
+            resetCurrentTooth();
+        }
     };
 
     const toggleToothStatus = (index: number) => {
@@ -387,12 +417,16 @@ export function NewBudgetModal({
                             onItemLocationRateChange={setItemLocationRate}
                             locationRate={locationRate}
                             onAddTooth={handleAddTooth}
+                            isEditing={editingIndex !== null}
+                            onCancelEdit={handleCancelEdit}
                         />
 
                         <BudgetSummarySection
                             teethList={teethList}
                             onToggleStatus={toggleToothStatus}
                             onRemoveTooth={handleRemoveTooth}
+                            onSelectItem={handleSelectItemForEdit}
+                            selectedIndex={editingIndex}
                             grandTotal={getGrandTotal()}
                         />
 

@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Trash2, CheckCircle, Clock, CreditCard } from 'lucide-react-native';
+import { Trash2, CheckCircle, Clock, CreditCard, Pencil } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, type ToothEntry } from './budgetUtils';
 
 interface BudgetSummarySectionProps {
     teethList: ToothEntry[];
     onToggleStatus: (index: number) => void;
     onRemoveTooth: (index: number) => void;
+    onSelectItem?: (item: ToothEntry, index: number) => void;
+    selectedIndex?: number | null;
     grandTotal: number;
 }
 
@@ -14,6 +16,8 @@ export function BudgetSummarySection({
     teethList,
     onToggleStatus,
     onRemoveTooth,
+    onSelectItem,
+    selectedIndex,
     grandTotal,
 }: BudgetSummarySectionProps) {
     if (teethList.length === 0) return null;
@@ -52,9 +56,11 @@ export function BudgetSummarySection({
             {teethList.map((item, index) => {
                 const toothTotal = getToothTotal(item);
                 return (
-                    <View
+                    <TouchableOpacity
                         key={index}
-                        className={`p-4 border-b border-teal-100 ${item.status === 'approved' ? 'bg-green-50' : item.status === 'paid' ? 'bg-blue-50' : ''}`}
+                        onPress={() => onSelectItem?.(item, index)}
+                        activeOpacity={onSelectItem ? 0.7 : 1}
+                        className={`p-4 border-b border-teal-100 ${item.status === 'approved' ? 'bg-green-50' : item.status === 'paid' ? 'bg-blue-50' : ''} ${selectedIndex === index ? 'border-l-4 border-l-teal-500' : ''}`}
                     >
                         {/* Header Row */}
                         <View className="flex-row items-center justify-between mb-2">
@@ -118,7 +124,7 @@ export function BudgetSummarySection({
                                 R$ {toothTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                 );
             })}
 
