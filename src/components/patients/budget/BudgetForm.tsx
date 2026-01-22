@@ -1,12 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Check, Calendar as CalendarIcon, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -27,9 +27,13 @@ interface BudgetFormProps {
     locationRate: string;
     setLocationRate: (rate: string) => void;
     onAddItem: (item: ToothEntry) => void;
+    onUpdateItem?: (item: ToothEntry, index: number) => void;
+    editingItem?: ToothEntry | null;
+    editingIndex?: number | null;
+    onCancelEdit?: () => void;
 }
 
-export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAddItem }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -38,6 +42,19 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
     const [selectedFaces, setSelectedFaces] = useState<string[]>([]);
     const [values, setValues] = useState<Record<string, string>>({});
     const [materials, setMaterials] = useState<Record<string, string>>({});
+
+    const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
+
+    // Load editing item into form
+    useEffect(() => {
+        if (editingItem) {
+            setSelectedTooth(editingItem.tooth);
+            setSelectedTreatments([...editingItem.treatments]);
+            setSelectedFaces([...(editingItem.faces || [])]);
+            setValues({ ...editingItem.values });
+            setMaterials({ ...(editingItem.materials || {}) });
+        }
+    }, [editingItem]);
 
     const resetCurrentItem = () => {
         setSelectedTooth('');
@@ -111,12 +128,24 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
             treatments: [...selectedTreatments],
             values: { ...values },
             materials: { ...materials },
-            status: 'pending'
+            status: editingItem?.status || 'pending'
         };
 
-        onAddItem(newItem);
+        if (isEditing && onUpdateItem && editingIndex !== null && editingIndex !== undefined) {
+            onUpdateItem(newItem, editingIndex);
+            toast({ title: "Item atualizado", description: "Item editado com sucesso." });
+        } else {
+            onAddItem(newItem);
+            toast({ title: "Item adicionado", description: "Item incluído na lista." });
+        }
+
         resetCurrentItem();
-        toast({ title: "Item adicionado", description: "Item incluído na lista." });
+        onCancelEdit?.();
+    };
+
+    const handleCancel = () => {
+        resetCurrentItem();
+        onCancelEdit?.();
     };
 
     const showFaces = selectedTreatments.includes('Restauração');
@@ -255,14 +284,34 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
                     </div>
                 )}
 
-                <Button
-                    className="w-full bg-teal-600 hover:bg-teal-700 mt-4 h-12 text-base"
-                    onClick={handleAddItem}
-                    disabled={!selectedTooth || selectedTreatments.length === 0}
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Adicionar Item ao Orçamento
-                </Button>
+                {isEditing ? (
+                    <div className="flex gap-2 mt-4">
+                        <Button
+                            variant="outline"
+                            className="flex-1 h-12 text-base"
+                            onClick={handleCancel}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            className="flex-1 bg-teal-600 hover:bg-teal-700 h-12 text-base"
+                            onClick={handleAddItem}
+                            disabled={!selectedTooth || selectedTreatments.length === 0}
+                        >
+                            <Save className="w-5 h-5 mr-2" />
+                            Salvar Alterações
+                        </Button>
+                    </div>
+                ) : (
+                    <Button
+                        className="w-full bg-teal-600 hover:bg-teal-700 mt-4 h-12 text-base"
+                        onClick={handleAddItem}
+                        disabled={!selectedTooth || selectedTreatments.length === 0}
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Adicionar Item ao Orçamento
+                    </Button>
+                )}
             </div>
         </ScrollArea>
     );

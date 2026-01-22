@@ -1,18 +1,20 @@
 
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calculator, Trash2 } from 'lucide-react';
+import { Calculator, Trash2, Pencil } from 'lucide-react';
 import { getToothDisplayName, formatCurrency, type ToothEntry } from '@/utils/budgetUtils';
 
 interface BudgetSummaryProps {
     items: ToothEntry[];
     onRemoveItem: (index: number) => void;
+    onSelectItem?: (item: ToothEntry, index: number) => void;
+    selectedItemIndex?: number | null;
     onSave: () => void;
     onCancel: () => void;
     saving: boolean;
 }
 
-export function BudgetSummary({ items, onRemoveItem, onSave, onCancel, saving }: BudgetSummaryProps) {
+export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemIndex, onSave, onCancel, saving }: BudgetSummaryProps) {
 
     const calculateTotal = () => {
         return items.reduce((acc, item) => {
@@ -28,6 +30,9 @@ export function BudgetSummary({ items, onRemoveItem, onSave, onCancel, saving }:
                     <Calculator className="w-5 h-5 text-teal-600" />
                     Resumo do Orçamento
                 </h3>
+                {onSelectItem && (
+                    <p className="text-xs text-muted-foreground mt-1">Clique em um item para editar</p>
+                )}
             </div>
 
             <ScrollArea className="flex-1 p-4">
@@ -38,15 +43,31 @@ export function BudgetSummary({ items, onRemoveItem, onSave, onCancel, saving }:
                 ) : (
                     <div className="space-y-3">
                         {items.map((item, idx) => (
-                            <div key={idx} className="bg-white p-3 rounded-lg border shadow-sm relative group">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-6 w-6 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => onRemoveItem(idx)}
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
+                            <div
+                                key={idx}
+                                className={`bg-white p-3 rounded-lg border shadow-sm relative group cursor-pointer transition-all hover:border-teal-300 hover:shadow-md ${selectedItemIndex === idx ? 'ring-2 ring-teal-500 border-teal-500' : ''}`}
+                                onClick={() => onSelectItem?.(item, idx)}
+                            >
+                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {onSelectItem && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-teal-500 hover:text-teal-700 hover:bg-teal-50"
+                                            onClick={(e) => { e.stopPropagation(); onSelectItem(item, idx); }}
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-slate-400 hover:text-red-500"
+                                        onClick={(e) => { e.stopPropagation(); onRemoveItem(idx); }}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                </div>
 
                                 <div className="font-semibold text-teal-800 mb-1">
                                     {getToothDisplayName(item.tooth)}

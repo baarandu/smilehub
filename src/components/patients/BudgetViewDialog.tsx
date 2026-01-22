@@ -18,11 +18,12 @@ interface BudgetViewDialogProps {
     open: boolean;
     onClose: () => void;
     onUpdate: () => void;
+    onEdit?: (budget: BudgetWithItems) => void;
     patientName?: string;
     onNavigateToPayments?: () => void;
 }
 
-export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName, onNavigateToPayments }: BudgetViewDialogProps) {
+export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, patientName, onNavigateToPayments }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const [updating, setUpdating] = useState(false);
 
@@ -228,10 +229,18 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, patientName,
                 </ScrollArea>
 
                 <DialogFooter className="p-6 pt-2 border-t mt-auto gap-2 sm:justify-between">
-                    <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Excluir
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                        </Button>
+                        {onEdit && (
+                            <Button variant="outline" onClick={() => { onClose(); onEdit(budget); }}>
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Editar
+                            </Button>
+                        )}
+                    </div>
                     <div className="flex gap-2">
                         {approvedItems.length > 0 && (
                             <Button

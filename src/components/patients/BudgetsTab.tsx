@@ -23,6 +23,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const [selectedBudget, setSelectedBudget] = useState<BudgetWithItems | null>(null);
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [newDialogOpen, setNewDialogOpen] = useState(false);
+    const [editingBudget, setEditingBudget] = useState<BudgetWithItems | null>(null);
 
     useEffect(() => {
         loadBudgets();
@@ -60,6 +61,11 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const handleBudgetClick = (budget: BudgetWithItems) => {
         setSelectedBudget(budget);
         setViewDialogOpen(true);
+    };
+
+    const handleEditBudget = (budget: BudgetWithItems) => {
+        setEditingBudget(budget);
+        setNewDialogOpen(true);
     };
 
     const getStatusColor = (status: string) => {
@@ -198,6 +204,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 open={viewDialogOpen}
                 onClose={() => setViewDialogOpen(false)}
                 onUpdate={loadBudgets}
+                onEdit={handleEditBudget}
                 patientName={patientName}
                 onNavigateToPayments={onNavigateToPayments}
             />
@@ -205,8 +212,9 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
             <NewBudgetDialog
                 patientId={patientId}
                 open={newDialogOpen}
-                onClose={() => setNewDialogOpen(false)}
+                onClose={() => { setNewDialogOpen(false); setEditingBudget(null); }}
                 onSuccess={loadBudgets}
+                budget={editingBudget}
             />
         </>
     );

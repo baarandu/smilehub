@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
-import { getShortToothId, type ToothEntry } from '@/utils/budgetUtils';
-import type { BudgetInsert } from '@/types/database';
+import { getShortToothId, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
+import type { BudgetInsert, BudgetWithItems } from '@/types/database';
 import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
 
@@ -13,9 +13,10 @@ interface NewBudgetDialogProps {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    budget?: BudgetWithItems | null;
 }
 
-export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudgetDialogProps) {
+export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }: NewBudgetDialogProps) {
     const { toast } = useToast();
     const [saving, setSaving] = useState(false);
 
@@ -24,21 +25,65 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
     const [locationRate, setLocationRate] = useState('');
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
-    // Reset form when opening
+    const isEditing = !!budget;
+
+    // Reset form when opening or load existing budget
     useEffect(() => {
         if (open) {
-            setDate(new Date().toISOString().split('T')[0]);
-            setLocationRate('');
-            setTeethList([]);
+            if (budget) {
+                // Load existing budget for editing
+                setDate(budget.date);
+                try {
+                    const parsed = JSON.parse(budget.notes || '{}');
+                    if (parsed.teeth) {
+                        setTeethList(parsed.teeth.map((t: ToothEntry) => ({
+                            ...t,
+                            status: t.status || 'pending',
+                        })));
+                    }
+                    if (parsed.locationRate) {
+                        setLocationRate(parsed.locationRate.toString());
+                    }
+                } catch (e) {
+                    setTeethList([]);
+                }
+            } else {
+                // Reset for new budget
+                setDate(new Date().toISOString().split('T')[0]);
+                setLocationRate('');
+                setTeethList([]);
+            }
         }
-    }, [open]);
+    }, [open, budget]);
+
+    // State for editing individual items
+    const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+    const editingItem = editingItemIndex !== null ? teethList[editingItemIndex] : null;
 
     const handleAddItem = (item: ToothEntry) => {
         setTeethList([...teethList, item]);
     };
 
+    const handleUpdateItem = (item: ToothEntry, index: number) => {
+        const newList = [...teethList];
+        newList[index] = item;
+        setTeethList(newList);
+        setEditingItemIndex(null);
+    };
+
+    const handleSelectItemForEdit = (item: ToothEntry, index: number) => {
+        setEditingItemIndex(index);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingItemIndex(null);
+    };
+
     const removeTooth = (index: number) => {
         setTeethList(teethList.filter((_, i) => i !== index));
+        if (editingItemIndex === index) {
+            setEditingItemIndex(null);
+        }
     };
 
     const calculateTotal = () => {
@@ -70,23 +115,36 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
                 faces: t.faces,
             }));
 
-            const budgetData: BudgetInsert = {
-                patient_id: patientId,
-                date: date,
-                treatment: allTreatments,
-                value: total,
-                notes: notesData,
-                status: 'pending'
-            };
+            if (isEditing && budget) {
+                // Update existing budget
+                await budgetsService.update(budget.id, {
+                    date: date,
+                    treatment: allTreatments,
+                    value: total,
+                    notes: notesData,
+                    status: calculateBudgetStatus(teethList)
+                });
+                toast({ title: "Sucesso", description: "Orçamento atualizado com sucesso!" });
+            } else {
+                // Create new budget
+                const budgetData: BudgetInsert = {
+                    patient_id: patientId,
+                    date: date,
+                    treatment: allTreatments,
+                    value: total,
+                    notes: notesData,
+                    status: 'pending'
+                };
 
-            await budgetsService.create(budgetData, budgetItems);
+                await budgetsService.create(budgetData, budgetItems);
+                toast({ title: "Sucesso", description: "Orçamento criado com sucesso!" });
+            }
 
-            toast({ title: "Sucesso", description: "Orçamento criado com sucesso!" });
             onSuccess();
             onClose();
         } catch (error) {
             console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao criar orçamento." });
+            toast({ variant: "destructive", title: "Erro", description: isEditing ? "Falha ao atualizar orçamento." : "Falha ao criar orçamento." });
         } finally {
             setSaving(false);
         }
@@ -96,7 +154,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="p-6 border-b shrink-0">
-                    <DialogTitle>Novo Orçamento</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
                 </DialogHeader>
 
                 <div className="flex flex-1 overflow-hidden">
@@ -107,12 +165,18 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess }: NewBudg
                         locationRate={locationRate}
                         setLocationRate={setLocationRate}
                         onAddItem={handleAddItem}
+                        onUpdateItem={handleUpdateItem}
+                        editingItem={editingItem}
+                        editingIndex={editingItemIndex}
+                        onCancelEdit={handleCancelEdit}
                     />
 
                     {/* Right Column: Summary */}
                     <BudgetSummary
                         items={teethList}
                         onRemoveItem={removeTooth}
+                        onSelectItem={handleSelectItemForEdit}
+                        selectedItemIndex={editingItemIndex}
                         onSave={handleSave}
                         onCancel={onClose}
                         saving={saving}
