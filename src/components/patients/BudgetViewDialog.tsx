@@ -228,23 +228,25 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                 </ScrollArea>
 
-                <DialogFooter className="p-4 pt-3 border-t mt-auto flex-col gap-2">
-                    <div className="flex gap-2 w-full">
-                        <Button variant="outline" className="flex-1 h-10" onClick={handleExportPDF} disabled={generatingPdf}>
-                            <Eye className="w-4 h-4 mr-2" />
+                <div className="p-4 pt-3 border-t mt-auto flex flex-col gap-2">
+                    <div className="grid grid-cols-4 gap-2">
+                        <Button variant="outline" className="h-10 text-sm" onClick={handleExportPDF} disabled={generatingPdf}>
+                            <Eye className="w-4 h-4 mr-1" />
                             PDF
                         </Button>
-                        {onEdit && (
-                            <Button variant="outline" className="flex-1 h-10" onClick={() => { onClose(); onEdit(budget); }}>
-                                <Pencil className="w-4 h-4 mr-2" />
+                        {onEdit ? (
+                            <Button variant="outline" className="h-10 text-sm" onClick={() => { onClose(); onEdit(budget); }}>
+                                <Pencil className="w-4 h-4 mr-1" />
                                 Editar
                             </Button>
+                        ) : (
+                            <div />
                         )}
-                        <Button variant="outline" className="flex-1 h-10 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
-                            <Trash2 className="w-4 h-4 mr-2" />
+                        <Button variant="outline" className="h-10 text-sm text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
+                            <Trash2 className="w-4 h-4 mr-1" />
                             Excluir
                         </Button>
-                        <Button variant="outline" className="flex-1 h-10" onClick={onClose}>Fechar</Button>
+                        <Button variant="outline" className="h-10 text-sm" onClick={onClose}>Fechar</Button>
                     </div>
                     {approvedItems.length > 0 && (
                         <Button
@@ -258,7 +260,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                             Pagar
                         </Button>
                     )}
-                </DialogFooter>
+                </div>
             </DialogContent>
 
             {/* PDF Preview Dialog */}
