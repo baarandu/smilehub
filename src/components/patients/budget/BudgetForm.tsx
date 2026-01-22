@@ -42,6 +42,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
     const [selectedFaces, setSelectedFaces] = useState<string[]>([]);
     const [values, setValues] = useState<Record<string, string>>({});
     const [materials, setMaterials] = useState<Record<string, string>>({});
+    const [itemLocationRate, setItemLocationRate] = useState<string>('');
 
     const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
 
@@ -53,6 +54,8 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
             setSelectedFaces([...(editingItem.faces || [])]);
             setValues({ ...editingItem.values });
             setMaterials({ ...(editingItem.materials || {}) });
+            // Load item-specific location rate
+            setItemLocationRate(editingItem.locationRate ? editingItem.locationRate.toString() : locationRate);
         }
     }, [editingItem]);
 
@@ -62,6 +65,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
         setSelectedFaces([]);
         setValues({});
         setMaterials({});
+        setItemLocationRate('');
     };
 
     const toggleTreatment = (treatment: string) => {
@@ -128,7 +132,8 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
             treatments: [...selectedTreatments],
             values: { ...values },
             materials: { ...materials },
-            status: editingItem?.status || 'pending'
+            status: editingItem?.status || 'pending',
+            locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0
         };
 
         if (isEditing && onUpdateItem && editingIndex !== null && editingIndex !== undefined) {
@@ -184,8 +189,8 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
                         <Input
                             type="number"
                             placeholder="0"
-                            value={locationRate}
-                            onChange={(e) => setLocationRate(e.target.value)}
+                            value={itemLocationRate}
+                            onChange={(e) => setItemLocationRate(e.target.value)}
                         />
                     </div>
                 </div>

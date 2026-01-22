@@ -41,11 +41,16 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                             status: t.status || 'pending',
                         })));
                     }
-                    if (parsed.locationRate) {
-                        setLocationRate(parsed.locationRate.toString());
+                    // Load locationRate from notes or from budget column
+                    const rate = parsed.locationRate || (budget as any).location_rate || 0;
+                    if (rate > 0) {
+                        setLocationRate(rate.toString());
+                    } else {
+                        setLocationRate('');
                     }
                 } catch (e) {
                     setTeethList([]);
+                    setLocationRate('');
                 }
             } else {
                 // Reset for new budget
