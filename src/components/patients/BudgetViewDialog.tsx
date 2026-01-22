@@ -228,38 +228,34 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                 </ScrollArea>
 
-                <DialogFooter className="p-4 pt-2 border-t mt-auto flex-col gap-2">
-                    <div className="flex gap-2 w-full">
-                        {approvedItems.length > 0 && (
-                            <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                                onClick={() => {
-                                    onClose();
-                                    onNavigateToPayments?.();
-                                }}
-                            >
-                                <CreditCard className="w-4 h-4 mr-2" />
-                                Pagar
-                            </Button>
-                        )}
-                        <Button variant="outline" className="flex-1" onClick={handleExportPDF} disabled={generatingPdf}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            PDF
+                <DialogFooter className="p-4 pt-3 border-t mt-auto flex-wrap gap-2 justify-center">
+                    {approvedItems.length > 0 && (
+                        <Button
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => {
+                                onClose();
+                                onNavigateToPayments?.();
+                            }}
+                        >
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Pagar
                         </Button>
-                        <Button variant="outline" className="flex-1" onClick={onClose}>Fechar</Button>
-                    </div>
-                    <div className="flex gap-2 w-full">
-                        <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Excluir
+                    )}
+                    <Button variant="outline" onClick={handleExportPDF} disabled={generatingPdf}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        PDF
+                    </Button>
+                    {onEdit && (
+                        <Button variant="outline" onClick={() => { onClose(); onEdit(budget); }}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Editar
                         </Button>
-                        {onEdit && (
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => { onClose(); onEdit(budget); }}>
-                                <Pencil className="w-4 h-4 mr-1" />
-                                Editar
-                            </Button>
-                        )}
-                    </div>
+                    )}
+                    <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleDelete}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir
+                    </Button>
+                    <Button variant="outline" onClick={onClose}>Fechar</Button>
                 </DialogFooter>
             </DialogContent>
 
