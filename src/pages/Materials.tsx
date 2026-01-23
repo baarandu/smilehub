@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { ShoppingItem, ShoppingOrder } from '@/types/materials';
 import { formatCurrency, formatDate } from '@/utils/materials';
 import { AddItemDialog, CheckoutDialog, OrderDetailDialog } from '@/components/materials';
+import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/materials/ExpensePaymentDialog';
+import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
 
 export default function Materials() {
   // Orders State
@@ -25,6 +27,16 @@ export default function Materials() {
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPurchaseData, setPendingPurchaseData] = useState<{
+    purchasedItems: ShoppingItem[];
+    unpurchasedItems: ShoppingItem[];
+    purchasedTotal: number;
+    unpurchasedTotal: number;
+    shoppingOrderId: string | null;
+  } | null>(null);
 
   // Other State
   const [loading, setLoading] = useState(false);
@@ -217,46 +229,114 @@ export default function Materials() {
         }
       }
 
-      // Create expense
-      const today = new Date();
-      const dbDate = today.toISOString().split('T')[0];
-
-      await financialService.createExpense({
-        amount: purchasedTotal,
-        description: `Compra de materiais - ${purchasedItems.length} itens`,
-        category: 'Materiais',
-        date: dbDate,
-        location: null,
-        related_entity_id: shoppingOrderId,
+      // Store purchase data and open payment modal
+      setPendingPurchaseData({
+        purchasedItems,
+        unpurchasedItems,
+        purchasedTotal,
+        unpurchasedTotal,
+        shoppingOrderId
       });
+      setCheckoutModalVisible(false);
+      setShowPaymentModal(true);
 
-      // Create new pending order for unpurchased items
-      if (unpurchasedItems.length > 0 && clinicUser) {
-        await (supabase.from('shopping_orders') as any)
-          .insert([{
-            clinic_id: (clinicUser as any).clinic_id,
-            items: unpurchasedItems,
-            total_amount: unpurchasedTotal,
-            status: 'pending',
-            created_by: user.id
-          }]);
+    } catch (error) {
+      console.error('Error confirming purchase:', error);
+      toast.error('Erro ao confirmar compra');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePaymentConfirm = async (
+    method: string,
+    transactions: ExpensePaymentTransaction[],
+    brand?: string,
+    interestRate?: number
+  ) => {
+    if (!pendingPurchaseData) return;
+
+    setLoading(true);
+    try {
+      const { purchasedItems, unpurchasedItems, unpurchasedTotal, shoppingOrderId } = pendingPurchaseData;
+
+      // Map payment method to database format
+      const methodMap: Record<string, string> = {
+        'credit': 'Cartão de Crédito',
+        'debit': 'Cartão de Débito',
+        'pix': 'Pix',
+        'cash': 'Dinheiro',
+        'transfer': 'Transferência',
+        'boleto': 'Boleto'
+      };
+      const dbMethod = methodMap[method] || method;
+
+      // Generate recurrence_id if multiple installments
+      const recurrenceId = transactions.length > 1 ? generateUUID() : null;
+
+      // Create expenses for each transaction
+      const itemsDesc = purchasedItems.map(i =>
+        `${i.name} (${i.quantity}x R$ ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
+      ).join(' | ');
+
+      for (let i = 0; i < transactions.length; i++) {
+        const transaction = transactions[i];
+        const installmentSuffix = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
+        const brandSuffix = brand ? ` - ${brand.toUpperCase()}` : '';
+        const interestSuffix = interestRate && interestRate > 0 ? ` - Juros: ${interestRate}%` : '';
+        const description = `Compra Materiais (${dbMethod})${installmentSuffix}${brandSuffix}${interestSuffix}: ${itemsDesc}`;
+
+        await financialService.createTransaction({
+          type: 'expense',
+          amount: transaction.amount,
+          description: description,
+          category: 'Materiais',
+          date: transaction.date,
+          location: null,
+          related_entity_id: shoppingOrderId,
+          payment_method: dbMethod,
+          recurrence_id: recurrenceId,
+        });
       }
 
-      setCheckoutModalVisible(false);
+      // Create new pending order for unpurchased items
+      if (unpurchasedItems.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: clinicUser } = await supabase
+          .from('clinic_users')
+          .select('clinic_id')
+          .eq('user_id', user?.id || '')
+          .single();
+
+        if (clinicUser) {
+          await (supabase.from('shopping_orders') as any)
+            .insert([{
+              clinic_id: (clinicUser as any).clinic_id,
+              items: unpurchasedItems,
+              total_amount: unpurchasedTotal,
+              status: 'pending',
+              created_by: user?.id
+            }]);
+        }
+      }
+
+      setShowPaymentModal(false);
+      setPendingPurchaseData(null);
       setExcludedItemIds(new Set());
 
       if (unpurchasedItems.length > 0) {
-        toast.success(`Compra registrada! ${unpurchasedItems.length} ${unpurchasedItems.length === 1 ? 'item transferido' : 'itens transferidos'} para nova lista.`);
+        toast.success(`Despesa lançada! ${unpurchasedItems.length} ${unpurchasedItems.length === 1 ? 'item transferido' : 'itens transferidos'} para nova lista.`);
       } else {
-        toast.success('Compra registrada com sucesso!');
+        toast.success('Despesa lançada com sucesso!');
       }
 
       setItems([]);
       setCurrentOrderId(null);
       loadOrders();
+
     } catch (error) {
-      console.error('Error confirming purchase:', error);
-      toast.error('Erro ao confirmar compra');
+      console.error('Error creating expense:', error);
+      toast.error('Erro ao registrar pagamento');
     } finally {
       setLoading(false);
     }
@@ -549,6 +629,19 @@ export default function Materials() {
         open={detailModalVisible}
         onOpenChange={setDetailModalVisible}
         order={selectedOrder}
+      />
+
+      <ExpensePaymentDialog
+        open={showPaymentModal}
+        onOpenChange={(open) => {
+          setShowPaymentModal(open);
+          if (!open) {
+            setPendingPurchaseData(null);
+          }
+        }}
+        onConfirm={handlePaymentConfirm}
+        itemName={`Compra de Materiais - ${pendingPurchaseData?.purchasedItems.length || 0} itens`}
+        value={pendingPurchaseData?.purchasedTotal || 0}
       />
     </div>
   );
