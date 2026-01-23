@@ -26,6 +26,9 @@ interface BudgetFormProps {
     setDate: (date: string) => void;
     locationRate: string;
     setLocationRate: (rate: string) => void;
+    location: string;
+    setLocation: (location: string) => void;
+    locations: { id: string; name: string }[];
     onAddItem: (item: ToothEntry) => void;
     onUpdateItem?: (item: ToothEntry, index: number) => void;
     editingItem?: ToothEntry | null;
@@ -33,7 +36,7 @@ interface BudgetFormProps {
     onCancelEdit?: () => void;
 }
 
-export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -185,14 +188,33 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, onAdd
                         </Popover>
                     </div>
                     <div className="space-y-2">
-                        <Label>Taxa Clínica (%)</Label>
-                        <Input
-                            type="number"
-                            placeholder="0"
-                            value={itemLocationRate}
-                            onChange={(e) => setItemLocationRate(e.target.value)}
-                        />
+                        <Label>Local de Atendimento</Label>
+                        <Select value={location} onValueChange={setLocation}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {locations.map(loc => (
+                                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Taxa Clínica (%)</Label>
+                    <Input
+                        type="number"
+                        placeholder="0"
+                        value={itemLocationRate}
+                        onChange={(e) => setItemLocationRate(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        {isEditing
+                            ? "A taxa será aplicada apenas a este item."
+                            : "A taxa definida aqui será aplicada a este novo item."}
+                    </p>
                 </div>
 
                 <Separator />

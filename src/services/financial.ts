@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/database';
+import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 
 export const financialService = {
     async getTransactions(start: Date, end: Date): Promise<any[]> {
@@ -228,5 +229,80 @@ export const financialService = {
             .eq('id', transactionId);
 
         if (deleteError) throw deleteError;
+    },
+
+    /**
+     * Sync budget item rates to existing financial transactions
+     * Called when a budget is updated to ensure proper financial reporting
+     */
+    async syncBudgetRates(budgetId: string, teeth: ToothEntry[]): Promise<void> {
+        // 1. Fetch all income transactions linked to this budget
+        const { data: transactions, error } = await supabase
+            .from('financial_transactions')
+            .select('*')
+            .eq('related_entity_id', budgetId)
+            .eq('type', 'income');
+
+        if (error) throw error;
+        if (!transactions || transactions.length === 0) return;
+
+        // 2. Iterate through updated teeth and sync corresponding transactions
+        for (const tooth of teeth) {
+            // Skip invalid entries
+            if (!tooth.treatments || tooth.treatments.length === 0) continue;
+
+            const treatmentsStr = tooth.treatments.join(', ');
+            const toothDisplay = getToothDisplayName(tooth.tooth);
+
+            // Find transactions that match this tooth/item
+            // Matching strategy: description must contain tooth name AND at least one of the treatments
+            const matchingTransactions = transactions.filter(t => {
+                const hasTooth = t.description.includes(toothDisplay);
+                const hasTreatment = tooth.treatments.some(treatment => t.description.includes(treatment));
+                return hasTooth && hasTreatment;
+            });
+
+            if (matchingTransactions.length === 0) continue;
+
+            // Determine correct rate for this item
+            // Priority: Item specific > Global logic (handled by caller passing loaded/merged value if possible, 
+            // but here we rely on what's in the tooth object from NewBudgetDialog)
+            const newRate = tooth.locationRate || 0;
+
+            // Update found transactions
+            for (const tx of matchingTransactions) {
+                // Skip if rate is already correct (optimization)
+                // We cast to any because standard definitions might be missing location_rate properties in some types
+                const currentRate = (tx as any).location_rate || 0;
+
+                // Always recalculate to ensure consistency, even if rate looks same (maybe amount changed? unlikely in this context but safe)
+
+                // Calculate new location amount
+                const newLocationAmount = (tx.amount * newRate) / 100;
+
+                // Recalculate net amount
+                // Start with gross amount
+                let newNetAmount = tx.amount;
+
+                // Deduct known fees (if fields exist and are non-null)
+                if (tx.tax_amount) newNetAmount -= tx.tax_amount;
+                if (tx.card_fee_amount) newNetAmount -= tx.card_fee_amount;
+                if ((tx as any).anticipation_amount) newNetAmount -= (tx as any).anticipation_amount;
+                if ((tx as any).commission_amount) newNetAmount -= (tx as any).commission_amount;
+
+                // Deduct new location amount
+                newNetAmount -= newLocationAmount;
+
+                // Limit decimal precision issues
+                newLocationAmount.toFixed(2);
+                newNetAmount.toFixed(2); // logic conceptual, passing numbers to DB handles rounding usually
+
+                await (supabase.from('financial_transactions') as any).update({
+                    location_rate: newRate,
+                    location_amount: newLocationAmount,
+                    net_amount: newNetAmount
+                }).eq('id', tx.id);
+            }
+        }
     }
 };

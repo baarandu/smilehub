@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
+import { locationsService, type Location } from '@/services/locations';
+import { financialService } from '@/services/financial';
 import { getShortToothId, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetInsert, BudgetWithItems } from '@/types/database';
 import { BudgetForm } from './budget/BudgetForm';
@@ -23,13 +25,17 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     // Form State
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [locationRate, setLocationRate] = useState('');
+    const [location, setLocation] = useState('');
+    const [locations, setLocations] = useState<Location[]>([]);
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
     const isEditing = !!budget;
 
     // Reset form when opening or load existing budget
+    // Reset form when opening or load existing budget
     useEffect(() => {
         if (open) {
+            loadLocations();
             if (budget) {
                 // Load existing budget for editing
                 setDate(budget.date);
@@ -41,6 +47,11 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                             status: t.status || 'pending',
                         })));
                     }
+                    // Load location if available
+                    if (parsed.location) {
+                        setLocation(parsed.location);
+                    }
+
                     // Load locationRate from notes or from budget column
                     const rate = parsed.locationRate || (budget as any).location_rate || 0;
                     if (rate > 0) {
@@ -51,15 +62,26 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                 } catch (e) {
                     setTeethList([]);
                     setLocationRate('');
+                    setLocation('');
                 }
             } else {
                 // Reset for new budget
                 setDate(new Date().toISOString().split('T')[0]);
                 setLocationRate('');
+                setLocation('');
                 setTeethList([]);
             }
         }
     }, [open, budget]);
+
+    const loadLocations = async () => {
+        try {
+            const data = await locationsService.getAll();
+            setLocations(data);
+        } catch (error) {
+            console.error('Error loading locations:', error);
+        }
+    };
 
     // State for editing individual items
     const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
@@ -111,6 +133,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
             const notesData = JSON.stringify({
                 teeth: teethList,
+                location: location,
                 locationRate: locationRate ? parseFloat(locationRate) : 0
             });
 
@@ -129,6 +152,10 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     notes: notesData,
                     status: calculateBudgetStatus(teethList)
                 });
+
+                // Sync updated rates to existing financial transactions
+                await financialService.syncBudgetRates(budget.id, teethList);
+
                 toast({ title: "Sucesso", description: "Orçamento atualizado com sucesso!" });
             } else {
                 // Create new budget
@@ -169,6 +196,9 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                         setDate={setDate}
                         locationRate={locationRate}
                         setLocationRate={setLocationRate}
+                        location={location}
+                        setLocation={setLocation}
+                        locations={locations}
                         onAddItem={handleAddItem}
                         onUpdateItem={handleUpdateItem}
                         editingItem={editingItem}
