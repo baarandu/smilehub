@@ -351,6 +351,10 @@ interface BudgetPDFData {
     clinicPhone?: string;
 }
 
+const formatMoney = (value: number) => {
+    return value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
 export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
     const { budget, patientName, clinicName, dentistName, logoUrl } = data;
 
@@ -400,14 +404,14 @@ export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
                     <tr>
                         <td>${t.tooth}</td>
                         <td>${t.treatments.join(', ')}</td>
-                        <td style="text-align: right;">R$ ${(Object.values(t.values as object).reduce((a: any, b: any) => a + Number(b), 0) / 100).toFixed(2).replace('.', ',')}</td>
+                        <td style="text-align: right;">R$ ${formatMoney(Object.values(t.values as object).reduce((a: any, b: any) => a + Number(b), 0) / 100)}</td>
                     </tr>
                  `).join('') || ''}
             </tbody>
         </table>
 
         <div class="total">
-            Valor Total: R$ ${(budget.value / 100).toFixed(2).replace('.', ',')}
+            Valor Total: R$ ${formatMoney(budget.value)}
         </div>
     </body>
     </html>
