@@ -635,7 +635,7 @@ export default function Patients() {
                         <Text className="text-lg font-semibold text-gray-900">
                             {selectedPatientForBudgets
                                 ? selectedPatientForBudgets.patientName
-                                : `Pacientes com Pendências (${pendingBudgetsCount})`
+                                : `Orçamentos Pendentes (${pendingBudgetsCount})`
                             }
                         </Text>
                         <View className="w-10" />

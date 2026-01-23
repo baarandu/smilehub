@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Bell, FileText, AlertTriangle, Phone, CheckCircle, RefreshCw } from 'lucide-react';
+import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
 import { ProfileMenu } from '@/components/profile';
-import { usePatientsCount } from '@/hooks/usePatients';
 import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
 import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
@@ -12,45 +11,10 @@ import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePen
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { budgetsService } from '@/services/budgets';
-import type { BudgetWithItems } from '@/types/database';
 import { remindersService, type Reminder } from '@/services/reminders';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
-
-// Helper functions
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
-
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
-};
-
-interface PendingItem {
-  budgetId: string;
-  patientId: string;
-  patientName: string;
-  date: string;
-  tooth: {
-    tooth: string;
-    treatments: string[];
-    values: Record<string, string>;
-    status: string;
-  };
-  totalBudgetValue: number;
-}
-
-const getToothDisplayName = (tooth: string): string => {
-  if (tooth === 'ARC_SUP') return 'Arcada Superior';
-  if (tooth === 'ARC_INF') return 'Arcada Inferior';
-  if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Inferior';
-  if (tooth.includes('Arcada')) return tooth;
-  return `Dente ${tooth}`;
-};
-
-const calculateToothTotal = (values: Record<string, string>): number => {
-  return Object.values(values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
-};
+import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -74,7 +38,6 @@ export default function Dashboard() {
 
   // Pending Budgets State
   const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
-  const [pendingBudgets, setPendingBudgets] = useState<PendingItem[]>([]);
   const [loadingBudgets, setLoadingBudgets] = useState(true);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -114,12 +77,8 @@ export default function Dashboard() {
   const loadPendingBudgets = async () => {
     try {
       setLoadingBudgets(true);
-      const [count, budgets] = await Promise.all([
-        budgetsService.getPendingCount(),
-        budgetsService.getAllPending()
-      ]);
+      const count = await budgetsService.getPendingPatientsCount();
       setPendingBudgetsCount(count);
-      setPendingBudgets(budgets);
     } catch (error) {
       console.error('Error loading pending budgets:', error);
     } finally {
@@ -266,58 +225,13 @@ export default function Dashboard() {
       </div>
 
       {/* Pending Budgets Modal */}
-      <Dialog open={showBudgetsModal} onOpenChange={setShowBudgetsModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-teal-600" />
-              Orçamentos Pendentes ({pendingBudgetsCount})
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3 mt-4">
-            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg text-sm border border-blue-100 mb-4">
-              <p className="font-semibold mb-1">O que são esses orçamentos pendentes?</p>
-              Esta lista exibe orçamentos criados mas ainda <strong>não aprovados</strong> pelo paciente.
-              Use para acompanhar negociações em aberto e não perder oportunidades de venda.
-            </div>
-            {pendingBudgets.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
-                Nenhum tratamento pendente
-              </div>
-            ) : (
-              pendingBudgets.map((item, index) => (
-                <div
-                  key={`${item.budgetId}-${index}`}
-                  onClick={() => {
-                    setShowBudgetsModal(false);
-                    navigate(`/pacientes/${item.patientId}?tab=budgets`);
-                  }}
-                  className="p-4 border rounded-lg hover:bg-slate-50 cursor-pointer transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-semibold text-gray-900">{item.patientName}</p>
-                      <p className="text-sm text-gray-500">{formatDate(item.date)}</p>
-                    </div>
-                    <span className="text-lg font-bold text-teal-600">
-                      R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="bg-amber-50 p-3 rounded-lg">
-                    <p className="font-medium text-amber-800">
-                      {getToothDisplayName(item.tooth.tooth)}
-                    </p>
-                    <p className="text-sm text-amber-600">
-                      {item.tooth.treatments.join(', ')}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PendingBudgetsDialog
+        open={showBudgetsModal}
+        onClose={() => {
+          setShowBudgetsModal(false);
+          loadPendingBudgets();
+        }}
+      />
 
       {/* Pending Returns Modal */}
       <Dialog open={showPendingReturnsModal} onOpenChange={setShowPendingReturnsModal}>

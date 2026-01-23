@@ -160,6 +160,32 @@ export const budgetsService = {
         return count;
     },
 
+    async getPendingPatientsCount(): Promise<number> {
+        const { data, error } = await supabase
+            .from('budgets')
+            .select('patient_id, notes');
+
+        if (error) throw error;
+
+        const patientsWithPending = new Set<string>();
+        (data || []).forEach((budget: any) => {
+            if (!budget.notes) return;
+            try {
+                const parsed = JSON.parse(budget.notes);
+                if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                    const hasPending = parsed.teeth.some((tooth: any) => tooth.status === 'pending');
+                    if (hasPending) {
+                        patientsWithPending.add(budget.patient_id);
+                    }
+                }
+            } catch (e) {
+                // Invalid JSON, skip
+            }
+        });
+
+        return patientsWithPending.size;
+    },
+
     async reconcileAllStatuses(): Promise<void> {
         const { data, error } = await supabase
             .from('budgets')

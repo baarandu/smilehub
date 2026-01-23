@@ -41,7 +41,7 @@ export default function Patients() {
 
   const loadPendingCount = async () => {
     try {
-      const count = await budgetsService.getPendingCount();
+      const count = await budgetsService.getPendingPatientsCount();
       setPendingCount(count);
     } catch (error) {
       console.error('Error loading pending count:', error);
