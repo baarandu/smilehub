@@ -326,8 +326,9 @@ export const financialService = {
 
                 // Always recalculate to ensure consistency, even if rate looks same (maybe amount changed? unlikely in this context but safe)
 
-                // Calculate new location amount
-                const newLocationAmount = (tx.amount * newRate) / 100;
+                // Calculate new location amount (based on gross minus card fee, consistent with PaymentMethodDialog)
+                const baseForLocation = tx.amount - (tx.card_fee_amount || 0);
+                const newLocationAmount = (baseForLocation * newRate) / 100;
 
                 // Recalculate net amount
                 // Start with gross amount

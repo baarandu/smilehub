@@ -151,8 +151,10 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         if (breakdown.locationAmount) {
           locationAmountPerTx = breakdown.locationAmount / numTransactions;
         } else if (targetLocationRate > 0) {
-          // Fallback if breakdown existed but missed location (e.g. manual rate on item but not passed to dialog properly?)
-          locationAmountPerTx = (txAmount * targetLocationRate) / 100;
+          // Fallback if breakdown existed but missed location
+          // Calculate on (txAmount - cardFee) to be consistent with PaymentMethodDialog
+          const baseForLocation = txAmount - cardFeeAmountPerTx;
+          locationAmountPerTx = (baseForLocation * targetLocationRate) / 100;
           netAmountPerTx -= locationAmountPerTx;
         }
       } else {
