@@ -126,24 +126,45 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
     const automaticDeductions = useMemo(() => {
         const income = transactions.filter(t => t.type === 'income');
 
-        const cardFees = income.reduce((sum, t) => sum + (t.card_fee_amount || 0), 0);
-        const taxes = income.reduce((sum, t) => sum + (t.tax_amount || 0), 0);
-        const locationFees = income.reduce((sum, t) => sum + (t.location_amount || 0), 0);
+        const cardFees = income.reduce((sum, t) => sum + Number(t.card_fee_amount || 0), 0);
+        const taxes = income.reduce((sum, t) => sum + Number(t.tax_amount || 0), 0);
 
-        // Location breakdown
+        // Location breakdown - same logic as ClosureTab, including implicit fees
         const locationBreakdown: Record<string, number> = {};
+        let totalLocationFees = 0;
+
         income.forEach(t => {
-            if (t.location && t.location_amount && t.location_amount > 0) {
-                locationBreakdown[t.location] = (locationBreakdown[t.location] || 0) + t.location_amount;
+            if (!t.location) return;
+
+            const explicit = Number((t as any).location_amount || 0);
+            const gross = Number(t.amount || 0);
+            const net = Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : gross);
+
+            // Calculate implicit fees (amount deducted that isn't accounted for by other fees)
+            const deductions =
+                Number(t.tax_amount || 0) +
+                Number(t.card_fee_amount || 0) +
+                Number((t as any).anticipation_amount || 0) +
+                Number((t as any).commission_amount || 0) +
+                explicit;
+
+            let implicit = gross - net - deductions;
+            if (implicit < 0.01) implicit = 0;
+
+            const totalFee = explicit + implicit;
+
+            if (totalFee > 0) {
+                locationBreakdown[t.location] = (locationBreakdown[t.location] || 0) + totalFee;
+                totalLocationFees += totalFee;
             }
         });
 
         return {
             cardFees,
             taxes,
-            locationFees,
+            locationFees: totalLocationFees,
             locationBreakdown,
-            total: cardFees + taxes + locationFees
+            total: cardFees + taxes + totalLocationFees
         };
     }, [transactions]);
 
