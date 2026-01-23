@@ -526,6 +526,10 @@ export interface Database {
           payment_method: string | null
           recurrence_id: string | null
           clinic_id: string | null
+          location_rate: number | null
+          location_amount: number | null
+          commission_rate: number | null
+          commission_amount: number | null
           created_at: string
           updated_at: string
         }
@@ -549,6 +553,10 @@ export interface Database {
           payment_method?: string | null
           recurrence_id?: string | null
           clinic_id?: string | null
+          location_rate?: number | null
+          location_amount?: number | null
+          commission_rate?: number | null
+          commission_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -572,6 +580,10 @@ export interface Database {
           payment_method?: string | null
           recurrence_id?: string | null
           clinic_id?: string | null
+          location_rate?: number | null
+          location_amount?: number | null
+          commission_rate?: number | null
+          commission_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -1060,3 +1072,20 @@ export type PatientDocumentInsert = {
   uploaded_at?: string
   created_at?: string
 }
+
+export type FinancialTransaction = Database['public']['Tables']['financial_transactions']['Row']
+export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
+export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
+
+export type Budget = Database['public']['Tables']['budgets']['Row']
+export type BudgetInsert = Database['public']['Tables']['budgets']['Insert']
+export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
+
+export type BudgetWithItems = Budget & {
+  budget_items?: Database['public']['Tables']['budget_items']['Row'][]
+}
+
+export type Procedure = Database['public']['Tables']['procedures']['Row']
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type Patient = Database['public']['Tables']['patients']['Row']
+export type Appointment = Database['public']['Tables']['appointments']['Row']

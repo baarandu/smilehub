@@ -273,7 +273,7 @@ export const financialService = {
             for (const tx of matchingTransactions) {
                 // Skip if rate is already correct (optimization)
                 // We cast to any because standard definitions might be missing location_rate properties in some types
-                const currentRate = (tx as any).location_rate || 0;
+                const currentRate = tx.location_rate || 0;
 
                 // Always recalculate to ensure consistency, even if rate looks same (maybe amount changed? unlikely in this context but safe)
 
@@ -287,15 +287,13 @@ export const financialService = {
                 // Deduct known fees (if fields exist and are non-null)
                 if (tx.tax_amount) newNetAmount -= tx.tax_amount;
                 if (tx.card_fee_amount) newNetAmount -= tx.card_fee_amount;
-                if ((tx as any).anticipation_amount) newNetAmount -= (tx as any).anticipation_amount;
-                if ((tx as any).commission_amount) newNetAmount -= (tx as any).commission_amount;
+                if (tx.anticipation_amount) newNetAmount -= tx.anticipation_amount;
+                if (tx.commission_amount) newNetAmount -= tx.commission_amount;
 
                 // Deduct new location amount
                 newNetAmount -= newLocationAmount;
 
-                // Limit decimal precision issues
-                newLocationAmount.toFixed(2);
-                newNetAmount.toFixed(2); // logic conceptual, passing numbers to DB handles rounding usually
+
 
                 await (supabase.from('financial_transactions') as any).update({
                     location_rate: newRate,
