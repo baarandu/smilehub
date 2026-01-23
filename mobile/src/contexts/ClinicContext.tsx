@@ -19,6 +19,7 @@ interface ClinicContextType {
     gender: 'male' | 'female' | null;
     role: Role | null;
     isAdmin: boolean;
+    isDentist: boolean;
     canEdit: boolean;
     loading: boolean;
     members: ClinicMember[];
@@ -128,6 +129,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         gender,
         role,
         isAdmin: role === 'admin',
+        isDentist: role === 'admin' || role === 'dentist',
         canEdit: role === 'admin' || role === 'editor',
         loading,
         members,

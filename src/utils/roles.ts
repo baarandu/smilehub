@@ -40,6 +40,14 @@ export const isAdminRole = (role: string): boolean => {
 };
 
 /**
+ * Check if role can act as a dentist (attend patients, manage appointments)
+ * Owners, admins, and dentists can all act as clinical professionals
+ */
+export const canActAsDentist = (role: string): boolean => {
+    return ['owner', 'admin', 'dentist'].includes(role);
+};
+
+/**
  * Get display label for a role
  */
 export const getRoleLabel = (role: string): string => {
