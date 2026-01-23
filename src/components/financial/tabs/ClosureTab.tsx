@@ -117,40 +117,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
     const totalCardFees = income.reduce((sum, t) => sum + Number(t.card_fee_amount || 0), 0);
     const totalAnticipation = income.reduce((sum, t) => sum + Number((t as any).anticipation_amount || 0), 0);
 
-    // Procedure Fees (Explicit + Implicit)
-    const totalProcedureFees = income.reduce((sum, t) => {
-        const gross = Number(t.amount || 0);
-        const net = Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : gross);
-        const explicit = Number((t as any).location_amount || 0);
-
-        const deductions =
-            Number(t.tax_amount || 0) +
-            Number(t.card_fee_amount || 0) +
-            Number((t as any).anticipation_amount || 0) +
-            Number((t as any).commission_amount || 0) +
-            explicit;
-
-        let implicit = gross - net - deductions;
-        if (implicit < 0.01) implicit = 0;
-
-        return sum + explicit + implicit;
-    }, 0);
-
-    const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
-
-    // Final Net Result
-    const netResult = totalIncome - totalCardFees - totalAnticipation - totalProcedureFees - totalTaxes - totalExpenses;
-    const netBalance = netResult;
-
-    // Breakdown by Method
-    const byMethod = income.reduce((acc, t) => {
-        const method = getNormalizedMethod(t.description);
-        acc[method] = (acc[method] || 0) + Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount);
-        return acc;
-    }, {} as Record<string, number>);
-
-    const totalForPercent = Object.values(byMethod).reduce((a, b) => a + b, 0) || 1;
-
+    // Procedure Fees by Location (Explicit + Implicit) - only for transactions with location
     const feesByLocation = income
         .filter(t => t.location)
         .reduce((acc, t) => {
@@ -177,6 +144,24 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
             }
             return acc;
         }, {} as Record<string, number>);
+
+    // Total procedure fees is the sum of fees by location
+    const totalProcedureFees = Object.values(feesByLocation).reduce((sum, v) => sum + v, 0);
+
+    const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    // Final Net Result
+    const netResult = totalIncome - totalCardFees - totalAnticipation - totalProcedureFees - totalTaxes - totalExpenses;
+    const netBalance = netResult;
+
+    // Breakdown by Method
+    const byMethod = income.reduce((acc, t) => {
+        const method = getNormalizedMethod(t.description);
+        acc[method] = (acc[method] || 0) + Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount);
+        return acc;
+    }, {} as Record<string, number>);
+
+    const totalForPercent = Object.values(byMethod).reduce((a, b) => a + b, 0) || 1;
 
     const expensesByCategory = expenses.reduce((acc, t) => {
         const cat = t.category || 'Outros';
