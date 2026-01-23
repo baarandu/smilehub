@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Mail, Lock, ArrowRight, Check } from 'lucide-react-native';
+import { Mail, Lock, ArrowRight, Check, Eye, EyeOff } from 'lucide-react-native';
 import {
     checkRateLimit,
     recordFailedAttempt,
@@ -14,6 +14,7 @@ import {
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
     const [loading, setLoading] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
@@ -121,10 +122,17 @@ export default function Login() {
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
                                     placeholder="Sua senha secreta"
-                                    secureTextEntry
+                                    secureTextEntry={!showPassword}
                                     value={password}
                                     onChangeText={setPassword}
                                 />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? (
+                                        <EyeOff size={20} color="#9CA3AF" />
+                                    ) : (
+                                        <Eye size={20} color="#9CA3AF" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
                             <View className="flex-row items-center justify-between mt-2">
                                 <TouchableOpacity

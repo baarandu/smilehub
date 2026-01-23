@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Mail, Lock, User as UserIcon, ArrowLeft, Building2, Stethoscope } from 'lucide-react-native';
+import { Mail, Lock, User as UserIcon, ArrowLeft, Building2, Stethoscope, Eye, EyeOff } from 'lucide-react-native';
 
 type AccountType = 'solo' | 'clinic';
 type Gender = 'male' | 'female';
@@ -12,6 +12,8 @@ export default function SignUp() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [accountType, setAccountType] = useState<AccountType>('solo');
     const [gender, setGender] = useState<Gender>('male');
     const [clinicName, setClinicName] = useState('');
@@ -204,10 +206,17 @@ export default function SignUp() {
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
                                     placeholder="Crie uma senha forte"
-                                    secureTextEntry
+                                    secureTextEntry={!showPassword}
                                     value={password}
                                     onChangeText={setPassword}
                                 />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? (
+                                        <EyeOff size={20} color="#9CA3AF" />
+                                    ) : (
+                                        <Eye size={20} color="#9CA3AF" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -218,10 +227,17 @@ export default function SignUp() {
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
                                     placeholder="Confirme sua senha"
-                                    secureTextEntry
+                                    secureTextEntry={!showConfirmPassword}
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
                                 />
+                                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    {showConfirmPassword ? (
+                                        <EyeOff size={20} color="#9CA3AF" />
+                                    ) : (
+                                        <Eye size={20} color="#9CA3AF" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
                         </View>
 
