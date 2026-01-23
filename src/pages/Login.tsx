@@ -61,7 +61,7 @@ export default function Login() {
             // Reset rate limit on successful login
             resetRateLimit();
             toast.success('Login realizado com sucesso!');
-            navigate('/');
+            navigate('/inicio');
         } catch (error: any) {
             console.error('Login error:', error);
 

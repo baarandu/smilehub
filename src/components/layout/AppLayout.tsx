@@ -25,7 +25,7 @@ interface AppLayoutProps {
 }
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Início' },
+  { to: '/inicio', icon: LayoutDashboard, label: 'Início' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/materiais', icon: Package, label: 'Materiais' },

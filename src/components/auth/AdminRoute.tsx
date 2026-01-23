@@ -23,7 +23,7 @@ export function AdminRoute() {
     }
 
     if (!isAdmin) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/inicio" replace />;
     }
 
     return <Outlet />;

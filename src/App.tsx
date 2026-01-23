@@ -11,6 +11,7 @@ import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy loading content pages
+const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
 const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
@@ -68,7 +69,8 @@ const LoadingFallback = () => (
 const AppContent = () => (
   <Suspense fallback={<LoadingFallback />}>
     <Routes>
-      {/* Auth routes (no layout) */}
+      {/* Public routes */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -76,7 +78,7 @@ const AppContent = () => (
 
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
-        <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+        <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
         <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
         <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
