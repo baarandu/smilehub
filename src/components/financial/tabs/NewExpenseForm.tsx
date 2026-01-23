@@ -5,7 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus, Trash2, Calendar as CalendarIcon, Check, CreditCard, Layers } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat } from 'lucide-react';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 import {
@@ -20,10 +27,10 @@ import {
     dateToDbFormat,
     dbDateToDisplay,
     generateInstallments,
+    generateFixedExpenses,
     extractPaymentMethod,
     parseExpenseDescription
 } from '@/utils/expense';
-import { cn } from '@/lib/utils';
 
 interface NewExpenseFormProps {
     onSuccess: () => void;
@@ -47,6 +54,11 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
     const [numInstallmentsStr, setNumInstallmentsStr] = useState('2');
     const [installmentList, setInstallmentList] = useState<InstallmentItem[]>([]);
 
+    // Fixed Expenses (recurring same value)
+    const [isFixedExpense, setIsFixedExpense] = useState(false);
+    const [numMonthsStr, setNumMonthsStr] = useState('12');
+    const [fixedExpenseList, setFixedExpenseList] = useState<InstallmentItem[]>([]);
+
     // Edit Mode State
     const [updateAllRecurring, setUpdateAllRecurring] = useState(false);
 
@@ -61,6 +73,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             const method = extractPaymentMethod(transactionToEdit.description);
             if (method) setPaymentMethod(method);
             setIsInstallment(false);
+            setIsFixedExpense(false);
             setUpdateAllRecurring(false);
         } else {
             resetForm();
@@ -79,6 +92,18 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         setInstallmentList(items);
     }, [isInstallment, numInstallmentsStr, value, date]);
 
+    useEffect(() => {
+        if (!isFixedExpense) {
+            setFixedExpenseList([]);
+            return;
+        }
+        const months = parseInt(numMonthsStr) || 1;
+        if (months < 2) return;
+        const monthlyVal = getNumericValue(value);
+        const items = generateFixedExpenses(monthlyVal, months, date);
+        setFixedExpenseList(items);
+    }, [isFixedExpense, numMonthsStr, value, date]);
+
     const resetForm = () => {
         setDescription('');
         const today = new Date();
@@ -89,6 +114,9 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         setIsInstallment(false);
         setNumInstallmentsStr('2');
         setInstallmentList([]);
+        setIsFixedExpense(false);
+        setNumMonthsStr('12');
+        setFixedExpenseList([]);
         setCategory('Outros');
         setPaymentMethod('Pix');
         setUpdateAllRecurring(false);
@@ -167,7 +195,11 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 }
             } else {
                 // Create Logic
-                if (!isInstallment) {
+                if (isFixedExpense) {
+                    await createFixedExpenses();
+                } else if (isInstallment) {
+                    await createInstallments();
+                } else {
                     const dbDate = dateToDbFormat(date);
                     const finalDesc = `${description} (${paymentMethod})` + (observations ? ` - ${observations}` : '');
                     await financialService.createExpense({
@@ -178,8 +210,6 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                         location: null
                         // clinic_id is handled in service now
                     });
-                } else {
-                    await createInstallments();
                 }
                 toast.success('Despesa salva com sucesso!');
                 onSuccess();
@@ -210,6 +240,26 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 recurrence_id: recurrenceId,
                 payment_method: paymentMethod
                 // clinic_id is handled in service now
+            });
+        }));
+    };
+
+    const createFixedExpenses = async () => {
+        const recurrenceId = generateUUID();
+        const numMonths = parseInt(numMonthsStr);
+        await Promise.all(fixedExpenseList.map((item, i) => {
+            const dbDate = dateToDbFormat(item.date);
+            let finalDesc = `${description} (${paymentMethod}) (Mês ${i + 1}/${numMonths})`;
+            if (observations) finalDesc += ` - ${observations}`;
+            return financialService.createTransaction({
+                type: 'expense',
+                amount: Number(item.rawValue.toFixed(2)),
+                description: finalDesc,
+                category,
+                date: dbDate,
+                location: null,
+                recurrence_id: recurrenceId,
+                payment_method: paymentMethod
             });
         }));
     };
@@ -245,30 +295,22 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             {/* Category */}
             <div className="space-y-2">
                 <Label>Categoria</Label>
-                <div className="flex flex-wrap gap-2">
-                    {EXPENSE_CATEGORIES.map(cat => (
-                        <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setCategory(cat)}
-                            className={cn(
-                                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5",
-                                category === cat
-                                    ? "bg-red-50 border-red-200 text-red-700"
-                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                            )}
-                        >
-                            {category === cat && <Check className="h-3 w-3" />}
-                            {cat}
-                        </button>
-                    ))}
-                </div>
+                <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200">
+                        <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {EXPENSE_CATEGORIES.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
 
             {/* Value and Date */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="amount">Valor {isInstallment ? 'Total' : ''}</Label>
+                    <Label htmlFor="amount">Valor {isInstallment ? 'Total' : isFixedExpense ? 'Mensal' : ''}</Label>
                     <Input
                         id="amount"
                         value={value}
@@ -279,7 +321,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="date">{isInstallment ? '1º Vencimento' : 'Data'}</Label>
+                    <Label htmlFor="date">{(isInstallment || isFixedExpense) ? '1º Vencimento' : 'Data'}</Label>
                     <div className="relative">
                         <Input
                             id="date"
@@ -298,35 +340,117 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             {/* Payment Method */}
             <div className="space-y-2">
                 <Label>Forma de Pagamento</Label>
-                <div className="flex flex-wrap gap-2">
-                    {PAYMENT_METHODS.map(method => (
-                        <button
-                            key={method}
-                            type="button"
-                            onClick={() => setPaymentMethod(method)}
-                            className={cn(
-                                "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5",
-                                paymentMethod === method
-                                    ? "bg-blue-50 border-blue-200 text-blue-700"
-                                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                            )}
-                        >
-                            {paymentMethod === method && <Check className="h-3 w-3" />}
-                            {method}
-                        </button>
-                    ))}
-                </div>
+                <Select value={paymentMethod} onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}>
+                    <SelectTrigger className="bg-slate-50 border-slate-200">
+                        <SelectValue placeholder="Selecione a forma de pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {PAYMENT_METHODS.map(method => (
+                            <SelectItem key={method} value={method}>{method}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
+
+            {/* Fixed Expense Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
+                <div className="flex items-center gap-2">
+                    <Repeat className="h-5 w-5 text-slate-600" />
+                    <div>
+                        <span className="font-medium text-slate-700 text-sm">Despesa Fixa Recorrente?</span>
+                        <p className="text-xs text-slate-500">Ex: aluguel, CRO (mesmo valor por mês)</p>
+                    </div>
+                </div>
+                <Switch
+                    checked={isFixedExpense}
+                    onCheckedChange={(checked) => {
+                        setIsFixedExpense(checked);
+                        if (checked) setIsInstallment(false);
+                    }}
+                />
+            </div>
+
+            {/* Fixed Expense List */}
+            {isFixedExpense && (
+                <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center justify-between">
+                        <Label>Configurar Meses</Label>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Meses:</span>
+                            <Input
+                                value={numMonthsStr}
+                                onChange={(e) => setNumMonthsStr(e.target.value)}
+                                className="w-16 h-8 text-center bg-white"
+                                type="number"
+                                maxLength={2}
+                            />
+                        </div>
+                    </div>
+
+                    {fixedExpenseList.length > 0 && value && (
+                        <p className="text-xs text-slate-600 bg-white p-2 rounded-lg border border-slate-200">
+                            {numMonthsStr} meses de <span className="font-semibold">R$ {value}</span> = Total: <span className="font-semibold">R$ {formatCurrency(getNumericValue(value) * (parseInt(numMonthsStr) || 0))}</span>
+                        </p>
+                    )}
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        {fixedExpenseList.length > 0 ? (
+                            fixedExpenseList.map((item, index) => (
+                                <div key={item.id} className="flex gap-2 items-center">
+                                    <span className="text-xs text-muted-foreground w-12 font-medium">Mês {index + 1}</span>
+                                    <Input
+                                        value={item.date}
+                                        onChange={(e) => {
+                                            const newList = [...fixedExpenseList];
+                                            newList[index].date = applyDateMask(e.target.value);
+                                            setFixedExpenseList(newList);
+                                        }}
+                                        className="h-8 text-xs bg-white text-center flex-1"
+                                        placeholder="Data"
+                                        maxLength={10}
+                                    />
+                                    <Input
+                                        value={item.value}
+                                        onChange={(e) => {
+                                            const newList = [...fixedExpenseList];
+                                            const raw = e.target.value.replace(/\D/g, '');
+                                            const val = Number(raw) / 100;
+                                            newList[index].value = formatCurrency(val);
+                                            newList[index].rawValue = val;
+                                            setFixedExpenseList(newList);
+                                        }}
+                                        className="h-8 text-xs bg-white text-center flex-1 font-medium"
+                                        placeholder="Valor"
+                                    />
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic text-center py-2">
+                                Preencha valor e data inicial para gerar.
+                            </p>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Installments Toggle */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">
                 <div className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-slate-600" />
-                    <span className="font-medium text-slate-700 text-sm">
-                        {transactionToEdit ? 'Refazer Parcelamento?' : 'Pagamento Parcelado?'}
-                    </span>
+                    <div>
+                        <span className="font-medium text-slate-700 text-sm">
+                            {transactionToEdit ? 'Refazer Parcelamento?' : 'Pagamento Parcelado?'}
+                        </span>
+                        <p className="text-xs text-slate-500">Ex: compra parcelada (valor dividido)</p>
+                    </div>
                 </div>
-                <Switch checked={isInstallment} onCheckedChange={setIsInstallment} />
+                <Switch
+                    checked={isInstallment}
+                    onCheckedChange={(checked) => {
+                        setIsInstallment(checked);
+                        if (checked) setIsFixedExpense(false);
+                    }}
+                />
             </div>
 
             {/* Installment List */}

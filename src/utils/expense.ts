@@ -5,6 +5,7 @@ export const EXPENSE_CATEGORIES: string[] = [
     'Manutenção',
     'Aluguel/Condomínio',
     'Impostos',
+    'CRO',
     'Marketing',
     'Pessoal',
     'Outros'
@@ -83,7 +84,7 @@ export function dbDateToDisplay(dateStr: string): string {
     return `${d}/${m}/${y}`;
 }
 
-// Generate installment list from base values
+// Generate installment list from base values (value is divided)
 export function generateInstallments(
     totalValue: number,
     count: number,
@@ -111,6 +112,38 @@ export function generateInstallments(
             date: `${d}/${m}/${y}`,
             value: formatCurrency(splitValue),
             rawValue: splitValue
+        });
+    }
+    return items;
+}
+
+// Generate fixed expenses list (same value repeated each month)
+export function generateFixedExpenses(
+    monthlyValue: number,
+    months: number,
+    startDateStr: string
+): InstallmentItem[] {
+    if (!startDateStr || startDateStr.length !== 10) return [];
+
+    const [day, month, year] = startDateStr.split('/').map(Number);
+    if (!day || !month || !year) return [];
+
+    const baseDateObj = new Date(year, month - 1, day);
+
+    const items: InstallmentItem[] = [];
+    for (let i = 0; i < months; i++) {
+        const nextDate = new Date(baseDateObj);
+        nextDate.setMonth(nextDate.getMonth() + i);
+
+        const d = String(nextDate.getDate()).padStart(2, '0');
+        const m = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const y = nextDate.getFullYear();
+
+        items.push({
+            id: i,
+            date: `${d}/${m}/${y}`,
+            value: formatCurrency(monthlyValue),
+            rawValue: monthlyValue
         });
     }
     return items;
