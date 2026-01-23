@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, FileText, CreditCard, Hospital, ClipboardList, Calculator } from 'lucide-react';
+import { ArrowLeft, FileText, CreditCard, Hospital, ClipboardList, Calculator, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePatient, useDeletePatient } from '@/hooks/usePatients';
 import { toast } from 'sonner';
+import { useClinic } from '@/contexts/ClinicContext';
 import {
   PatientHeader,
   ProceduresTab,
@@ -23,7 +24,12 @@ export default function PatientDetail() {
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
   const deletePatient = useDeletePatient();
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'anamnese');
+  const { role } = useClinic();
+
+  // Secretaries cannot see anamnese - default to budgets tab
+  const isSecretary = role === 'assistant';
+  const defaultTab = isSecretary ? 'budgets' : 'anamnese';
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || defaultTab);
 
   // Sync state if URL changes
   useEffect(() => {
@@ -102,11 +108,13 @@ export default function PatientDetail() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="anamnese" className="gap-2">
-            <ClipboardList className="w-4 h-4" />
-            <span className="hidden sm:inline">Anamnese</span>
-          </TabsTrigger>
+        <TabsList className={`grid w-full ${isSecretary ? 'grid-cols-4' : 'grid-cols-5'}`}>
+          {!isSecretary && (
+            <TabsTrigger value="anamnese" className="gap-2">
+              <ClipboardList className="w-4 h-4" />
+              <span className="hidden sm:inline">Anamnese</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="budgets" className="gap-2">
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">Orçamentos</span>
@@ -125,9 +133,11 @@ export default function PatientDetail() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="anamnese" className="mt-6">
-          <AnamneseTab patientId={patient.id} />
-        </TabsContent>
+        {!isSecretary && (
+          <TabsContent value="anamnese" className="mt-6">
+            <AnamneseTab patientId={patient.id} />
+          </TabsContent>
+        )}
 
         <TabsContent value="budgets" className="mt-6">
           <BudgetsTab

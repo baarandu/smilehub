@@ -109,6 +109,61 @@ export const subscriptionService = {
 
         if (error) throw error;
         return data;
+    },
+
+    /**
+     * Change subscription plan (upgrade or downgrade)
+     * - Upgrade: Immediate with proration
+     * - Downgrade: Scheduled for next billing cycle
+     */
+    async changePlan(clinicId: string, newPlanId: string, userId: string): Promise<{
+        success: boolean;
+        message: string;
+        immediate: boolean;
+        isUpgrade: boolean;
+        prorationAmount?: number;
+        effectiveDate?: string;
+        newPlan?: string;
+        isTrialing?: boolean;
+    }> {
+        const { data, error } = await supabase.functions.invoke('update-subscription', {
+            body: { clinicId, newPlanId, userId },
+        });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Cancel subscription at period end
+     */
+    async cancelSubscription(clinicId: string): Promise<{ success: boolean; message: string }> {
+        const { data: currentSub } = await supabase
+            .from('subscriptions')
+            .select('stripe_subscription_id')
+            .eq('clinic_id', clinicId)
+            .in('status', ['active', 'trialing'])
+            .single();
+
+        if (!currentSub?.stripe_subscription_id) {
+            throw new Error('Nenhuma assinatura ativa encontrada');
+        }
+
+        // Update cancel_at_period_end flag
+        const { error } = await supabase
+            .from('subscriptions')
+            .update({
+                cancel_at_period_end: true,
+                updated_at: new Date().toISOString()
+            })
+            .eq('clinic_id', clinicId);
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: 'Assinatura sera cancelada ao fim do periodo atual.'
+        };
     }
 };
 

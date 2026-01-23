@@ -10,6 +10,7 @@ export function PrivateRoute() {
     // Add Super Admin and Subscription logic
     const [isChecking, setIsChecking] = useState(true);
     const [isAllowed, setIsAllowed] = useState(false);
+    const [isTrialExpired, setIsTrialExpired] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -38,6 +39,7 @@ export function PrivateRoute() {
             if (profile?.is_super_admin) {
                 if (mounted) {
                     setIsAllowed(true);
+                    setIsTrialExpired(false);
                     setLoading(false);
                     setIsChecking(false);
                 }
@@ -52,28 +54,60 @@ export function PrivateRoute() {
                 .single();
 
             if (clinicUser) {
-                // We need to import subscriptionService dynamically to avoid circular deps if any
-                // But since we are in components, services should be fine.
-                // Assuming subscriptionService is available or we do a raw query.
-                // Let's do raw query for safety and speed here.
-                const { data: subscription } = await supabase
+                // Fetch subscription with current_period_end to check expiration
+                const { data: subscriptions } = await supabase
                     .from('subscriptions')
-                    .select('status, plan_id')
+                    .select('status, plan_id, current_period_end')
                     .eq('clinic_id', clinicUser.clinic_id)
                     .in('status', ['active', 'trialing'])
-                    .in('status', ['active', 'trialing'])
+                    .order('created_at', { ascending: false })
                     .limit(1);
 
-                const hasActiveSubscription = subscription && subscription.length > 0;
+                const subscription = subscriptions?.[0];
+
+                if (subscription) {
+                    // Check if subscription is active (not expired)
+                    if (subscription.status === 'active') {
+                        // Active paid subscription - allow access
+                        if (mounted) {
+                            setIsAllowed(true);
+                            setIsTrialExpired(false);
+                        }
+                    } else if (subscription.status === 'trialing') {
+                        // Trial - check if not expired
+                        const periodEnd = new Date(subscription.current_period_end);
+                        const now = new Date();
+
+                        if (periodEnd > now) {
+                            // Trial still valid
+                            if (mounted) {
+                                setIsAllowed(true);
+                                setIsTrialExpired(false);
+                            }
+                        } else {
+                            // Trial expired
+                            if (mounted) {
+                                setIsAllowed(false);
+                                setIsTrialExpired(true);
+                            }
+                        }
+                    }
+                } else {
+                    // No subscription found
+                    if (mounted) {
+                        setIsAllowed(false);
+                        setIsTrialExpired(false);
+                    }
+                }
 
                 if (mounted) {
-                    setIsAllowed(hasActiveSubscription);
                     setLoading(false);
                     setIsChecking(false);
                 }
             } else {
                 if (mounted) {
                     setIsAllowed(false);
+                    setIsTrialExpired(false);
                     setLoading(false);
                     setIsChecking(false);
                 }
@@ -95,6 +129,9 @@ export function PrivateRoute() {
         };
     }, []);
 
+    // Use useLocation to ensure re-render on route change
+    const location = useLocation();
+
     if (loading || isChecking) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -107,11 +144,16 @@ export function PrivateRoute() {
         return <Navigate to="/login" replace />;
     }
 
-    // Use useLocation to ensure re-render on route change
-    const location = useLocation();
     const isPlansPage = location.pathname.startsWith('/planos');
+    const isTrialExpiredPage = location.pathname === '/trial-expirado';
 
-    if (!isAllowed && !isPlansPage) {
+    // Trial expired - redirect to trial expired page
+    if (isTrialExpired && !isTrialExpiredPage && !isPlansPage) {
+        return <Navigate to="/trial-expirado" replace />;
+    }
+
+    // No subscription - redirect to plans
+    if (!isAllowed && !isPlansPage && !isTrialExpiredPage) {
         return <Navigate to="/planos" replace />;
     }
 

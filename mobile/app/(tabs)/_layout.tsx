@@ -4,9 +4,14 @@ import { DeviceEventEmitter } from 'react-native';
 import { LayoutDashboard, Users, Calendar, Bell, Package, DollarSign } from 'lucide-react-native';
 import { remindersService } from '../../src/services/reminders';
 import { alertsService } from '../../src/services/alerts';
+import { useClinic } from '../../src/contexts/ClinicContext';
 
 export default function TabLayout() {
     const [activeReminders, setActiveReminders] = useState(0);
+    const { role } = useClinic();
+
+    // Secretaries cannot access Financeiro
+    const isSecretary = role === 'assistant';
 
     useFocusEffect(
         useCallback(() => {
@@ -73,6 +78,8 @@ export default function TabLayout() {
                 options={{
                     title: 'Financeiro',
                     tabBarIcon: ({ color }) => <DollarSign size={22} color={color} />,
+                    // Hide tab for secretaries
+                    href: isSecretary ? null : '/financial',
                 }}
             />
             <Tabs.Screen

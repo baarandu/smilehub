@@ -9,6 +9,8 @@ export interface SubscriptionStatus {
     plan: Plan | null;
     isActive: boolean;
     isTrialing: boolean;
+    isTrialExpired: boolean;
+    trialDaysLeft: number | null;
 }
 
 export const subscriptionService = {
@@ -25,11 +27,11 @@ export const subscriptionService = {
 
         if (error && error.code !== 'PGRST116') {
             console.error('Error fetching subscription:', error);
-            return { subscription: null, plan: null, isActive: false, isTrialing: false };
+            return { subscription: null, plan: null, isActive: false, isTrialing: false, isTrialExpired: false, trialDaysLeft: null };
         }
 
         if (!subscription) {
-            return { subscription: null, plan: null, isActive: false, isTrialing: false };
+            return { subscription: null, plan: null, isActive: false, isTrialing: false, isTrialExpired: false, trialDaysLeft: null };
         }
 
         const { data: plan } = await supabase
@@ -38,11 +40,33 @@ export const subscriptionService = {
             .eq('id', (subscription as any).plan_id)
             .single();
 
+        const status = (subscription as any).status;
+        const currentPeriodEnd = (subscription as any).current_period_end;
+
+        let isTrialExpired = false;
+        let trialDaysLeft: number | null = null;
+
+        if (status === 'trialing' && currentPeriodEnd) {
+            const periodEnd = new Date(currentPeriodEnd);
+            const now = new Date();
+            const diffTime = periodEnd.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays <= 0) {
+                isTrialExpired = true;
+                trialDaysLeft = 0;
+            } else {
+                trialDaysLeft = diffDays;
+            }
+        }
+
         return {
             subscription,
             plan,
-            isActive: (subscription as any).status === 'active',
-            isTrialing: (subscription as any).status === 'trialing'
+            isActive: status === 'active',
+            isTrialing: status === 'trialing' && !isTrialExpired,
+            isTrialExpired,
+            trialDaysLeft
         };
     },
 
@@ -91,6 +115,29 @@ export const subscriptionService = {
     async createSubscription(priceId: string, email: string, userId: string, planName: string, amount: number, customerId?: string) {
         const { data, error } = await supabase.functions.invoke('create-subscription', {
             body: { priceId, email, userId, planName, amount, customerId },
+        });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Change subscription plan (upgrade or downgrade)
+     * - Upgrade: Immediate with proration
+     * - Downgrade: Scheduled for next billing cycle
+     */
+    async changePlan(clinicId: string, newPlanId: string, userId: string): Promise<{
+        success: boolean;
+        message: string;
+        immediate: boolean;
+        isUpgrade: boolean;
+        prorationAmount?: number;
+        effectiveDate?: string;
+        newPlan?: string;
+        isTrialing?: boolean;
+    }> {
+        const { data, error } = await supabase.functions.invoke('update-subscription', {
+            body: { clinicId, newPlanId, userId },
         });
 
         if (error) throw error;

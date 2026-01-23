@@ -2,17 +2,61 @@ import { supabase } from '../lib/supabase';
 import type { FinancialTransaction, FinancialTransactionInsert, FinancialTransactionUpdate, FinancialTransactionWithPatient } from '../types/database';
 
 export const financialService = {
+    /**
+     * Get user role and clinic info
+     * Returns { userId, clinicId, role, canSeeAllFinancials }
+     */
+    async getUserContext(): Promise<{
+        userId: string;
+        clinicId: string;
+        role: string;
+        canSeeAllFinancials: boolean;
+    } | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id, role')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser) return null;
+
+        const role = (clinicUser as any).role;
+        // Owners, admins, and managers can see all financials
+        // Dentists and other roles only see their own transactions
+        const canSeeAllFinancials = ['owner', 'admin', 'manager'].includes(role);
+
+        return {
+            userId: user.id,
+            clinicId: (clinicUser as any).clinic_id,
+            role,
+            canSeeAllFinancials
+        };
+    },
+
     async getTransactions(start: Date, end: Date): Promise<FinancialTransactionWithPatient[]> {
         // Robust way to get YYYY-MM-DD from the local date object passed
         const startDate = start.getFullYear() + '-' + String(start.getMonth() + 1).padStart(2, '0') + '-' + String(start.getDate()).padStart(2, '0');
         const endDate = end.getFullYear() + '-' + String(end.getMonth() + 1).padStart(2, '0') + '-' + String(end.getDate()).padStart(2, '0');
 
-        const { data, error } = await supabase
+        // Get user context to determine filtering
+        const context = await this.getUserContext();
+
+        let query = supabase
             .from('financial_transactions')
             .select('*, patients(name)')
             .gte('date', startDate)
             .lte('date', endDate)
             .order('date', { ascending: false });
+
+        // If user is a dentist (not owner/admin), filter by their user_id
+        if (context && !context.canSeeAllFinancials) {
+            query = query.eq('user_id', context.userId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('[FinancialService] Error fetching:', error);

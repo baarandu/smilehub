@@ -3,14 +3,58 @@ import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/d
 import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 
 export const financialService = {
+    /**
+     * Get user role and clinic info
+     * Returns { userId, clinicId, role, canSeeAllFinancials }
+     */
+    async getUserContext(): Promise<{
+        userId: string;
+        clinicId: string;
+        role: string;
+        canSeeAllFinancials: boolean;
+    } | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id, role')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser) return null;
+
+        const role = (clinicUser as any).role;
+        // Owners, admins, and managers can see all financials
+        // Dentists and other roles only see their own transactions
+        const canSeeAllFinancials = ['owner', 'admin', 'manager'].includes(role);
+
+        return {
+            userId: user.id,
+            clinicId: (clinicUser as any).clinic_id,
+            role,
+            canSeeAllFinancials
+        };
+    },
+
     async getTransactions(start: Date, end: Date): Promise<any[]> {
-        const { data, error } = await supabase
+        // Get user context to determine filtering
+        const context = await this.getUserContext();
+
+        let query = supabase
             .from('financial_transactions')
             .select('*, patients(name)')
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
             .order('date', { ascending: false })
             .order('created_at', { ascending: false });
+
+        // If user is a dentist (not owner/admin), filter by their user_id
+        if (context && !context.canSeeAllFinancials) {
+            query = query.eq('user_id', context.userId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         return data || [];
@@ -30,7 +74,11 @@ export const financialService = {
 
         const { data, error } = await supabase
             .from('financial_transactions')
-            .insert({ ...transaction, clinic_id: clinicUser.clinic_id } as any)
+            .insert({
+                ...transaction,
+                clinic_id: (clinicUser as any).clinic_id,
+                user_id: user.id  // Track which user created the transaction
+            } as any)
             .select()
             .single();
 
@@ -67,7 +115,8 @@ export const financialService = {
                 date: expense.date,
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
-                clinic_id: clinicUser.clinic_id
+                clinic_id: (clinicUser as any).clinic_id,
+                user_id: user.id  // Track which user created the expense
             } as any)
             .select()
             .single();

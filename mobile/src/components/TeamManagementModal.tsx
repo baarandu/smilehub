@@ -39,12 +39,13 @@ interface ClinicUserRow {
     role: string;
 }
 
-const ROLE_CONFIG = {
+const ROLE_CONFIG: Record<string, { label: string; description: string; color: string; bgColor: string }> = {
+    owner: { label: 'Dono', description: 'Proprietario da clinica', color: '#059669', bgColor: '#d1fae5' },
     admin: { label: 'Administrador', description: 'Acesso total ao sistema', color: '#14b8a6', bgColor: '#ccfbf1' },
     dentist: { label: 'Dentista', description: 'Acesso a pacientes e agenda', color: '#3b82f6', bgColor: '#dbeafe' },
-    assistant: { label: 'Assistente', description: 'Acesso restrito', color: '#8b5cf6', bgColor: '#f3e8ff' },
+    assistant: { label: 'Secretaria', description: 'Acesso administrativo', color: '#8b5cf6', bgColor: '#f3e8ff' },
     editor: { label: 'Editor', description: 'Pode criar e editar dados', color: '#f59e0b', bgColor: '#fef3c7' },
-    viewer: { label: 'Visualizador', description: 'Apenas visualização', color: '#6b7280', bgColor: '#f3f4f6' },
+    viewer: { label: 'Visualizador', description: 'Apenas visualizacao', color: '#6b7280', bgColor: '#f3f4f6' },
 };
 
 interface TeamManagementModalProps {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,6 +11,7 @@ import { usePatientData } from '../../src/hooks/usePatientData';
 import { usePatientPayments } from '../../src/hooks/usePatientPayments';
 import { usePatientHandlers } from '../../src/hooks/usePatientHandlers';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
+import { useClinic } from '../../src/contexts/ClinicContext';
 import * as Linking from 'expo-linking';
 import ImageViewing from 'react-native-image-viewing';
 import { WebView } from 'react-native-webview';
@@ -21,6 +22,20 @@ type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 export default function PatientDetail() {
     const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
     const router = useRouter();
+    const { role } = useClinic();
+
+    // Secretaries cannot see anamnese
+    const isSecretary = role === 'assistant';
+    const defaultTab: TabType = isSecretary ? 'budgets' : 'anamnese';
+
+    // Filter available tabs based on role
+    const availableTabs = useMemo(() => {
+        const allTabs: TabType[] = ['anamnese', 'budgets', 'procedures', 'exams', 'payments'];
+        if (isSecretary) {
+            return allTabs.filter(t => t !== 'anamnese');
+        }
+        return allTabs;
+    }, [isSecretary]);
 
     const {
         patient, anamneses, budgets, procedures, exams, loading,
@@ -31,7 +46,7 @@ export default function PatientDetail() {
     const { handleDeleteAnamnese, handleDeleteBudget, handleDeleteProcedure, handleDeleteExam } = usePatientHandlers({
         loadAnamneses, loadBudgets, loadProcedures, loadExams, exams
     });
-    const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) || 'anamnese');
+    const [activeTab, setActiveTab] = useState<TabType>((tab as TabType) || defaultTab);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
@@ -274,7 +289,7 @@ export default function PatientDetail() {
                 {/* Tabs */}
                 <View className="mx-4 mb-4">
                     <View className="flex-row bg-gray-100 rounded-xl p-1">
-                        {(['anamnese', 'budgets', 'procedures', 'exams', 'payments'] as TabType[]).map((t) => (
+                        {availableTabs.map((t) => (
                             <TouchableOpacity key={t} onPress={() => setActiveTab(t)} className={`flex-1 py-4 rounded-lg items-center ${activeTab === t ? 'bg-white' : ''}`}>
                                 {t === 'anamnese' && <ClipboardList size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
                                 {t === 'budgets' && <Calculator size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
@@ -282,7 +297,7 @@ export default function PatientDetail() {
                                 {t === 'exams' && <FileText size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
                                 {t === 'payments' && <CreditCard size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
                                 <Text className={`text-[10px] mt-1.5 ${activeTab === t ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
-                                    {t === 'anamnese' ? 'Anamnese' : t === 'budgets' ? 'Orçamentos' : t === 'procedures' ? 'Procedimentos' : t === 'exams' ? 'Exames' : 'Pagamentos'}
+                                    {t === 'anamnese' ? 'Anamnese' : t === 'budgets' ? 'Orcamentos' : t === 'procedures' ? 'Procedimentos' : t === 'exams' ? 'Exames' : 'Pagamentos'}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -290,7 +305,7 @@ export default function PatientDetail() {
                 </View>
 
                 {/* Tab Contents */}
-                {activeTab === 'anamnese' && <AnamneseTab anamneses={anamneses} onAdd={handleAddAnamnese} onEdit={handleEditAnamnese} onDelete={handleDeleteAnamnese} onView={handleViewAnamnese} />}
+                {activeTab === 'anamnese' && !isSecretary && <AnamneseTab anamneses={anamneses} onAdd={handleAddAnamnese} onEdit={handleEditAnamnese} onDelete={handleDeleteAnamnese} onView={handleViewAnamnese} />}
                 {activeTab === 'budgets' && <BudgetsTab budgets={budgets} onAdd={handleAddBudget} onEdit={handleEditBudget} onDelete={handleDeleteBudget} onView={handleViewBudget} />}
                 {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
                 {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} />}

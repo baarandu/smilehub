@@ -25,6 +25,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AdminPlans = lazy(() => import("./pages/AdminPlans"));
 const Pricing = lazy(() => import("./pages/Pricing"));
+const TrialExpired = lazy(() => import("./pages/TrialExpired"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const AppContent = () => (
         <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
         <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
+        <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
 
       {/* Admin Routes */}

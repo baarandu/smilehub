@@ -113,10 +113,11 @@ serve(async (req) => {
             },
         );
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[create-subscription] FATAL ERROR:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erro interno no servidor de pagamento.';
         return new Response(
-            JSON.stringify({ error: error.message || 'Erro interno no servidor de pagamento.' }),
+            JSON.stringify({ error: errorMessage }),
             {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,

@@ -18,6 +18,9 @@ export interface Database {
           current_period_start: string
           current_period_end: string
           cancel_at_period_end: boolean
+          stripe_subscription_id: string | null
+          stripe_customer_id: string | null
+          pending_plan_id: string | null
           created_at: string
           updated_at: string
         }
@@ -29,6 +32,9 @@ export interface Database {
           current_period_start?: string
           current_period_end: string
           cancel_at_period_end?: boolean
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          pending_plan_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -40,6 +46,9 @@ export interface Database {
           current_period_start?: string
           current_period_end?: string
           cancel_at_period_end?: boolean
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          pending_plan_id?: string | null
           created_at?: string
           updated_at?: string
         }

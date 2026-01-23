@@ -10,6 +10,8 @@ type AuthContextType = {
     isLoading: boolean;
     role: string | null;
     hasActiveSubscription: boolean;
+    isTrialExpired: boolean;
+    trialDaysLeft: number | null;
     signIn: (email: string, password: string) => Promise<void>;
     signUp: (email: string, password: string, name?: string, accountType?: 'solo' | 'clinic', clinicName?: string, gender?: 'male' | 'female') => Promise<void>;
     signOut: () => Promise<void>;
@@ -23,6 +25,8 @@ const AuthContext = createContext<AuthContextType>({
     isLoading: true,
     role: null,
     hasActiveSubscription: false,
+    isTrialExpired: false,
+    trialDaysLeft: null,
     signIn: async () => { },
     signUp: async () => { },
     signOut: async () => { },
@@ -36,6 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [role, setRole] = useState<string | null>(null);
     const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+    const [isTrialExpired, setIsTrialExpired] = useState(false);
+    const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
     const checkSubscription = async (userId: string) => {
         console.log('AUTH_CONTEXT: checkSubscription for user:', userId);
@@ -51,6 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.log('AUTH_CONTEXT: checkSubscription - User is SUPER ADMIN. Bypassing checks.');
                 setRole('owner'); // Super admin acts as owner
                 setHasActiveSubscription(true);
+                setIsTrialExpired(false);
+                setTrialDaysLeft(null);
                 setIsLoading(false);
                 return;
             }
@@ -66,14 +74,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setRole((clinicUser as any).role);
                 const subStatus = await subscriptionService.getCurrentSubscription((clinicUser as any).clinic_id);
                 console.log('AUTH_CONTEXT: checkSubscription - subStatus:', subStatus);
-                // Consider active if active or trialing
+                // Consider active if active or trialing (and not expired)
                 const isActive = subStatus.isActive || subStatus.isTrialing;
                 console.log('AUTH_CONTEXT: checkSubscription - isActive:', isActive);
+                console.log('AUTH_CONTEXT: checkSubscription - isTrialExpired:', subStatus.isTrialExpired);
+                console.log('AUTH_CONTEXT: checkSubscription - trialDaysLeft:', subStatus.trialDaysLeft);
                 setHasActiveSubscription(isActive);
+                setIsTrialExpired(subStatus.isTrialExpired);
+                setTrialDaysLeft(subStatus.trialDaysLeft);
             } else {
                 console.log('AUTH_CONTEXT: checkSubscription - NO clinicUser found');
                 setRole(null);
                 setHasActiveSubscription(false);
+                setIsTrialExpired(false);
+                setTrialDaysLeft(null);
             }
         } catch (error) {
             console.error('Error checking subscription:', error);
@@ -162,6 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await supabase.auth.signOut();
             setRole(null);
             setHasActiveSubscription(false);
+            setIsTrialExpired(false);
+            setTrialDaysLeft(null);
         } catch (error) {
             console.error(error);
         } finally {
@@ -193,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ session, user, isLoading, role, hasActiveSubscription, signIn, signUp, signOut, resetPassword, refreshSubscription }}>
+        <AuthContext.Provider value={{ session, user, isLoading, role, hasActiveSubscription, isTrialExpired, trialDaysLeft, signIn, signUp, signOut, resetPassword, refreshSubscription }}>
             {children}
         </AuthContext.Provider>
     );

@@ -8,7 +8,7 @@ import { ClinicProvider } from '../src/contexts/ClinicContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 function RootLayoutNav() {
-    const { session, isLoading, hasActiveSubscription, role } = useAuth();
+    const { session, isLoading, hasActiveSubscription, isTrialExpired, role } = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
@@ -17,6 +17,7 @@ function RootLayoutNav() {
         console.log('ROOT_LAYOUT: isLoading:', isLoading);
         console.log('ROOT_LAYOUT: Session user:', session?.user?.id);
         console.log('ROOT_LAYOUT: hasActiveSubscription:', hasActiveSubscription);
+        console.log('ROOT_LAYOUT: isTrialExpired:', isTrialExpired);
         console.log('ROOT_LAYOUT: Segments:', segments);
 
         if (isLoading) return;
@@ -32,42 +33,52 @@ function RootLayoutNav() {
         const isProtectedRoute = protectedRoutes.includes(firstSegment as string);
 
         // Routes that should be accessible even without subscription (to allow payment)
-        // const subscriptionRoutes = ['settings'];
-        // const isSubscriptionRoute = firstSegment === 'settings' && segments.length > 1 && (segments as string[])[1] === 'subscription';
-
-        // Better check for subscription route to avoid casting issues
         const isSubscriptionRoute = segments.join('/') === 'settings/subscription';
+        const isTrialExpiredRoute = firstSegment === 'trial-expired';
+
         console.log('ROOT_LAYOUT: isPublicRoute:', isPublicRoute);
         console.log('ROOT_LAYOUT: isSubscriptionRoute:', isSubscriptionRoute);
+        console.log('ROOT_LAYOUT: isTrialExpiredRoute:', isTrialExpiredRoute);
 
         if (session) {
-            // 1. Priority: Enforce Subscription
-            // User has NO subscription, and is NOT on subscription page -> Force Subscription
-            if (!hasActiveSubscription && !isSubscriptionRoute) {
+            // 1. Priority: Trial Expired - redirect to trial expired page
+            if (isTrialExpired && !isTrialExpiredRoute && !isSubscriptionRoute) {
+                console.log('ROOT_LAYOUT: REDIRECTING TO TRIAL-EXPIRED (Trial Expired)');
+                router.replace('/trial-expired');
+                return;
+            }
+
+            // 2. Priority: No subscription at all - redirect to subscription page
+            if (!hasActiveSubscription && !isTrialExpired && !isSubscriptionRoute) {
                 console.log('ROOT_LAYOUT: REDIRECTING TO SUBSCRIPTION (No Sub + Not on Sub Page)');
                 router.replace('/settings/subscription');
                 return;
             }
 
-            // 2. Priority: Redirect from Public to Protected
+            // 3. Priority: Redirect from Public to Protected
             if (isPublicRoute) {
                 console.log('ROOT_LAYOUT: REDIRECTING TO TABS (Public Route -> Tabs)');
-                // User is signed in but on public route, redirect to tabs
                 router.replace('/(tabs)');
             }
-        } else if (isProtectedRoute) {
+        } else if (isProtectedRoute || isTrialExpiredRoute) {
             console.log('ROOT_LAYOUT: REDIRECTING TO LOGIN (Protected Route -> Login)');
-            // User is not signed in but trying to access protected route
             router.replace('/login');
         }
-    }, [session, isLoading, hasActiveSubscription, role, segments]);
+    }, [session, isLoading, hasActiveSubscription, isTrialExpired, role, segments]);
 
     // Declarative Redirection for Paywall Enforcement
     const firstSegment = segments[0];
     const isSubscriptionRoute = segments.join('/') === 'settings/subscription';
+    const isTrialExpiredRoute = firstSegment === 'trial-expired';
 
-    // If logged in, not loading, no subscription, and not already on subscription page -> Redirect
-    if (!isLoading && session && !hasActiveSubscription && !isSubscriptionRoute) {
+    // If logged in, trial expired, not on trial-expired or subscription page -> Redirect
+    if (!isLoading && session && isTrialExpired && !isTrialExpiredRoute && !isSubscriptionRoute) {
+        console.log('ROOT_LAYOUT: Blocking access, redirecting to trial-expired.');
+        return <Redirect href="/trial-expired" />;
+    }
+
+    // If logged in, no subscription (and not trial expired), not on subscription page -> Redirect
+    if (!isLoading && session && !hasActiveSubscription && !isTrialExpired && !isSubscriptionRoute) {
         console.log('ROOT_LAYOUT: Blocking access, redirecting to subscription.');
         return <Redirect href="/settings/subscription" />;
     }
@@ -90,6 +101,7 @@ function RootLayoutNav() {
                 <Stack.Screen name="signup" />
                 <Stack.Screen name="forgot-password" />
                 <Stack.Screen name="reset-password" />
+                <Stack.Screen name="trial-expired" />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" />

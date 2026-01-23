@@ -20,6 +20,7 @@ import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { supabase } from '../../src/lib/supabase';
+import { TrialBanner } from '../../src/components/TrialBanner';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -272,6 +273,9 @@ export default function Dashboard() {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+                {/* Trial Banner */}
+                <TrialBanner />
 
                 {/* Content Container */}
                 <View className="px-4 pb-8">

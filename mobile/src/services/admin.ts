@@ -18,6 +18,7 @@ export const adminService = {
     },
 
     async createPlan(plan: SubscriptionPlanInsert) {
+        // @ts-expect-error - supabase types mismatch with manual Database definition
         const { data, error } = await supabase
             .from('subscription_plans')
             .insert(plan)
@@ -29,6 +30,7 @@ export const adminService = {
     },
 
     async updatePlan(id: string, updates: SubscriptionPlanUpdate) {
+        // @ts-expect-error - supabase types mismatch with manual Database definition
         const { data, error } = await supabase
             .from('subscription_plans')
             .update(updates)
@@ -41,6 +43,7 @@ export const adminService = {
     },
 
     async togglePlanActive(id: string, isActive: boolean) {
+        // @ts-expect-error - supabase types mismatch with manual Database definition
         const { data, error } = await supabase
             .from('subscription_plans')
             .update({ is_active: isActive })

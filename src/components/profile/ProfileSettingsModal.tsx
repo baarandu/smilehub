@@ -55,9 +55,10 @@ interface TeamInvite {
 }
 
 const ROLE_CONFIG: Record<string, { label: string; icon: any; description: string }> = {
+    owner: { label: 'Dono', icon: Shield, description: 'Proprietario da clinica' },
     admin: { label: 'Administrador', icon: Shield, description: 'Acesso total' },
     dentist: { label: 'Dentista', icon: StethoscopeIcon, description: 'Acesso a pacientes e agenda' },
-    assistant: { label: 'Assistente', icon: Users, description: 'Acesso restrito' },
+    assistant: { label: 'Secretaria', icon: Users, description: 'Acesso administrativo' },
 };
 
 // Fallback icon since Stethoscope might not be imported from lucide-react in all versions
@@ -486,9 +487,9 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="admin">Administrador</SelectItem>
                                         <SelectItem value="dentist">Dentista</SelectItem>
-                                        <SelectItem value="assistant">Assistente</SelectItem>
+                                        <SelectItem value="assistant">Secretaria</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

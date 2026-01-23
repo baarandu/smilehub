@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Check, ArrowLeft, Shield } from 'lucide-react-native';
+import { Check, ArrowLeft, Shield, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { supabase } from '../../src/lib/supabase';
 import { Database } from '../../src/types/database';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -12,7 +12,7 @@ type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 
 export default function SubscriptionScreen() {
     const router = useRouter();
-    const { session, refreshSubscription } = useAuth();
+    const { session, refreshSubscription, isTrialExpired, trialDaysLeft } = useAuth();
     const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
     const [plans, setPlans] = useState<Plan[]>([]);
@@ -20,6 +20,9 @@ export default function SubscriptionScreen() {
     const [processing, setProcessing] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+    const [clinicId, setClinicId] = useState<string | null>(null);
+    const [isTrialing, setIsTrialing] = useState(false);
+    const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
 
     useEffect(() => {
         loadData();
@@ -49,10 +52,13 @@ export default function SubscriptionScreen() {
 
                 if (clinicUser) {
                     const typedUser = clinicUser as any;
-                    setIsAdmin(typedUser.role === 'admin');
+                    setIsAdmin(typedUser.role === 'admin' || typedUser.role === 'owner');
+                    setClinicId(typedUser.clinic_id);
                     const subStatus = await subscriptionService.getCurrentSubscription(typedUser.clinic_id);
                     if ((subStatus.isActive || subStatus.isTrialing) && subStatus.plan) {
                         setCurrentPlanId(subStatus.plan!.id);
+                        setIsTrialing(subStatus.isTrialing);
+                        setCurrentPeriodEnd(subStatus.subscription?.current_period_end || null);
                     }
                 }
             }
@@ -67,12 +73,12 @@ export default function SubscriptionScreen() {
 
     const handleSubscribe = async (plan: Plan) => {
         if (!isAdmin) {
-            Alert.alert('Acesso Negado', 'Apenas administradores podem gerenciar a assinatura da clínica.');
+            Alert.alert('Acesso Negado', 'Apenas administradores podem gerenciar a assinatura da clinica.');
             return;
         }
 
         if (!session?.user?.email) {
-            Alert.alert('Erro', 'Email não encontrado.');
+            Alert.alert('Erro', 'Email nao encontrado.');
             return;
         }
 
@@ -82,14 +88,89 @@ export default function SubscriptionScreen() {
             return;
         }
 
+        // Check if this is a plan change (has current plan)
+        if (currentPlanId && clinicId) {
+            const currentPlan = plans.find(p => p.id === currentPlanId);
+            if (currentPlan) {
+                const isUpgrade = plan.price_monthly > currentPlan.price_monthly;
+                handlePlanChange(plan, isUpgrade);
+                return;
+            }
+        }
+
+        // New subscription flow
+        await processNewSubscription(plan);
+    };
+
+    const handlePlanChange = (plan: Plan, isUpgrade: boolean) => {
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        const periodEndFormatted = currentPeriodEnd
+            ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR')
+            : 'o fim do periodo';
+
+        if (isUpgrade) {
+            const message = isTrialing
+                ? `Voce esta no periodo de teste. A mudanca para ${plan.name} sera aplicada imediatamente e voce continuara no trial.`
+                : `Sera cobrado um valor proporcional pela diferenca de plano. O novo valor cheio sera cobrado na proxima renovacao.`;
+
+            Alert.alert(
+                'Confirmar Upgrade',
+                `Voce esta prestes a fazer upgrade de ${currentPlan?.name} para ${plan.name}.\n\n${message}`,
+                [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Confirmar Upgrade', onPress: () => confirmPlanChange(plan) }
+                ]
+            );
+        } else {
+            const message = isTrialing
+                ? `A mudanca sera aplicada imediatamente. Voce pode perder acesso a algumas funcionalidades do plano atual.`
+                : `Voce continuara com acesso ao plano atual ate ${periodEndFormatted}. Apos essa data, seu plano sera alterado automaticamente.`;
+
+            Alert.alert(
+                'Confirmar Downgrade',
+                `Voce esta prestes a fazer downgrade de ${currentPlan?.name} para ${plan.name}.\n\n${message}\n\nAtencao: O plano ${plan.name} pode ter limites menores de usuarios, pacientes ou outras funcionalidades.`,
+                [
+                    { text: 'Manter Plano Atual', style: 'cancel' },
+                    { text: 'Confirmar Downgrade', style: 'destructive', onPress: () => confirmPlanChange(plan) }
+                ]
+            );
+        }
+    };
+
+    const confirmPlanChange = async (plan: Plan) => {
+        if (!clinicId || !session?.user?.id) return;
+
+        try {
+            setProcessing(true);
+            const result = await subscriptionService.changePlan(clinicId, plan.id, session.user.id);
+
+            if (result.success) {
+                Alert.alert(
+                    result.isUpgrade ? 'Upgrade Realizado!' : 'Downgrade Agendado!',
+                    result.message,
+                    [{ text: 'OK', onPress: () => loadData() }]
+                );
+                await refreshSubscription();
+            } else {
+                throw new Error(result.message || 'Erro ao mudar plano');
+            }
+        } catch (error: any) {
+            console.error('Plan change error:', error);
+            Alert.alert('Erro', error.message || 'Nao foi possivel mudar o plano. Tente novamente.');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const processNewSubscription = async (plan: Plan) => {
         try {
             setProcessing(true);
 
             // 1. Create Subscription Intent via Edge Function
             const result = await subscriptionService.createSubscription(
                 plan.id,
-                session.user.email,
-                session.user.id,
+                session!.user!.email!,
+                session!.user!.id,
                 plan.name,
                 plan.price_monthly
             );
@@ -104,7 +185,7 @@ export default function SubscriptionScreen() {
                 setupIntentClientSecret: result.type === 'setup' ? result.clientSecret : undefined,
                 merchantDisplayName: 'Organiza Odonto',
                 defaultBillingDetails: {
-                    email: session.user.email,
+                    email: session!.user!.email!,
                 }
             });
 
@@ -117,20 +198,17 @@ export default function SubscriptionScreen() {
 
             if (paymentError) {
                 if (paymentError.code === 'Canceled') {
-                    // User canceled, do nothing
                     return;
                 }
                 throw new Error(paymentError.message);
             }
 
             // 4. Success
-            Alert.alert('Sucesso!', 'Assinatura realizada com sucesso. Aproveite seu período de teste!');
+            Alert.alert('Sucesso!', 'Assinatura realizada com sucesso. Aproveite seu periodo de teste!');
 
-            // Wait a moment for webhook to process
             await new Promise(resolve => setTimeout(resolve, 2000));
-
-            await refreshSubscription(); // Force update context
-            router.replace('/(tabs)'); // Navigate back to home
+            await refreshSubscription();
+            router.replace('/(tabs)');
 
         } catch (error: any) {
             console.error(error);
@@ -148,6 +226,50 @@ export default function SubscriptionScreen() {
         } catch {
             return [];
         }
+    };
+
+    const getButtonText = (plan: Plan): string => {
+        if (plan.id === currentPlanId) return 'Seu Plano';
+        if (plan.slug === 'enterprise') return 'Fale Conosco';
+
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        if (currentPlan) {
+            if (plan.price_monthly > currentPlan.price_monthly) {
+                return isTrialing ? 'Mudar para Este' : 'Fazer Upgrade';
+            }
+            if (plan.price_monthly < currentPlan.price_monthly) {
+                return isTrialing ? 'Mudar para Este' : 'Fazer Downgrade';
+            }
+        }
+        return 'Assinar Agora';
+    };
+
+    const getButtonIcon = (plan: Plan) => {
+        if (plan.id === currentPlanId || plan.slug === 'enterprise') return null;
+
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        if (!currentPlan) return null;
+
+        if (plan.price_monthly > currentPlan.price_monthly) {
+            return <ArrowUp size={16} color="white" style={{ marginRight: 6 }} />;
+        }
+        if (plan.price_monthly < currentPlan.price_monthly) {
+            return <ArrowDown size={16} color="white" style={{ marginRight: 6 }} />;
+        }
+        return null;
+    };
+
+    const getButtonStyle = (plan: Plan): string => {
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        if (!currentPlan) return 'bg-teal-600';
+
+        if (plan.price_monthly > currentPlan.price_monthly) {
+            return 'bg-green-600'; // Upgrade
+        }
+        if (plan.price_monthly < currentPlan.price_monthly) {
+            return 'bg-amber-600'; // Downgrade
+        }
+        return 'bg-teal-600';
     };
 
     if (loading) {
@@ -246,23 +368,22 @@ export default function SubscriptionScreen() {
                                         <TouchableOpacity
                                             onPress={() => handleSubscribe(plan)}
                                             disabled={processing || isCurrent || isEnterprise}
-                                            className={`py-4 rounded-xl items-center justify-center ${isCurrent
+                                            className={`py-4 rounded-xl items-center justify-center flex-row ${isCurrent
                                                 ? 'bg-gray-100'
                                                 : isEnterprise
                                                     ? 'border border-gray-300'
-                                                    : 'bg-teal-600'
+                                                    : getButtonStyle(plan)
                                                 }`}
                                         >
                                             {processing && !isCurrent && !isEnterprise ? (
                                                 <ActivityIndicator color="white" />
                                             ) : (
-                                                <Text className={`font-bold ${isCurrent ? 'text-gray-500' : isEnterprise ? 'text-gray-700' : 'text-white'}`}>
-                                                    {isCurrent
-                                                        ? 'Seu Plano'
-                                                        : isEnterprise
-                                                            ? 'Fale Conosco'
-                                                            : 'Assinar Agora'}
-                                                </Text>
+                                                <>
+                                                    {getButtonIcon(plan)}
+                                                    <Text className={`font-bold ${isCurrent ? 'text-gray-500' : isEnterprise ? 'text-gray-700' : 'text-white'}`}>
+                                                        {getButtonText(plan)}
+                                                    </Text>
+                                                </>
                                             )}
                                         </TouchableOpacity>
                                     </View>

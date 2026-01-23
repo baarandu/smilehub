@@ -3,11 +3,20 @@ import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
 import { PaymentModal } from '@/components/subscription/PaymentModal';
 import { subscriptionService } from '@/services/subscription';
 import { useToast } from '@/components/ui/use-toast';
-// import { useAuth } from '@/components/auth/AuthProvider'; // Removed broken import
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 
@@ -26,6 +35,13 @@ export default function Pricing() {
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [clinicId, setClinicId] = useState<string | null>(null);
     const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
+    const [isTrialing, setIsTrialing] = useState(false);
+    const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
+
+    // Plan change confirmation dialogs
+    const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
+    const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+    const [pendingPlanChange, setPendingPlanChange] = useState<Plan | null>(null);
 
     useEffect(() => {
         console.log('PRICING_PAGE: Mounted');
@@ -60,8 +76,68 @@ export default function Pricing() {
                 if (subStatus.isActive || subStatus.isTrialing) {
                     console.log('PRICING_PAGE: Setting currentPlanId to:', subStatus.plan?.id);
                     setCurrentPlanId(subStatus.plan?.id || null);
+                    setIsTrialing(subStatus.isTrialing);
+                    setCurrentPeriodEnd(subStatus.subscription?.current_period_end || null);
                 }
             }
+        }
+    };
+
+    const handlePlanChange = async (plan: Plan) => {
+        if (!userId || !clinicId) {
+            toast({ title: 'Erro', description: 'Dados do usuario nao encontrados.', variant: 'destructive' });
+            return;
+        }
+
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        if (!currentPlan) {
+            // No current plan, treat as new subscription
+            handleSubscribe(plan);
+            return;
+        }
+
+        const isUpgrade = plan.price_monthly > currentPlan.price_monthly;
+
+        setPendingPlanChange(plan);
+
+        if (isUpgrade) {
+            setUpgradeDialogOpen(true);
+        } else {
+            setDowngradeDialogOpen(true);
+        }
+    };
+
+    const confirmPlanChange = async () => {
+        if (!pendingPlanChange || !clinicId || !userId) return;
+
+        setUpgradeDialogOpen(false);
+        setDowngradeDialogOpen(false);
+        setProcessing(true);
+
+        try {
+            const result = await subscriptionService.changePlan(clinicId, pendingPlanChange.id, userId);
+
+            if (result.success) {
+                toast({
+                    title: result.isUpgrade ? 'Upgrade Realizado!' : 'Downgrade Agendado!',
+                    description: result.message,
+                });
+
+                // Refresh subscription data
+                await getCurrentUser();
+            } else {
+                throw new Error(result.message || 'Erro ao mudar plano');
+            }
+        } catch (error: any) {
+            console.error('Plan change error:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao mudar plano',
+                description: error.message || 'Tente novamente.',
+            });
+        } finally {
+            setProcessing(false);
+            setPendingPlanChange(null);
         }
     };
 
@@ -145,10 +221,38 @@ export default function Pricing() {
         if (currentPlanId === plan.id) return 'Plano Atual';
 
         const currentPlan = plans.find(p => p.id === currentPlanId);
-        if (currentPlan && plan.price_monthly > currentPlan.price_monthly) return 'Fazer Upgrade';
-        if (currentPlan && plan.price_monthly < currentPlan.price_monthly) return 'Fazer Downgrade'; // Logic for downgrade needs more care usually (cancel/prorate), but for MVP we label it.
+        if (currentPlan && plan.price_monthly > currentPlan.price_monthly) {
+            return isTrialing ? 'Mudar para Este' : 'Fazer Upgrade';
+        }
+        if (currentPlan && plan.price_monthly < currentPlan.price_monthly) {
+            return isTrialing ? 'Mudar para Este' : 'Fazer Downgrade';
+        }
 
         return 'Assinar Agora';
+    };
+
+    const getButtonIcon = (plan: Plan) => {
+        const currentPlan = plans.find(p => p.id === currentPlanId);
+        if (!currentPlan || currentPlanId === plan.id) return null;
+
+        if (plan.price_monthly > currentPlan.price_monthly) {
+            return <ArrowUp className="mr-2 h-4 w-4" />;
+        }
+        if (plan.price_monthly < currentPlan.price_monthly) {
+            return <ArrowDown className="mr-2 h-4 w-4" />;
+        }
+        return null;
+    };
+
+    const handleButtonClick = (plan: Plan) => {
+        // If no current plan or this is the current plan, use normal subscribe flow
+        if (!currentPlanId || currentPlanId === plan.id) {
+            handleSubscribe(plan);
+            return;
+        }
+
+        // Otherwise, handle as plan change
+        handlePlanChange(plan);
     };
 
     const getButtonVariant = (plan: Plan) => {
@@ -209,10 +313,14 @@ export default function Pricing() {
                                 <Button
                                     className="w-full"
                                     variant={getButtonVariant(plan)}
-                                    onClick={() => handleSubscribe(plan)}
+                                    onClick={() => handleButtonClick(plan)}
                                     disabled={processing || isCurrent || plan.slug === 'enterprise'}
                                 >
-                                    {processing && selectedPlan?.id === plan.id ? <Loader2 className="animate-spin mr-2" /> : null}
+                                    {processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id) ? (
+                                        <Loader2 className="animate-spin mr-2" />
+                                    ) : (
+                                        getButtonIcon(plan)
+                                    )}
                                     {plan.slug === 'enterprise' ? 'Fale Conosco' : getButtonText(plan)}
                                 </Button>
                             </CardFooter>
@@ -252,7 +360,7 @@ export default function Pricing() {
 
                             if (status.isActive || status.isTrialing) {
                                 clearInterval(checkInterval);
-                                toast({ title: 'Sucesso!', description: 'Assinatura ativada com sucesso! 🚀' });
+                                toast({ title: 'Sucesso!', description: 'Assinatura ativada com sucesso!' });
                                 window.location.href = '/';
                             } else if (attempts >= maxAttempts) {
                                 clearInterval(checkInterval);
@@ -265,6 +373,107 @@ export default function Pricing() {
                     }, 1000);
                 }}
             />
+
+            {/* Upgrade Confirmation Dialog */}
+            <AlertDialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <ArrowUp className="h-5 w-5 text-green-600" />
+                            Confirmar Upgrade
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                            <p>
+                                Voce esta prestes a fazer upgrade para o plano <strong>{pendingPlanChange?.name}</strong>.
+                            </p>
+                            {isTrialing ? (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800">
+                                    <p className="font-medium">Periodo de Trial</p>
+                                    <p className="text-sm">
+                                        Como voce ainda esta no periodo de teste, a mudanca sera aplicada imediatamente
+                                        e voce continuara usando o trial ate o fim do periodo.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                                    <p className="font-medium">Cobranca Proporcional</p>
+                                    <p className="text-sm">
+                                        Sera cobrado um valor proporcional pela diferenca de plano ate o fim do
+                                        periodo atual. O novo valor cheio sera cobrado na proxima renovacao.
+                                    </p>
+                                </div>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={processing}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmPlanChange}
+                            disabled={processing}
+                            className="bg-green-600 hover:bg-green-700"
+                        >
+                            {processing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                            Confirmar Upgrade
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Downgrade Confirmation Dialog */}
+            <AlertDialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-600" />
+                            Confirmar Downgrade
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-3">
+                            <p>
+                                Voce esta prestes a fazer downgrade para o plano <strong>{pendingPlanChange?.name}</strong>.
+                            </p>
+                            {isTrialing ? (
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800">
+                                    <p className="font-medium">Periodo de Trial</p>
+                                    <p className="text-sm">
+                                        Como voce ainda esta no periodo de teste, a mudanca sera aplicada imediatamente.
+                                        Voce pode perder acesso a algumas funcionalidades do plano atual.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800">
+                                    <p className="font-medium">Agendado para Proxima Renovacao</p>
+                                    <p className="text-sm">
+                                        Voce continuara com acesso ao plano atual ate{' '}
+                                        <strong>
+                                            {currentPeriodEnd
+                                                ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR')
+                                                : 'o fim do periodo'}
+                                        </strong>
+                                        . Apos essa data, seu plano sera alterado automaticamente.
+                                    </p>
+                                </div>
+                            )}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800">
+                                <p className="text-sm">
+                                    <strong>Atencao:</strong> O plano {pendingPlanChange?.name} pode ter limites menores
+                                    de usuarios, pacientes ou outras funcionalidades.
+                                </p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={processing}>Manter Plano Atual</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmPlanChange}
+                            disabled={processing}
+                            className="bg-amber-600 hover:bg-amber-700"
+                        >
+                            {processing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                            Confirmar Downgrade
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

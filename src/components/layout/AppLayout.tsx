@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,6 +17,8 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
+import { TrialBanner } from '@/components/subscription/TrialBanner';
+import { useClinic } from '@/contexts/ClinicContext';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -38,6 +40,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const { role } = useClinic();
+
+  // Filter nav items based on role
+  // Secretaries (assistant) cannot access Financeiro
+  const filteredNavItems = useMemo(() => {
+    if (role === 'assistant') {
+      return navItems.filter(item => item.to !== '/financeiro');
+    }
+    return navItems;
+  }, [role]);
 
   // Emails with early access to AI Secretary (beta testers)
   const AI_SECRETARY_ALLOWED_EMAILS = [
@@ -139,7 +151,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         {/* Navigation */}
         <nav className="p-4 space-y-1">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = location.pathname === item.to;
             return (
               <NavLink
@@ -211,6 +223,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content */}
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8 animate-fade-in">
+          <TrialBanner />
           {children}
         </div>
       </main>
