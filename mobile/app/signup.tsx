@@ -64,7 +64,7 @@ export default function SignUp() {
                     <View className="mb-8 items-center">
                         <Image
                             source={require('../assets/logo-login.png')}
-                            style={{ width: 80, height: 80 }}
+                            style={{ width: 80, height: 80, borderRadius: 16 }}
                             resizeMode="contain"
                             className="mb-4"
                         />

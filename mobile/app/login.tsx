@@ -90,7 +90,7 @@ export default function Login() {
                     <View className="items-center mb-10">
                         <Image
                             source={require('../assets/logo-login.png')}
-                            style={{ width: 120, height: 120 }}
+                            style={{ width: 120, height: 120, borderRadius: 24 }}
                             resizeMode="contain"
                             className="mb-4"
                         />

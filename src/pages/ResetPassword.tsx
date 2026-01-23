@@ -115,7 +115,7 @@ export default function ResetPassword() {
                     <img
                         src="/logo-login.png"
                         alt="Logo"
-                        className="h-16 w-auto mx-auto mb-4"
+                        className="w-24 h-24 mx-auto mb-4 object-contain rounded-2xl"
                     />
                     <h1 className="text-2xl font-bold text-gray-900">
                         Redefinir Senha
