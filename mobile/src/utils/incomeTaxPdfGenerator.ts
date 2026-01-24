@@ -350,8 +350,26 @@ function generateHtmlContent(summary: IRSummary): string {
         `}
       </div>
 
+      <!-- PAGE 6: Disclaimer -->
+      <div class="section page-break">
+        <div class="section-title">AVISO IMPORTANTE</div>
+        <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 15px; margin-top: 15px;">
+          <p style="margin-bottom: 12px; font-weight: bold; color: #92400e;">
+            Este relatorio e um documento INFORMATIVO gerado automaticamente para fins de organizacao e planejamento tributario.
+            NAO substitui a assessoria de um contador ou profissional qualificado.
+          </p>
+          <ul style="margin: 0; padding-left: 20px; font-size: 10px; color: #78350f;">
+            <li style="margin-bottom: 8px;">Os valores apresentados sao <strong>estimativas</strong> baseadas nos dados registrados no sistema e nas aliquotas vigentes.</li>
+            <li style="margin-bottom: 8px;">As aliquotas e faixas de impostos podem sofrer alteracoes pela legislacao. Sempre consulte a legislacao atualizada.</li>
+            <li style="margin-bottom: 8px;">Para fins de declaracao oficial de Imposto de Renda junto a Receita Federal, os dados devem ser conferidos por um contador.</li>
+            <li style="margin-bottom: 8px;">O regime tributario mais vantajoso depende de fatores especificos. Consulte seu contador antes de tomar decisoes.</li>
+            <li>Este sistema nao oferece consultoria tributaria. As informacoes sao fornecidas como ferramenta de apoio a gestao.</li>
+          </ul>
+        </div>
+      </div>
+
       <div class="footer">
-        Relatorio gerado em ${formatDate(new Date())} - Documento informativo para fins de conferencia
+        Relatorio gerado em ${formatDate(new Date())} - Documento informativo - Consulte um contador para fins oficiais
       </div>
     </body>
     </html>

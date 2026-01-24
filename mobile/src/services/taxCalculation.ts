@@ -258,8 +258,9 @@ async function calculateSimples(
         tax_label: getTaxTypeLabel('das'),
         base_value: grossIncome,
         rate: effectiveRate,
-        rate_display: bracketUsed,
+        rate_display: `${formatTaxRate(effectiveRate)} efetiva`,
         calculated_amount: tax,
+        notes: `Nominal: ${bracketUsed}. Efetiva = (RBT12 x Nominal - Deducao) / RBT12`,
       });
     }
   }

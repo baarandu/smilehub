@@ -366,11 +366,18 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
       )}
 
       {/* Disclaimer */}
-      <div className="p-4 bg-muted/50 rounded-lg">
-        <p className="text-xs text-muted-foreground">
-          <strong>Aviso:</strong> Os calculos apresentados sao estimativas baseadas nas aliquotas configuradas
-          e servem apenas como referencia. Para fins de declaracao oficial, consulte um contador ou profissional
-          qualificado. As aliquotas e faixas podem ser alteradas pela legislacao vigente.
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+        <p className="text-sm font-medium text-amber-800">
+          Importante: Simulacao para fins de planejamento
+        </p>
+        <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+          <li>Os valores apresentados sao <strong>estimativas</strong> baseadas nas aliquotas vigentes e servem apenas como referencia.</li>
+          <li>Aliquotas do Simples Nacional exibidas sao <strong>efetivas</strong> (calculadas pela formula oficial).</li>
+          <li>O regime mais vantajoso depende de diversos fatores especificos. <strong>Consulte seu contador</strong> antes de tomar decisoes.</li>
+          <li>As aliquotas e faixas podem ser alteradas pela legislacao. Valores baseados na tabela 2024.</li>
+        </ul>
+        <p className="text-xs text-amber-600 italic">
+          Este sistema nao substitui assessoria contabil profissional.
         </p>
       </div>
     </div>

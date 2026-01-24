@@ -277,9 +277,21 @@ export function TaxCalculationSection({ summary, year }: Props) {
       )}
 
       {/* Disclaimer */}
-      <View className="bg-gray-50 rounded-xl p-3 mt-2">
-        <Text className="text-xs text-gray-500">
-          Calculos estimados. Consulte um contador para declaracao oficial.
+      <View className="bg-amber-50 rounded-xl p-4 mt-3 border border-amber-200">
+        <Text className="text-sm font-medium text-amber-800 mb-2">
+          Importante: Simulacao para planejamento
+        </Text>
+        <Text className="text-xs text-amber-700 mb-1">
+          • Valores sao estimativas baseadas nas aliquotas vigentes
+        </Text>
+        <Text className="text-xs text-amber-700 mb-1">
+          • Aliquotas do Simples sao efetivas (formula oficial)
+        </Text>
+        <Text className="text-xs text-amber-700 mb-1">
+          • Consulte seu contador antes de decisoes tributarias
+        </Text>
+        <Text className="text-xs text-amber-600 italic mt-2">
+          Nao substitui assessoria contabil profissional
         </Text>
       </View>
     </View>

@@ -330,6 +330,55 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
     }
   }
 
+  // ============ DISCLAIMER PAGE ============
+  doc.addPage();
+  y = 30;
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('AVISO IMPORTANTE', pageWidth / 2, y, { align: 'center' });
+  y += 20;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+
+  const disclaimerText = [
+    'Este relatorio e um documento INFORMATIVO gerado automaticamente para fins de',
+    'organizacao e planejamento tributario. NAO substitui a assessoria de um contador',
+    'ou profissional qualificado.',
+    '',
+    'IMPORTANTE:',
+    '',
+    '1. Os valores apresentados sao estimativas baseadas nos dados registrados no sistema',
+    '   e nas aliquotas vigentes na data de geracao do relatorio.',
+    '',
+    '2. As aliquotas e faixas de impostos podem sofrer alteracoes pela legislacao.',
+    '   Sempre consulte a legislacao atualizada e/ou um profissional contabil.',
+    '',
+    '3. Para fins de declaracao oficial de Imposto de Renda junto a Receita Federal,',
+    '   os dados devem ser conferidos e validados por um contador.',
+    '',
+    '4. O regime tributario mais vantajoso depende de diversos fatores especificos',
+    '   de cada contribuinte. Recomendamos consultar seu contador antes de tomar',
+    '   decisoes sobre enquadramento tributario.',
+    '',
+    '5. Este sistema nao oferece consultoria tributaria. As informacoes sao fornecidas',
+    '   apenas como ferramenta de apoio a gestao financeira.',
+    '',
+    '',
+    'Ao utilizar este relatorio, voce concorda que compreendeu estas limitacoes.',
+  ];
+
+  for (const line of disclaimerText) {
+    doc.text(line, margin, y);
+    y += 6;
+  }
+
+  y += 10;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.text(`Relatorio gerado em ${formatDate(new Date())}`, margin, y);
+
   // ============ Footer on all pages ============
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
@@ -340,7 +389,7 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
 
     // Footer text
     doc.text(
-      `Relatorio gerado em ${formatDate(new Date())} - Documento informativo para fins de conferencia`,
+      `Documento informativo - Consulte um contador para fins oficiais`,
       pageWidth / 2,
       pageHeight - 10,
       { align: 'center' }

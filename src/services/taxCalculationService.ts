@@ -291,9 +291,9 @@ async function calculateSimples(
         tax_label: getTaxTypeLabel('das'),
         base_value: grossIncome,
         rate: effectiveRate,
-        rate_display: bracketUsed,
+        rate_display: `${formatTaxRate(effectiveRate)} efetiva`,
         calculated_amount: tax,
-        notes: `Aliquota efetiva baseada no RBT12`,
+        notes: `Aliquota efetiva = (RBT12 x Nominal - Deducao) / RBT12. Nominal: ${bracketUsed}`,
       });
     }
   }
