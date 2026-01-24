@@ -9,6 +9,25 @@ const formatDate = (date: Date) => {
   return date.toLocaleDateString('pt-BR');
 };
 
+// Carnê-Leão tax table for 2024/2025 (monthly)
+const CARNE_LEAO_TABLE = [
+  { limit: 2259.20, rate: 0, deduction: 0 },
+  { limit: 2826.65, rate: 0.075, deduction: 169.44 },
+  { limit: 3751.05, rate: 0.15, deduction: 381.44 },
+  { limit: 4664.68, rate: 0.225, deduction: 662.77 },
+  { limit: Infinity, rate: 0.275, deduction: 896.00 },
+];
+
+const calculateCarneLeao = (baseCalculo: number): { aliquota: number; imposto: number } => {
+  for (const faixa of CARNE_LEAO_TABLE) {
+    if (baseCalculo <= faixa.limit) {
+      const imposto = Math.max(0, baseCalculo * faixa.rate - faixa.deduction);
+      return { aliquota: faixa.rate * 100, imposto };
+    }
+  }
+  return { aliquota: 27.5, imposto: baseCalculo * 0.275 - 896.00 };
+};
+
 /**
  * Generate the annual IR Report PDF (Dossie IR)
  */
@@ -327,6 +346,292 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
       doc.text(`R$ ${formatCurrency(source.total_amount)}`, margin + 115, y);
       doc.text(`R$ ${formatCurrency(source.irrf_total)}`, pageWidth - margin - 2, y, { align: 'right' });
       y += 7;
+    }
+  }
+
+  // ============ PAGE 6: Carnê-Leão (if PF uses it) ============
+  if (summary.fiscal_profile?.pf_enabled && summary.fiscal_profile?.pf_uses_carne_leao) {
+    doc.addPage();
+    y = 30;
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DEMONSTRATIVO CARNE-LEAO MENSAL', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Simulacao baseada na tabela progressiva mensal vigente', pageWidth / 2, y, { align: 'center' });
+    y += 12;
+
+    // Table Header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Mes', margin + 2, y);
+    doc.text('Receita PF', margin + 30, y);
+    doc.text('(-) Deducoes', margin + 58, y);
+    doc.text('Base Calculo', margin + 88, y);
+    doc.text('Aliq.', margin + 118, y);
+    doc.text('IR Devido', margin + 135, y);
+    doc.text('(-) IRRF', margin + 158, y);
+    y += 8;
+
+    // Table Rows with Carnê-Leão calculation
+    doc.setFont('helvetica', 'normal');
+    let totalIRDevido = 0;
+    let totalIRRFRetido = 0;
+
+    for (const month of summary.monthly) {
+      if (y > 270) {
+        doc.addPage();
+        y = 30;
+      }
+
+      const baseCalculo = Math.max(0, month.income_pf - month.expenses_deductible);
+      const { aliquota, imposto } = calculateCarneLeao(baseCalculo);
+      const irrfMes = month.irrf_total; // IRRF retido no mês
+      totalIRDevido += imposto;
+      totalIRRFRetido += irrfMes;
+
+      doc.text(month.month_name.substring(0, 3), margin + 2, y);
+      doc.text(`R$ ${formatCurrency(month.income_pf)}`, margin + 25, y);
+      doc.text(`R$ ${formatCurrency(month.expenses_deductible)}`, margin + 55, y);
+      doc.text(`R$ ${formatCurrency(baseCalculo)}`, margin + 85, y);
+      doc.text(`${aliquota.toFixed(1)}%`, margin + 118, y);
+      doc.text(`R$ ${formatCurrency(imposto)}`, margin + 133, y);
+      doc.text(`R$ ${formatCurrency(irrfMes)}`, margin + 158, y);
+      y += 6;
+    }
+
+    // Totals
+    y += 3;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y - 3, pageWidth - margin, y - 3);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL', margin + 2, y);
+    doc.text(`R$ ${formatCurrency(summary.total_income_pf)}`, margin + 25, y);
+    doc.text(`R$ ${formatCurrency(summary.total_expenses_deductible)}`, margin + 55, y);
+    doc.text(`R$ ${formatCurrency(Math.max(0, summary.total_income_pf - summary.total_expenses_deductible))}`, margin + 85, y);
+    doc.text(`R$ ${formatCurrency(totalIRDevido)}`, margin + 133, y);
+    doc.text(`R$ ${formatCurrency(totalIRRFRetido)}`, margin + 158, y);
+
+    y += 15;
+
+    // Summary box
+    doc.setFillColor(255, 250, 240);
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 35, 3, 3, 'FD');
+    y += 10;
+
+    doc.setFontSize(10);
+    const saldoIR = totalIRDevido - totalIRRFRetido;
+    doc.text('Resumo Carne-Leao:', margin + 5, y);
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total IR Devido no ano: R$ ${formatCurrency(totalIRDevido)}`, margin + 5, y);
+    doc.text(`Total IRRF Retido: R$ ${formatCurrency(totalIRRFRetido)}`, margin + 85, y);
+    y += 8;
+    doc.setFont('helvetica', 'bold');
+    if (saldoIR > 0) {
+      doc.setTextColor(200, 0, 0);
+      doc.text(`Saldo a Pagar: R$ ${formatCurrency(saldoIR)}`, margin + 5, y);
+    } else {
+      doc.setTextColor(0, 128, 0);
+      doc.text(`Saldo a Restituir: R$ ${formatCurrency(Math.abs(saldoIR))}`, margin + 5, y);
+    }
+    doc.setTextColor(0, 0, 0);
+  }
+
+  // ============ PAGE 7: DMED - Relação para Declaração ============
+  if (summary.payers_pf.length > 0) {
+    doc.addPage();
+    y = 30;
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DMED - DECLARACAO DE SERVICOS MEDICOS', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Relacao de pacientes para a Declaracao de Servicos Medicos e Receita Saude', pageWidth / 2, y, { align: 'center' });
+    y += 15;
+
+    // Info box
+    doc.setFillColor(240, 248, 255);
+    doc.roundedRect(margin, y, pageWidth - 2 * margin, 25, 3, 3, 'FD');
+    y += 8;
+    doc.setFontSize(8);
+    doc.text('A DMED e obrigatoria para PJ prestadoras de servicos de saude. O prazo de entrega', margin + 5, y);
+    y += 5;
+    doc.text('geralmente e ate o ultimo dia util de marco do ano seguinte ao ano-calendario.', margin + 5, y);
+    y += 5;
+    doc.text('Os dados abaixo devem ser conferidos com seu contador antes do envio.', margin + 5, y);
+    y += 12;
+
+    // Table Header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('#', margin + 2, y);
+    doc.text('CPF Responsavel', margin + 12, y);
+    doc.text('Nome do Paciente', margin + 55, y);
+    doc.text('Qtd.', margin + 125, y);
+    doc.text('Valor Total', pageWidth - margin - 25, y);
+    y += 8;
+
+    // Table Rows - sorted by amount
+    doc.setFont('helvetica', 'normal');
+    const sortedPayers = [...summary.payers_pf].sort((a, b) => b.total_amount - a.total_amount);
+    let count = 0;
+
+    for (const payer of sortedPayers) {
+      if (y > 270) {
+        doc.addPage();
+        y = 30;
+      }
+
+      count++;
+      doc.text(count.toString(), margin + 2, y);
+      doc.text(payer.cpf || 'Nao informado', margin + 12, y);
+
+      // Truncate name
+      let displayName = payer.name;
+      const maxNameWidth = 65;
+      if (doc.getTextWidth(displayName) > maxNameWidth) {
+        while (doc.getTextWidth(displayName + '...') > maxNameWidth && displayName.length > 0) {
+          displayName = displayName.slice(0, -1);
+        }
+        displayName += '...';
+      }
+      doc.text(displayName, margin + 55, y);
+      doc.text(payer.transaction_count?.toString() || '1', margin + 128, y);
+      doc.text(`R$ ${formatCurrency(payer.total_amount)}`, pageWidth - margin - 2, y, { align: 'right' });
+      y += 6;
+    }
+
+    // Total
+    y += 3;
+    doc.line(margin, y - 3, pageWidth - margin, y - 3);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL', margin + 2, y);
+    doc.text(`${sortedPayers.length} pacientes`, margin + 55, y);
+    doc.text(`R$ ${formatCurrency(summary.total_income_pf)}`, pageWidth - margin - 2, y, { align: 'right' });
+  }
+
+  // ============ PAGE 8: Checklist de Documentos ============
+  doc.addPage();
+  y = 30;
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CHECKLIST DE DOCUMENTOS PARA O CONTADOR', pageWidth / 2, y, { align: 'center' });
+  y += 15;
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+
+  // Determine which checklist based on fiscal profile
+  const isPF = summary.fiscal_profile?.pf_enabled;
+  const isPJ = summary.fiscal_profile?.pj_enabled;
+  const regime = summary.fiscal_profile?.pj_regime_tributario;
+
+  // PF Checklist
+  if (isPF) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('PESSOA FISICA (Autonomo):', margin, y);
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+
+    const pfChecklist = [
+      '[ ] CPF e RG',
+      '[ ] Comprovante de endereco atualizado',
+      '[ ] Dados bancarios (para restituicao)',
+      '[ ] Livro-Caixa mensal completo',
+      '[ ] Informes de rendimentos de convenios/clinicas',
+      '[ ] Recibos de aluguel do consultorio',
+      '[ ] Notas de materiais odontologicos',
+      '[ ] Comprovante de anuidade CRO',
+      '[ ] Guias de INSS pagas (se autonomo)',
+      '[ ] Comprovantes de despesas medicas pessoais',
+      '[ ] Informe de previdencia privada (PGBL)',
+      '[ ] Extratos de investimentos em 31/12',
+      '[ ] Documentos de imoveis e veiculos',
+    ];
+
+    for (const item of pfChecklist) {
+      doc.text(item, margin + 5, y);
+      y += 6;
+    }
+    y += 5;
+  }
+
+  // PJ Checklist
+  if (isPJ) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(`PESSOA JURIDICA (${regime === 'simples' ? 'Simples Nacional' : regime === 'lucro_presumido' ? 'Lucro Presumido' : 'Lucro Real'}):`, margin, y);
+    y += 8;
+    doc.setFont('helvetica', 'normal');
+
+    const pjBaseChecklist = [
+      '[ ] CNPJ e Contrato Social',
+      '[ ] Alvara de funcionamento',
+      '[ ] Certificado Digital (e-CNPJ)',
+      '[ ] Notas fiscais emitidas (12 meses)',
+      '[ ] Extratos bancarios da conta PJ',
+      '[ ] Folha de pagamento (12 meses)',
+      '[ ] Recibos de pro-labore',
+      '[ ] Comprovantes de distribuicao de lucros',
+      '[ ] Relatorios de maquininha de cartao',
+    ];
+
+    for (const item of pjBaseChecklist) {
+      doc.text(item, margin + 5, y);
+      y += 6;
+    }
+
+    // Regime-specific items
+    if (regime === 'simples') {
+      y += 3;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Especifico Simples Nacional:', margin + 5, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.text('[ ] Guias DAS pagas (12 meses)', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Calculo do Fator R', margin + 10, y);
+      y += 6;
+      doc.text('[ ] DEFIS do ano anterior', margin + 10, y);
+    } else if (regime === 'lucro_presumido') {
+      y += 3;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Especifico Lucro Presumido:', margin + 5, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.text('[ ] DARFs IRPJ/CSLL (trimestrais)', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Balancete trimestral', margin + 10, y);
+      y += 6;
+      doc.text('[ ] DRE anual', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Balanco Patrimonial', margin + 10, y);
+    } else if (regime === 'lucro_real') {
+      y += 3;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Especifico Lucro Real:', margin + 5, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.text('[ ] Livro Diario e Razao', margin + 10, y);
+      y += 6;
+      doc.text('[ ] LALUR/LACS', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Controle de estoque', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Inventario em 31/12', margin + 10, y);
+      y += 6;
+      doc.text('[ ] Laudos de depreciacao', margin + 10, y);
     }
   }
 

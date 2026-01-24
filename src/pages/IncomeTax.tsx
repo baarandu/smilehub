@@ -13,7 +13,9 @@ import { FiscalSettingsTab } from '@/components/incomeTax/FiscalSettingsTab';
 import { IRIncomeTab } from '@/components/incomeTax/IRIncomeTab';
 import { IRExpensesTab } from '@/components/incomeTax/IRExpensesTab';
 import { AnnualReportTab } from '@/components/incomeTax/AnnualReportTab';
+import { FiscalDocumentsTab } from '@/components/incomeTax/FiscalDocumentsTab';
 import { TaxRatesConfigModal } from '@/components/incomeTax/TaxRatesConfigModal';
+import type { TaxRegime } from '@/types/fiscalDocuments';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { FiscalProfile, PJSource, TransactionWithIR, IRSummary } from '@/types/incomeTax';
 import { toast } from 'sonner';
@@ -149,11 +151,12 @@ export default function IncomeTax() {
 
       {/* Tabs */}
       <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
-          <TabsTrigger value="settings">Configuracoes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 mb-8">
+          <TabsTrigger value="settings">Configurações</TabsTrigger>
+          <TabsTrigger value="documents">Documentos</TabsTrigger>
           <TabsTrigger value="income">Receitas</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
-          <TabsTrigger value="report">Relatorio Anual</TabsTrigger>
+          <TabsTrigger value="report">Relatório</TabsTrigger>
         </TabsList>
 
         <TabsContent value="settings">
@@ -162,6 +165,17 @@ export default function IncomeTax() {
             pjSources={pjSources}
             onProfileUpdated={handleProfileUpdated}
             onPJSourcesUpdated={handlePJSourcesUpdated}
+          />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <FiscalDocumentsTab
+            year={selectedYear}
+            taxRegime={
+              fiscalProfile?.pj_enabled
+                ? (fiscalProfile.pj_regime_tributario as TaxRegime) || 'simples'
+                : 'pf'
+            }
           />
         </TabsContent>
 
