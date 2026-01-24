@@ -17,6 +17,7 @@ import {
   ChevronDown,
   RefreshCw,
   Calculator,
+  FolderOpen,
 } from 'lucide-react-native';
 import { incomeTaxService } from '../../services/incomeTax';
 import type {
@@ -26,22 +27,25 @@ import type {
   IRSummary,
 } from '../../types/incomeTax';
 import { FiscalSettingsTab } from './FiscalSettingsTab';
+import { FiscalDocumentsTab } from './FiscalDocumentsTab';
 import { IRIncomeTab } from './IRIncomeTab';
 import { IRExpensesTab } from './IRExpensesTab';
 import { AnnualReportTab } from './AnnualReportTab';
 import { TaxRatesConfigModal } from './TaxRatesConfigModal';
+import type { TaxRegime } from '../../types/fiscalDocuments';
 
 interface Props {
   onBack?: () => void;
 }
 
-type TabType = 'settings' | 'income' | 'expenses' | 'report';
+type TabType = 'settings' | 'documents' | 'income' | 'expenses' | 'report';
 
 const TABS: { key: TabType; label: string; icon: any }[] = [
   { key: 'settings', label: 'Config', icon: Settings },
+  { key: 'documents', label: 'Docs', icon: FolderOpen },
   { key: 'income', label: 'Receitas', icon: TrendingUp },
   { key: 'expenses', label: 'Despesas', icon: TrendingDown },
-  { key: 'report', label: 'Relatorio', icon: BarChart3 },
+  { key: 'report', label: 'Relatório', icon: BarChart3 },
 ];
 
 export default function IncomeTaxScreen({ onBack }: Props) {
@@ -133,6 +137,19 @@ export default function IncomeTaxScreen({ onBack }: Props) {
             pjSources={pjSources}
             onProfileUpdated={handleProfileUpdated}
             onPJSourcesUpdated={handlePJSourcesUpdated}
+          />
+        );
+      case 'documents':
+        return (
+          <FiscalDocumentsTab
+            year={selectedYear}
+            taxRegime={
+              fiscalProfile?.pj_enabled
+                ? (fiscalProfile.pj_regime_tributario as TaxRegime) || 'simples'
+                : 'pf'
+            }
+            refreshing={refreshing}
+            onRefresh={onRefresh}
           />
         );
       case 'income':

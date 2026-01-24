@@ -188,6 +188,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            console.log('File selected:', file.name, file.type, file.size);
             setUploadFile(file);
             if (!uploadName) {
                 setUploadName(file.name.replace(/\.[^/.]+$/, ''));
@@ -197,7 +198,18 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Handle upload
     const handleUpload = async () => {
-        if (!uploadFile || !selectedItem || !clinic?.id) return;
+        if (!uploadFile) {
+            toast.error('Selecione um arquivo');
+            return;
+        }
+        if (!selectedItem) {
+            toast.error('Item não selecionado');
+            return;
+        }
+        if (!clinic?.id) {
+            toast.error('Clínica não encontrada');
+            return;
+        }
 
         setUploading(true);
         try {
@@ -218,9 +230,10 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
             setUploadDialogOpen(false);
             resetUploadForm();
             loadData();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error uploading document:', error);
-            toast.error('Erro ao enviar documento');
+            const errorMessage = error?.message || 'Erro desconhecido';
+            toast.error(`Erro ao enviar documento: ${errorMessage}`);
         } finally {
             setUploading(false);
         }
@@ -255,6 +268,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Open upload dialog for a specific item
     const openUploadDialog = (item: FiscalChecklistItem) => {
+        console.log('Opening upload dialog for:', item.label);
         setSelectedItem(item);
         setUploadDialogOpen(true);
     };
@@ -331,6 +345,16 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
             {/* Checklist by Category */}
             <div className="space-y-4">
+                {sections.length === 0 && (
+                    <Card>
+                        <CardContent className="py-8 text-center">
+                            <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">
+                                Nenhum item no checklist para o regime {TAX_REGIME_LABELS[taxRegime]}.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
                 {sections.map((section) => (
                     <Card key={section.category}>
                         <Collapsible

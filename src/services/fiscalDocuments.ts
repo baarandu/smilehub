@@ -70,7 +70,16 @@ async function uploadFile(
             upsert: false,
         });
 
-    if (error) throw error;
+    if (error) {
+        console.error('Storage upload error:', error);
+        if (error.message?.includes('bucket') || error.message?.includes('not found')) {
+            throw new Error('Bucket de armazenamento não encontrado. Verifique se a migração do storage foi executada no Supabase.');
+        }
+        if (error.message?.includes('policy') || error.message?.includes('permission')) {
+            throw new Error('Sem permissão para upload. Verifique as políticas de acesso no Supabase.');
+        }
+        throw new Error(`Erro no upload: ${error.message}`);
+    }
 
     const { data: urlData } = supabase.storage
         .from(BUCKET_NAME)

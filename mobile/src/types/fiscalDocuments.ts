@@ -337,14 +337,17 @@ export function getChecklistByRegime(regime: TaxRegime): FiscalChecklistItem[] {
 export function groupChecklistByCategory(items: FiscalChecklistItem[]): FiscalChecklistSection[] {
     const categories = [...new Set(items.map(i => i.category))];
 
-    return categories.map(category => ({
-        category,
-        label: FISCAL_CATEGORY_LABELS[category],
-        icon: getCategoryIcon(category),
-        items: items.filter(i => i.category === category),
-        completedCount: 0,
-        totalCount: items.filter(i => i.category === category).length,
-    }));
+    return categories.map(category => {
+        const categoryItems = items.filter(i => i.category === category);
+        return {
+            category,
+            label: FISCAL_CATEGORY_LABELS[category],
+            icon: getCategoryIcon(category),
+            items: categoryItems,
+            completedCount: categoryItems.filter(i => i.isComplete).length,
+            totalCount: categoryItems.length,
+        };
+    });
 }
 
 // Helper to get category icon name
