@@ -855,15 +855,15 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
               {/* Info Banner */}
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Valores de fabrica:</strong> As aliquotas e faixas abaixo estao configuradas
-                  conforme a legislacao tributaria brasileira vigente. Voce pode editar qualquer valor
-                  clicando nele. Para reverter, use "Restaurar Padrao".
+                  <strong>Valores de fábrica:</strong> As alíquotas e faixas abaixo estão configuradas
+                  conforme a legislação tributária brasileira vigente. Você pode editar qualquer valor
+                  clicando nele. Para reverter, use "Restaurar Padrão".
                 </p>
               </div>
 
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TaxRegime)}>
                 <TabsList className="grid w-full grid-cols-4 mb-4">
-                  <TabsTrigger value="pf_carne_leao">PF Carne-Leao</TabsTrigger>
+                  <TabsTrigger value="pf_carne_leao">PF Carnê-Leão</TabsTrigger>
                   <TabsTrigger value="simples">Simples</TabsTrigger>
                   <TabsTrigger value="lucro_presumido">Lucro Presumido</TabsTrigger>
                   <TabsTrigger value="lucro_real">Lucro Real</TabsTrigger>

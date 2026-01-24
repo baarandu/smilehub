@@ -136,8 +136,8 @@ export interface TaxTypeInfo {
 
 export const TAX_REGIME_INFO: Record<TaxRegime, TaxRegimeInfo> = {
   pf_carne_leao: {
-    label: 'Pessoa Fisica - Autonomo',
-    description: 'Dentista autonomo sem CNPJ. Tabela progressiva mensal do IRPF com isencao ate R$5.000.',
+    label: 'Pessoa Física - Autônomo',
+    description: 'Dentista autônomo sem CNPJ. Tabela progressiva mensal do IRPF. Com desconto simplificado vigente, rendimentos até ~R$ 2.824 podem ter isenção prática.',
   },
   simples: {
     label: 'Simples Nacional',
@@ -145,42 +145,42 @@ export const TAX_REGIME_INFO: Record<TaxRegime, TaxRegimeInfo> = {
   },
   lucro_presumido: {
     label: 'Lucro Presumido',
-    description: 'Base de calculo presumida de 32% para servicos odontologicos. Impostos sobre faturamento.',
+    description: 'Base de cálculo presumida de 32% para serviços odontológicos. Impostos sobre faturamento.',
   },
   lucro_real: {
     label: 'Lucro Real',
-    description: 'Impostos calculados sobre o lucro liquido real. PIS/COFINS nao-cumulativo com direito a creditos.',
+    description: 'Impostos calculados sobre o lucro líquido real. PIS/COFINS não-cumulativo com direito a créditos.',
   },
 };
 
 export const TAX_TYPE_INFO: Record<TaxType, TaxTypeInfo> = {
   irpf: {
     label: 'IRPF',
-    description: 'Imposto de Renda Pessoa Fisica',
+    description: 'Imposto de Renda Pessoa Física',
   },
   irpj: {
     label: 'IRPJ',
-    description: 'Imposto de Renda Pessoa Juridica',
+    description: 'Imposto de Renda Pessoa Jurídica',
   },
   irpj_adicional: {
     label: 'IRPJ Adicional',
-    description: 'Adicional do IRPJ (10% sobre excedente R$20.000/mes)',
+    description: 'Adicional do IRPJ (10% sobre excedente R$20.000/mês)',
   },
   csll: {
     label: 'CSLL',
-    description: 'Contribuicao Social sobre o Lucro Liquido',
+    description: 'Contribuição Social sobre o Lucro Líquido',
   },
   pis: {
     label: 'PIS',
-    description: 'Programa de Integracao Social',
+    description: 'Programa de Integração Social',
   },
   cofins: {
     label: 'COFINS',
-    description: 'Contribuicao para Financiamento da Seguridade Social',
+    description: 'Contribuição para Financiamento da Seguridade Social',
   },
   iss: {
     label: 'ISS',
-    description: 'Imposto sobre Servicos (2% a 5% conforme municipio)',
+    description: 'Imposto sobre Serviços (2% a 5% conforme município)',
   },
   das: {
     label: 'DAS Anexo III',
@@ -192,7 +192,7 @@ export const TAX_TYPE_INFO: Record<TaxType, TaxTypeInfo> = {
   },
   inss: {
     label: 'INSS',
-    description: 'Contribuicao Previdenciaria (20% autonomo)',
+    description: 'Contribuição Previdenciária (20% autônomo)',
   },
 };
 

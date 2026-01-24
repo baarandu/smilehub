@@ -195,8 +195,8 @@ export interface TaxTypeInfo {
 export const TAX_REGIME_INFO: Record<TaxRegime, TaxRegimeInfo> = {
   pf_carne_leao: {
     value: 'pf_carne_leao',
-    label: 'Pessoa Fisica - Autonomo',
-    description: 'Dentista autonomo sem CNPJ. Tabela progressiva mensal do IRPF com isencao ate R$5.000.',
+    label: 'Pessoa Física - Autônomo',
+    description: 'Dentista autônomo sem CNPJ. Tabela progressiva mensal do IRPF. Com desconto simplificado vigente, rendimentos até ~R$ 2.824 podem ter isenção prática.',
     applicableTaxTypes: ['irpf', 'inss', 'iss'],
   },
   simples: {
@@ -208,13 +208,13 @@ export const TAX_REGIME_INFO: Record<TaxRegime, TaxRegimeInfo> = {
   lucro_presumido: {
     value: 'lucro_presumido',
     label: 'Lucro Presumido',
-    description: 'Base de calculo presumida de 32% para servicos odontologicos. Impostos sobre faturamento.',
+    description: 'Base de cálculo presumida de 32% para serviços odontológicos. Impostos sobre faturamento.',
     applicableTaxTypes: ['irpj', 'irpj_adicional', 'csll', 'pis', 'cofins', 'iss'],
   },
   lucro_real: {
     value: 'lucro_real',
     label: 'Lucro Real',
-    description: 'Impostos calculados sobre o lucro liquido real. PIS/COFINS nao-cumulativo com direito a creditos.',
+    description: 'Impostos calculados sobre o lucro líquido real. PIS/COFINS não-cumulativo com direito a créditos.',
     applicableTaxTypes: ['irpj', 'irpj_adicional', 'csll', 'pis', 'cofins', 'iss'],
   },
 };
@@ -223,37 +223,37 @@ export const TAX_TYPE_INFO: Record<TaxType, TaxTypeInfo> = {
   irpf: {
     value: 'irpf',
     label: 'IRPF',
-    description: 'Imposto de Renda Pessoa Fisica',
+    description: 'Imposto de Renda Pessoa Física',
   },
   irpj: {
     value: 'irpj',
     label: 'IRPJ',
-    description: 'Imposto de Renda Pessoa Juridica',
+    description: 'Imposto de Renda Pessoa Jurídica',
   },
   irpj_adicional: {
     value: 'irpj_adicional',
     label: 'IRPJ Adicional',
-    description: 'Adicional do IRPJ (10% sobre excedente R$20.000/mes)',
+    description: 'Adicional do IRPJ (10% sobre excedente R$20.000/mês)',
   },
   csll: {
     value: 'csll',
     label: 'CSLL',
-    description: 'Contribuicao Social sobre o Lucro Liquido',
+    description: 'Contribuição Social sobre o Lucro Líquido',
   },
   pis: {
     value: 'pis',
     label: 'PIS',
-    description: 'Programa de Integracao Social',
+    description: 'Programa de Integração Social',
   },
   cofins: {
     value: 'cofins',
     label: 'COFINS',
-    description: 'Contribuicao para Financiamento da Seguridade Social',
+    description: 'Contribuição para Financiamento da Seguridade Social',
   },
   iss: {
     value: 'iss',
     label: 'ISS',
-    description: 'Imposto sobre Servicos (2% a 5% conforme municipio)',
+    description: 'Imposto sobre Serviços (2% a 5% conforme município)',
   },
   das: {
     value: 'das',
@@ -268,7 +268,7 @@ export const TAX_TYPE_INFO: Record<TaxType, TaxTypeInfo> = {
   inss: {
     value: 'inss',
     label: 'INSS',
-    description: 'Contribuicao Previdenciaria (20% autonomo)',
+    description: 'Contribuição Previdenciária (20% autônomo)',
   },
 };
 

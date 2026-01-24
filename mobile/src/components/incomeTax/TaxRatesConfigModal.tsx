@@ -93,7 +93,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
       setConfigurations(configs);
     } catch (error) {
       console.error('Error loading tax configs:', error);
-      Alert.alert('Erro', 'Falha ao carregar configuracoes');
+      Alert.alert('Erro', 'Falha ao carregar configurações');
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
   const handleUpdateFlatRate = async (configId: string) => {
     const rate = parseFloat(editValue) / 100;
     if (isNaN(rate) || rate < 0 || rate > 1) {
-      Alert.alert('Erro', 'Valor invalido');
+      Alert.alert('Erro', 'Valor inválido');
       return;
     }
 
@@ -112,9 +112,9 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
       await loadData();
       setEditingId(null);
       onConfigUpdated?.();
-      Alert.alert('Sucesso', 'Aliquota atualizada');
+      Alert.alert('Sucesso', 'Alíquota atualizada');
     } catch (error) {
-      Alert.alert('Erro', 'Falha ao atualizar aliquota');
+      Alert.alert('Erro', 'Falha ao atualizar alíquota');
     } finally {
       setSaving(false);
     }
@@ -126,13 +126,13 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
     if (field === 'rate') {
       value = parseFloat(editValue) / 100;
       if (isNaN(value) || value < 0 || value > 1) {
-        Alert.alert('Erro', 'Valor invalido');
+        Alert.alert('Erro', 'Valor inválido');
         return;
       }
     } else {
       value = parseFloat(editValue.replace(/\./g, '').replace(',', '.'));
       if (isNaN(value)) {
-        Alert.alert('Erro', 'Valor invalido');
+        Alert.alert('Erro', 'Valor inválido');
         return;
       }
     }
@@ -153,8 +153,8 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
 
   const handleResetToDefaults = () => {
     Alert.alert(
-      'Restaurar Configuracoes de Fabrica',
-      'Todas as aliquotas serao restauradas para os valores padrao conforme a legislacao (IRPF 2024, Simples Anexo III, Lucro Presumido, Lucro Real).\n\nQualquer alteracao sera perdida.',
+      'Restaurar Configurações de Fábrica',
+      'Todas as alíquotas serão restauradas para os valores padrão conforme a legislação (IRPF 2024, Simples Anexo III, Lucro Presumido, Lucro Real).\n\nQualquer alteração será perdida.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -166,9 +166,9 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
               await taxConfigService.resetToDefaults();
               await loadData();
               onConfigUpdated?.();
-              Alert.alert('Sucesso', 'Valores de fabrica restaurados com sucesso');
+              Alert.alert('Sucesso', 'Valores de fábrica restaurados com sucesso');
             } catch (error) {
-              Alert.alert('Erro', 'Falha ao restaurar configuracoes');
+              Alert.alert('Erro', 'Falha ao restaurar configurações');
             } finally {
               setSaving(false);
             }
@@ -180,13 +180,13 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
 
   const handleCreateTax = async () => {
     if (!newTaxType || !newTaxRate) {
-      Alert.alert('Erro', 'Preencha tipo e aliquota');
+      Alert.alert('Erro', 'Preencha tipo e alíquota');
       return;
     }
 
     const rate = parseFloat(newTaxRate) / 100;
     if (isNaN(rate) || rate < 0 || rate > 1) {
-      Alert.alert('Erro', 'Aliquota invalida');
+      Alert.alert('Erro', 'Alíquota inválida');
       return;
     }
 
@@ -216,7 +216,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
   const handleDeleteTax = (configId: string, taxName: string) => {
     Alert.alert(
       'Excluir Imposto',
-      `Deseja excluir "${taxName}"? Esta acao nao pode ser desfeita.`,
+      `Deseja excluir "${taxName}"? Esta ação não pode ser desfeita.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -386,7 +386,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
       <View className="bg-white rounded-lg mb-3 border border-gray-100 overflow-hidden">
         <View className="px-3 py-2 border-b border-gray-100 flex-row justify-between items-center">
           <View>
-            <Text className="font-semibold text-gray-800">Aliquotas</Text>
+            <Text className="font-semibold text-gray-800">Alíquotas</Text>
             <Text className="text-xs text-gray-500">Deslize para esquerda para editar/excluir</Text>
           </View>
           <TouchableOpacity
@@ -412,7 +412,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
             </View>
             <View className="flex-row mb-2">
               <View className="flex-1 mr-2">
-                <Text className="text-xs text-gray-600 mb-1">Aliquota (%)</Text>
+                <Text className="text-xs text-gray-600 mb-1">Alíquota (%)</Text>
                 <TextInput
                   className="bg-white border border-gray-200 rounded px-3 py-2"
                   value={newTaxRate}
@@ -422,7 +422,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
                 />
               </View>
               <View className="flex-1">
-                <Text className="text-xs text-gray-600 mb-1">Descricao</Text>
+                <Text className="text-xs text-gray-600 mb-1">Descrição</Text>
                 <TextInput
                   className="bg-white border border-gray-200 rounded px-3 py-2"
                   value={newTaxDescription}
@@ -456,7 +456,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
 
         {flatConfigs.length === 0 ? (
           <View className="py-6 items-center">
-            <Text className="text-gray-500 text-sm">Nenhuma aliquota cadastrada</Text>
+            <Text className="text-gray-500 text-sm">Nenhuma alíquota cadastrada</Text>
             <Text className="text-gray-400 text-xs">Toque em "Adicionar" para criar</Text>
           </View>
         ) : (
@@ -480,7 +480,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
         <View className="flex-row bg-gray-50 py-2 px-1 rounded-t">
           <Text className="text-xs text-gray-500 w-8">#</Text>
           <Text className="text-xs text-gray-500 flex-1">De</Text>
-          <Text className="text-xs text-gray-500 flex-1">Ate</Text>
+          <Text className="text-xs text-gray-500 flex-1">Até</Text>
           <Text className="text-xs text-gray-500 w-16 text-right">Aliq.</Text>
         </View>
 
@@ -620,14 +620,14 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               <Calculator size={24} color="#0D9488" />
-              <Text className="font-bold text-lg text-gray-900 ml-2">Base de Calculo</Text>
+              <Text className="font-bold text-lg text-gray-900 ml-2">Base de Cálculo</Text>
             </View>
             <TouchableOpacity onPress={onClose} className="p-2">
               <X size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
           <Text className="text-xs text-gray-500 mt-1">
-            Valores padrao conforme legislacao. Edite se necessario.
+            Valores padrão conforme legislação. Edite se necessário.
           </Text>
         </View>
 
@@ -662,8 +662,8 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
             {/* Info Banner */}
             <View className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <Text className="text-xs text-blue-800">
-                <Text className="font-bold">Valores de fabrica: </Text>
-                Aliquotas conforme legislacao vigente. Use "Restaurar Padrao" para reverter.
+                <Text className="font-bold">Valores de fábrica: </Text>
+                Alíquotas conforme legislação vigente. Use "Restaurar Padrão" para reverter.
               </Text>
             </View>
 
@@ -678,7 +678,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-amber-800 font-medium">Dica: Deslize para a esquerda</Text>
-                  <Text className="text-xs text-amber-700">em qualquer aliquota para editar ou excluir</Text>
+                  <Text className="text-xs text-amber-700">em qualquer alíquota para editar ou excluir</Text>
                 </View>
               </Animated.View>
             )}
@@ -695,7 +695,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
             className="flex-row items-center justify-center py-3 bg-gray-100 rounded-xl"
           >
             <RefreshCw size={18} color="#6B7280" />
-            <Text className="text-gray-700 font-medium ml-2">Restaurar Padrao</Text>
+            <Text className="text-gray-700 font-medium ml-2">Restaurar Padrão</Text>
           </TouchableOpacity>
         </View>
       </View>
