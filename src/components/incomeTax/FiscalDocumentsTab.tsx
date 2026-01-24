@@ -16,7 +16,13 @@ import {
     X,
     File,
     Image,
+    Share2,
+    Mail,
+    Package,
+    Loader2,
 } from 'lucide-react';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -128,6 +134,9 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     // Delete confirmation state
     const [deleteDoc, setDeleteDoc] = useState<FiscalDocument | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Export state
+    const [exporting, setExporting] = useState(false);
 
     // Expanded sections
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['identificacao']));
@@ -286,6 +295,98 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         });
     };
 
+    // Export documents as ZIP
+    const handleExportZip = async () => {
+        if (documents.length === 0) {
+            toast.error('Nenhum documento para exportar');
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const zip = new JSZip();
+
+            // Group documents by category
+            const docsByCategory: Record<string, FiscalDocument[]> = {};
+            documents.forEach(doc => {
+                if (!docsByCategory[doc.category]) {
+                    docsByCategory[doc.category] = [];
+                }
+                docsByCategory[doc.category].push(doc);
+            });
+
+            // Download and add each file to the ZIP
+            for (const [category, docs] of Object.entries(docsByCategory)) {
+                const categoryLabel = FISCAL_CATEGORY_LABELS[category as FiscalDocumentCategory] || category;
+                const folder = zip.folder(categoryLabel);
+
+                for (const doc of docs) {
+                    try {
+                        const response = await fetch(doc.file_url);
+                        const blob = await response.blob();
+                        const ext = doc.file_url.split('.').pop() || 'file';
+                        const fileName = `${doc.name}.${ext}`;
+                        folder?.file(fileName, blob);
+                    } catch (error) {
+                        console.error(`Error downloading ${doc.name}:`, error);
+                    }
+                }
+            }
+
+            // Generate and download ZIP
+            const content = await zip.generateAsync({ type: 'blob' });
+            const zipName = `Documentos_Fiscais_${year}_${TAX_REGIME_LABELS[taxRegime].replace(/\s/g, '_')}.zip`;
+            saveAs(content, zipName);
+
+            toast.success('Documentos exportados com sucesso');
+        } catch (error) {
+            console.error('Error exporting ZIP:', error);
+            toast.error('Erro ao exportar documentos');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    // Share with accountant via email/WhatsApp
+    const handleShareWithAccountant = () => {
+        const pendingItems = sections.flatMap(s => s.items.filter(i => !i.isComplete && i.required));
+        const completedCount = completionStats.completed;
+        const totalCount = completionStats.total;
+
+        const subject = `Documentos Fiscais ${year} - ${TAX_REGIME_LABELS[taxRegime]}`;
+
+        let body = `Olá,\n\nSegue o resumo dos documentos fiscais para o ano ${year} (${TAX_REGIME_LABELS[taxRegime]}):\n\n`;
+        body += `📊 Progresso: ${completedCount} de ${totalCount} documentos (${completionStats.percentage}%)\n\n`;
+
+        if (documents.length > 0) {
+            body += `📎 Documentos enviados:\n`;
+            sections.forEach(section => {
+                const sectionDocs = documents.filter(d => d.category === section.category);
+                if (sectionDocs.length > 0) {
+                    body += `\n${section.label}:\n`;
+                    sectionDocs.forEach(doc => {
+                        body += `  • ${doc.name}\n`;
+                    });
+                }
+            });
+        }
+
+        if (pendingItems.length > 0) {
+            body += `\n⚠️ Documentos pendentes (obrigatórios):\n`;
+            pendingItems.forEach(item => {
+                body += `  • ${item.label}\n`;
+            });
+        }
+
+        body += `\n---\nEnviado via OrganizaOdonto`;
+
+        // Create mailto link
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.open(mailtoLink, '_blank');
+
+        toast.success('Email aberto. Anexe o ZIP dos documentos se necessário.');
+    };
+
     // Get documents for a checklist item
     const getItemDocuments = (item: FiscalChecklistItem): FiscalDocument[] => {
         return documents.filter(
@@ -326,18 +427,46 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                 </CardHeader>
                 <CardContent>
                     <Progress value={completionStats.percentage} className="h-3" />
-                    <div className="flex gap-4 mt-4 text-sm">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            <span>Completo</span>
+                    <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+                        <div className="flex gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                <span>Completo</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Circle className="w-4 h-4 text-muted-foreground" />
+                                <span>Pendente</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                <span>Obrigatório</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <Circle className="w-4 h-4 text-muted-foreground" />
-                            <span>Pendente</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            <span>Obrigatório</span>
+
+                        {/* Export buttons */}
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleShareWithAccountant}
+                                disabled={documents.length === 0}
+                            >
+                                <Mail className="w-4 h-4 mr-2" />
+                                Enviar Resumo
+                            </Button>
+                            <Button
+                                variant="default"
+                                size="sm"
+                                onClick={handleExportZip}
+                                disabled={documents.length === 0 || exporting}
+                            >
+                                {exporting ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Package className="w-4 h-4 mr-2" />
+                                )}
+                                {exporting ? 'Exportando...' : 'Exportar ZIP'}
+                            </Button>
                         </div>
                     </div>
                 </CardContent>

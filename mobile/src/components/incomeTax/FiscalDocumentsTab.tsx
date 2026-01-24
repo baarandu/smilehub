@@ -30,6 +30,8 @@ import {
     Camera,
     Folder,
     Share2,
+    Mail,
+    Package,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -96,6 +98,9 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
 
     // Delete state
     const [deleting, setDeleting] = useState(false);
+
+    // Export state
+    const [exporting, setExporting] = useState(false);
 
     // Load data
     const loadData = useCallback(async () => {
@@ -414,6 +419,117 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
         );
     };
 
+    // Share summary with accountant via WhatsApp/Email
+    const handleShareWithAccountant = async () => {
+        const pendingItems = sections.flatMap(s => s.items.filter(i => !i.isComplete && i.required));
+        const completedCount = completionStats.completed;
+        const totalCount = completionStats.total;
+
+        let message = `*Documentos Fiscais ${year} - ${TAX_REGIME_LABELS[taxRegime]}*\n\n`;
+        message += `📊 Progresso: ${completedCount} de ${totalCount} documentos (${completionStats.percentage}%)\n\n`;
+
+        if (documents.length > 0) {
+            message += `📎 *Documentos enviados:*\n`;
+            sections.forEach(section => {
+                const sectionDocs = documents.filter(d => d.category === section.category);
+                if (sectionDocs.length > 0) {
+                    message += `\n_${section.label}:_\n`;
+                    sectionDocs.forEach(doc => {
+                        message += `  • ${doc.name}\n`;
+                    });
+                }
+            });
+        }
+
+        if (pendingItems.length > 0) {
+            message += `\n⚠️ *Documentos pendentes (obrigatórios):*\n`;
+            pendingItems.forEach(item => {
+                message += `  • ${item.label}\n`;
+            });
+        }
+
+        message += `\n---\n_Enviado via OrganizaOdonto_`;
+
+        try {
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (isAvailable) {
+                // Create a text file with the summary
+                const fileUri = `${FileSystem.cacheDirectory}resumo_fiscal_${year}.txt`;
+                await FileSystem.writeAsStringAsync(fileUri, message);
+                await Sharing.shareAsync(fileUri, {
+                    mimeType: 'text/plain',
+                    dialogTitle: 'Compartilhar resumo fiscal',
+                });
+            } else {
+                Alert.alert('Erro', 'Compartilhamento não disponível');
+            }
+        } catch (error) {
+            console.error('Error sharing:', error);
+            Alert.alert('Erro', 'Falha ao compartilhar');
+        }
+    };
+
+    // Export all documents (share multiple files)
+    const handleExportDocuments = async () => {
+        if (documents.length === 0) {
+            Alert.alert('Aviso', 'Nenhum documento para exportar');
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (!isAvailable) {
+                Alert.alert('Erro', 'Compartilhamento não disponível neste dispositivo');
+                return;
+            }
+
+            // Download all files to cache
+            const downloadedFiles: string[] = [];
+            for (const doc of documents) {
+                try {
+                    const fileExt = doc.file_url.split('.').pop() || 'file';
+                    const safeName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
+                    const localUri = `${FileSystem.cacheDirectory}${safeName}.${fileExt}`;
+
+                    const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
+                    if (downloadResult.status === 200) {
+                        downloadedFiles.push(downloadResult.uri);
+                    }
+                } catch (error) {
+                    console.error(`Error downloading ${doc.name}:`, error);
+                }
+            }
+
+            if (downloadedFiles.length === 0) {
+                throw new Error('Nenhum arquivo baixado');
+            }
+
+            // Share first file (iOS limitation - can only share one at a time)
+            // Show message about sharing one by one
+            Alert.alert(
+                'Exportar Documentos',
+                `${downloadedFiles.length} documentos prontos. No iOS, você pode compartilhar um de cada vez. Deseja continuar?`,
+                [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                        text: 'Compartilhar',
+                        onPress: async () => {
+                            for (const fileUri of downloadedFiles) {
+                                await Sharing.shareAsync(fileUri);
+                            }
+                        },
+                    },
+                ]
+            );
+        } catch (error: any) {
+            console.error('Error exporting documents:', error);
+            Alert.alert('Erro', error?.message || 'Falha ao exportar documentos');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     if (loading) {
         return (
             <View className="flex-1 items-center justify-center py-20">
@@ -469,6 +585,34 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                         <AlertTriangle size={14} color="#f59e0b" />
                         <Text className="text-xs text-gray-600 ml-1">Obrigatório</Text>
                     </View>
+                </View>
+
+                {/* Export buttons */}
+                <View className="flex-row gap-3 mt-4">
+                    <TouchableOpacity
+                        onPress={handleShareWithAccountant}
+                        disabled={documents.length === 0}
+                        className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${documents.length === 0 ? 'bg-gray-200' : 'bg-gray-100'}`}
+                    >
+                        <Mail size={18} color={documents.length === 0 ? '#9ca3af' : '#b94a48'} />
+                        <Text className={`ml-2 font-medium ${documents.length === 0 ? 'text-gray-400' : 'text-[#b94a48]'}`}>
+                            Enviar Resumo
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleExportDocuments}
+                        disabled={documents.length === 0 || exporting}
+                        className={`flex-1 flex-row items-center justify-center py-3 rounded-xl ${documents.length === 0 || exporting ? 'bg-gray-300' : 'bg-[#b94a48]'}`}
+                    >
+                        {exporting ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <Package size={18} color="white" />
+                        )}
+                        <Text className="ml-2 font-medium text-white">
+                            {exporting ? 'Exportando...' : 'Exportar'}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
