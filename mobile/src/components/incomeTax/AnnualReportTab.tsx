@@ -15,9 +15,11 @@ import {
   CheckCircle,
   User,
   Building2,
+  FileSpreadsheet,
 } from 'lucide-react-native';
 import { incomeTaxService } from '../../services/incomeTax';
 import { TaxCalculationSection } from './TaxCalculationSection';
+import { generateIRPdf, exportCSV } from '../../utils/incomeTaxPdfGenerator';
 import type { IRSummary, IRValidationIssue } from '../../types/incomeTax';
 
 interface Props {
@@ -49,12 +51,34 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
     }
   };
 
-  const handleExport = () => {
-    Alert.alert(
-      'Exportar Dossie IR',
-      'Para gerar o PDF completo do Dossie IR e exportar CSV, acesse a versao web pelo computador.\n\nO relatorio inclui:\n- Capa e resumo anual\n- Receitas por mes\n- Despesas dedutiveis\n- Relacao de pagadores PF\n- Relacao de fontes PJ',
-      [{ text: 'Entendi' }]
-    );
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!summary) return;
+
+    setExporting(true);
+    try {
+      await generateIRPdf(summary);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      Alert.alert('Erro', 'Falha ao gerar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    if (!summary) return;
+
+    setExporting(true);
+    try {
+      await exportCSV(summary);
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      Alert.alert('Erro', 'Falha ao exportar CSV');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const errors = validationIssues.filter((i) => i.severity === 'error');
@@ -151,11 +175,35 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={handleExport}
-          className="flex-1 bg-teal-600 py-3 rounded-xl flex-row items-center justify-center"
+          onPress={handleExportPdf}
+          disabled={exporting || errors.length > 0}
+          className={`flex-1 py-3 rounded-xl flex-row items-center justify-center ${
+            errors.length > 0 ? 'bg-gray-300' : 'bg-teal-600'
+          }`}
         >
-          <Download size={18} color="white" />
-          <Text className="text-white font-medium ml-2">Exportar</Text>
+          {exporting ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <>
+              <Download size={18} color="white" />
+              <Text className="text-white font-medium ml-2">PDF</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleExportCSV}
+          disabled={exporting}
+          className="flex-1 bg-white border border-gray-200 py-3 rounded-xl flex-row items-center justify-center"
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color="#0D9488" />
+          ) : (
+            <>
+              <FileSpreadsheet size={18} color="#0D9488" />
+              <Text className="text-teal-600 font-medium ml-2">CSV</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -317,11 +365,11 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
       )}
 
       {/* Info Card */}
-      <View className="bg-blue-50 p-4 rounded-xl border border-blue-200 mb-8">
-        <Text className="text-blue-800 font-medium mb-2">Exportacao Completa</Text>
-        <Text className="text-blue-700 text-sm">
-          Para gerar o PDF do Dossie IR e exportar planilhas CSV detalhadas, acesse a versao web
-          pelo computador.
+      <View className="bg-teal-50 p-4 rounded-xl border border-teal-200 mb-8">
+        <Text className="text-teal-800 font-medium mb-2">Exportar Relatorio</Text>
+        <Text className="text-teal-700 text-sm">
+          Clique em PDF para gerar o Dossie IR completo ou CSV para exportar os dados em planilha.
+          O arquivo sera compartilhado para salvar ou enviar.
         </Text>
       </View>
     </View>
