@@ -19,6 +19,7 @@ import { remindersService, type Reminder } from '../../src/services/reminders';
 import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useClinic } from '../../src/contexts/ClinicContext';
 import { supabase } from '../../src/lib/supabase';
 import { TrialBanner } from '../../src/components/TrialBanner';
 
@@ -60,6 +61,7 @@ export default function Dashboard() {
     const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     const { session, signOut } = useAuth();
+    const { role: clinicRole } = useClinic();
 
     useEffect(() => {
         if (session?.user) loadProfile();
@@ -389,6 +391,7 @@ export default function Dashboard() {
                 isAdmin={isAdmin}
                 isSuperAdmin={isSuperAdmin}
                 userEmail={session?.user?.email || ''}
+                userRole={clinicRole || ''}
                 onLogout={handleLogout}
                 onOpenLocations={openLocationsModal}
                 onOpenTeam={() => { setShowProfileModal(false); setShowTeamModal(true); }}

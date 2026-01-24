@@ -12,7 +12,8 @@ import {
   DollarSign,
   Bot,
   Crown,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const navItems = [
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
+  { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Assinatura' },
 ];
@@ -43,10 +45,12 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { role } = useClinic();
 
   // Filter nav items based on role
-  // Secretaries (assistant) cannot access Financeiro
+  // Secretaries (assistant) cannot access Financeiro and Imposto de Renda
   const filteredNavItems = useMemo(() => {
     if (role === 'assistant') {
-      return navItems.filter(item => item.to !== '/financeiro');
+      return navItems.filter(item =>
+        item.to !== '/financeiro' && item.to !== '/imposto-de-renda'
+      );
     }
     return navItems;
   }, [role]);

@@ -539,6 +539,19 @@ export interface Database {
           location_amount: number | null
           commission_rate: number | null
           commission_amount: number | null
+          // IR fields - payer data
+          payer_is_patient: boolean
+          payer_name: string | null
+          payer_cpf: string | null
+          payer_type: 'PF' | 'PJ' | null
+          pj_source_id: string | null
+          irrf_amount: number
+          // IR fields - supplier data (Livro Caixa)
+          supplier_name: string | null
+          supplier_cpf_cnpj: string | null
+          receipt_number: string | null
+          receipt_attachment_url: string | null
+          is_deductible: boolean
           created_at: string
           updated_at: string
         }
@@ -566,6 +579,18 @@ export interface Database {
           location_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          // IR fields
+          payer_is_patient?: boolean
+          payer_name?: string | null
+          payer_cpf?: string | null
+          payer_type?: 'PF' | 'PJ' | null
+          pj_source_id?: string | null
+          irrf_amount?: number
+          supplier_name?: string | null
+          supplier_cpf_cnpj?: string | null
+          receipt_number?: string | null
+          receipt_attachment_url?: string | null
+          is_deductible?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -593,6 +618,18 @@ export interface Database {
           location_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          // IR fields
+          payer_is_patient?: boolean
+          payer_name?: string | null
+          payer_cpf?: string | null
+          payer_type?: 'PF' | 'PJ' | null
+          pj_source_id?: string | null
+          irrf_amount?: number
+          supplier_name?: string | null
+          supplier_cpf_cnpj?: string | null
+          receipt_number?: string | null
+          receipt_attachment_url?: string | null
+          is_deductible?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -908,6 +945,100 @@ export interface Database {
           updated_at?: string
         }
       }
+      fiscal_profiles: {
+        Row: {
+          id: string
+          clinic_id: string
+          pf_enabled: boolean
+          pf_cpf: string | null
+          pf_cro: string | null
+          pf_address: string | null
+          pf_city: string | null
+          pf_state: string | null
+          pf_zip_code: string | null
+          pf_uses_carne_leao: boolean
+          pj_enabled: boolean
+          pj_cnpj: string | null
+          pj_razao_social: string | null
+          pj_nome_fantasia: string | null
+          pj_regime_tributario: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          pf_enabled?: boolean
+          pf_cpf?: string | null
+          pf_cro?: string | null
+          pf_address?: string | null
+          pf_city?: string | null
+          pf_state?: string | null
+          pf_zip_code?: string | null
+          pf_uses_carne_leao?: boolean
+          pj_enabled?: boolean
+          pj_cnpj?: string | null
+          pj_razao_social?: string | null
+          pj_nome_fantasia?: string | null
+          pj_regime_tributario?: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          pf_enabled?: boolean
+          pf_cpf?: string | null
+          pf_cro?: string | null
+          pf_address?: string | null
+          pf_city?: string | null
+          pf_state?: string | null
+          pf_zip_code?: string | null
+          pf_uses_carne_leao?: boolean
+          pj_enabled?: boolean
+          pj_cnpj?: string | null
+          pj_razao_social?: string | null
+          pj_nome_fantasia?: string | null
+          pj_regime_tributario?: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      pj_sources: {
+        Row: {
+          id: string
+          clinic_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          cnpj?: string
+          razao_social?: string
+          nome_fantasia?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -1098,3 +1229,18 @@ export type Procedure = Database['public']['Tables']['procedures']['Row']
 export type Exam = Database['public']['Tables']['exams']['Row']
 export type Patient = Database['public']['Tables']['patients']['Row']
 export type Appointment = Database['public']['Tables']['appointments']['Row']
+
+// Fiscal/IR Types
+export type FiscalProfile = Database['public']['Tables']['fiscal_profiles']['Row']
+export type FiscalProfileInsert = Database['public']['Tables']['fiscal_profiles']['Insert']
+export type FiscalProfileUpdate = Database['public']['Tables']['fiscal_profiles']['Update']
+
+export type PJSource = Database['public']['Tables']['pj_sources']['Row']
+export type PJSourceInsert = Database['public']['Tables']['pj_sources']['Insert']
+export type PJSourceUpdate = Database['public']['Tables']['pj_sources']['Update']
+
+// Transaction with IR relations
+export type FinancialTransactionWithIR = FinancialTransaction & {
+  patient?: Pick<Patient, 'name' | 'cpf'> | null
+  pj_source?: PJSource | null
+}

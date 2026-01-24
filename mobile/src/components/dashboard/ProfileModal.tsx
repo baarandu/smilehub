@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard } from 'lucide-react-native';
+import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -11,6 +11,7 @@ interface ProfileModalProps {
     isAdmin: boolean;
     isSuperAdmin?: boolean;
     userEmail?: string;
+    userRole?: string;
     onLogout: () => void;
     onOpenLocations: () => void;
     onOpenTeam: () => void;
@@ -30,6 +31,7 @@ export function ProfileModal({
     isAdmin,
     isSuperAdmin = false,
     userEmail = '',
+    userRole = '',
     onLogout,
     onOpenLocations,
     onOpenTeam
@@ -39,6 +41,9 @@ export function ProfileModal({
 
     // Check if user has access to AI Secretary
     const hasAISecretaryAccess = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
+
+    // Secretaries (assistant) cannot access financial features including Income Tax
+    const canAccessFinancials = userRole !== 'assistant';
 
     useEffect(() => {
         if (visible) {
@@ -153,6 +158,19 @@ export function ProfileModal({
                                 <CreditCard size={20} color="#6B7280" />
                                 <Text className="text-gray-700 font-medium">Assinatura</Text>
                             </TouchableOpacity>
+
+                            {canAccessFinancials && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/settings/income-tax');
+                                    }}
+                                >
+                                    <FileText size={20} color="#6B7280" />
+                                    <Text className="text-gray-700 font-medium">Imposto de Renda</Text>
+                                </TouchableOpacity>
+                            )}
 
                             <TouchableOpacity
                                 className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"

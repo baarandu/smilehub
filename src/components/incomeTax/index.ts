@@ -1,0 +1,9 @@
+export { FiscalSettingsTab } from './FiscalSettingsTab';
+export { PJSourcesManager } from './PJSourcesManager';
+export { IRIncomeTab } from './IRIncomeTab';
+export { PayerDataDialog } from './PayerDataDialog';
+export { IRExpensesTab } from './IRExpensesTab';
+export { ExpenseDataDialog } from './ExpenseDataDialog';
+export { AnnualReportTab } from './AnnualReportTab';
+export { ValidationWarnings } from './ValidationWarnings';
+export { IRSummaryCards } from './IRSummaryCards';

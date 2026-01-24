@@ -20,6 +20,7 @@ const Alerts = lazy(() => import("./pages/Alerts"));
 const Materials = lazy(() => import("./pages/Materials"));
 const Financial = lazy(() => import("./pages/Financial"));
 const FinancialSettings = lazy(() => import("./pages/FinancialSettings"));
+const IncomeTax = lazy(() => import("./pages/IncomeTax"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -86,8 +87,7 @@ const AppContent = () => (
         <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
         <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
         <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
-        <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
-        <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
+        <Route path="/imposto-de-renda" element={<AppLayout><IncomeTax /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
