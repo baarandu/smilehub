@@ -435,7 +435,8 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                                                         {itemDocs.map((doc) => (
                                                                             <div
                                                                                 key={doc.id}
-                                                                                className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-sm"
+                                                                                className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 text-sm hover:bg-muted transition-colors cursor-pointer"
+                                                                                onClick={() => setPreviewDoc(doc)}
                                                                             >
                                                                                 {doc.file_type === 'image' ? (
                                                                                     <Image className="w-4 h-4 text-blue-500" />
@@ -451,15 +452,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                                                                 <span className="text-muted-foreground text-xs">
                                                                                     {formatFileSize(doc.file_size)}
                                                                                 </span>
-                                                                                <div className="flex gap-1">
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="icon"
-                                                                                        className="h-7 w-7"
-                                                                                        onClick={() => setPreviewDoc(doc)}
-                                                                                    >
-                                                                                        <Eye className="w-3 h-3" />
-                                                                                    </Button>
+                                                                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                                                                     <Button
                                                                                         variant="ghost"
                                                                                         size="icon"

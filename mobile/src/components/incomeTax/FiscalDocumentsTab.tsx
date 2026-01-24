@@ -570,9 +570,10 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                                                     {hasDocuments && (
                                                         <View className="mt-3 space-y-2">
                                                             {itemDocs.map((doc) => (
-                                                                <View
+                                                                <TouchableOpacity
                                                                     key={doc.id}
-                                                                    className="flex-row items-center bg-gray-50 rounded-lg p-2"
+                                                                    className="flex-row items-center bg-gray-50 rounded-lg p-2 active:bg-gray-100"
+                                                                    onPress={() => openDocument(doc)}
                                                                 >
                                                                     {doc.file_type === 'image' ? (
                                                                         <ImageIcon size={16} color="#3b82f6" />
@@ -593,19 +594,16 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                                                                         {formatFileSize(doc.file_size)}
                                                                     </Text>
                                                                     <TouchableOpacity
-                                                                        onPress={() => openDocument(doc)}
+                                                                        onPress={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDelete(doc);
+                                                                        }}
                                                                         className="p-1"
-                                                                    >
-                                                                        <Eye size={16} color="#6b7280" />
-                                                                    </TouchableOpacity>
-                                                                    <TouchableOpacity
-                                                                        onPress={() => handleDelete(doc)}
-                                                                        className="p-1 ml-1"
                                                                         disabled={deleting}
                                                                     >
                                                                         <Trash2 size={16} color="#ef4444" />
                                                                     </TouchableOpacity>
-                                                                </View>
+                                                                </TouchableOpacity>
                                                             ))}
                                                         </View>
                                                     )}
