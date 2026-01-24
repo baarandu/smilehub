@@ -230,7 +230,7 @@ export default function Dashboard() {
     if (loading) {
         return (
             <View className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
                 <Text className="text-gray-500 mt-4">Carregando...</Text>
             </View>
         );
@@ -243,15 +243,15 @@ export default function Dashboard() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={async () => { setRefreshing(true); await loadData(); setRefreshing(false); }}
-                        colors={['#0D9488']}
-                        tintColor="#0D9488"
+                        colors={['#b94a48']}
+                        tintColor="#b94a48"
                     />
                 }
             >
                 {/* Green Header */}
                 <View
                     style={{ paddingTop: insets.top + 20, paddingBottom: 32 }}
-                    className="bg-teal-600 px-6 rounded-b-[32px] mb-6 shadow-md"
+                    className="bg-[#a03f3d] px-6 rounded-b-[32px] mb-6 shadow-md"
                 >
                     <View className="flex-row items-center justify-between">
                         <View className="flex-1 mr-4">
@@ -265,7 +265,7 @@ export default function Dashboard() {
                                 </View>
                                 <Text className="text-2xl font-bold text-white">Painel de Controle</Text>
                             </View>
-                            <Text className="text-teal-50 mt-1 text-sm opacity-90">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
+                            <Text className="text-[#fef2f2] mt-1 text-sm opacity-90">Bem-vinda de volta! Aqui está o resumo do dia.</Text>
                         </View>
                         <TouchableOpacity
                             className="w-10 h-10 bg-white/20 rounded-full items-center justify-center border border-white/30"
@@ -283,14 +283,14 @@ export default function Dashboard() {
                 <View className="px-4 pb-8">
                     {/* Stats Grid */}
                     <View className="flex-row flex-wrap justify-between gap-y-4 mb-6">
-                        <StatsCard title="Lembretes Ativos" value={activeReminders.toString()} icon={<Bell size={24} color="#0D9488" />} onPress={() => router.push('/alerts')} />
-                        <StatsCard title="Consultas Hoje" value={todayCount.toString()} icon={<Calendar size={24} color="#0D9488" />} onPress={() => router.push('/agenda?date=today')} />
+                        <StatsCard title="Lembretes Ativos" value={activeReminders.toString()} icon={<Bell size={24} color="#b94a48" />} onPress={() => router.push('/alerts')} />
+                        <StatsCard title="Consultas Hoje" value={todayCount.toString()} icon={<Calendar size={24} color="#b94a48" />} onPress={() => router.push('/agenda?date=today')} />
                         <StatsCard title="Retornos Pendentes" value={pendingReturns.toString()} icon={<AlertTriangle size={24} color="#F59E0B" />} onPress={async () => {
                             setShowPendingReturnsModal(true);
                             setLoadingPendingReturns(true);
                             try { setPendingReturnsList(await getPendingReturns()); } catch (e) { console.error(e); } finally { setLoadingPendingReturns(false); }
                         }} />
-                        <StatsCard title="Orçamentos Pendentes" value={pendingBudgetsCount.toString()} icon={<FileText size={24} color="#0D9488" />} onPress={async () => {
+                        <StatsCard title="Orçamentos Pendentes" value={pendingBudgetsCount.toString()} icon={<FileText size={24} color="#b94a48" />} onPress={async () => {
                             setShowPendingBudgetsModal(true);
                             setLoadingPendingBudgets(true);
                             try { setPendingBudgetsList(await budgetsService.getAllPending()); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
@@ -301,11 +301,11 @@ export default function Dashboard() {
                     <View className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8">
                         <View className="flex-row justify-between items-center mb-4">
                             <View className="flex-row items-center gap-2">
-                                <Calendar size={20} color="#0D9488" />
+                                <Calendar size={20} color="#b94a48" />
                                 <Text className="text-lg font-bold text-gray-900">Agenda de Hoje</Text>
                             </View>
                             <TouchableOpacity onPress={() => router.push('/agenda')}>
-                                <Text className="text-teal-600 font-medium">Ver agenda</Text>
+                                <Text className="text-[#a03f3d] font-medium">Ver agenda</Text>
                             </TouchableOpacity>
                         </View>
                         <Text className="text-gray-500 mb-4">{todayAppointments.length} consultas</Text>
@@ -319,12 +319,12 @@ export default function Dashboard() {
                                 {todayAppointments.map((apt) => (
                                     <View key={apt.id} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-xl">
                                         <View className="flex-row items-center gap-3">
-                                            <View className="w-10 h-10 bg-teal-100 rounded-full items-center justify-center">
-                                                <Users size={20} color="#0D9488" />
+                                            <View className="w-10 h-10 bg-[#fee2e2] rounded-full items-center justify-center">
+                                                <Users size={20} color="#b94a48" />
                                             </View>
                                             <View>
                                                 <Text className="font-semibold text-gray-900">{apt.patients?.name}</Text>
-                                                <Text className="text-teal-700 font-bold">{apt.time?.slice(0, 5)}</Text>
+                                                <Text className="text-[#8b3634] font-bold">{apt.time?.slice(0, 5)}</Text>
                                                 {apt.notes && <Text className="text-xs text-gray-500">{apt.notes}</Text>}
                                             </View>
                                         </View>
@@ -343,7 +343,7 @@ export default function Dashboard() {
                                 <Text className="text-lg font-bold text-gray-900">Alertas Recentes</Text>
                             </View>
                             <TouchableOpacity onPress={() => router.push('/alerts')}>
-                                <Text className="text-teal-600 font-medium">Ver todos</Text>
+                                <Text className="text-[#a03f3d] font-medium">Ver todos</Text>
                             </TouchableOpacity>
                         </View>
                         {recentAlerts.length === 0 ? (
@@ -361,8 +361,8 @@ export default function Dashboard() {
 
                                     if (alert.type === 'birthday') { icon = <Gift size={20} color="#EC4899" />; color = "bg-pink-50"; title = `Aniversário de ${alert.patient.name}`; subtitle = "Hoje"; }
                                     else if (alert.type === 'procedure_return') { icon = <Clock size={20} color="#F59E0B" />; color = "bg-amber-50"; title = `Retorno: ${alert.patient.name}`; subtitle = `${alert.daysSince} dias sem vir`; }
-                                    else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#0D9488" />; color = "bg-teal-50"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
-                                    else if (alert.type === 'reminder') { icon = <Bell size={20} color="#0D9488" />; color = "bg-teal-50"; title = alert.title; subtitle = alert.description || 'Lembrete'; }
+                                    else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
+                                    else if (alert.type === 'reminder') { icon = <Bell size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = alert.title; subtitle = alert.description || 'Lembrete'; }
 
                                     return (
                                         <TouchableOpacity key={index} className="flex-row items-center p-3 rounded-xl border border-gray-100 bg-white" onPress={() => router.push('/alerts')}>
@@ -432,10 +432,10 @@ function StatsCard({ title, value, icon, trend, isPositive, onPress }: { title: 
         <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1} className="w-[48%] bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
             <View className="flex-row justify-between items-start mb-2">
                 <Text className="text-gray-600 text-sm font-medium flex-1">{title}</Text>
-                <View className="bg-teal-50 p-2 rounded-lg">{icon}</View>
+                <View className="bg-[#fef2f2] p-2 rounded-lg">{icon}</View>
             </View>
             <Text className="text-3xl font-bold text-gray-900 mb-1">{value}</Text>
-            {trend && <Text className={`text-xs ${isPositive ? 'text-green-600' : 'text-red-500'}`}>{trend}</Text>}
+            {trend && <Text className={`text-xs ${isPositive ? 'text-green-600' : 'text-[#b94a48]'}`}>{trend}</Text>}
         </TouchableOpacity>
     );
 }

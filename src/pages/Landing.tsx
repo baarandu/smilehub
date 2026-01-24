@@ -251,8 +251,8 @@ export default function Landing() {
             />
             <FeatureCard
               icon={Shield}
-              iconBg="bg-teal-100"
-              iconColor="text-teal-600"
+              iconBg="bg-red-100"
+              iconColor="text-[#a03f3d]"
               title="Seguro e Confiável"
               description="Seus dados protegidos com criptografia de ponta. Backup automático na nuvem todos os dias."
             />

@@ -210,8 +210,8 @@ export function FiscalSettingsTab({
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
         <View className="flex-row items-center justify-between mb-4">
           <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-teal-100 rounded-full items-center justify-center mr-3">
-              <User size={20} color="#0D9488" />
+            <View className="w-10 h-10 bg-[#fee2e2] rounded-full items-center justify-center mr-3">
+              <User size={20} color="#b94a48" />
             </View>
             <View>
               <Text className="font-bold text-gray-900">Pessoa Fisica (PF)</Text>
@@ -222,7 +222,7 @@ export function FiscalSettingsTab({
             value={formData.pf_enabled}
             onValueChange={(v) => setFormData({ ...formData, pf_enabled: v })}
             trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-            thumbColor={formData.pf_enabled ? '#0D9488' : '#9CA3AF'}
+            thumbColor={formData.pf_enabled ? '#b94a48' : '#9CA3AF'}
           />
         </View>
 
@@ -304,7 +304,7 @@ export function FiscalSettingsTab({
                 value={formData.pf_uses_carne_leao}
                 onValueChange={(v) => setFormData({ ...formData, pf_uses_carne_leao: v })}
                 trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                thumbColor={formData.pf_uses_carne_leao ? '#0D9488' : '#9CA3AF'}
+                thumbColor={formData.pf_uses_carne_leao ? '#b94a48' : '#9CA3AF'}
               />
             </View>
           </View>
@@ -450,7 +450,7 @@ export function FiscalSettingsTab({
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
         <View className="flex-row items-center justify-between mb-4">
           <View className="flex-row items-center">
-            <Building2 size={20} color="#0D9488" />
+            <Building2 size={20} color="#b94a48" />
             <Text className="font-bold text-gray-900 ml-2">Fontes PJ (Convenios)</Text>
           </View>
           <TouchableOpacity
@@ -459,7 +459,7 @@ export function FiscalSettingsTab({
               setPJFormData({ cnpj: '', razao_social: '', nome_fantasia: '', is_active: true });
               setShowPJModal(true);
             }}
-            className="bg-teal-600 px-3 py-1.5 rounded-lg flex-row items-center"
+            className="bg-[#a03f3d] px-3 py-1.5 rounded-lg flex-row items-center"
           >
             <Plus size={16} color="white" />
             <Text className="text-white font-medium ml-1">Adicionar</Text>
@@ -498,7 +498,7 @@ export function FiscalSettingsTab({
       <TouchableOpacity
         onPress={handleSave}
         disabled={saving}
-        className={`flex-row items-center justify-center py-4 rounded-xl ${saving ? 'bg-gray-300' : 'bg-teal-600'}`}
+        className={`flex-row items-center justify-center py-4 rounded-xl ${saving ? 'bg-gray-300' : 'bg-[#a03f3d]'}`}
       >
         {saving ? (
           <ActivityIndicator color="white" />
@@ -528,7 +528,7 @@ export function FiscalSettingsTab({
                     setFormData({ ...formData, pf_state: state });
                     setShowStateModal(false);
                   }}
-                  className={`w-16 py-2 m-1 rounded-lg items-center ${formData.pf_state === state ? 'bg-teal-600' : 'bg-gray-100'}`}
+                  className={`w-16 py-2 m-1 rounded-lg items-center ${formData.pf_state === state ? 'bg-[#a03f3d]' : 'bg-gray-100'}`}
                 >
                   <Text className={formData.pf_state === state ? 'text-white font-bold' : 'text-gray-700'}>
                     {state}
@@ -558,12 +558,12 @@ export function FiscalSettingsTab({
                     setFormData({ ...formData, pj_regime_tributario: regime });
                     setShowRegimeModal(false);
                   }}
-                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.pj_regime_tributario === regime ? 'bg-teal-50 border border-teal-200' : 'bg-gray-50'}`}
+                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.pj_regime_tributario === regime ? 'bg-[#fef2f2] border border-[#fca5a5]' : 'bg-gray-50'}`}
                 >
-                  <Text className={formData.pj_regime_tributario === regime ? 'text-teal-700 font-medium' : 'text-gray-700'}>
+                  <Text className={formData.pj_regime_tributario === regime ? 'text-[#8b3634] font-medium' : 'text-gray-700'}>
                     {regimeLabels[regime]}
                   </Text>
-                  {formData.pj_regime_tributario === regime && <Check size={20} color="#0D9488" />}
+                  {formData.pj_regime_tributario === regime && <Check size={20} color="#b94a48" />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -618,12 +618,12 @@ export function FiscalSettingsTab({
                   value={pjFormData.is_active}
                   onValueChange={(v) => setPJFormData({ ...pjFormData, is_active: v })}
                   trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                  thumbColor={pjFormData.is_active ? '#0D9488' : '#9CA3AF'}
+                  thumbColor={pjFormData.is_active ? '#b94a48' : '#9CA3AF'}
                 />
               </View>
               <TouchableOpacity
                 onPress={handleSavePJSource}
-                className="bg-teal-600 py-4 rounded-xl items-center mt-4"
+                className="bg-[#a03f3d] py-4 rounded-xl items-center mt-4"
               >
                 <Text className="text-white font-bold">Salvar</Text>
               </TouchableOpacity>

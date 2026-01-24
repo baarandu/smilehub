@@ -34,7 +34,7 @@ type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 const SettingsSection = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
     <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
         <View className="flex-row items-center gap-2 mb-4">
-            <Icon size={18} color="#0D9488" />
+            <Icon size={18} color="#b94a48" />
             <Text className="text-sm font-semibold text-gray-900">{title}</Text>
         </View>
         {children}
@@ -51,7 +51,7 @@ const CollapsibleSection = ({ title, icon: Icon, children, defaultOpen = false }
                 onPress={() => setIsOpen(!isOpen)}
             >
                 <View className="flex-row items-center gap-2">
-                    <Icon size={18} color="#0D9488" />
+                    <Icon size={18} color="#b94a48" />
                     <Text className="text-sm font-semibold text-gray-900">{title}</Text>
                 </View>
                 <ChevronRight size={18} color="#9CA3AF" style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }} />
@@ -283,7 +283,7 @@ export default function AISecretarySettingsScreen() {
     if (isLoading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center" edges={['top']}>
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
                 <Text className="text-gray-500 mt-4">Carregando configurações...</Text>
             </SafeAreaView>
         );
@@ -293,7 +293,7 @@ export default function AISecretarySettingsScreen() {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center" edges={['top']}>
                 <Text className="text-gray-500">Erro ao carregar configurações</Text>
-                <TouchableOpacity onPress={loadData} className="mt-4 bg-teal-600 px-4 py-2 rounded-lg">
+                <TouchableOpacity onPress={loadData} className="mt-4 bg-[#a03f3d] px-4 py-2 rounded-lg">
                     <Text className="text-white font-medium">Tentar novamente</Text>
                 </TouchableOpacity>
             </SafeAreaView>
@@ -308,8 +308,8 @@ export default function AISecretarySettingsScreen() {
                     <ArrowLeft size={24} color="#374151" />
                 </TouchableOpacity>
                 <View className="flex-1 ml-2 flex-row items-center gap-3">
-                    <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center border border-teal-100">
-                        <Bot size={24} color="#0D9488" />
+                    <View className="w-10 h-10 bg-[#fef2f2] rounded-full items-center justify-center border border-[#fecaca]">
+                        <Bot size={24} color="#b94a48" />
                     </View>
                     <View>
                         <Text className="text-lg font-bold text-gray-900">Secretária IA</Text>
@@ -333,7 +333,7 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         </View>
                         <Switch
-                            trackColor={{ false: "#E5E7EB", true: "#0D9488" }}
+                            trackColor={{ false: "#E5E7EB", true: "#b94a48" }}
                             thumbColor={"#FFFFFF"}
                             ios_backgroundColor="#E5E7EB"
                             onValueChange={toggleActive}
@@ -361,12 +361,12 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         </View>
                         {connectionStatus !== 'connected' ? (
-                            <TouchableOpacity onPress={handleLinkWhatsApp} className="bg-teal-600 px-3 py-2 rounded-lg">
+                            <TouchableOpacity onPress={handleLinkWhatsApp} className="bg-[#a03f3d] px-3 py-2 rounded-lg">
                                 <Text className="text-xs font-semibold text-white">Vincular</Text>
                             </TouchableOpacity>
                         ) : (
                             <TouchableOpacity onPress={handleDisconnectWhatsApp} className="bg-white border border-gray-200 px-3 py-2 rounded-lg">
-                                <Text className="text-xs font-semibold text-red-500">Desconectar</Text>
+                                <Text className="text-xs font-semibold text-[#b94a48]">Desconectar</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -379,7 +379,7 @@ export default function AISecretarySettingsScreen() {
                             <Text className="text-gray-500 text-sm mb-3">Nenhum horário configurado</Text>
                             <TouchableOpacity
                                 onPress={handleCreateDefaultSchedule}
-                                className="bg-teal-600 px-4 py-2 rounded-lg"
+                                className="bg-[#a03f3d] px-4 py-2 rounded-lg"
                             >
                                 <Text className="text-white font-medium text-sm">Criar Horário Padrão (Seg-Sex, 8h-18h)</Text>
                             </TouchableOpacity>
@@ -420,10 +420,10 @@ export default function AISecretarySettingsScreen() {
                     )}
                     <TouchableOpacity
                         onPress={() => setShowScheduleModal(true)}
-                        className="flex-row items-center justify-center gap-2 bg-teal-50 border border-teal-200 p-3 rounded-lg mt-2"
+                        className="flex-row items-center justify-center gap-2 bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg mt-2"
                     >
-                        <Plus size={16} color="#0D9488" />
-                        <Text className="text-teal-700 font-medium text-sm">Adicionar Horário</Text>
+                        <Plus size={16} color="#b94a48" />
+                        <Text className="text-[#8b3634] font-medium text-sm">Adicionar Horário</Text>
                     </TouchableOpacity>
                 </CollapsibleSection>
 
@@ -510,8 +510,8 @@ export default function AISecretarySettingsScreen() {
                         ) : (
                             <View className="gap-2">
                                 {blockedNumbers.map((item) => (
-                                    <View key={item.id} className="flex-row items-center justify-between bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
-                                        <Text className="text-xs text-red-700">{item.phone_number}</Text>
+                                    <View key={item.id} className="flex-row items-center justify-between bg-[#fef2f2] border border-[#fecaca] px-3 py-2 rounded-lg">
+                                        <Text className="text-xs text-[#8b3634]">{item.phone_number}</Text>
                                         <TouchableOpacity onPress={() => handleRemoveBlockedNumber(item)}>
                                             <Trash2 size={14} color="#EF4444" />
                                         </TouchableOpacity>
@@ -525,9 +525,9 @@ export default function AISecretarySettingsScreen() {
                 {/* Reports/Stats */}
                 <CollapsibleSection title="Relatórios (Este Mês)" icon={BarChart3}>
                     <View className="flex-row gap-3">
-                        <View className="flex-1 bg-teal-50 border border-teal-100 p-3 rounded-xl items-center">
-                            <Text className="text-2xl font-bold text-teal-700">{stats.total_appointments_created}</Text>
-                            <Text className="text-[10px] text-teal-600 mt-1">Agendamentos</Text>
+                        <View className="flex-1 bg-[#fef2f2] border border-[#fecaca] p-3 rounded-xl items-center">
+                            <Text className="text-2xl font-bold text-[#8b3634]">{stats.total_appointments_created}</Text>
+                            <Text className="text-[10px] text-[#a03f3d] mt-1">Agendamentos</Text>
                         </View>
                         <View className="flex-1 bg-blue-50 border border-blue-100 p-3 rounded-xl items-center">
                             <Text className="text-2xl font-bold text-blue-700">{stats.total_conversations}</Text>
@@ -546,15 +546,15 @@ export default function AISecretarySettingsScreen() {
                     <View className="flex-row gap-3">
                         <TouchableOpacity
                             onPress={() => updateTone('casual')}
-                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'casual' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}
+                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'casual' ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
                         >
-                            <Text className={`text-sm font-medium text-center ${settings.tone === 'casual' ? 'text-teal-700' : 'text-gray-600'}`}>Casual 😊</Text>
+                            <Text className={`text-sm font-medium text-center ${settings.tone === 'casual' ? 'text-[#8b3634]' : 'text-gray-600'}`}>Casual 😊</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => updateTone('formal')}
-                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'formal' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}
+                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'formal' ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
                         >
-                            <Text className={`text-sm font-medium text-center ${settings.tone === 'formal' ? 'text-teal-700' : 'text-gray-600'}`}>Formal 👔</Text>
+                            <Text className={`text-sm font-medium text-center ${settings.tone === 'formal' ? 'text-[#8b3634]' : 'text-gray-600'}`}>Formal 👔</Text>
                         </TouchableOpacity>
                     </View>
                 </SettingsSection>
@@ -598,7 +598,7 @@ export default function AISecretarySettingsScreen() {
                         {showMessageModal === 'reminder' && (
                             <Text className="text-[10px] text-gray-400 mt-2">Use {'{hora}'} para inserir o horário da consulta.</Text>
                         )}
-                        <TouchableOpacity onPress={saveMessage} className="bg-teal-600 mt-4 p-4 rounded-xl">
+                        <TouchableOpacity onPress={saveMessage} className="bg-[#a03f3d] mt-4 p-4 rounded-xl">
                             <Text className="text-white font-semibold text-center">Salvar Mensagem</Text>
                         </TouchableOpacity>
                     </View>
@@ -624,9 +624,9 @@ export default function AISecretarySettingsScreen() {
                                     <TouchableOpacity
                                         key={day}
                                         onPress={() => setNewScheduleDay(day)}
-                                        className={`px-4 py-2 rounded-lg border ${newScheduleDay === day ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                        className={`px-4 py-2 rounded-lg border ${newScheduleDay === day ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
                                     >
-                                        <Text className={`text-sm font-medium ${newScheduleDay === day ? 'text-teal-700' : 'text-gray-600'}`}>
+                                        <Text className={`text-sm font-medium ${newScheduleDay === day ? 'text-[#8b3634]' : 'text-gray-600'}`}>
                                             {DAY_NAMES[day]}
                                         </Text>
                                     </TouchableOpacity>
@@ -664,9 +664,9 @@ export default function AISecretarySettingsScreen() {
                                     <View className="flex-row gap-2">
                                         <TouchableOpacity
                                             onPress={() => setNewScheduleLocation(null)}
-                                            className={`px-3 py-2 rounded-lg border ${newScheduleLocation === null ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                            className={`px-3 py-2 rounded-lg border ${newScheduleLocation === null ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
                                         >
-                                            <Text className={`text-xs font-medium ${newScheduleLocation === null ? 'text-teal-700' : 'text-gray-600'}`}>
+                                            <Text className={`text-xs font-medium ${newScheduleLocation === null ? 'text-[#8b3634]' : 'text-gray-600'}`}>
                                                 Todos
                                             </Text>
                                         </TouchableOpacity>
@@ -674,9 +674,9 @@ export default function AISecretarySettingsScreen() {
                                             <TouchableOpacity
                                                 key={loc.id}
                                                 onPress={() => setNewScheduleLocation(loc.id)}
-                                                className={`px-3 py-2 rounded-lg border ${newScheduleLocation === loc.id ? 'bg-teal-50 border-teal-300' : 'bg-gray-50 border-gray-200'}`}
+                                                className={`px-3 py-2 rounded-lg border ${newScheduleLocation === loc.id ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
                                             >
-                                                <Text className={`text-xs font-medium ${newScheduleLocation === loc.id ? 'text-teal-700' : 'text-gray-600'}`}>
+                                                <Text className={`text-xs font-medium ${newScheduleLocation === loc.id ? 'text-[#8b3634]' : 'text-gray-600'}`}>
                                                     {loc.name}
                                                 </Text>
                                             </TouchableOpacity>
@@ -686,7 +686,7 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         )}
 
-                        <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-teal-600 mt-2 p-4 rounded-xl">
+                        <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-[#a03f3d] mt-2 p-4 rounded-xl">
                             <Text className="text-white font-semibold text-center">Adicionar</Text>
                         </TouchableOpacity>
                     </View>

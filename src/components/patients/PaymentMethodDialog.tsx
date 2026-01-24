@@ -223,14 +223,14 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
 
                 {isLoadingSettings ? (
                     <div className="flex justify-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                        <Loader2 className="h-8 w-8 animate-spin text-[#a03f3d]" />
                     </div>
                 ) : (
                     <div className="space-y-4">
                         {/* Amount Display */}
                         <div className="text-center py-4 border-b bg-gray-50 rounded-t-lg -mx-6 px-6">
                             <div className="text-sm text-muted-foreground">{itemName}</div>
-                            <div className="text-3xl font-bold text-teal-600 mt-1">
+                            <div className="text-3xl font-bold text-[#a03f3d] mt-1">
                                 R$ {formatMoney(value)}
                             </div>
                         </div>
@@ -255,13 +255,13 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                                             className={`
                                                 cursor-pointer p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all
                                                 ${isSelected
-                                                    ? `border-teal-500 bg-teal-50`
+                                                    ? `border-red-500 bg-red-50`
                                                     : `border-slate-100 hover:border-slate-200 bg-white`
                                                 }
                                             `}
                                         >
-                                            <Icon className={`w-5 h-5 ${isSelected ? 'text-teal-600' : method.color}`} />
-                                            <span className={`text-sm font-medium ${isSelected ? 'text-teal-700' : 'text-slate-700'}`}>
+                                            <Icon className={`w-5 h-5 ${isSelected ? 'text-[#a03f3d]' : method.color}`} />
+                                            <span className={`text-sm font-medium ${isSelected ? 'text-[#8b3634]' : 'text-slate-700'}`}>
                                                 {method.label}
                                             </span>
                                         </div>
@@ -365,7 +365,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                         </div>
 
                         <Button
-                            className="w-full h-12 mt-2 bg-teal-600 hover:bg-teal-700 text-lg"
+                            className="w-full h-12 mt-2 bg-[#a03f3d] hover:bg-[#8b3634] text-lg"
                             disabled={!selectedMethod || loading || isLoadingSettings}
                             onClick={handleConfirm}
                         >

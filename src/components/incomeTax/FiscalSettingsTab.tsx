@@ -129,7 +129,7 @@ export function FiscalSettingsTab({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-teal-600" />
+              <User className="w-5 h-5 text-[#a03f3d]" />
               <CardTitle>Pessoa Fisica (PF)</CardTitle>
             </div>
             <Switch
@@ -219,7 +219,7 @@ export function FiscalSettingsTab({
               <div>
                 <Label htmlFor="pf_carne_leao" className="text-base">Utiliza Carne-Leao</Label>
                 <p className="text-sm text-muted-foreground">
-                  Marque se voce recolhe IR mensalmente via carne-leao
+                  Marque se você recolhe IR mensalmente via carnê-leao
                 </p>
               </div>
               <Switch
@@ -237,7 +237,7 @@ export function FiscalSettingsTab({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-teal-600" />
+              <Building2 className="w-5 h-5 text-[#a03f3d]" />
               <CardTitle>Pessoa Juridica (PJ)</CardTitle>
             </div>
             <Switch
@@ -394,7 +394,7 @@ export function FiscalSettingsTab({
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-teal-600 hover:bg-teal-700"
+          className="bg-[#a03f3d] hover:bg-[#8b3634]"
         >
           <Save className="w-4 h-4 mr-2" />
           {saving ? 'Salvando...' : 'Salvar Configuracoes'}

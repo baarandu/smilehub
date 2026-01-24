@@ -247,7 +247,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                 variant={selectedTreatments.includes(treatment) ? "default" : "outline"}
                                 size="sm"
                                 onClick={() => toggleTreatment(treatment)}
-                                className={selectedTreatments.includes(treatment) ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                className={selectedTreatments.includes(treatment) ? "bg-[#a03f3d] hover:bg-[#8b3634]" : ""}
                             >
                                 {treatment}
                                 {selectedTreatments.includes(treatment) && <Check className="w-3 h-3 ml-2" />}
@@ -282,7 +282,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         <Label className="text-base font-semibold">4. Valores e Materiais</Label>
                         {selectedTreatments.map(treatment => (
                             <div key={treatment} className="p-3 border rounded-lg space-y-3">
-                                <div className="font-medium text-teal-700">{treatment}</div>
+                                <div className="font-medium text-[#8b3634]">{treatment}</div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1">
                                         <Label className="text-xs text-muted-foreground">Valor</Label>
@@ -321,7 +321,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                             Cancelar
                         </Button>
                         <Button
-                            className="flex-1 bg-teal-600 hover:bg-teal-700 h-12 text-base"
+                            className="flex-1 bg-[#a03f3d] hover:bg-[#8b3634] h-12 text-base"
                             onClick={handleAddItem}
                             disabled={!selectedTooth || selectedTreatments.length === 0}
                         >
@@ -331,7 +331,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                     </div>
                 ) : (
                     <Button
-                        className="w-full bg-teal-600 hover:bg-teal-700 mt-4 h-12 text-base"
+                        className="w-full bg-[#a03f3d] hover:bg-[#8b3634] mt-4 h-12 text-base"
                         onClick={handleAddItem}
                         disabled={!selectedTooth || selectedTreatments.length === 0}
                     >

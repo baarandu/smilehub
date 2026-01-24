@@ -202,12 +202,12 @@ export function ExpensePaymentDialog({ open, onOpenChange, onConfirm, itemName, 
                                         className={cn(
                                             "flex flex-col items-center p-3 rounded-xl border-2 transition-colors",
                                             isSelected
-                                                ? "border-teal-500 bg-teal-50"
+                                                ? "border-red-500 bg-red-50"
                                                 : "border-slate-200 bg-white hover:bg-slate-50"
                                         )}
                                     >
-                                        <Icon className={cn("h-6 w-6", isSelected ? "text-teal-600" : "text-slate-500")} />
-                                        <span className={cn("text-xs font-medium mt-1", isSelected ? "text-teal-700" : "text-slate-600")}>
+                                        <Icon className={cn("h-6 w-6", isSelected ? "text-[#a03f3d]" : "text-slate-500")} />
+                                        <span className={cn("text-xs font-medium mt-1", isSelected ? "text-[#8b3634]" : "text-slate-600")}>
                                             {method.label}
                                         </span>
                                     </button>
@@ -231,7 +231,7 @@ export function ExpensePaymentDialog({ open, onOpenChange, onConfirm, itemName, 
                                             className={cn(
                                                 "px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors",
                                                 isSelected
-                                                    ? "border-teal-500 bg-teal-50 text-teal-700"
+                                                    ? "border-red-500 bg-red-50 text-[#8b3634]"
                                                     : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                                             )}
                                         >
@@ -331,7 +331,7 @@ export function ExpensePaymentDialog({ open, onOpenChange, onConfirm, itemName, 
                         </div>
                     </div>
 
-                    <Button onClick={handleConfirm} className="w-full bg-teal-600 hover:bg-teal-700">
+                    <Button onClick={handleConfirm} className="w-full bg-[#a03f3d] hover:bg-[#8b3634]">
                         Confirmar Pagamento
                     </Button>
                 </div>

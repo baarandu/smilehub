@@ -60,7 +60,7 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
         y += 6;
       }
       if (summary.fiscal_profile.pf_uses_carne_leao) {
-        doc.text('Utiliza Carne-Leao: Sim', margin, y);
+        doc.text('Utiliza Carnê-Leao: Sim', margin, y);
         y += 6;
       }
     }

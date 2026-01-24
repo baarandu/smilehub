@@ -107,21 +107,21 @@ export function AttachmentManager({
                     onPress={() => pickImage(false)}
                     className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
                 >
-                    <ImageIcon size={20} color="#0D9488" className="mb-1" />
+                    <ImageIcon size={20} color="#b94a48" className="mb-1" />
                     <Text className="text-xs text-gray-700 font-medium">Galeria</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={() => pickImage(true)}
                     className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
                 >
-                    <Camera size={20} color="#0D9488" className="mb-1" />
+                    <Camera size={20} color="#b94a48" className="mb-1" />
                     <Text className="text-xs text-gray-700 font-medium">Câmera</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     onPress={pickDocument}
                     className="flex-1 bg-white p-3 rounded-xl items-center justify-center border border-gray-200"
                 >
-                    <FileText size={20} color="#0D9488" className="mb-1" />
+                    <FileText size={20} color="#b94a48" className="mb-1" />
                     <Text className="text-xs text-gray-700 font-medium">Arquivo</Text>
                 </TouchableOpacity>
             </View>

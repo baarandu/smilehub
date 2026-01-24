@@ -135,13 +135,13 @@ export function CouponsTab() {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value / 100);
     };
 
-    if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-teal-600" /></div>;
+    if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-[#a03f3d]" /></div>;
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-800">Cupons de Desconto</h3>
-                <Button onClick={() => handleOpenDialog()} className="bg-teal-600 hover:bg-teal-700">
+                <Button onClick={() => handleOpenDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">
                     <Plus className="mr-2 h-4 w-4" /> Novo Cupom
                 </Button>
             </div>
@@ -278,7 +278,7 @@ export function CouponsTab() {
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={saving} className="bg-teal-600">
+                        <Button onClick={handleSave} disabled={saving} className="bg-[#a03f3d]">
                             Salvar
                         </Button>
                     </DialogFooter>

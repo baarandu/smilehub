@@ -137,7 +137,7 @@ export default function Financial() {
                             >
                                 <Settings size={20} color="#4B5563" />
                             </TouchableOpacity>
-                            <TouchableOpacity className="bg-teal-500 p-3 rounded-xl" onPress={handleAddPress}>
+                            <TouchableOpacity className="bg-[#b94a48] p-3 rounded-xl" onPress={handleAddPress}>
                                 <Plus size={20} color="#FFFFFF" />
                             </TouchableOpacity>
                         </View>
@@ -213,10 +213,10 @@ export default function Financial() {
                                 paddingBottom: 12,
                                 alignItems: 'center',
                                 borderBottomWidth: 2,
-                                borderBottomColor: activeTab === 'income' ? '#0D9488' : 'transparent'
+                                borderBottomColor: activeTab === 'income' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'income' ? 'text-teal-600' : 'text-gray-500'}`}>Receitas</Text>
+                            <Text className={`font-medium ${activeTab === 'income' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Receitas</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('expenses')}
@@ -225,10 +225,10 @@ export default function Financial() {
                                 paddingBottom: 12,
                                 alignItems: 'center',
                                 borderBottomWidth: 2,
-                                borderBottomColor: activeTab === 'expenses' ? '#0D9488' : 'transparent'
+                                borderBottomColor: activeTab === 'expenses' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'expenses' ? 'text-teal-600' : 'text-gray-500'}`}>Despesas</Text>
+                            <Text className={`font-medium ${activeTab === 'expenses' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Despesas</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('closure')}
@@ -237,10 +237,10 @@ export default function Financial() {
                                 paddingBottom: 12,
                                 alignItems: 'center',
                                 borderBottomWidth: 2,
-                                borderBottomColor: activeTab === 'closure' ? '#0D9488' : 'transparent'
+                                borderBottomColor: activeTab === 'closure' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'closure' ? 'text-teal-600' : 'text-gray-500'}`}>Fechamento</Text>
+                            <Text className={`font-medium ${activeTab === 'closure' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Fechamento</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -249,7 +249,7 @@ export default function Financial() {
                 <View className="flex-1 relative">
                     {loading && (
                         <View className="absolute inset-0 z-50 bg-white/50 justify-center items-center">
-                            <ActivityIndicator size="large" color="#0D9488" />
+                            <ActivityIndicator size="large" color="#b94a48" />
                         </View>
                     )}
 
@@ -268,7 +268,7 @@ export default function Financial() {
                                     <TouchableOpacity
                                         key={month}
                                         onPress={() => { setSelectedMonth(index); setShowMonthPicker(false); }}
-                                        className={`px-4 py-3 rounded-lg ${selectedMonth === index ? 'bg-teal-500' : 'bg-gray-100'}`}
+                                        className={`px-4 py-3 rounded-lg ${selectedMonth === index ? 'bg-[#b94a48]' : 'bg-gray-100'}`}
                                     >
                                         <Text className={`font-medium ${selectedMonth === index ? 'text-white' : 'text-gray-700'}`}>
                                             {month.slice(0, 3)}
@@ -289,7 +289,7 @@ export default function Financial() {
                                     <TouchableOpacity
                                         key={year}
                                         onPress={() => { setSelectedYear(year); setShowYearPicker(false); }}
-                                        className={`px-5 py-3 rounded-lg ${selectedYear === year ? 'bg-teal-500' : 'bg-gray-100'}`}
+                                        className={`px-5 py-3 rounded-lg ${selectedYear === year ? 'bg-[#b94a48]' : 'bg-gray-100'}`}
                                     >
                                         <Text className={`font-medium ${selectedYear === year ? 'text-white' : 'text-gray-700'}`}>
                                             {year}

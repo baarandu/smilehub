@@ -158,7 +158,7 @@ export function TaxCalculationSection({ summary, year }: Props) {
   if (loading) {
     return (
       <View className="bg-white rounded-xl p-6 mb-4 border border-gray-100 items-center">
-        <ActivityIndicator size="large" color="#0D9488" />
+        <ActivityIndicator size="large" color="#b94a48" />
         <Text className="text-gray-500 mt-2">Calculando impostos...</Text>
       </View>
     );
@@ -185,7 +185,7 @@ export function TaxCalculationSection({ summary, year }: Props) {
     <View>
       {/* Header */}
       <View className="flex-row items-center mb-4">
-        <Calculator size={20} color="#0D9488" />
+        <Calculator size={20} color="#b94a48" />
         <Text className="font-bold text-lg text-gray-900 ml-2">
           Calculo de Impostos - {year}
         </Text>
@@ -194,12 +194,12 @@ export function TaxCalculationSection({ summary, year }: Props) {
       {/* Summary Cards */}
       <View className="flex-row flex-wrap mb-4">
         <View className="w-1/2 p-1">
-          <View className="bg-teal-50 p-3 rounded-xl">
-            <Text className="text-xs text-teal-700">Impostos PF</Text>
-            <Text className="font-bold text-teal-700">
+          <View className="bg-[#fef2f2] p-3 rounded-xl">
+            <Text className="text-xs text-[#8b3634]">Impostos PF</Text>
+            <Text className="font-bold text-[#8b3634]">
               {formatCurrency(taxSummary.total_pf_taxes)}
             </Text>
-            <Text className="text-xs text-teal-600">
+            <Text className="text-xs text-[#a03f3d]">
               {formatTaxRate(taxSummary.pf_effective_rate)} efetivo
             </Text>
           </View>
@@ -227,18 +227,18 @@ export function TaxCalculationSection({ summary, year }: Props) {
         </View>
 
         <View className="w-1/2 p-1">
-          <View className={`p-3 rounded-xl ${balanceIsPositive ? 'bg-red-50' : 'bg-green-50'}`}>
+          <View className={`p-3 rounded-xl ${balanceIsPositive ? 'bg-[#fef2f2]' : 'bg-green-50'}`}>
             <View className="flex-row items-center">
               {balanceIsPositive ? (
                 <TrendingUp size={14} color="#DC2626" />
               ) : (
                 <TrendingDown size={14} color="#16A34A" />
               )}
-              <Text className={`text-xs ml-1 ${balanceIsPositive ? 'text-red-700' : 'text-green-700'}`}>
+              <Text className={`text-xs ml-1 ${balanceIsPositive ? 'text-[#8b3634]' : 'text-green-700'}`}>
                 {balanceIsPositive ? 'A Pagar' : 'A Restituir'}
               </Text>
             </View>
-            <Text className={`font-bold ${balanceIsPositive ? 'text-red-700' : 'text-green-700'}`}>
+            <Text className={`font-bold ${balanceIsPositive ? 'text-[#8b3634]' : 'text-green-700'}`}>
               {formatCurrency(Math.abs(taxSummary.balance_due))}
             </Text>
           </View>
@@ -252,7 +252,7 @@ export function TaxCalculationSection({ summary, year }: Props) {
           'Impostos Pessoa Fisica',
           showPFDetails,
           setShowPFDetails,
-          'text-teal-600'
+          'text-[#a03f3d]'
         )
       )}
 

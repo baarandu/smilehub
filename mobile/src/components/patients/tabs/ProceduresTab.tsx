@@ -79,7 +79,7 @@ export function ProceduresTab({
                 {/* Header */}
                 <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                     <Text className="font-semibold text-gray-900">Procedimentos Realizados</Text>
-                    <TouchableOpacity onPress={onAdd} className="bg-teal-500 p-2 rounded-lg">
+                    <TouchableOpacity onPress={onAdd} className="bg-[#b94a48] p-2 rounded-lg">
                         <Plus size={16} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
@@ -109,10 +109,10 @@ export function ProceduresTab({
                                             </View>
                                         </View>
                                         <View className="flex-row gap-2">
-                                            <TouchableOpacity onPress={() => onEdit(procedure)} className="bg-teal-50 p-2 rounded-lg">
-                                                <Edit3 size={16} color="#0D9488" />
+                                            <TouchableOpacity onPress={() => onEdit(procedure)} className="bg-[#fef2f2] p-2 rounded-lg">
+                                                <Edit3 size={16} color="#b94a48" />
                                             </TouchableOpacity>
-                                            <TouchableOpacity onPress={() => onDelete(procedure)} className="bg-red-50 p-2 rounded-lg">
+                                            <TouchableOpacity onPress={() => onDelete(procedure)} className="bg-[#fef2f2] p-2 rounded-lg">
                                                 <Trash2 size={16} color="#EF4444" />
                                             </TouchableOpacity>
                                         </View>

@@ -45,7 +45,7 @@ export default function ForgotPassword() {
                     <View className="gap-4">
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Email</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-[#b94a48] focus:bg-white">
                                 <Mail size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -61,7 +61,7 @@ export default function ForgotPassword() {
                         <TouchableOpacity
                             onPress={handleReset}
                             disabled={loading}
-                            className={`bg-teal-600 rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
+                            className={`bg-[#a03f3d] rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <ActivityIndicator color="white" />

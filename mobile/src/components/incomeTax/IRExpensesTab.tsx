@@ -139,7 +139,7 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
               <Text className="text-xs text-gray-500">{t.category}</Text>
             </View>
           </View>
-          <Text className="font-bold text-red-600">{formatCurrency(t.amount)}</Text>
+          <Text className="font-bold text-[#a03f3d]">{formatCurrency(t.amount)}</Text>
         </View>
 
         <View className="flex-row items-center justify-between">
@@ -180,7 +180,7 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
       <View className="flex-row gap-2 mb-4">
         <View className="flex-1 bg-white p-3 rounded-xl border border-gray-100">
           <Text className="text-xs text-gray-500">Total Despesas</Text>
-          <Text className="font-bold text-red-600">{formatCurrency(summaries.totalExpenses)}</Text>
+          <Text className="font-bold text-[#a03f3d]">{formatCurrency(summaries.totalExpenses)}</Text>
         </View>
         <View className="flex-1 bg-white p-3 rounded-xl border border-gray-100">
           <Text className="text-xs text-gray-500">Dedutiveis</Text>
@@ -228,8 +228,8 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
             <RefreshControl
               refreshing={refreshing || false}
               onRefresh={onRefresh}
-              colors={['#0D9488']}
-              tintColor="#0D9488"
+              colors={['#b94a48']}
+              tintColor="#b94a48"
             />
           ) : undefined
         }
@@ -311,8 +311,8 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
               </View>
 
               {formData.is_deductible && (
-                <View className="bg-teal-50 p-3 rounded-lg mb-4 border border-teal-200">
-                  <Text className="text-sm text-teal-800">
+                <View className="bg-[#fef2f2] p-3 rounded-lg mb-4 border border-[#fca5a5]">
+                  <Text className="text-sm text-[#6b2a28]">
                     <Text className="font-bold">Dica:</Text> Guarde os comprovantes por 5 anos.
                   </Text>
                 </View>
@@ -320,7 +320,7 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
 
               <TouchableOpacity
                 onPress={handleSave}
-                className="bg-teal-600 py-4 rounded-xl items-center"
+                className="bg-[#a03f3d] py-4 rounded-xl items-center"
               >
                 <Text className="text-white font-bold">Salvar</Text>
               </TouchableOpacity>

@@ -182,8 +182,8 @@ export function ExpenseDataDialog({
 
           {/* Info about deductible expenses */}
           {formData.is_deductible && (
-            <div className="p-3 bg-teal-50 border border-teal-200 rounded-lg">
-              <p className="text-sm text-teal-800">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-[#6b2a28]">
                 <strong>Dica:</strong> Para deduzir despesas no IR, mantenha os comprovantes
                 originais arquivados por pelo menos 5 anos.
               </p>
@@ -198,7 +198,7 @@ export function ExpenseDataDialog({
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-teal-600 hover:bg-teal-700"
+            className="bg-[#a03f3d] hover:bg-[#8b3634]"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>

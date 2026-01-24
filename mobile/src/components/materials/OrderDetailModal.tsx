@@ -54,7 +54,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             )}
                             <View style={styles.detailRow}>
                                 <Text style={styles.detailLabel}>Total:</Text>
-                                <Text style={[styles.detailValue, { color: '#0d9488', fontWeight: 'bold', fontSize: 20 }]}>
+                                <Text style={[styles.detailValue, { color: '#b94a48', fontWeight: 'bold', fontSize: 20 }]}>
                                     {formatCurrency(order.total_amount)}
                                 </Text>
                             </View>
@@ -76,7 +76,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                     </View>
                                     <View style={styles.detailItemInfo}>
                                         <Text style={styles.detailItemLabel}>Total:</Text>
-                                        <Text style={[styles.detailItemValue, { color: '#0d9488', fontWeight: 'bold' }]}>
+                                        <Text style={[styles.detailItemValue, { color: '#b94a48', fontWeight: 'bold' }]}>
                                             {formatCurrency(item.totalPrice)}
                                         </Text>
                                     </View>
@@ -93,13 +93,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                             <View style={{ marginTop: 16, marginBottom: 8 }}>
                                 {checkingExpense ? (
                                     <View style={[styles.recreateButton, { opacity: 0.6, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }]}>
-                                        <ActivityIndicator size="small" color="#0D9488" />
+                                        <ActivityIndicator size="small" color="#b94a48" />
                                         <Text style={styles.recreateButtonText}>Verificando...</Text>
                                     </View>
                                 ) : (
                                     <TouchableOpacity 
                                         onPress={() => onReopenOrder?.(order)} 
-                                        style={[styles.recreateButton, { backgroundColor: '#0D9488' }]}
+                                        style={[styles.recreateButton, { backgroundColor: '#b94a48' }]}
                                     >
                                         <Package size={18} color="#FFFFFF" />
                                         <Text style={styles.recreateButtonText}>

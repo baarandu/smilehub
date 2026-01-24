@@ -247,7 +247,7 @@ export default function Patients() {
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
                 <Text className="text-gray-500 mt-4">Carregando pacientes...</Text>
             </SafeAreaView>
         );
@@ -265,8 +265,8 @@ export default function Patients() {
                             await Promise.all([loadPatients(), loadPendingBudgets()]);
                             setRefreshing(false);
                         }}
-                        colors={['#0D9488']}
-                        tintColor="#0D9488"
+                        colors={['#b94a48']}
+                        tintColor="#b94a48"
                     />
                 }
             >
@@ -281,9 +281,9 @@ export default function Patients() {
                     <View className="flex-row gap-2">
                         <TouchableOpacity
                             onPress={() => setShowDocumentsModal(true)}
-                            className="w-10 h-10 bg-teal-50 items-center justify-center rounded-xl"
+                            className="w-10 h-10 bg-[#fef2f2] items-center justify-center rounded-xl"
                         >
-                            <FileText size={20} color="#0D9488" />
+                            <FileText size={20} color="#b94a48" />
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setShowBudgetsModal(true)}
@@ -298,7 +298,7 @@ export default function Patients() {
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setShowModal(true)}
-                            className="bg-teal-500 p-3 rounded-xl"
+                            className="bg-[#b94a48] p-3 rounded-xl"
                         >
                             <UserPlus size={20} color="#FFFFFF" />
                         </TouchableOpacity>
@@ -335,7 +335,7 @@ export default function Patients() {
                                 activeOpacity={0.7}
                             >
                                 <View className="flex-row items-center gap-4">
-                                    <View className="w-14 h-14 rounded-xl bg-teal-500 items-center justify-center">
+                                    <View className="w-14 h-14 rounded-xl bg-[#b94a48] items-center justify-center">
                                         <Text className="text-white font-bold text-lg">
                                             {getInitials(patient.name)}
                                         </Text>
@@ -391,7 +391,7 @@ export default function Patients() {
                             </TouchableOpacity>
                             <Text className="text-lg font-semibold text-gray-900">Novo Paciente</Text>
                             <TouchableOpacity onPress={handleSave} disabled={saving}>
-                                <Text className={`font-semibold ${saving ? 'text-gray-400' : 'text-teal-500'}`}>
+                                <Text className={`font-semibold ${saving ? 'text-gray-400' : 'text-[#b94a48]'}`}>
                                     {saving ? 'Salvando...' : 'Salvar'}
                                 </Text>
                             </TouchableOpacity>
@@ -659,8 +659,8 @@ export default function Patients() {
                                     onPress={() => setSelectedPatientForBudgets(null)}
                                     className="flex-row items-center gap-2 mb-2"
                                 >
-                                    <ChevronRight size={16} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-                                    <Text className="text-teal-600 font-medium">Voltar à lista</Text>
+                                    <ChevronRight size={16} color="#b94a48" style={{ transform: [{ rotate: '180deg' }] }} />
+                                    <Text className="text-[#a03f3d] font-medium">Voltar à lista</Text>
                                 </TouchableOpacity>
 
                                 {selectedPatientForBudgets.items.map((item, idx) => (
@@ -686,7 +686,7 @@ export default function Patients() {
                                             <Text className="text-sm text-yellow-600">
                                                 {item.tooth.treatments.join(', ')}
                                             </Text>
-                                            <Text className="text-teal-600 font-bold mt-1">
+                                            <Text className="text-[#a03f3d] font-bold mt-1">
                                                 R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </Text>
                                         </View>
@@ -699,7 +699,7 @@ export default function Patients() {
                                         setSelectedPatientForBudgets(null);
                                         router.push(`/patient/${selectedPatientForBudgets.patientId}?tab=budgets`);
                                     }}
-                                    className="bg-teal-600 p-4 rounded-xl mt-2"
+                                    className="bg-[#a03f3d] p-4 rounded-xl mt-2"
                                 >
                                     <Text className="text-white font-bold text-center">
                                         Abrir Ficha do Paciente

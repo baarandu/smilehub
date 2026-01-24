@@ -73,7 +73,7 @@ export function LocationsModal({
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={onSave}
-                                className="flex-1 bg-teal-600 py-4 rounded-xl"
+                                className="flex-1 bg-[#a03f3d] py-4 rounded-xl"
                             >
                                 <Text className="text-white font-semibold text-center">
                                     {editingLocation ? 'Salvar' : 'Adicionar'}
@@ -85,7 +85,7 @@ export function LocationsModal({
                     <ScrollView className="flex-1 px-4 py-4">
                         <TouchableOpacity
                             onPress={onAdd}
-                            className="bg-teal-600 py-4 rounded-xl flex-row items-center justify-center gap-2 mb-4"
+                            className="bg-[#a03f3d] py-4 rounded-xl flex-row items-center justify-center gap-2 mb-4"
                         >
                             <Plus size={20} color="#FFFFFF" />
                             <Text className="text-white font-semibold">Adicionar Local</Text>
@@ -115,7 +115,7 @@ export function LocationsModal({
                                             </TouchableOpacity>
                                             <TouchableOpacity
                                                 onPress={() => onDelete(location)}
-                                                className="bg-red-50 p-2 rounded-lg"
+                                                className="bg-[#fef2f2] p-2 rounded-lg"
                                             >
                                                 <Trash2 size={18} color="#EF4444" />
                                             </TouchableOpacity>

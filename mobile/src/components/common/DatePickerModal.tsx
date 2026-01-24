@@ -98,13 +98,13 @@ export function DatePickerModal({ visible, onClose, onSelectDate, initialDate }:
                     {/* Month Navigation */}
                     <View className="flex-row items-center justify-between mb-4">
                         <TouchableOpacity onPress={goToPrevMonth} className="p-2">
-                            <ChevronLeft size={20} color="#0D9488" />
+                            <ChevronLeft size={20} color="#b94a48" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={goToToday} className="px-4 py-2 bg-teal-100 rounded-lg">
-                            <Text className="text-teal-700 font-medium text-sm">Hoje</Text>
+                        <TouchableOpacity onPress={goToToday} className="px-4 py-2 bg-[#fee2e2] rounded-lg">
+                            <Text className="text-[#8b3634] font-medium text-sm">Hoje</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={goToNextMonth} className="p-2">
-                            <ChevronRight size={20} color="#0D9488" />
+                            <ChevronRight size={20} color="#b94a48" />
                         </TouchableOpacity>
                     </View>
 
@@ -126,9 +126,9 @@ export function DatePickerModal({ visible, onClose, onSelectDate, initialDate }:
                                         onPress={() => handleDateSelect(date)}
                                         className={`flex-1 items-center justify-center rounded-lg ${
                                             isSelected(date)
-                                                ? 'bg-teal-600'
+                                                ? 'bg-[#a03f3d]'
                                                 : isToday(date)
-                                                ? 'bg-teal-100'
+                                                ? 'bg-[#fee2e2]'
                                                 : 'bg-gray-50'
                                         }`}
                                     >
@@ -137,7 +137,7 @@ export function DatePickerModal({ visible, onClose, onSelectDate, initialDate }:
                                                 isSelected(date)
                                                     ? 'text-white'
                                                     : isToday(date)
-                                                    ? 'text-teal-700'
+                                                    ? 'text-[#8b3634]'
                                                     : 'text-gray-700'
                                             }`}
                                         >

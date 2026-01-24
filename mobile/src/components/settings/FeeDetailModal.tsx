@@ -50,7 +50,7 @@ export function FeeDetailModal({ fee, onClose, onRefresh }: FeeDetailModalProps)
                     </View>
                     <View className="flex-row justify-between py-3 border-b border-gray-100">
                         <Text className="text-gray-500">Taxa Normal</Text>
-                        <Text className="font-bold text-red-600 text-lg">{fee.rate}%</Text>
+                        <Text className="font-bold text-[#a03f3d] text-lg">{fee.rate}%</Text>
                     </View>
                     <View className="flex-row justify-between py-3">
                         <Text className="text-gray-500">Taxa de Antecipação</Text>
@@ -59,9 +59,9 @@ export function FeeDetailModal({ fee, onClose, onRefresh }: FeeDetailModalProps)
                 </View>
 
                 <View className="flex-row gap-3">
-                    <TouchableOpacity onPress={handleDelete} className="flex-1 bg-red-50 border border-red-200 rounded-xl py-4 items-center flex-row justify-center gap-2">
+                    <TouchableOpacity onPress={handleDelete} className="flex-1 bg-[#fef2f2] border border-[#fca5a5] rounded-xl py-4 items-center flex-row justify-center gap-2">
                         <Trash2 size={18} color="#EF4444" />
-                        <Text className="text-red-600 font-semibold">Excluir</Text>
+                        <Text className="text-[#a03f3d] font-semibold">Excluir</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={onClose} className="flex-1 bg-gray-100 rounded-xl py-4 items-center">
                         <Text className="text-gray-700 font-semibold">Fechar</Text>

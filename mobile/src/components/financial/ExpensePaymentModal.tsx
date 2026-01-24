@@ -207,12 +207,12 @@ export function ExpensePaymentModal({ visible, onClose, onConfirm, itemName, val
                                                 }
                                             }}
                                             className={`flex-1 min-w-[30%] p-4 rounded-xl border-2 ${
-                                                isSelected ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
+                                                isSelected ? 'border-[#b94a48] bg-[#fef2f2]' : 'border-gray-200 bg-white'
                                             }`}
                                         >
-                                            <Icon size={24} color={isSelected ? '#0D9488' : '#6B7280'} />
+                                            <Icon size={24} color={isSelected ? '#b94a48' : '#6B7280'} />
                                             <Text className={`text-sm font-medium mt-2 text-center ${
-                                                isSelected ? 'text-teal-700' : 'text-gray-700'
+                                                isSelected ? 'text-[#8b3634]' : 'text-gray-700'
                                             }`}>
                                                 {method.label}
                                             </Text>
@@ -234,11 +234,11 @@ export function ExpensePaymentModal({ visible, onClose, onConfirm, itemName, val
                                                 key={brand.id}
                                                 onPress={() => setSelectedBrand(brand.id)}
                                                 className={`px-4 py-2 rounded-lg border ${
-                                                    isSelected ? 'border-teal-500 bg-teal-50' : 'border-gray-200 bg-white'
+                                                    isSelected ? 'border-[#b94a48] bg-[#fef2f2]' : 'border-gray-200 bg-white'
                                                 }`}
                                             >
                                                 <Text className={`text-sm font-medium ${
-                                                    isSelected ? 'text-teal-700' : 'text-gray-700'
+                                                    isSelected ? 'text-[#8b3634]' : 'text-gray-700'
                                                 }`}>
                                                     {brand.label}
                                                 </Text>
@@ -257,7 +257,7 @@ export function ExpensePaymentModal({ visible, onClose, onConfirm, itemName, val
                                     <TouchableOpacity
                                         onPress={() => setIsInstallments(!isInstallments)}
                                         className={`w-12 h-6 rounded-full ${
-                                            isInstallments ? 'bg-teal-500' : 'bg-gray-300'
+                                            isInstallments ? 'bg-[#b94a48]' : 'bg-gray-300'
                                         }`}
                                     >
                                         <View className={`w-5 h-5 rounded-full bg-white mt-0.5 ${
@@ -345,7 +345,7 @@ export function ExpensePaymentModal({ visible, onClose, onConfirm, itemName, val
                             {isInstallments && parseFloat(interestRate) > 0 && (
                                 <View className="flex-row justify-between items-center mb-2">
                                     <Text className="text-sm text-gray-600">Juros ({interestRate}%)</Text>
-                                    <Text className="text-sm font-medium text-red-600">
+                                    <Text className="text-sm font-medium text-[#a03f3d]">
                                         +{formatCurrency(totalWithInterest - value)}
                                     </Text>
                                 </View>
@@ -362,7 +362,7 @@ export function ExpensePaymentModal({ visible, onClose, onConfirm, itemName, val
                     <View className="p-4 border-t border-gray-100 bg-white safe-area-bottom">
                         <TouchableOpacity
                             onPress={handleConfirm}
-                            className="bg-teal-500 rounded-xl p-4 items-center"
+                            className="bg-[#b94a48] rounded-xl p-4 items-center"
                         >
                             <Text className="text-white font-bold text-lg">Confirmar Pagamento</Text>
                         </TouchableOpacity>

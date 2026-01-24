@@ -240,11 +240,11 @@ export default function Agenda() {
     const isToday = selectedDate.toDateString() === new Date().toDateString();
 
     const statusConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
-        scheduled: { label: 'Agendado', bgColor: 'bg-teal-100', textColor: 'text-teal-700' },
+        scheduled: { label: 'Agendado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
         confirmed: { label: 'Confirmado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
         completed: { label: 'Compareceu', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
         no_show: { label: 'Não Compareceu', bgColor: 'bg-orange-100', textColor: 'text-orange-700' },
-        cancelled: { label: 'Cancelado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+        cancelled: { label: 'Cancelado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
         rescheduled: { label: 'Remarcado', bgColor: 'bg-purple-100', textColor: 'text-purple-700' },
     };
 
@@ -342,8 +342,8 @@ export default function Agenda() {
                             await Promise.all([loadAppointments(), loadMonthDates()]);
                             setRefreshing(false);
                         }}
-                        colors={['#0D9488']}
-                        tintColor="#0D9488"
+                        colors={['#b94a48']}
+                        tintColor="#b94a48"
                     />
                 }
             >
@@ -359,7 +359,7 @@ export default function Agenda() {
                             setEditingAppointment(null);
                             setShowModal(true);
                         }}
-                        className="bg-teal-600 w-12 h-12 rounded-full items-center justify-center shadow-lg"
+                        className="bg-[#a03f3d] w-12 h-12 rounded-full items-center justify-center shadow-lg"
                     >
                         <Plus size={24} color="#FFFFFF" />
                     </TouchableOpacity>
@@ -391,7 +391,7 @@ export default function Agenda() {
                         </Text>
                         {!isToday && (
                             <TouchableOpacity onPress={goToToday}>
-                                <Text className="text-teal-600 text-sm mt-1">Ir para hoje</Text>
+                                <Text className="text-[#a03f3d] text-sm mt-1">Ir para hoje</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -400,7 +400,7 @@ export default function Agenda() {
                 {/* Appointments */}
                 {loading ? (
                     <View className="py-12 items-center">
-                        <ActivityIndicator size="large" color="#0D9488" />
+                        <ActivityIndicator size="large" color="#b94a48" />
                     </View>
                 ) : appointments.length === 0 ? (
                     <View className="bg-white rounded-xl p-12 items-center">
@@ -423,7 +423,7 @@ export default function Agenda() {
                                 >
                                     <View className="flex-row items-center gap-4">
                                         <View className="items-center justify-center">
-                                            <Text className="text-2xl font-bold text-teal-600">
+                                            <Text className="text-2xl font-bold text-[#a03f3d]">
                                                 {apt.time?.slice(0, 5)}
                                             </Text>
                                         </View>
@@ -522,11 +522,11 @@ export default function Agenda() {
                                         className={`flex-row items-center p-4 rounded-xl mb-2 ${isSelected ? 'bg-gray-100' : 'bg-gray-50'}`}
                                     >
                                         <View className={`w-3 h-3 rounded-full mr-3 ${config.bgColor.replace('100', '500')}`} />
-                                        <Text className={`flex-1 font-medium ${isSelected ? 'text-teal-600' : 'text-gray-700'}`}>
+                                        <Text className={`flex-1 font-medium ${isSelected ? 'text-[#a03f3d]' : 'text-gray-700'}`}>
                                             {option.label}
                                         </Text>
                                         {isSelected && (
-                                            <Text className="text-teal-600">✓</Text>
+                                            <Text className="text-[#a03f3d]">✓</Text>
                                         )}
                                     </TouchableOpacity>
                                 );
@@ -558,15 +558,15 @@ export default function Agenda() {
                             </TouchableOpacity>
                             <Text className="text-lg font-semibold text-gray-900">Cadastrar Paciente</Text>
                             <TouchableOpacity onPress={handleSavePatient} disabled={savingPatient}>
-                                <Text className={`font-semibold ${savingPatient ? 'text-gray-400' : 'text-teal-500'}`}>
+                                <Text className={`font-semibold ${savingPatient ? 'text-gray-400' : 'text-[#b94a48]'}`}>
                                     {savingPatient ? 'Salvando...' : 'Salvar'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView className="flex-1 px-4 py-6">
-                            <View className="bg-teal-50 border border-teal-100 rounded-xl p-4 mb-6">
-                                <Text className="text-teal-700 text-sm">
+                            <View className="bg-[#fef2f2] border border-[#fecaca] rounded-xl p-4 mb-6">
+                                <Text className="text-[#8b3634] text-sm">
                                     Cadastro rápido de paciente. Você poderá completar o perfil depois.
                                 </Text>
                             </View>

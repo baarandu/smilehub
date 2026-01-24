@@ -27,7 +27,7 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
         <div className="w-[400px] flex flex-col bg-slate-50 border-l">
             <div className="p-4 border-b bg-white">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Calculator className="w-5 h-5 text-teal-600" />
+                    <Calculator className="w-5 h-5 text-[#a03f3d]" />
                     Resumo do Orçamento
                 </h3>
                 {onSelectItem && (
@@ -45,7 +45,7 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
                         {items.map((item, idx) => (
                             <div
                                 key={idx}
-                                className={`bg-white p-3 rounded-lg border shadow-sm relative group cursor-pointer transition-all hover:border-teal-300 hover:shadow-md ${selectedItemIndex === idx ? 'ring-2 ring-teal-500 border-teal-500' : ''}`}
+                                className={`bg-white p-3 rounded-lg border shadow-sm relative group cursor-pointer transition-all hover:border-red-300 hover:shadow-md ${selectedItemIndex === idx ? 'ring-2 ring-red-500 border-red-500' : ''}`}
                                 onClick={() => onSelectItem?.(item, idx)}
                             >
                                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -53,7 +53,7 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6 text-teal-500 hover:text-teal-700 hover:bg-teal-50"
+                                            className="h-6 w-6 text-red-500 hover:text-[#8b3634] hover:bg-red-50"
                                             onClick={(e) => { e.stopPropagation(); onSelectItem(item, idx); }}
                                         >
                                             <Pencil className="w-4 h-4" />
@@ -69,7 +69,7 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
                                     </Button>
                                 </div>
 
-                                <div className="font-semibold text-teal-800 mb-1">
+                                <div className="font-semibold text-[#6b2a28] mb-1">
                                     {getToothDisplayName(item.tooth)}
                                 </div>
 

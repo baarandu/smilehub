@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     editButton: {
-        backgroundColor: '#0D9488',
+        backgroundColor: '#b94a48',
     },
     deleteButton: {
         backgroundColor: '#EF4444',

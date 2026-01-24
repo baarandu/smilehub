@@ -297,8 +297,8 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         {Object.entries(automaticDeductions.locationBreakdown).map(([location, amount]) => (
                             <div key={location} className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 bg-teal-100 rounded-lg flex items-center justify-center">
-                                        <MapPin className="h-4 w-4 text-teal-600" />
+                                    <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <MapPin className="h-4 w-4 text-[#a03f3d]" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-foreground">Taxa do Local</p>

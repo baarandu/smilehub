@@ -163,9 +163,9 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                         <Text className="text-lg font-semibold text-gray-900">Editar Paciente</Text>
                         <TouchableOpacity onPress={handleSave} disabled={saving}>
                             {saving ? (
-                                <ActivityIndicator size="small" color="#0D9488" />
+                                <ActivityIndicator size="small" color="#b94a48" />
                             ) : (
-                                <Text className="font-semibold text-teal-500">Salvar</Text>
+                                <Text className="font-semibold text-[#b94a48]">Salvar</Text>
                             )}
                         </TouchableOpacity>
                     </View>

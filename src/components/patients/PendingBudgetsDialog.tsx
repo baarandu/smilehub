@@ -122,7 +122,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                         <div className="space-y-3">
                             <button
                                 onClick={handleBack}
-                                className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 font-medium mb-4"
+                                className="flex items-center gap-2 text-sm text-[#a03f3d] hover:text-[#8b3634] font-medium mb-4"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                                 Voltar à lista
@@ -148,7 +148,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                                         <p className="text-sm text-amber-600 dark:text-amber-300">
                                             {item.tooth.treatments.join(', ')}
                                         </p>
-                                        <p className="text-teal-600 font-bold mt-1">
+                                        <p className="text-[#a03f3d] font-bold mt-1">
                                             R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>
                                     </div>
@@ -157,7 +157,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
 
                             <Button
                                 onClick={() => handleOpenPatient(selectedPatient.patientId)}
-                                className="w-full mt-4 bg-teal-600 hover:bg-teal-700"
+                                className="w-full mt-4 bg-[#a03f3d] hover:bg-[#8b3634]"
                             >
                                 Abrir Ficha do Paciente
                             </Button>

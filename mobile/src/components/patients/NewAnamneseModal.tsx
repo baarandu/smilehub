@@ -42,10 +42,10 @@ function QuestionField({
                         value={value}
                         onValueChange={onValueChange}
                         trackColor={{ false: '#E5E7EB', true: '#99F6E4' }}
-                        thumbColor={value ? '#0D9488' : '#9CA3AF'}
+                        thumbColor={value ? '#b94a48' : '#9CA3AF'}
                         ios_backgroundColor="#E5E7EB"
                     />
-                    <Text className={`text-sm ${value ? 'text-teal-600 font-medium' : 'text-gray-400'}`}>Sim</Text>
+                    <Text className={`text-sm ${value ? 'text-[#a03f3d] font-medium' : 'text-gray-400'}`}>Sim</Text>
                 </View>
             </View>
             {value && showDetails && onDetailsChange && (
@@ -621,7 +621,7 @@ export function NewAnamneseModal({
                         <TouchableOpacity
                             onPress={handleSave}
                             disabled={saving}
-                            className="bg-teal-500 rounded-xl px-6 py-4 items-center"
+                            className="bg-[#b94a48] rounded-xl px-6 py-4 items-center"
                         >
                             {saving ? (
                                 <Text className="text-white font-semibold">Salvando...</Text>

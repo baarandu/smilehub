@@ -18,7 +18,7 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
             <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                     <Text className="font-semibold text-gray-900">Orçamentos</Text>
-                    <TouchableOpacity onPress={onAdd} className="bg-teal-500 p-2 rounded-lg">
+                    <TouchableOpacity onPress={onAdd} className="bg-[#b94a48] p-2 rounded-lg">
                         <Plus size={16} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
@@ -75,18 +75,18 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
                                             ));
                                         })()}
                                     </View>
-                                    <Text className="text-lg font-bold text-teal-600">
+                                    <Text className="text-lg font-bold text-[#a03f3d]">
                                         R$ {budget.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </Text>
                                 </TouchableOpacity>
                                 <View className="flex-row gap-2 mt-3 pt-3 border-t border-gray-100">
-                                    <TouchableOpacity onPress={() => onEdit(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-teal-50 py-2 rounded-lg">
-                                        <Edit3 size={14} color="#0D9488" />
-                                        <Text className="text-teal-600 text-sm font-medium">Editar</Text>
+                                    <TouchableOpacity onPress={() => onEdit(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-[#fef2f2] py-2 rounded-lg">
+                                        <Edit3 size={14} color="#b94a48" />
+                                        <Text className="text-[#a03f3d] text-sm font-medium">Editar</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity onPress={() => onDelete(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-red-50 py-2 rounded-lg">
+                                    <TouchableOpacity onPress={() => onDelete(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-[#fef2f2] py-2 rounded-lg">
                                         <Trash2 size={14} color="#EF4444" />
-                                        <Text className="text-red-600 text-sm font-medium">Excluir</Text>
+                                        <Text className="text-[#a03f3d] text-sm font-medium">Excluir</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>

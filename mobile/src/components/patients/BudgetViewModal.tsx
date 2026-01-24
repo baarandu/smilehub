@@ -212,8 +212,8 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                     </View>
 
                     {/* Total */}
-                    <View className="bg-teal-500 rounded-xl p-4 mb-4">
-                        <Text className="text-teal-100 text-sm">Total do Orçamento</Text>
+                    <View className="bg-[#b94a48] rounded-xl p-4 mb-4">
+                        <Text className="text-[#fee2e2] text-sm">Total do Orçamento</Text>
                         <Text className="text-white font-bold text-2xl">
                             R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </Text>
@@ -226,7 +226,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                 onClose();
                                 onNavigateToPayments?.();
                             }}
-                            className="bg-teal-600 rounded-xl p-4 mb-4 flex-row items-center justify-center"
+                            className="bg-[#a03f3d] rounded-xl p-4 mb-4 flex-row items-center justify-center"
                         >
                             <CreditCard size={20} color="#FFFFFF" />
                             <Text className="text-white font-bold ml-2">Pagar</Text>
@@ -237,14 +237,14 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                     <TouchableOpacity
                         onPress={handleExportPDF}
                         disabled={generatingPdf}
-                        className="bg-white border border-teal-500 rounded-xl p-4 mb-4 flex-row items-center justify-center"
+                        className="bg-white border border-[#b94a48] rounded-xl p-4 mb-4 flex-row items-center justify-center"
                     >
                         {generatingPdf ? (
-                            <ActivityIndicator color="#0d9488" />
+                            <ActivityIndicator color="#b94a48" />
                         ) : (
                             <>
-                                <Eye size={20} color="#0d9488" />
-                                <Text className="text-teal-600 font-medium ml-2">Visualizar PDF</Text>
+                                <Eye size={20} color="#b94a48" />
+                                <Text className="text-[#a03f3d] font-medium ml-2">Visualizar PDF</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -277,7 +277,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             <Text className="font-semibold text-gray-900">
                                                 R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </Text>
-                                            <Text className="text-teal-600 text-xs">Toque para aprovar</Text>
+                                            <Text className="text-[#a03f3d] text-xs">Toque para aprovar</Text>
                                         </View>
                                     </TouchableOpacity>
                                 );

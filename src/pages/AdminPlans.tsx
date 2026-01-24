@@ -7,8 +7,8 @@ export default function AdminPlans() {
     return (
         <div className="container mx-auto p-6 max-w-6xl space-y-8">
             <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
-                <div className="p-3 bg-teal-100 rounded-xl">
-                    <ShieldCheck className="h-8 w-8 text-teal-700" />
+                <div className="p-3 bg-red-100 rounded-xl">
+                    <ShieldCheck className="h-8 w-8 text-[#8b3634]" />
                 </div>
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Administração de Planos</h1>

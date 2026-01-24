@@ -261,7 +261,7 @@ export default function SubscriptionScreen() {
 
     const getButtonStyle = (plan: Plan): string => {
         const currentPlan = plans.find(p => p.id === currentPlanId);
-        if (!currentPlan) return 'bg-teal-600';
+        if (!currentPlan) return 'bg-[#a03f3d]';
 
         if (plan.price_monthly > currentPlan.price_monthly) {
             return 'bg-green-600'; // Upgrade
@@ -269,13 +269,13 @@ export default function SubscriptionScreen() {
         if (plan.price_monthly < currentPlan.price_monthly) {
             return 'bg-amber-600'; // Downgrade
         }
-        return 'bg-teal-600';
+        return 'bg-[#a03f3d]';
     };
 
     if (loading) {
         return (
             <View className="flex-1 items-center justify-center bg-gray-50">
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
             </View>
         );
     }
@@ -292,7 +292,7 @@ export default function SubscriptionScreen() {
             <ScrollView className="p-4" contentContainerStyle={{ paddingBottom: 40 }}>
                 {!isAdmin ? (
                     <View className="flex-1 items-center justify-center py-20">
-                        <View className="bg-red-50 p-6 rounded-full mb-6">
+                        <View className="bg-[#fef2f2] p-6 rounded-full mb-6">
                             <Shield size={48} color="#EF4444" />
                         </View>
                         <Text className="text-xl font-bold text-gray-900 text-center mb-2">
@@ -310,7 +310,7 @@ export default function SubscriptionScreen() {
                                 await loadData();
                                 setLoading(false);
                             }}
-                            className="mt-8 bg-teal-600 px-6 py-3 rounded-full"
+                            className="mt-8 bg-[#a03f3d] px-6 py-3 rounded-full"
                         >
                             <Text className="text-white font-bold">Verificar Novamente</Text>
                         </TouchableOpacity>
@@ -320,9 +320,9 @@ export default function SubscriptionScreen() {
                         <Text className="text-gray-500 text-center mb-2">
                             Escolha o melhor plano para sua clínica crescer.
                         </Text>
-                        <View className="bg-teal-50 p-4 rounded-xl mb-6 items-center">
-                            <Text className="text-teal-800 font-bold text-center">30 Dias Grátis no Plano Mensal!</Text>
-                            <Text className="text-teal-600 text-xs text-center mt-1">
+                        <View className="bg-[#fef2f2] p-4 rounded-xl mb-6 items-center">
+                            <Text className="text-[#6b2a28] font-bold text-center">30 Dias Grátis no Plano Mensal!</Text>
+                            <Text className="text-[#a03f3d] text-xs text-center mt-1">
                                 Cancele a qualquer momento. A cobrança só ocorre após o período de teste.
                             </Text>
                         </View>
@@ -336,11 +336,11 @@ export default function SubscriptionScreen() {
                                 return (
                                     <View
                                         key={plan.id}
-                                        className={`bg-white rounded-2xl p-6 shadow-sm border ${isCurrent ? 'border-teal-500 border-2' : 'border-gray-200'}`}
+                                        className={`bg-white rounded-2xl p-6 shadow-sm border ${isCurrent ? 'border-[#b94a48] border-2' : 'border-gray-200'}`}
                                     >
                                         {isCurrent && (
                                             <View className="absolute -top-3 left-0 right-0 items-center">
-                                                <View className="bg-teal-600 px-3 py-1 rounded-full">
+                                                <View className="bg-[#a03f3d] px-3 py-1 rounded-full">
                                                     <Text className="text-white text-xs font-bold uppercase">Plano Atual</Text>
                                                 </View>
                                             </View>

@@ -125,10 +125,10 @@ export function PJSourcesManager({ sources, onUpdated }: PJSourcesManagerProps) 
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Building className="w-5 h-5 text-teal-600" />
+              <Building className="w-5 h-5 text-[#a03f3d]" />
               <CardTitle>Fontes Pagadoras PJ (Convenios)</CardTitle>
             </div>
-            <Button onClick={openCreateDialog} size="sm" className="bg-teal-600 hover:bg-teal-700">
+            <Button onClick={openCreateDialog} size="sm" className="bg-[#a03f3d] hover:bg-[#8b3634]">
               <Plus className="w-4 h-4 mr-2" />
               Adicionar
             </Button>
@@ -247,7 +247,7 @@ export function PJSourcesManager({ sources, onUpdated }: PJSourcesManagerProps) 
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-[#a03f3d] hover:bg-[#8b3634]"
             >
               {saving ? 'Salvando...' : 'Salvar'}
             </Button>

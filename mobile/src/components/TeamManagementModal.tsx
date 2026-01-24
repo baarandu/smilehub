@@ -41,7 +41,7 @@ interface ClinicUserRow {
 
 const ROLE_CONFIG: Record<string, { label: string; description: string; color: string; bgColor: string }> = {
     owner: { label: 'Dono', description: 'Proprietario da clinica', color: '#059669', bgColor: '#d1fae5' },
-    admin: { label: 'Administrador', description: 'Acesso total ao sistema', color: '#14b8a6', bgColor: '#ccfbf1' },
+    admin: { label: 'Administrador', description: 'Acesso total ao sistema', color: '#c75a58', bgColor: '#fee2e2' },
     dentist: { label: 'Dentista', description: 'Acesso a pacientes e agenda', color: '#3b82f6', bgColor: '#dbeafe' },
     assistant: { label: 'Secretaria', description: 'Acesso administrativo', color: '#8b5cf6', bgColor: '#f3e8ff' },
     editor: { label: 'Editor', description: 'Pode criar e editar dados', color: '#f59e0b', bgColor: '#fef3c7' },
@@ -333,7 +333,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                 <Edit3 size={18} color="#6b7280" />
                             </TouchableOpacity>
                             <TouchableOpacity
-                                className="p-2 bg-red-50 rounded-lg"
+                                className="p-2 bg-[#fef2f2] rounded-lg"
                                 onPress={() => handleRemoveMember(member)}
                             >
                                 <Trash2 size={18} color="#ef4444" />
@@ -393,7 +393,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
 
             {loadingAudit ? (
                 <View className="items-center py-8">
-                    <ActivityIndicator size="large" color="#14b8a6" />
+                    <ActivityIndicator size="large" color="#c75a58" />
                 </View>
             ) : auditLogs.length === 0 ? (
                 <View className="items-center py-8">
@@ -411,7 +411,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                             </Text>
                         </View>
                         <Text className="text-sm text-gray-600 mt-1">
-                            <Text className="font-medium text-teal-700">{log.action}</Text> em {log.entity}
+                            <Text className="font-medium text-[#8b3634]">{log.action}</Text> em {log.entity}
                         </Text>
                         {/* Optionally show details if needed */}
                         {/* <Text className="text-xs text-gray-400 mt-1">{JSON.stringify(log.details)}</Text> */}
@@ -432,7 +432,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                         </TouchableOpacity>
                         <Text className="text-lg font-semibold text-gray-900">Gerenciar Equipe</Text>
                         <TouchableOpacity onPress={() => setShowInviteForm(true)}>
-                            <UserPlus size={24} color="#14b8a6" />
+                            <UserPlus size={24} color="#c75a58" />
                         </TouchableOpacity>
                     </View>
 
@@ -440,25 +440,25 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                     <View className="flex-row px-4 pt-4 gap-4">
                         <TouchableOpacity
                             onPress={() => setActiveTab('members')}
-                            className={`pb-2 border-b-2 ${activeTab === 'members' ? 'border-teal-600' : 'border-transparent'}`}
+                            className={`pb-2 border-b-2 ${activeTab === 'members' ? 'border-[#a03f3d]' : 'border-transparent'}`}
                         >
-                            <Text className={`font-medium ${activeTab === 'members' ? 'text-teal-800' : 'text-gray-500'}`}>
+                            <Text className={`font-medium ${activeTab === 'members' ? 'text-[#6b2a28]' : 'text-gray-500'}`}>
                                 Membros ({members.length})
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('invites')}
-                            className={`pb-2 border-b-2 ${activeTab === 'invites' ? 'border-teal-600' : 'border-transparent'}`}
+                            className={`pb-2 border-b-2 ${activeTab === 'invites' ? 'border-[#a03f3d]' : 'border-transparent'}`}
                         >
-                            <Text className={`font-medium ${activeTab === 'invites' ? 'text-teal-800' : 'text-gray-500'}`}>
+                            <Text className={`font-medium ${activeTab === 'invites' ? 'text-[#6b2a28]' : 'text-gray-500'}`}>
                                 Convites ({invites.length})
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('audit')}
-                            className={`pb-2 border-b-2 ${activeTab === 'audit' ? 'border-teal-600' : 'border-transparent'}`}
+                            className={`pb-2 border-b-2 ${activeTab === 'audit' ? 'border-[#a03f3d]' : 'border-transparent'}`}
                         >
-                            <Text className={`font-medium ${activeTab === 'audit' ? 'text-teal-800' : 'text-gray-500'}`}>
+                            <Text className={`font-medium ${activeTab === 'audit' ? 'text-[#6b2a28]' : 'text-gray-500'}`}>
                                 Auditoria
                             </Text>
                         </TouchableOpacity>
@@ -466,7 +466,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
 
                     {loading ? (
                         <View className="flex-1 items-center justify-center">
-                            <ActivityIndicator size="large" color="#14b8a6" />
+                            <ActivityIndicator size="large" color="#c75a58" />
                         </View>
                     ) : (
                         <ScrollView className="flex-1 px-4 py-4">
@@ -496,13 +496,13 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                             <TouchableOpacity
                                                 key={role}
                                                 className={`px-3 py-2 rounded-lg border ${inviteRole === role
-                                                    ? 'border-teal-500 bg-teal-50'
+                                                    ? 'border-[#b94a48] bg-[#fef2f2]'
                                                     : 'border-gray-200'
                                                     }`}
                                                 onPress={() => setInviteRole(role)}
                                             >
                                                 <Text
-                                                    className={`text-xs ${inviteRole === role ? 'text-teal-700 font-medium' : 'text-gray-600'
+                                                    className={`text-xs ${inviteRole === role ? 'text-[#8b3634] font-medium' : 'text-gray-600'
                                                         }`}
                                                 >
                                                     {ROLE_CONFIG[role].label}
@@ -512,7 +512,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                     </View>
 
                                     <TouchableOpacity
-                                        className="py-3 bg-teal-600 rounded-lg shadow-sm"
+                                        className="py-3 bg-[#a03f3d] rounded-lg shadow-sm"
                                         onPress={handleInvite}
                                         disabled={saving}
                                     >
@@ -548,19 +548,19 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                         <TouchableOpacity
                                             key={role}
                                             className={`flex-row items-center p-3 mb-2 rounded-xl border-2 ${selectedRole === role
-                                                ? 'border-teal-500 bg-teal-50'
+                                                ? 'border-[#b94a48] bg-[#fef2f2]'
                                                 : 'border-gray-200'
                                                 }`}
                                             onPress={() => setSelectedRole(role)}
                                         >
                                             <View className="flex-1">
-                                                <Text className={`font-medium ${selectedRole === role ? 'text-teal-700' : 'text-gray-900'}`}>
+                                                <Text className={`font-medium ${selectedRole === role ? 'text-[#8b3634]' : 'text-gray-900'}`}>
                                                     {ROLE_CONFIG[role].label}
                                                 </Text>
                                                 <Text className="text-xs text-gray-500">{ROLE_CONFIG[role].description}</Text>
                                             </View>
                                             {selectedRole === role && (
-                                                <Check size={20} color="#14b8a6" />
+                                                <Check size={20} color="#c75a58" />
                                             )}
                                         </TouchableOpacity>
                                     ))}
@@ -573,7 +573,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                             <Text className="text-center text-gray-600">Cancelar</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
-                                            className="flex-1 py-3 bg-teal-600 rounded-lg"
+                                            className="flex-1 py-3 bg-[#a03f3d] rounded-lg"
                                             onPress={confirmRoleChange}
                                         >
                                             <Text className="text-center text-white font-medium">Confirmar</Text>

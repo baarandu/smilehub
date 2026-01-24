@@ -187,7 +187,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
             </Text>
             <Text className="text-xs text-gray-500">{formatDate(t.date)}</Text>
           </View>
-          <Text className="font-bold text-teal-600">{formatCurrency(t.amount)}</Text>
+          <Text className="font-bold text-[#a03f3d]">{formatCurrency(t.amount)}</Text>
         </View>
 
         <View className="flex-row items-center justify-between">
@@ -230,7 +230,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
       <View className="flex-row gap-2 mb-4">
         <View className="flex-1 bg-white p-3 rounded-xl border border-gray-100">
           <Text className="text-xs text-gray-500">Receita PF</Text>
-          <Text className="font-bold text-teal-600">{formatCurrency(summaries.pfTotal)}</Text>
+          <Text className="font-bold text-[#a03f3d]">{formatCurrency(summaries.pfTotal)}</Text>
         </View>
         <View className="flex-1 bg-white p-3 rounded-xl border border-gray-100">
           <Text className="text-xs text-gray-500">Receita PJ</Text>
@@ -278,7 +278,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
         contentContainerStyle={{ padding: 16 }}
         refreshControl={
           onRefresh ? (
-            <RefreshControl refreshing={refreshing || false} onRefresh={onRefresh} colors={['#0D9488']} />
+            <RefreshControl refreshing={refreshing || false} onRefresh={onRefresh} colors={['#b94a48']} />
           ) : undefined
         }
       />
@@ -309,7 +309,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
               <View className="flex-row gap-2 mb-4">
                 <TouchableOpacity
                   onPress={() => setFormData({ ...formData, payer_type: 'PF', pj_source_id: '' })}
-                  className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${formData.payer_type === 'PF' ? 'bg-teal-600 border-teal-600' : 'border-gray-200'}`}
+                  className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${formData.payer_type === 'PF' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200'}`}
                 >
                   <User size={18} color={formData.payer_type === 'PF' ? 'white' : '#6B7280'} />
                   <Text
@@ -322,7 +322,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                   onPress={() =>
                     setFormData({ ...formData, payer_type: 'PJ', payer_is_patient: false })
                   }
-                  className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${formData.payer_type === 'PJ' ? 'bg-teal-600 border-teal-600' : 'border-gray-200'}`}
+                  className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${formData.payer_type === 'PJ' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200'}`}
                 >
                   <Building2 size={18} color={formData.payer_type === 'PJ' ? 'white' : '#6B7280'} />
                   <Text
@@ -348,7 +348,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                         value={formData.payer_is_patient}
                         onValueChange={(v) => setFormData({ ...formData, payer_is_patient: v })}
                         trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                        thumbColor={formData.payer_is_patient ? '#0D9488' : '#9CA3AF'}
+                        thumbColor={formData.payer_is_patient ? '#b94a48' : '#9CA3AF'}
                       />
                     </View>
                   )}
@@ -426,7 +426,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
 
               <TouchableOpacity
                 onPress={handleSave}
-                className="bg-teal-600 py-4 rounded-xl items-center"
+                className="bg-[#a03f3d] py-4 rounded-xl items-center"
               >
                 <Text className="text-white font-bold">Salvar</Text>
               </TouchableOpacity>
@@ -460,13 +460,13 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                         setFormData({ ...formData, pj_source_id: source.id });
                         setShowPJPicker(false);
                       }}
-                      className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.pj_source_id === source.id ? 'bg-teal-50 border border-teal-200' : 'bg-gray-50'}`}
+                      className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.pj_source_id === source.id ? 'bg-[#fef2f2] border border-[#fca5a5]' : 'bg-gray-50'}`}
                     >
                       <View>
                         <Text
                           className={
                             formData.pj_source_id === source.id
-                              ? 'text-teal-700 font-medium'
+                              ? 'text-[#8b3634] font-medium'
                               : 'text-gray-700'
                           }
                         >
@@ -474,7 +474,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                         </Text>
                         <Text className="text-xs text-gray-500">{source.cnpj}</Text>
                       </View>
-                      {formData.pj_source_id === source.id && <Check size={20} color="#0D9488" />}
+                      {formData.pj_source_id === source.id && <Check size={20} color="#b94a48" />}
                     </TouchableOpacity>
                   ))
               )}

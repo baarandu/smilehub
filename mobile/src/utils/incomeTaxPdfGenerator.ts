@@ -31,7 +31,7 @@ function generateHtmlContent(summary: IRSummary): string {
       .header h1 {
         font-size: 22px;
         margin-bottom: 5px;
-        color: #0D9488;
+        color: #b94a48;
       }
       .header h2 {
         font-size: 14px;
@@ -48,7 +48,7 @@ function generateHtmlContent(summary: IRSummary): string {
         background: #f0f0f0;
         padding: 8px 12px;
         margin-bottom: 10px;
-        border-left: 4px solid #0D9488;
+        border-left: 4px solid #b94a48;
       }
       .summary-grid {
         display: flex;
@@ -129,7 +129,7 @@ function generateHtmlContent(summary: IRSummary): string {
       .fiscal-info p {
         margin: 4px 0;
       }
-      .text-teal { color: #0D9488; }
+      .text-teal { color: #b94a48; }
       .text-blue { color: #2563EB; }
       .text-amber { color: #D97706; }
       .text-red { color: #DC2626; }

@@ -574,7 +574,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                         <TabsContent value="audit" className="mt-4 h-[400px]">
                             {loadingAudit ? (
                                 <div className="flex justify-center py-8">
-                                    <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                                    <Loader2 className="w-8 h-8 animate-spin text-[#a03f3d]" />
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -595,7 +595,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                                                         </span>
                                                     </div>
                                                     <p className="text-gray-600">
-                                                        <span className="font-medium text-teal-700 uppercase text-xs mr-2 px-1.5 py-0.5 bg-teal-50 rounded">
+                                                        <span className="font-medium text-[#8b3634] uppercase text-xs mr-2 px-1.5 py-0.5 bg-red-50 rounded">
                                                             {log.action}
                                                         </span>
                                                         {(log.details as any)?.description || 'Ação registrada'}
@@ -655,7 +655,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                                 <Button
                                     onClick={handlePasswordChange}
                                     disabled={loadingPassword || !newPassword || !confirmPassword}
-                                    className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                                    className="w-full bg-[#a03f3d] hover:bg-[#8b3634] text-white"
                                 >
                                     {loadingPassword ? (
                                         <>

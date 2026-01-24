@@ -146,7 +146,7 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
             <div className="p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground">Receita PF</p>
-              <p className="text-xl font-bold text-teal-600">
+              <p className="text-xl font-bold text-[#a03f3d]">
                 {formatCurrency(summary.total_income_pf)}
               </p>
             </div>
@@ -172,9 +172,9 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
                 {formatCurrency(summary.total_expenses_deductible)}
               </p>
             </div>
-            <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
-              <p className="text-sm text-teal-700">Resultado Liquido</p>
-              <p className="text-xl font-bold text-teal-700">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-[#8b3634]">Resultado Liquido</p>
+              <p className="text-xl font-bold text-[#8b3634]">
                 {formatCurrency(summary.net_result)}
               </p>
             </div>
@@ -197,7 +197,7 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         <Button
           onClick={handleExportPdf}
           disabled={exporting || hasErrors}
-          className="bg-teal-600 hover:bg-teal-700"
+          className="bg-[#a03f3d] hover:bg-[#8b3634]"
         >
           <FileDown className="w-4 h-4 mr-2" />
           Gerar PDF (Dossie IR)

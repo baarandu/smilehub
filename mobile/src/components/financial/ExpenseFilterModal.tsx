@@ -106,9 +106,9 @@ export function ExpenseFilterModal({
                                 <TouchableOpacity
                                     key={cat}
                                     onPress={() => toggleCategory(cat)}
-                                    className={`px-3 py-2 rounded-lg border ${filters.categories.includes(cat) ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}
+                                    className={`px-3 py-2 rounded-lg border ${filters.categories.includes(cat) ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
                                 >
-                                    <Text className={`text-xs ${filters.categories.includes(cat) ? 'text-red-700 font-medium' : 'text-gray-600'}`}>
+                                    <Text className={`text-xs ${filters.categories.includes(cat) ? 'text-[#8b3634] font-medium' : 'text-gray-600'}`}>
                                         {cat}
                                     </Text>
                                 </TouchableOpacity>
@@ -121,9 +121,9 @@ export function ExpenseFilterModal({
                                 <TouchableOpacity
                                     key={loc}
                                     onPress={() => toggleLocation(loc)}
-                                    className={`px-3 py-2 rounded-lg border ${filters.locations.includes(loc) ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}
+                                    className={`px-3 py-2 rounded-lg border ${filters.locations.includes(loc) ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
                                 >
-                                    <Text className={`text-xs ${filters.locations.includes(loc) ? 'text-red-700 font-medium' : 'text-gray-600'}`}>
+                                    <Text className={`text-xs ${filters.locations.includes(loc) ? 'text-[#8b3634] font-medium' : 'text-gray-600'}`}>
                                         {loc}
                                     </Text>
                                 </TouchableOpacity>
@@ -132,7 +132,7 @@ export function ExpenseFilterModal({
                     </ScrollView>
 
                     <View className="p-4 border-t border-gray-100 bg-white safe-area-bottom">
-                        <TouchableOpacity onPress={onApply} className="bg-red-600 rounded-xl p-4 items-center mb-3">
+                        <TouchableOpacity onPress={onApply} className="bg-[#a03f3d] rounded-xl p-4 items-center mb-3">
                             <Text className="text-white font-bold text-base">Aplicar Filtros</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={onClear} className="p-4 items-center">

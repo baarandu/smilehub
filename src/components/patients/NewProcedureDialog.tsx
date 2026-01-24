@@ -417,7 +417,7 @@ export function NewProcedureDialog({
           <Button
             type="submit"
             form="procedure-form"
-            className="flex-1 bg-teal-600 hover:bg-teal-700"
+            className="flex-1 bg-[#a03f3d] hover:bg-[#8b3634]"
             disabled={isLoading}
           >
             {isLoading ? (

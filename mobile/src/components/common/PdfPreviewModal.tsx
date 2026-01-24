@@ -38,7 +38,7 @@ export function PdfPreviewModal({
                 <View className="flex-1 bg-white m-3 rounded-xl overflow-hidden shadow-sm border border-gray-200">
                     {loading ? (
                         <View className="flex-1 items-center justify-center">
-                            <ActivityIndicator size="large" color="#0D9488" />
+                            <ActivityIndicator size="large" color="#b94a48" />
                             <Text className="text-gray-500 mt-3">Gerando pré-visualização...</Text>
                         </View>
                     ) : htmlContent ? (
@@ -70,7 +70,7 @@ export function PdfPreviewModal({
                     <TouchableOpacity
                         onPress={onShare}
                         disabled={loading || !htmlContent}
-                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${loading || !htmlContent ? 'bg-teal-400' : 'bg-teal-600'}`}
+                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${loading || !htmlContent ? 'bg-[#c95a58]' : 'bg-[#a03f3d]'}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="white" />

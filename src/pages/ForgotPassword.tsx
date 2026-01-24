@@ -38,7 +38,7 @@ export default function ForgotPassword() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo/Header */}
                 <div className="text-center mb-8">
@@ -59,7 +59,7 @@ export default function ForgotPassword() {
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                     {sent ? (
                         <div className="text-center">
-                            <CheckCircle className="w-16 h-16 text-teal-500 mx-auto mb-4" />
+                            <CheckCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                             <h2 className="text-xl font-semibold text-gray-900 mb-2">
                                 Email Enviado!
                             </h2>
@@ -67,7 +67,7 @@ export default function ForgotPassword() {
                                 Verifique sua caixa de entrada e siga as instruções para redefinir sua senha.
                             </p>
                             <Link to="/login">
-                                <Button className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700">
+                                <Button className="w-full bg-gradient-to-r from-red-500 to-[#b94a48] hover:from-[#a03f3d] hover:to-[#a03f3d]">
                                     <ArrowLeft className="w-4 h-4 mr-2" />
                                     Voltar ao Login
                                 </Button>
@@ -94,7 +94,7 @@ export default function ForgotPassword() {
 
                             <Button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                                className="w-full bg-gradient-to-r from-red-500 to-[#b94a48] hover:from-[#a03f3d] hover:to-[#a03f3d]"
                                 disabled={loading}
                             >
                                 {loading ? (
@@ -107,7 +107,7 @@ export default function ForgotPassword() {
                             <div className="text-center">
                                 <Link
                                     to="/login"
-                                    className="text-sm text-teal-600 hover:text-teal-700 flex items-center justify-center gap-2"
+                                    className="text-sm text-[#a03f3d] hover:text-[#8b3634] flex items-center justify-center gap-2"
                                 >
                                     <ArrowLeft className="w-4 h-4" />
                                     Voltar ao Login

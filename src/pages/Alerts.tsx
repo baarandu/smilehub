@@ -289,7 +289,7 @@ export default function Alerts() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-teal-600 hover:bg-teal-700 gap-2">
+              <Button className="bg-[#a03f3d] hover:bg-[#8b3634] gap-2">
                 <Plus className="w-4 h-4" />
                 Novo Lembrete
               </Button>
@@ -341,7 +341,7 @@ export default function Alerts() {
                       <Label className="text-base font-semibold">Mensagens Personalizadas</Label>
                       <p className="text-xs text-muted-foreground">Crie seus próprios modelos de mensagem</p>
                     </div>
-                    <Button size="sm" variant="outline" className="gap-2 h-8 border-teal-200 text-teal-700 hover:bg-teal-50" onClick={handleAddCustomTemplate}>
+                    <Button size="sm" variant="outline" className="gap-2 h-8 border-red-200 text-[#8b3634] hover:bg-red-50" onClick={handleAddCustomTemplate}>
                       <Plus className="w-4 h-4" /> Novo Modelo
                     </Button>
                   </div>
@@ -353,7 +353,7 @@ export default function Alerts() {
                   ) : (
                     <div className="space-y-4">
                       {customTemplates.map((template) => (
-                        <div key={template.id} className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50 transition-colors hover:border-teal-200/50">
+                        <div key={template.id} className="space-y-3 p-4 bg-muted/30 rounded-xl border border-border/50 transition-colors hover:border-red-200/50">
                           <div className="flex justify-between items-center gap-2">
                             <Input
                               placeholder="Título (ex: Pós-operatório)"
@@ -365,7 +365,7 @@ export default function Alerts() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                                className="h-8 w-8 text-[#a03f3d] hover:text-[#8b3634] hover:bg-red-50"
                                 onClick={() => initiateSendMessage(template.message)}
                                 title="Enviar para um paciente"
                               >
@@ -413,7 +413,7 @@ export default function Alerts() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label>Mensagem de Retorno (6 meses)</Label>
-                      <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(returnTemplate)}>
+                      <Button size="sm" variant="ghost" className="h-6 text-[#a03f3d]" onClick={() => initiateSendMessage(returnTemplate)}>
                         <MessageCircle className="w-4 h-4 mr-1" /> Enviar
                       </Button>
                     </div>
@@ -428,7 +428,7 @@ export default function Alerts() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label>Mensagem de Confirmação de Consulta</Label>
-                      <Button size="sm" variant="ghost" className="h-6 text-teal-600" onClick={() => initiateSendMessage(confirmationTemplate)}>
+                      <Button size="sm" variant="ghost" className="h-6 text-[#a03f3d]" onClick={() => initiateSendMessage(confirmationTemplate)}>
                         <MessageCircle className="w-4 h-4 mr-1" /> Enviar
                       </Button>
                     </div>
@@ -453,7 +453,7 @@ export default function Alerts() {
       {/* Reminders Section */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Bell className="w-5 h-5 text-teal-600" />
+          <Bell className="w-5 h-5 text-[#a03f3d]" />
           Meus Lembretes
         </h2>
         {loadingReminders ? (
@@ -473,7 +473,7 @@ export default function Alerts() {
                 <div key={reminder.id} className={cn(
                   "group relative p-4 rounded-xl border transition-all duration-200",
                   reminder.is_active
-                    ? "bg-white border-teal-100 shadow-sm hover:shadow-md hover:border-teal-200"
+                    ? "bg-white border-red-100 shadow-sm hover:shadow-md hover:border-red-200"
                     : "bg-gray-50 border-gray-200 opacity-75"
                 )}>
                   <div className="flex justify-between items-start mb-2">
@@ -633,9 +633,9 @@ export default function Alerts() {
 
       {/* Tomorrow's Appointments - Confirmação de Consulta */}
       <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
-        <div className="p-5 border-b border-border bg-teal-50/50">
+        <div className="p-5 border-b border-border bg-red-50/50">
           <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
-            <Bell className="w-5 h-5 text-teal-500" />
+            <Bell className="w-5 h-5 text-red-500" />
             Confirmar Consultas de Amanhã
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
@@ -649,10 +649,10 @@ export default function Alerts() {
         ) : (
           <div className="divide-y divide-border">
             {tomorrowAppointments?.map((appointment) => (
-              <div key={appointment.id} className="p-4 hover:bg-teal-50/30 transition-colors">
+              <div key={appointment.id} className="p-4 hover:bg-red-50/30 transition-colors">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="bg-teal-500 text-white px-3 py-1.5 rounded-lg font-bold text-sm">
+                    <div className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-sm">
                       {appointment.time.slice(0, 5)}
                     </div>
                     <div>
@@ -664,7 +664,7 @@ export default function Alerts() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="border-teal-200 text-teal-700 hover:bg-teal-50 gap-2"
+                      className="border-red-200 text-[#8b3634] hover:bg-red-50 gap-2"
                       onClick={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
                     >
                       <MessageCircle className="w-4 h-4" />
@@ -762,7 +762,7 @@ export default function Alerts() {
                   <p className="font-medium text-sm">{patient.name}</p>
                   <p className="text-xs text-muted-foreground">{patient.phone}</p>
                 </div>
-                <MessageCircle className="w-4 h-4 text-teal-600 opacity-0 group-hover:opacity-100" />
+                <MessageCircle className="w-4 h-4 text-[#a03f3d] opacity-0 group-hover:opacity-100" />
               </button>
             ))}
             {filteredPatients.length === 0 && (

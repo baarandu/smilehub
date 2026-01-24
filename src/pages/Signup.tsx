@@ -74,7 +74,7 @@ export default function Signup() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo/Header */}
                 <div className="text-center mb-8">
@@ -97,26 +97,26 @@ export default function Signup() {
                                 <button
                                     type="button"
                                     className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'solo'
-                                        ? 'border-teal-500 bg-teal-50'
+                                        ? 'border-red-500 bg-red-50'
                                         : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                     onClick={() => setAccountType('solo')}
                                 >
-                                    <Stethoscope className={`w-6 h-6 ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-600'}`}>
+                                    <Stethoscope className={`w-6 h-6 ${accountType === 'solo' ? 'text-[#a03f3d]' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${accountType === 'solo' ? 'text-[#a03f3d]' : 'text-gray-600'}`}>
                                         Dentista Autônomo
                                     </span>
                                 </button>
                                 <button
                                     type="button"
                                     className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'clinic'
-                                        ? 'border-teal-500 bg-teal-50'
+                                        ? 'border-red-500 bg-red-50'
                                         : 'border-gray-200 hover:border-gray-300'
                                         }`}
                                     onClick={() => setAccountType('clinic')}
                                 >
-                                    <Building2 className={`w-6 h-6 ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-600'}`}>
+                                    <Building2 className={`w-6 h-6 ${accountType === 'clinic' ? 'text-[#a03f3d]' : 'text-gray-400'}`} />
+                                    <span className={`text-sm font-medium ${accountType === 'clinic' ? 'text-[#a03f3d]' : 'text-gray-600'}`}>
                                         Clínica
                                     </span>
                                 </button>
@@ -258,7 +258,7 @@ export default function Signup() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                            className="w-full bg-gradient-to-r from-red-500 to-[#b94a48] hover:from-[#a03f3d] hover:to-[#a03f3d]"
                             disabled={loading}
                         >
                             {loading ? (
@@ -275,7 +275,7 @@ export default function Signup() {
                     <div className="mt-6 text-center">
                         <p className="text-gray-500">
                             Já tem uma conta?{' '}
-                            <Link to="/login" className="text-teal-600 hover:text-teal-700 font-medium">
+                            <Link to="/login" className="text-[#a03f3d] hover:text-[#8b3634] font-medium">
                                 Fazer login
                             </Link>
                         </p>

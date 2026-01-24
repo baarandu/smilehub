@@ -23,8 +23,8 @@ export function ApprovedBudgetList({
     return (
         <View className="bg-white border border-gray-200 rounded-xl p-4">
             <View className="flex-row items-center justify-between mb-3">
-                <Text className="font-semibold text-teal-800">Procedimentos Pagos</Text>
-                {loading && <ActivityIndicator size="small" color="#0D9488" />}
+                <Text className="font-semibold text-[#6b2a28]">Procedimentos Pagos</Text>
+                {loading && <ActivityIndicator size="small" color="#b94a48" />}
             </View>
 
             {items.length === 0 && !loading ? (
@@ -46,7 +46,7 @@ export function ApprovedBudgetList({
                                     >
                                         <View className="mt-0.5 mr-3">
                                             {isSelected ? (
-                                                <View className="bg-teal-500 rounded-sm">
+                                                <View className="bg-[#b94a48] rounded-sm">
                                                     <Check size={16} color="#FFF" />
                                                 </View>
                                             ) : (
@@ -54,7 +54,7 @@ export function ApprovedBudgetList({
                                             )}
                                         </View>
                                         <View className="flex-1">
-                                            <Text className={`text-sm ${isSelected ? 'text-teal-900 font-medium' : 'text-gray-700'}`}>
+                                            <Text className={`text-sm ${isSelected ? 'text-[#5a2322] font-medium' : 'text-gray-700'}`}>
                                                 {item.label}
                                             </Text>
                                             <Text className="text-xs text-gray-500 mt-0.5">

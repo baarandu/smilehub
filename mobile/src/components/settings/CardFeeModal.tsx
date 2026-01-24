@@ -82,7 +82,7 @@ export function CardFeeModal({ visible, onClose, onSave, cardBrands, editingFee 
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                             <View className="flex-row gap-2">
                                 {cardBrands.map(b => (
-                                    <TouchableOpacity key={b.id} onPress={() => setBrand(b.name.toLowerCase())} className={`px-3 py-2 rounded-lg border ${brand === b.name.toLowerCase() ? 'bg-teal-500 border-teal-500' : 'bg-white border-gray-200'}`}>
+                                    <TouchableOpacity key={b.id} onPress={() => setBrand(b.name.toLowerCase())} className={`px-3 py-2 rounded-lg border ${brand === b.name.toLowerCase() ? 'bg-[#b94a48] border-[#b94a48]' : 'bg-white border-gray-200'}`}>
                                         <Text className={brand === b.name.toLowerCase() ? 'text-white' : 'text-gray-700'}>{b.name}</Text>
                                     </TouchableOpacity>
                                 ))}
@@ -95,10 +95,10 @@ export function CardFeeModal({ visible, onClose, onSave, cardBrands, editingFee 
                             <Text className="text-sm font-medium text-gray-700 mb-2">Tipo</Text>
                             <View className="flex-row bg-gray-100 p-1 rounded-lg">
                                 <TouchableOpacity onPress={() => setType('credit')} style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6, backgroundColor: type === 'credit' ? '#fff' : 'transparent' }}>
-                                    <Text style={{ fontWeight: type === 'credit' ? 'bold' : 'normal', color: type === 'credit' ? '#0D9488' : '#6B7280' }}>Crédito</Text>
+                                    <Text style={{ fontWeight: type === 'credit' ? 'bold' : 'normal', color: type === 'credit' ? '#b94a48' : '#6B7280' }}>Crédito</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setType('debit')} style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6, backgroundColor: type === 'debit' ? '#fff' : 'transparent' }}>
-                                    <Text style={{ fontWeight: type === 'debit' ? 'bold' : 'normal', color: type === 'debit' ? '#0D9488' : '#6B7280' }}>Débito</Text>
+                                    <Text style={{ fontWeight: type === 'debit' ? 'bold' : 'normal', color: type === 'debit' ? '#b94a48' : '#6B7280' }}>Débito</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -122,7 +122,7 @@ export function CardFeeModal({ visible, onClose, onSave, cardBrands, editingFee 
                         <Text className="text-xs text-gray-500 mt-1">Taxa para antecipar o recebimento</Text>
                     </View>
 
-                    <TouchableOpacity onPress={handleSave} disabled={saving} className="bg-teal-500 rounded-xl py-4 items-center">
+                    <TouchableOpacity onPress={handleSave} disabled={saving} className="bg-[#b94a48] rounded-xl py-4 items-center">
                         {saving ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold text-lg">Salvar Regra</Text>}
                     </TouchableOpacity>
                 </View>

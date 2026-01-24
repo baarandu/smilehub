@@ -32,19 +32,19 @@ export default function TrialExpired() {
                     </h3>
                     <ul className="space-y-2 text-gray-600">
                         <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                             Gestão completa de pacientes
                         </li>
                         <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                             Agenda inteligente
                         </li>
                         <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                             Controle financeiro detalhado
                         </li>
                         <li className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                             Alertas de retorno automáticos
                         </li>
                     </ul>
@@ -54,7 +54,7 @@ export default function TrialExpired() {
                 <Button
                     onClick={() => navigate('/planos')}
                     size="lg"
-                    className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-lg py-6"
+                    className="w-full bg-gradient-to-r from-red-500 to-[#b94a48] hover:from-[#a03f3d] hover:to-[#a03f3d] text-lg py-6"
                 >
                     Ver planos e continuar
                     <ArrowRight className="w-5 h-5 ml-2" />

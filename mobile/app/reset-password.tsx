@@ -51,12 +51,12 @@ export default function ResetPassword() {
     if (success) {
         return (
             <View className="flex-1 bg-white items-center justify-center p-8">
-                <CheckCircle size={64} color="#14B8A6" />
+                <CheckCircle size={64} color="#c75a58" />
                 <Text className="text-2xl font-bold text-gray-900 mt-4">Senha Alterada!</Text>
                 <Text className="text-gray-500 mt-2 text-center">
                     Você será redirecionado para o login...
                 </Text>
-                <ActivityIndicator color="#14B8A6" className="mt-4" />
+                <ActivityIndicator color="#c75a58" className="mt-4" />
             </View>
         );
     }
@@ -112,7 +112,7 @@ export default function ResetPassword() {
                         <TouchableOpacity
                             onPress={handleReset}
                             disabled={loading}
-                            className={`bg-teal-600 rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
+                            className={`bg-[#a03f3d] rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <ActivityIndicator color="white" />

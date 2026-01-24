@@ -438,7 +438,7 @@ export function NewBudgetModal({
                         <TouchableOpacity
                             onPress={handleSave}
                             disabled={saving}
-                            className="bg-teal-500 rounded-xl px-6 py-4 items-center"
+                            className="bg-[#b94a48] rounded-xl px-6 py-4 items-center"
                         >
                             {saving ? (
                                 <Text className="text-white font-semibold">Salvando...</Text>

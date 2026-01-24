@@ -252,7 +252,7 @@ export default function Alerts() {
     };
 
     const getUrgencyConfig = (days: number) => {
-        if (days <= 7) return { label: 'Urgente', bgColor: 'bg-red-100', textColor: 'text-red-700', borderColor: 'border-l-red-500', Icon: AlertTriangle };
+        if (days <= 7) return { label: 'Urgente', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]', borderColor: 'border-l-[#b94a48]', Icon: AlertTriangle };
         if (days <= 14) return { label: 'Em breve', bgColor: 'bg-amber-100', textColor: 'text-amber-700', borderColor: 'border-l-amber-500', Icon: Clock };
         return { label: 'Próximo', bgColor: 'bg-gray-100', textColor: 'text-gray-600', borderColor: 'border-l-gray-400', Icon: CheckCircle };
     };
@@ -260,7 +260,7 @@ export default function Alerts() {
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
                 <Text className="text-gray-500 mt-4">Carregando alertas...</Text>
             </SafeAreaView>
         );
@@ -276,8 +276,8 @@ export default function Alerts() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={async () => { setRefreshing(true); await loadData(); setRefreshing(false); }}
-                        colors={['#0D9488']}
-                        tintColor="#0D9488"
+                        colors={['#b94a48']}
+                        tintColor="#b94a48"
                     />
                 }
             >
@@ -290,7 +290,7 @@ export default function Alerts() {
                     <View className="flex-row gap-2">
                         <TouchableOpacity
                             onPress={() => { setEditingReminder(null); setReminderForm({ title: '', description: '' }); setShowReminderModal(true); }}
-                            className="w-10 h-10 bg-teal-600 rounded-full items-center justify-center shadow-sm"
+                            className="w-10 h-10 bg-[#a03f3d] rounded-full items-center justify-center shadow-sm"
                         >
                             <Plus size={20} color="#FFFFFF" />
                         </TouchableOpacity>
@@ -307,11 +307,11 @@ export default function Alerts() {
                 {reminders.length > 0 ? (
                     <View className="mb-8">
                         <Text className="text-lg font-bold text-gray-800 mb-3 flex-row items-center gap-2">
-                            <Bell size={20} color="#0D9488" /> Meus Lembretes
+                            <Bell size={20} color="#b94a48" /> Meus Lembretes
                         </Text>
                         <View className="gap-3">
                             {reminders.map(reminder => (
-                                <View key={reminder.id} className={`p-4 rounded-xl border ${reminder.is_active ? 'bg-white border-teal-100' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+                                <View key={reminder.id} className={`p-4 rounded-xl border ${reminder.is_active ? 'bg-white border-[#fecaca]' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
                                     <View className="flex-row justify-between items-start">
                                         <View className="flex-1 mr-2">
                                             <Text className={`font-semibold text-base ${reminder.is_active ? 'text-gray-900' : 'text-gray-500 line-through'}`}>
@@ -322,7 +322,7 @@ export default function Alerts() {
                                         <Switch
                                             value={reminder.is_active}
                                             onValueChange={() => handleToggleReminder(reminder.id, reminder.is_active)}
-                                            trackColor={{ false: "#D1D5DB", true: "#0D9488" }}
+                                            trackColor={{ false: "#D1D5DB", true: "#b94a48" }}
                                         />
                                     </View>
                                     <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-gray-100">
@@ -340,7 +340,7 @@ export default function Alerts() {
                     <View className="mb-6 bg-white border border-dashed border-gray-300 rounded-xl p-6 items-center">
                         <Text className="text-gray-400">Nenhum lembrete criado.</Text>
                         <TouchableOpacity onPress={() => setShowReminderModal(true)}>
-                            <Text className="text-teal-600 font-bold mt-2">Criar Lembrete</Text>
+                            <Text className="text-[#a03f3d] font-bold mt-2">Criar Lembrete</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -358,18 +358,18 @@ export default function Alerts() {
                         {tomorrowAppointments.length > 0 && (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
-                                    <Bell size={20} color="#0D9488" />
+                                    <Bell size={20} color="#b94a48" />
                                     <Text className="text-lg font-bold text-gray-800">Confirmar Consultas de Amanhã</Text>
-                                    <View className="bg-teal-100 px-2 py-0.5 rounded-full ml-auto">
-                                        <Text className="text-xs font-bold text-teal-700">{tomorrowAppointments.length}</Text>
+                                    <View className="bg-[#fee2e2] px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-[#8b3634]">{tomorrowAppointments.length}</Text>
                                     </View>
                                 </View>
                                 <View className="gap-3">
                                     {tomorrowAppointments.map((appointment) => (
-                                        <View key={appointment.id} className="bg-teal-50 rounded-xl p-4 border-l-4 border-l-teal-500">
+                                        <View key={appointment.id} className="bg-[#fef2f2] rounded-xl p-4 border-l-4 border-l-[#b94a48]">
                                             <View className="flex-row justify-between items-center">
                                                 <View className="flex-row items-center gap-3">
-                                                    <View className="bg-teal-500 px-3 py-1.5 rounded-lg">
+                                                    <View className="bg-[#b94a48] px-3 py-1.5 rounded-lg">
                                                         <Text className="text-white font-bold text-sm">{appointment.time?.slice(0, 5)}</Text>
                                                     </View>
                                                     <View>
@@ -380,7 +380,7 @@ export default function Alerts() {
                                             </View>
                                             <View className="mt-3 flex-row gap-2">
                                                 <TouchableOpacity
-                                                    className="flex-1 bg-teal-500 rounded-lg py-2 flex-row justify-center items-center gap-2"
+                                                    className="flex-1 bg-[#b94a48] rounded-lg py-2 flex-row justify-center items-center gap-2"
                                                     onPress={() => handleWhatsApp(appointment.patients?.phone || '', appointment.patients?.name?.split(' ')[0] || '', 'reminder')}
                                                 >
                                                     <MessageCircle size={18} color="white" />
@@ -508,7 +508,7 @@ export default function Alerts() {
                         {scheduledAlerts.length > 0 && (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
-                                    <Calendar size={20} color="#0D9488" />
+                                    <Calendar size={20} color="#b94a48" />
                                     <Text className="text-lg font-bold text-gray-800">Retornos Agendados</Text>
                                 </View>
                                 <View className="gap-3">
@@ -538,7 +538,7 @@ export default function Alerts() {
                                                         <Phone size={18} color="#6B7280" />
                                                         <Text className="text-gray-600 font-medium">Ligar</Text>
                                                     </TouchableOpacity>
-                                                    <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg bg-teal-500" onPress={() => handleWhatsApp(alert.phone, alert.patient_name.split(' ')[0], 'scheduled')}>
+                                                    <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg bg-[#b94a48]" onPress={() => handleWhatsApp(alert.phone, alert.patient_name.split(' ')[0], 'scheduled')}>
                                                         <MessageCircle size={18} color="#FFFFFF" />
                                                         <Text className="text-white font-medium">WhatsApp</Text>
                                                     </TouchableOpacity>

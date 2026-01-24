@@ -168,7 +168,7 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
                                     placeholder="0.00"
                                 />
                             </div>
-                            <Button size="sm" onClick={handleAddFee} className="col-span-1 bg-teal-600 hover:bg-teal-700">
+                            <Button size="sm" onClick={handleAddFee} className="col-span-1 bg-[#a03f3d] hover:bg-[#8b3634]">
                                 <Plus className="w-4 h-4 mr-1" /> Add
                             </Button>
                         </div>

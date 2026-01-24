@@ -178,7 +178,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
 
     const getIcon = (method: string) => {
         switch (method) {
-            case 'Pix': return <QrCode className="h-4 w-4 text-teal-600" />;
+            case 'Pix': return <QrCode className="h-4 w-4 text-[#a03f3d]" />;
             case 'Cartão de Crédito': return <CreditCard className="h-4 w-4 text-blue-600" />;
             case 'Cartão de Débito': return <CreditCard className="h-4 w-4 text-orange-600" />;
             case 'Dinheiro': return <Banknote className="h-4 w-4 text-green-600" />;
@@ -247,7 +247,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                     </CardContent>
                 </Card>
 
-                <Card className={`border-l-4 ${netBalance >= 0 ? 'border-l-teal-500 bg-teal-50/30' : 'border-l-red-500 bg-red-50/30'}`}>
+                <Card className={`border-l-4 ${netBalance >= 0 ? 'border-l-red-500 bg-red-50/30' : 'border-l-red-500 bg-red-50/30'}`}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-foreground">
                             Balanço Líquido
@@ -255,7 +255,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-teal-700' : 'text-red-700'}`}>
+                        <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-[#8b3634]' : 'text-red-700'}`}>
                             {formatCurrency(netBalance)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">Considerando taxas descontadas</p>
@@ -310,7 +310,7 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
 
                     <div className="flex justify-between items-center mb-1">
                         <span className="text-gray-900 font-bold text-lg">Receita Líquida</span>
-                        <span className={`text-xl font-bold ${netResult >= 0 ? 'text-teal-600' : 'text-red-600'}`}>
+                        <span className={`text-xl font-bold ${netResult >= 0 ? 'text-[#a03f3d]' : 'text-red-600'}`}>
                             {formatCurrency(netResult)}
                         </span>
                     </div>

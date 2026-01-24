@@ -278,7 +278,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
               setEditValue((rate * 100).toFixed(2));
             }}
             style={{
-              backgroundColor: '#14B8A6',
+              backgroundColor: '#c75a58',
               justifyContent: 'center',
               alignItems: 'center',
               flex: 1,
@@ -368,8 +368,8 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
             )}
           </View>
           <View className="flex-row items-center">
-            <View className="flex-row items-center bg-teal-50 px-3 py-1.5 rounded-lg">
-              <Text className="font-mono text-teal-700 font-medium">{formatTaxRate(rate)}</Text>
+            <View className="flex-row items-center bg-[#fef2f2] px-3 py-1.5 rounded-lg">
+              <Text className="font-mono text-[#8b3634] font-medium">{formatTaxRate(rate)}</Text>
             </View>
             {/* Swipe indicator */}
             <View className="ml-2 opacity-40">
@@ -391,10 +391,10 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
           </View>
           <TouchableOpacity
             onPress={() => setShowNewTax(true)}
-            className="flex-row items-center bg-teal-50 px-3 py-1.5 rounded-lg"
+            className="flex-row items-center bg-[#fef2f2] px-3 py-1.5 rounded-lg"
           >
-            <Plus size={16} color="#0D9488" />
-            <Text className="text-teal-600 text-sm font-medium ml-1">Adicionar</Text>
+            <Plus size={16} color="#b94a48" />
+            <Text className="text-[#a03f3d] text-sm font-medium ml-1">Adicionar</Text>
           </TouchableOpacity>
         </View>
 
@@ -446,7 +446,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
               <TouchableOpacity
                 onPress={handleCreateTax}
                 disabled={saving}
-                className="bg-teal-600 px-4 py-2 rounded-lg"
+                className="bg-[#a03f3d] px-4 py-2 rounded-lg"
               >
                 <Text className="text-white font-medium">Salvar</Text>
               </TouchableOpacity>
@@ -578,7 +578,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
                 }}
                 className="w-16"
               >
-                <Text className="text-xs text-teal-600 text-right font-mono">
+                <Text className="text-xs text-[#a03f3d] text-right font-mono">
                   {formatTaxRate(bracket.rate)}
                 </Text>
               </TouchableOpacity>
@@ -598,8 +598,8 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
 
     return (
       <View>
-        <View className="p-3 bg-teal-50 rounded-lg mb-3">
-          <Text className="text-xs text-teal-700">
+        <View className="p-3 bg-[#fef2f2] rounded-lg mb-3">
+          <Text className="text-xs text-[#8b3634]">
             {TAX_REGIME_INFO[activeTab].description}
           </Text>
         </View>
@@ -619,7 +619,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
         <View className="bg-white border-b border-gray-200 px-4 py-3">
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
-              <Calculator size={24} color="#0D9488" />
+              <Calculator size={24} color="#b94a48" />
               <Text className="font-bold text-lg text-gray-900 ml-2">Base de Cálculo</Text>
             </View>
             <TouchableOpacity onPress={onClose} className="p-2">
@@ -638,12 +638,12 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
               className={`flex-1 py-3 items-center border-b-2 ${
-                activeTab === tab.key ? 'border-teal-600' : 'border-transparent'
+                activeTab === tab.key ? 'border-[#a03f3d]' : 'border-transparent'
               }`}
             >
               <Text
                 className={`text-sm font-medium ${
-                  activeTab === tab.key ? 'text-teal-600' : 'text-gray-500'
+                  activeTab === tab.key ? 'text-[#a03f3d]' : 'text-gray-500'
                 }`}
               >
                 {tab.label}
@@ -655,7 +655,7 @@ export function TaxRatesConfigModal({ visible, onClose, onConfigUpdated }: Props
         {/* Content */}
         {loading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#0D9488" />
+            <ActivityIndicator size="large" color="#b94a48" />
           </View>
         ) : (
           <ScrollView className="flex-1 p-4">

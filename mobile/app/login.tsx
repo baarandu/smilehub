@@ -102,7 +102,7 @@ export default function Login() {
                     <View className="gap-4">
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Email</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-[#b94a48] focus:bg-white">
                                 <Mail size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -117,7 +117,7 @@ export default function Login() {
 
                         <View>
                             <Text className="text-sm font-medium text-gray-700 mb-1.5">Senha</Text>
-                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                            <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-[#b94a48] focus:bg-white">
                                 <Lock size={20} color="#9CA3AF" />
                                 <TextInput
                                     className="flex-1 ml-3 text-gray-900"
@@ -139,7 +139,7 @@ export default function Login() {
                                     className="flex-row items-center"
                                     onPress={() => setRememberMe(!rememberMe)}
                                 >
-                                    <View className={`w-5 h-5 rounded border items-center justify-center mr-2 ${rememberMe ? 'bg-teal-600 border-teal-600' : 'border-gray-300 bg-white'}`}>
+                                    <View className={`w-5 h-5 rounded border items-center justify-center mr-2 ${rememberMe ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-300 bg-white'}`}>
                                         {rememberMe && <Check size={14} color="white" />}
                                     </View>
                                     <Text className="text-sm text-gray-600">Permanecer conectado</Text>
@@ -147,7 +147,7 @@ export default function Login() {
 
                                 <Link href="/forgot-password" asChild>
                                     <TouchableOpacity>
-                                        <Text className="text-sm text-teal-600 font-medium">Esqueceu a senha?</Text>
+                                        <Text className="text-sm text-[#a03f3d] font-medium">Esqueceu a senha?</Text>
                                     </TouchableOpacity>
                                 </Link>
                             </View>
@@ -156,7 +156,7 @@ export default function Login() {
                         <TouchableOpacity
                             onPress={handleLogin}
                             disabled={loading}
-                            className={`bg-teal-600 rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
+                            className={`bg-[#a03f3d] rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <ActivityIndicator color="white" />
@@ -174,7 +174,7 @@ export default function Login() {
                         <Text className="text-gray-500">Não tem uma conta? </Text>
                         <Link href="/signup" asChild>
                             <TouchableOpacity>
-                                <Text className="text-teal-600 font-bold">Cadastre-se</Text>
+                                <Text className="text-[#a03f3d] font-bold">Cadastre-se</Text>
                             </TouchableOpacity>
                         </Link>
                     </View>

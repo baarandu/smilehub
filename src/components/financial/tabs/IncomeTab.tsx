@@ -353,7 +353,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
                                             return (
                                                 <>
-                                                    <p className="text-sm text-teal-700 font-medium line-clamp-1" title={procedure}>{procedure}</p>
+                                                    <p className="text-sm text-[#8b3634] font-medium line-clamp-1" title={procedure}>{procedure}</p>
                                                     <p className="text-xs text-muted-foreground">Forma de Pagamento: {displayMethod}</p>
                                                     {t.location && (
                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
@@ -507,7 +507,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 {selectedTransaction.location && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Local</span>
-                                        <Badge variant="secondary" className="bg-teal-50 text-teal-700">
+                                        <Badge variant="secondary" className="bg-red-50 text-[#8b3634]">
                                             {selectedTransaction.location}
                                         </Badge>
                                     </div>

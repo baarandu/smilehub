@@ -31,7 +31,7 @@ export function ProcedureBudgetList({
     return (
         <div className="space-y-3 border rounded-lg p-4 bg-slate-50">
             <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold text-teal-800">Selecionar Procedimentos Pagos</Label>
+                <Label className="text-base font-semibold text-[#6b2a28]">Selecionar Procedimentos Pagos</Label>
                 {loading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             </div>
 

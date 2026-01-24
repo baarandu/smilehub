@@ -58,12 +58,12 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
             <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
-                <TouchableOpacity onPress={() => onBack?.()} className="mr-4"><ArrowLeft size={24} color="#0D9488" /></TouchableOpacity>
+                <TouchableOpacity onPress={() => onBack?.()} className="mr-4"><ArrowLeft size={24} color="#b94a48" /></TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900">Configurações Financeiras</Text>
             </View>
 
             {loading ? (
-                <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#0D9488" /></View>
+                <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#b94a48" /></View>
             ) : (
                 <ScrollView className="flex-1 p-4">
                     <TaxSection taxes={taxes} onRefresh={loadSettings} />
@@ -71,12 +71,12 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
 
                     {/* Card Fees Section */}
                     <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-8">
-                        <View className="p-5 border-b border-gray-100 flex-row justify-between items-center bg-teal-50">
+                        <View className="p-5 border-b border-gray-100 flex-row justify-between items-center bg-[#fef2f2]">
                             <View className="flex-row items-center gap-2">
-                                <CreditCard size={20} color="#0f766e" />
-                                <Text className="text-base font-bold text-teal-900">Taxas de Cartão</Text>
+                                <CreditCard size={20} color="#8b3634" />
+                                <Text className="text-base font-bold text-[#5a2322]">Taxas de Cartão</Text>
                             </View>
-                            <TouchableOpacity onPress={() => openFeeModal()} className="bg-teal-500 p-2 rounded-lg">
+                            <TouchableOpacity onPress={() => openFeeModal()} className="bg-[#b94a48] p-2 rounded-lg">
                                 <Plus size={20} color="white" />
                             </TouchableOpacity>
                         </View>
@@ -85,20 +85,20 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                         <View className="px-4 py-3 bg-white border-b border-gray-100">
                             <View className="flex-row gap-2 mb-3">
                                 {['all', 'credit', 'debit'].map(type => (
-                                    <TouchableOpacity key={type} onPress={() => setFilterType(type as any)} className={`px-3 py-1.5 rounded-full border ${filterType === type ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}>
-                                        <Text className={`text-xs font-medium ${filterType === type ? 'text-teal-700' : 'text-gray-600'}`}>
+                                    <TouchableOpacity key={type} onPress={() => setFilterType(type as any)} className={`px-3 py-1.5 rounded-full border ${filterType === type ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}>
+                                        <Text className={`text-xs font-medium ${filterType === type ? 'text-[#8b3634]' : 'text-gray-600'}`}>
                                             {type === 'all' ? 'Todos os Tipos' : type === 'credit' ? 'Crédito' : 'Débito'}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
-                                <TouchableOpacity onPress={() => setFilterBrand('all')} className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === 'all' ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}>
-                                    <Text className={`text-xs font-medium ${filterBrand === 'all' ? 'text-teal-700' : 'text-gray-600'}`}>Todas</Text>
+                                <TouchableOpacity onPress={() => setFilterBrand('all')} className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === 'all' ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}>
+                                    <Text className={`text-xs font-medium ${filterBrand === 'all' ? 'text-[#8b3634]' : 'text-gray-600'}`}>Todas</Text>
                                 </TouchableOpacity>
                                 {Array.from(new Set(cardFees.map(f => f.brand))).sort().map(brand => (
-                                    <TouchableOpacity key={brand} onPress={() => setFilterBrand(brand)} className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === brand ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200'}`}>
-                                        <Text className={`text-xs font-medium capitalize ${filterBrand === brand ? 'text-teal-700' : 'text-gray-600'}`}>{brand === 'others' ? 'Outras' : brand}</Text>
+                                    <TouchableOpacity key={brand} onPress={() => setFilterBrand(brand)} className={`mr-2 px-3 py-1.5 rounded-full border ${filterBrand === brand ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}>
+                                        <Text className={`text-xs font-medium capitalize ${filterBrand === brand ? 'text-[#8b3634]' : 'text-gray-600'}`}>{brand === 'others' ? 'Outras' : brand}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>
@@ -120,7 +120,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
                                             <Text className="flex-1 font-medium capitalize text-gray-900">{fee.brand === 'others' ? 'Outras' : fee.brand}</Text>
                                             <Text className="w-20 text-center text-xs text-gray-600 bg-white border border-gray-200 py-1 rounded capitalize">{fee.payment_type === 'credit' ? 'Crédito' : 'Débito'}</Text>
                                             <Text className="w-20 text-center text-gray-900">{fee.installments}x</Text>
-                                            <Text className="w-16 text-right font-bold text-red-500">{fee.rate}%</Text>
+                                            <Text className="w-16 text-right font-bold text-[#b94a48]">{fee.rate}%</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>

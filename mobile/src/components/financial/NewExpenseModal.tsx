@@ -315,7 +315,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                         <Text className="text-xl font-bold text-gray-800">{transactionToEdit ? 'Editar Despesa' : 'Nova Despesa'}</Text>
                         <View className="flex-row gap-2">
                             {transactionToEdit && (
-                                <TouchableOpacity onPress={handleDelete} className="bg-red-100 p-2 rounded-full">
+                                <TouchableOpacity onPress={handleDelete} className="bg-[#fee2e2] p-2 rounded-full">
                                     <Trash size={20} color="#EF4444" />
                                 </TouchableOpacity>
                             )}
@@ -547,7 +547,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
 
                     {/* Footer */}
                     <View className="p-4 border-t border-gray-100 safe-area-bottom">
-                        <TouchableOpacity onPress={handleSave} disabled={loading} className={`rounded-xl p-4 items-center flex-row justify-center gap-2 ${loading ? 'bg-red-400' : 'bg-red-600'}`}>
+                        <TouchableOpacity onPress={handleSave} disabled={loading} className={`rounded-xl p-4 items-center flex-row justify-center gap-2 ${loading ? 'bg-[#c95a58]' : 'bg-[#a03f3d]'}`}>
                             {loading ? <ActivityIndicator color="white" /> : (<><Check size={20} color="white" /><Text className="text-white font-bold text-lg">{transactionToEdit ? 'Salvar Alterações' : 'Salvar Despesa'}</Text></>)}
                         </TouchableOpacity>
                     </View>

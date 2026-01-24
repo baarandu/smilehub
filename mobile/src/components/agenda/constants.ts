@@ -6,10 +6,10 @@ export const MONTHS = [
 ];
 
 export const STATUS_CONFIG: Record<string, { label: string; bgColor: string; textColor: string }> = {
-  scheduled: { label: 'Agendado', bgColor: 'bg-teal-100', textColor: 'text-teal-700' },
+  scheduled: { label: 'Agendado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
   confirmed: { label: 'Confirmado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
   completed: { label: 'Compareceu', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
-  cancelled: { label: 'Cancelado', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+  cancelled: { label: 'Cancelado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
 };
 
 

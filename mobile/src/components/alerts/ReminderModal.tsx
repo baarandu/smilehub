@@ -58,7 +58,7 @@ export function ReminderModal({
                     </View>
                     <TouchableOpacity
                         onPress={onSave}
-                        className="bg-teal-600 py-4 rounded-xl items-center mt-4"
+                        className="bg-[#a03f3d] py-4 rounded-xl items-center mt-4"
                     >
                         <Text className="text-white font-bold text-base">Salvar Lembrete</Text>
                     </TouchableOpacity>

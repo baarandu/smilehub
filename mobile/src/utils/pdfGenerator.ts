@@ -118,7 +118,7 @@ export const generatePatientReport = async ({
             .header { 
                 display: flex; 
                 align-items: center; 
-                border-bottom: 2px solid #0d9488; 
+                border-bottom: 2px solid #b94a48; 
                 padding-bottom: 10px; 
                 margin-bottom: 20px; 
             }
@@ -126,7 +126,7 @@ export const generatePatientReport = async ({
                 width: 60px; 
                 height: 60px; 
                 margin-right: 15px; 
-                background-color: #f0fdfa;
+                background-color: #fef2f2;
                 border-radius: 8px;
                 object-fit: contain;
             }
@@ -136,7 +136,7 @@ export const generatePatientReport = async ({
             .clinic-title { 
                 font-size: 20px; 
                 font-weight: bold; 
-                color: #0d9488; 
+                color: #b94a48; 
                 margin: 0; 
                 line-height: 1.2;
             }
@@ -168,9 +168,9 @@ export const generatePatientReport = async ({
             .section-title { 
                 font-size: 14px; 
                 font-weight: bold; 
-                color: #115e59; 
+                color: #6b2a28; 
                 margin-bottom: 10px; 
-                border-bottom: 1px solid #ccfbf1; 
+                border-bottom: 1px solid #fee2e2; 
                 padding-bottom: 5px; 
             }
             .patient-name {
@@ -190,7 +190,7 @@ export const generatePatientReport = async ({
                 font-size: 12px; 
             }
             th { 
-                color: #115e59; 
+                color: #6b2a28; 
                 font-weight: 600; 
             }
             tr:last-child td {
@@ -369,12 +369,12 @@ export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
             body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #333; }
             .header { text-align: center; margin-bottom: 30px; }
             .logo { max-height: 80px; margin-bottom: 10px; }
-            .title { font-size: 24px; font-weight: bold; color: #0d9488; }
+            .title { font-size: 24px; font-weight: bold; color: #b94a48; }
             .meta { margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 15px; }
             .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             .table th, .table td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
-            .table th { color: #0f766e; }
-            .total { margin-top: 30px; text-align: right; font-size: 18px; font-weight: bold; color: #0d9488; }
+            .table th { color: #8b3634; }
+            .total { margin-top: 30px; text-align: right; font-size: 18px; font-weight: bold; color: #b94a48; }
         </style>
     </head>
     <body>

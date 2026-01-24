@@ -26,22 +26,22 @@ export function ToothPickerModal({
     const isToothInList = (tooth: string) => teethList.some(t => t.tooth === tooth);
 
     const getArchButtonStyle = (arch: string) => {
-        if (isArchSelected(arch)) return 'bg-teal-500 border-2 border-teal-500';
-        if (isArchInList(arch)) return 'bg-teal-100 border-2 border-teal-300';
+        if (isArchSelected(arch)) return 'bg-[#b94a48] border-2 border-[#b94a48]';
+        if (isArchInList(arch)) return 'bg-[#fee2e2] border-2 border-[#fca5a5]';
         return 'bg-gray-100';
     };
 
     const getArchTextStyle = (arch: string) => {
         if (isArchSelected(arch)) return 'text-white font-bold';
-        if (isArchInList(arch)) return 'text-teal-700 font-bold';
+        if (isArchInList(arch)) return 'text-[#8b3634] font-bold';
         return 'text-gray-700';
     };
 
     const getToothButtonStyle = (tooth: string) =>
-        isToothInList(tooth) ? 'bg-teal-100 border-2 border-teal-500' : 'bg-gray-100';
+        isToothInList(tooth) ? 'bg-[#fee2e2] border-2 border-[#b94a48]' : 'bg-gray-100';
 
     const getToothTextStyle = (tooth: string) =>
-        isToothInList(tooth) ? 'text-teal-700 font-bold' : 'text-gray-700';
+        isToothInList(tooth) ? 'text-[#8b3634] font-bold' : 'text-gray-700';
 
     const renderTeethGrid = (teeth: string[], label: string) => (
         <>
@@ -96,7 +96,7 @@ export function ToothPickerModal({
                         {selectedArches.length > 0 && (
                             <TouchableOpacity
                                 onPress={onConfirmArch}
-                                className="bg-teal-500 py-3 rounded-lg items-center mb-4"
+                                className="bg-[#b94a48] py-3 rounded-lg items-center mb-4"
                             >
                                 <Text className="text-white font-semibold">
                                     Confirmar {selectedArches.length === 2 ? 'Ambas Arcadas' : selectedArches[0]}

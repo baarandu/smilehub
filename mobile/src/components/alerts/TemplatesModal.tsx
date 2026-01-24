@@ -89,7 +89,7 @@ export function TemplatesModal({
                         </TouchableOpacity>
                         <Text className="text-lg font-semibold text-gray-900">Mensagens Padrão</Text>
                         <TouchableOpacity onPress={onSave}>
-                            <Text className="text-teal-600 font-bold">Salvar</Text>
+                            <Text className="text-[#a03f3d] font-bold">Salvar</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -100,10 +100,10 @@ export function TemplatesModal({
                                 <Text className="text-lg font-bold text-gray-900">Mensagens Personalizadas</Text>
                                 <TouchableOpacity
                                     onPress={handleAddTemplate}
-                                    className="flex-row items-center gap-1 bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100"
+                                    className="flex-row items-center gap-1 bg-[#fef2f2] px-3 py-1.5 rounded-full border border-[#fecaca]"
                                 >
-                                    <Plus size={16} color="#0D9488" />
-                                    <Text className="text-teal-700 font-bold text-xs">Nova Mensagem</Text>
+                                    <Plus size={16} color="#b94a48" />
+                                    <Text className="text-[#8b3634] font-bold text-xs">Nova Mensagem</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -142,11 +142,11 @@ export function TemplatesModal({
                                             <View className="flex-row justify-end">
                                                 <TouchableOpacity
                                                     onPress={() => onSendTemplate(template.message)}
-                                                    className="bg-teal-100 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+                                                    className="bg-[#fee2e2] px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
                                                     disabled={!template.message.trim()}
                                                 >
-                                                    <MessageCircle size={14} color="#0D9488" />
-                                                    <Text className="text-xs font-bold text-teal-700">Testar Envio</Text>
+                                                    <MessageCircle size={14} color="#b94a48" />
+                                                    <Text className="text-xs font-bold text-[#8b3634]">Testar Envio</Text>
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
@@ -162,9 +162,9 @@ export function TemplatesModal({
                                 <Text className="text-sm font-bold text-gray-900 flex-row items-center gap-2">
                                     <Gift size={16} color="#EC4899" /> Mensagem de Aniversário
                                 </Text>
-                                <TouchableOpacity onPress={() => onSendTemplate(birthdayTemplate)} className="bg-teal-100 px-3 py-1 rounded-full flex-row items-center gap-1">
-                                    <MessageCircle size={14} color="#0D9488" />
-                                    <Text className="text-xs font-bold text-teal-700">Enviar</Text>
+                                <TouchableOpacity onPress={() => onSendTemplate(birthdayTemplate)} className="bg-[#fee2e2] px-3 py-1 rounded-full flex-row items-center gap-1">
+                                    <MessageCircle size={14} color="#b94a48" />
+                                    <Text className="text-xs font-bold text-[#8b3634]">Enviar</Text>
                                 </TouchableOpacity>
                             </View>
                             <Text className="text-xs text-gray-500 mb-2">Use {'{name}'} para inserir o nome do paciente.</Text>
@@ -183,9 +183,9 @@ export function TemplatesModal({
                                 <Text className="text-sm font-bold text-gray-900 flex-row items-center gap-2">
                                     <Clock size={16} color="#F59E0B" /> Mensagem de Retorno (6 meses)
                                 </Text>
-                                <TouchableOpacity onPress={() => onSendTemplate(returnTemplate)} className="bg-teal-100 px-3 py-1 rounded-full flex-row items-center gap-1">
-                                    <MessageCircle size={14} color="#0D9488" />
-                                    <Text className="text-xs font-bold text-teal-700">Enviar</Text>
+                                <TouchableOpacity onPress={() => onSendTemplate(returnTemplate)} className="bg-[#fee2e2] px-3 py-1 rounded-full flex-row items-center gap-1">
+                                    <MessageCircle size={14} color="#b94a48" />
+                                    <Text className="text-xs font-bold text-[#8b3634]">Enviar</Text>
                                 </TouchableOpacity>
                             </View>
                             <Text className="text-xs text-gray-500 mb-2">Use {'{name}'} para inserir o nome do paciente.</Text>
@@ -202,11 +202,11 @@ export function TemplatesModal({
                         <View className="mb-6">
                             <View className="flex-row justify-between items-center mb-2">
                                 <Text className="text-sm font-bold text-gray-900 flex-row items-center gap-2">
-                                    <Bell size={16} color="#0D9488" /> Mensagem de Confirmação
+                                    <Bell size={16} color="#b94a48" /> Mensagem de Confirmação
                                 </Text>
-                                <TouchableOpacity onPress={() => onSendTemplate(confirmationTemplate)} className="bg-teal-100 px-3 py-1 rounded-full flex-row items-center gap-1">
-                                    <MessageCircle size={14} color="#0D9488" />
-                                    <Text className="text-xs font-bold text-teal-700">Enviar</Text>
+                                <TouchableOpacity onPress={() => onSendTemplate(confirmationTemplate)} className="bg-[#fee2e2] px-3 py-1 rounded-full flex-row items-center gap-1">
+                                    <MessageCircle size={14} color="#b94a48" />
+                                    <Text className="text-xs font-bold text-[#8b3634]">Enviar</Text>
                                 </TouchableOpacity>
                             </View>
                             <Text className="text-xs text-gray-500 mb-2">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</Text>

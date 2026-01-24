@@ -144,7 +144,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                             </div>
                         </div>
                     </div>
-                    <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-teal-600 hover:bg-teal-700">
+                    <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-[#a03f3d] hover:bg-[#8b3634]">
                         <Plus className="w-4 h-4" />
                         <span className="hidden sm:inline">Adicionar</span>
                     </Button>

@@ -115,7 +115,7 @@ export function AddItemDialog({
                                     <button
                                         key={index}
                                         type="button"
-                                        className="w-full px-4 py-2 text-left text-sm hover:bg-teal-50 hover:text-teal-700 transition-colors border-b border-gray-50 last:border-0"
+                                        className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 hover:text-[#8b3634] transition-colors border-b border-gray-50 last:border-0"
                                         onClick={() => {
                                             setName(suggestion);
                                             setShowSuggestions(false);

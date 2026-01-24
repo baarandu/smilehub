@@ -36,13 +36,13 @@ export function SelectModal({ visible, onClose, onSelect, options, selectedValue
                                 key={option}
                                 onPress={() => handleSelect(option)}
                                 className={`flex-row items-center justify-between p-4 rounded-xl mb-2 ${
-                                    selectedValue === option ? 'bg-teal-50 border border-teal-200' : 'bg-gray-50'
+                                    selectedValue === option ? 'bg-[#fef2f2] border border-[#fca5a5]' : 'bg-gray-50'
                                 }`}
                             >
-                                <Text className={`text-base ${selectedValue === option ? 'text-teal-700 font-semibold' : 'text-gray-700'}`}>
+                                <Text className={`text-base ${selectedValue === option ? 'text-[#8b3634] font-semibold' : 'text-gray-700'}`}>
                                     {option}
                                 </Text>
-                                {selectedValue === option && <Check size={20} color="#0D9488" />}
+                                {selectedValue === option && <Check size={20} color="#b94a48" />}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>

@@ -200,8 +200,8 @@ export function NewAppointmentModal({
         </View>
 
         <ScrollView className="flex-1 px-4 py-6">
-          <View className="bg-teal-50 rounded-xl p-4 mb-6">
-            <Text className="text-teal-700 font-medium text-center capitalize">
+          <View className="bg-[#fef2f2] rounded-xl p-4 mb-6">
+            <Text className="text-[#8b3634] font-medium text-center capitalize">
               {formatDate(selectedDate)}
             </Text>
           </View>
@@ -209,9 +209,9 @@ export function NewAppointmentModal({
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Paciente *</Text>
             {newAppointment.patientId ? (
-              <View className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+              <View className="bg-[#fef2f2] border border-[#fca5a5] rounded-xl p-4">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-teal-800 font-medium">{newAppointment.patientName}</Text>
+                  <Text className="text-[#6b2a28] font-medium">{newAppointment.patientName}</Text>
                   <View className="flex-row items-center gap-2">
                     {appointmentToEdit && (
                       <TouchableOpacity
@@ -219,16 +219,16 @@ export function NewAppointmentModal({
                           onClose();
                           router.push(`/patient/${appointmentToEdit.patient_id}`);
                         }}
-                        className="bg-white p-2 rounded-full border border-teal-100"
+                        className="bg-white p-2 rounded-full border border-[#fecaca]"
                       >
-                        <ExternalLink size={16} color="#0D9488" />
+                        <ExternalLink size={16} color="#b94a48" />
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity onPress={() => {
                       setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
                       setPatientSearch('');
                     }}>
-                      <X size={20} color="#0D9488" />
+                      <X size={20} color="#b94a48" />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -240,7 +240,7 @@ export function NewAppointmentModal({
                     }}
                     className="mt-2 flex-row items-center gap-1"
                   >
-                    <Text className="text-teal-600 text-xs font-medium">Ver perfil do paciente</Text>
+                    <Text className="text-[#a03f3d] text-xs font-medium">Ver perfil do paciente</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -278,7 +278,7 @@ export function NewAppointmentModal({
                     {onRequestCreatePatient && (
                       <TouchableOpacity
                         onPress={() => onRequestCreatePatient(patientSearch)}
-                        className="bg-teal-600 py-3 rounded-xl"
+                        className="bg-[#a03f3d] py-3 rounded-xl"
                       >
                         <Text className="text-white font-semibold text-center">+ Cadastrar Novo Paciente</Text>
                       </TouchableOpacity>
@@ -346,9 +346,9 @@ export function NewAppointmentModal({
                     <TouchableOpacity
                       key={location.id}
                       onPress={() => { setNewAppointment({ ...newAppointment, location: location.name }); setShowLocationPicker(false); }}
-                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${newAppointment.location === location.name ? 'bg-teal-50' : ''}`}
+                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${newAppointment.location === location.name ? 'bg-[#fef2f2]' : ''}`}
                     >
-                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-teal-700' : 'text-gray-900'}`}>{location.name}</Text>
+                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-[#8b3634]' : 'text-gray-900'}`}>{location.name}</Text>
                       {location.address && <Text className="text-gray-500 text-sm">{location.address}</Text>}
                     </TouchableOpacity>
                   ))
@@ -373,7 +373,7 @@ export function NewAppointmentModal({
             <TouchableOpacity onPress={handleClose} className="flex-1 bg-gray-100 py-4 rounded-xl">
               <Text className="text-gray-700 font-semibold text-center">Cancelar</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleCreate} className="flex-1 bg-teal-600 py-4 rounded-xl">
+            <TouchableOpacity onPress={handleCreate} className="flex-1 bg-[#a03f3d] py-4 rounded-xl">
               <Text className="text-white font-semibold text-center">
                 {appointmentToEdit ? 'Salvar' : 'Agendar'}
               </Text>
@@ -381,8 +381,8 @@ export function NewAppointmentModal({
           </View>
 
           {appointmentToEdit && onDelete && (
-            <TouchableOpacity onPress={handleDelete} className="mt-4 bg-red-50 py-4 rounded-xl">
-              <Text className="text-red-600 font-semibold text-center">Excluir Agendamento</Text>
+            <TouchableOpacity onPress={handleDelete} className="mt-4 bg-[#fef2f2] py-4 rounded-xl">
+              <Text className="text-[#a03f3d] font-semibold text-center">Excluir Agendamento</Text>
             </TouchableOpacity>
           )}
         </ScrollView>

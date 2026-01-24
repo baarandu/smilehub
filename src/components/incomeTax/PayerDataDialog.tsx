@@ -149,7 +149,7 @@ export function PayerDataDialog({
               <Button
                 type="button"
                 variant={formData.payer_type === 'PF' ? 'default' : 'outline'}
-                className={formData.payer_type === 'PF' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                className={formData.payer_type === 'PF' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 onClick={() => setFormData({ ...formData, payer_type: 'PF', pj_source_id: '' })}
               >
                 <User className="w-4 h-4 mr-2" />
@@ -158,7 +158,7 @@ export function PayerDataDialog({
               <Button
                 type="button"
                 variant={formData.payer_type === 'PJ' ? 'default' : 'outline'}
-                className={formData.payer_type === 'PJ' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                className={formData.payer_type === 'PJ' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 onClick={() => setFormData({ ...formData, payer_type: 'PJ', payer_is_patient: false })}
               >
                 <Building className="w-4 h-4 mr-2" />
@@ -291,7 +291,7 @@ export function PayerDataDialog({
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-teal-600 hover:bg-teal-700"
+            className="bg-[#a03f3d] hover:bg-[#8b3634]"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>

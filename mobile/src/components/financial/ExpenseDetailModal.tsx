@@ -130,9 +130,9 @@ export function ExpenseDetailModal({
                             </View>
                         </View>
 
-                        <View className="bg-red-50 rounded-xl py-6 items-center mb-4">
+                        <View className="bg-[#fef2f2] rounded-xl py-6 items-center mb-4">
                             <Text className="text-sm text-gray-500 mb-1">Valor da Despesa</Text>
-                            <Text className="text-3xl font-bold text-red-600">- {formatValue(expense.amount)}</Text>
+                            <Text className="text-3xl font-bold text-[#a03f3d]">- {formatValue(expense.amount)}</Text>
                         </View>
 
                         {expense.category === 'Materiais' && (
@@ -153,7 +153,7 @@ export function ExpenseDetailModal({
                                                     <Text className="font-medium text-sm text-gray-900">{item.name}</Text>
                                                     <Text className="text-xs text-gray-500">{item.quantity}x {formatValue(item.unitPrice)} • {item.supplier}</Text>
                                                 </View>
-                                                <Text className="font-semibold text-red-600">{formatValue(item.totalPrice)}</Text>
+                                                <Text className="font-semibold text-[#a03f3d]">{formatValue(item.totalPrice)}</Text>
                                             </View>
                                         ))}
                                     </View>
@@ -186,7 +186,7 @@ export function ExpenseDetailModal({
                             <TouchableOpacity
                                 onPress={handleDelete}
                                 disabled={deleting}
-                                className={`flex-1 bg-red-500 rounded-xl p-4 flex-row items-center justify-center gap-2 ${deleting ? 'opacity-50' : ''}`}
+                                className={`flex-1 bg-[#b94a48] rounded-xl p-4 flex-row items-center justify-center gap-2 ${deleting ? 'opacity-50' : ''}`}
                             >
                                 {deleting ? <ActivityIndicator size="small" color="white" /> : <Trash2 size={18} color="white" />}
                                 <Text className="font-semibold text-white">Excluir</Text>

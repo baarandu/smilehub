@@ -189,11 +189,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
                 location.pathname === '/admin/planos'
-                  ? "bg-teal-100 text-teal-700"
+                  ? "bg-red-100 text-[#8b3634]"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-teal-600")} />
+              <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-[#a03f3d]")} />
               <span className="flex-1">Planos & Preços</span>
             </NavLink>
           </div>
@@ -206,7 +206,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               onClick={() => alert("Em breve: A Secretária IA estará disponível para ajudar você!")}
               className={cn(
                 "flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-                "text-muted-foreground hover:bg-muted hover:text-foreground hover:bg-teal-50 hover:text-teal-700"
+                "text-muted-foreground hover:bg-muted hover:text-foreground hover:bg-red-50 hover:text-[#8b3634]"
               )}
             >
               <Bot className="w-5 h-5" />

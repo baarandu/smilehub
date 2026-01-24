@@ -297,31 +297,31 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                     </View>
 
                     <ScrollView className="flex-1 p-6">
-                        {loadingSettings && <ActivityIndicator size="small" color="#0D9488" className="mb-4" />}
+                        {loadingSettings && <ActivityIndicator size="small" color="#b94a48" className="mb-4" />}
 
                         {/* Summary & Breakdown */}
                         <View className="items-center mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <Text className="text-gray-500 text-sm mb-1">{itemName}</Text>
-                            <Text className="text-3xl font-bold text-teal-600">R$ {formatCurrency(value)}</Text>
+                            <Text className="text-3xl font-bold text-[#a03f3d]">R$ {formatCurrency(value)}</Text>
 
                             {/* Visual Breakdown */}
                             <View className="w-full mt-4 pt-4 border-t border-gray-200 gap-2">
                                 {(breakdown.cardFeeAmount > 0) && (
                                     <View className="flex-row justify-between">
                                         <Text className="text-xs text-gray-500">Taxa Cartão ({breakdown.cardFeeRate}%):</Text>
-                                        <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.cardFeeAmount)}</Text>
+                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.cardFeeAmount)}</Text>
                                     </View>
                                 )}
                                 {(breakdown.taxAmount > 0) && (
                                     <View className="flex-row justify-between">
                                         <Text className="text-xs text-gray-500">Impostos ({breakdown.taxRate}%):</Text>
-                                        <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.taxAmount)}</Text>
+                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.taxAmount)}</Text>
                                     </View>
                                 )}
                                 {(breakdown.isAnticipated && breakdown.anticipationAmount > 0) && (
                                     <View className="flex-row justify-between">
                                         <Text className="text-xs text-gray-500">Antecipação ({breakdown.anticipationRate}%):</Text>
-                                        <Text className="text-xs text-red-500">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
+                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
                                     </View>
                                 )}
                                 {(breakdown.locationAmount > 0) && (
@@ -329,13 +329,13 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                         <Text className="text-gray-500 text-sm">
                                             Taxa do Procedimento ({locationRate ? locationRate.toFixed(2).replace('.', ',') : '0'}%):
                                         </Text>
-                                        <Text className="text-red-500 text-sm font-medium">
+                                        <Text className="text-[#b94a48] text-sm font-medium">
                                             - R$ {breakdown.locationAmount.toFixed(2).replace('.', ',')}
                                         </Text>
                                     </View>)}
                                 <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-200">
                                     <Text className="font-semibold text-gray-900">Valor Líquido:</Text>
-                                    <Text className="font-bold text-teal-700">R$ {formatCurrency(breakdown.netAmount)}</Text>
+                                    <Text className="font-bold text-[#8b3634]">R$ {formatCurrency(breakdown.netAmount)}</Text>
                                 </View>
                             </View>
                         </View>
@@ -355,12 +355,12 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                             }
                                         }}
                                         className={`items-center p-3 rounded-xl border w-24 ${selectedMethod === method.id
-                                            ? 'bg-teal-50 border-teal-500'
+                                            ? 'bg-[#fef2f2] border-[#b94a48]'
                                             : 'border-gray-100 bg-gray-50'
                                             }`}
                                     >
-                                        <method.icon size={24} color={selectedMethod === method.id ? '#0D9488' : '#6B7280'} />
-                                        <Text className={`text-xs font-medium mt-2 text-center ${selectedMethod === method.id ? 'text-teal-900' : 'text-gray-700'}`}>
+                                        <method.icon size={24} color={selectedMethod === method.id ? '#b94a48' : '#6B7280'} />
+                                        <Text className={`text-xs font-medium mt-2 text-center ${selectedMethod === method.id ? 'text-[#5a2322]' : 'text-gray-700'}`}>
                                             {method.label}
                                         </Text>
                                     </TouchableOpacity>
@@ -380,7 +380,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                                     key={brand.id}
                                                     onPress={() => setSelectedBrand(brand.id)}
                                                     className={`px-4 py-2 rounded-lg border ${selectedBrand === brand.id
-                                                        ? 'bg-teal-500 border-teal-500'
+                                                        ? 'bg-[#b94a48] border-[#b94a48]'
                                                         : 'border-gray-200 bg-white'
                                                         }`}
                                                 >
@@ -406,7 +406,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                                 setIsInstallments(val);
                                                 if (val && installmentItems.length === 0) handleGenerateClick();
                                             }}
-                                            trackColor={{ false: '#E5E7EB', true: '#0D9488' }}
+                                            trackColor={{ false: '#E5E7EB', true: '#b94a48' }}
                                         />
                                     </View>
                                 )}
@@ -426,7 +426,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                             </View>
                                             <TouchableOpacity
                                                 onPress={handleGenerateClick}
-                                                className="bg-teal-600 p-3 rounded-lg mb-[1px]"
+                                                className="bg-[#a03f3d] p-3 rounded-lg mb-[1px]"
                                             >
                                                 <Text className="text-white font-medium">Recalcular</Text>
                                             </TouchableOpacity>
@@ -465,7 +465,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                                 ))}
                                                 <View className="mt-2 pt-2 border-t border-gray-200 flex-row justify-between items-center">
                                                     <Text className="text-xs text-gray-500">Total Planejado:</Text>
-                                                    <Text className={`font-bold ${Math.abs(getTotalPlanned() - value) > 0.05 ? 'text-red-500' : 'text-green-600'}`}>
+                                                    <Text className={`font-bold ${Math.abs(getTotalPlanned() - value) > 0.05 ? 'text-[#b94a48]' : 'text-green-600'}`}>
                                                         R$ {formatCurrency(getTotalPlanned())}
                                                     </Text>
                                                 </View>
@@ -499,7 +499,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                         <TouchableOpacity
                             onPress={handleConfirm}
                             disabled={!selectedMethod || loading}
-                            className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${selectedMethod && !loading ? 'bg-teal-500' : 'bg-gray-200'}`}
+                            className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${selectedMethod && !loading ? 'bg-[#b94a48]' : 'bg-gray-200'}`}
                         >
                             {loading ? (
                                 <>

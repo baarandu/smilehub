@@ -49,9 +49,9 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
       case 'procedure_return':
         return { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' };
       case 'reminder':
-        return { icon: Bell, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-100' };
+        return { icon: Bell, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
       default:
-        return { icon: Bell, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-100' };
+        return { icon: Bell, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
     }
   };
 

@@ -101,12 +101,12 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
 
         <View className="flex-row flex-wrap">
           <View className="w-1/2 p-2">
-            <View className="bg-teal-50 p-3 rounded-xl">
+            <View className="bg-[#fef2f2] p-3 rounded-xl">
               <View className="flex-row items-center mb-2">
-                <User size={16} color="#0D9488" />
-                <Text className="text-xs text-teal-700 ml-1">Receita PF</Text>
+                <User size={16} color="#b94a48" />
+                <Text className="text-xs text-[#8b3634] ml-1">Receita PF</Text>
               </View>
-              <Text className="font-bold text-teal-700">{formatCurrency(summary.total_income_pf)}</Text>
+              <Text className="font-bold text-[#8b3634]">{formatCurrency(summary.total_income_pf)}</Text>
             </View>
           </View>
 
@@ -131,12 +131,12 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           </View>
 
           <View className="w-1/2 p-2">
-            <View className="bg-red-50 p-3 rounded-xl">
+            <View className="bg-[#fef2f2] p-3 rounded-xl">
               <View className="flex-row items-center mb-2">
                 <TrendingDown size={16} color="#DC2626" />
-                <Text className="text-xs text-red-700 ml-1">Deduções</Text>
+                <Text className="text-xs text-[#8b3634] ml-1">Deduções</Text>
               </View>
-              <Text className="font-bold text-red-700">
+              <Text className="font-bold text-[#8b3634]">
                 {formatCurrency(summary.total_expenses_deductible)}
               </Text>
             </View>
@@ -149,9 +149,9 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
             <Text className="text-gray-600">Receita Total</Text>
             <Text className="font-bold text-gray-900">{formatCurrency(summary.total_income)}</Text>
           </View>
-          <View className="flex-row justify-between items-center bg-teal-50 p-3 rounded-xl">
-            <Text className="text-teal-700 font-medium">Resultado Líquido</Text>
-            <Text className="font-bold text-teal-700 text-lg">
+          <View className="flex-row justify-between items-center bg-[#fef2f2] p-3 rounded-xl">
+            <Text className="text-[#8b3634] font-medium">Resultado Líquido</Text>
+            <Text className="font-bold text-[#8b3634] text-lg">
               {formatCurrency(summary.net_result)}
             </Text>
           </View>
@@ -166,11 +166,11 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           className="flex-1 bg-white border border-gray-200 py-3 rounded-xl flex-row items-center justify-center"
         >
           {validating ? (
-            <ActivityIndicator size="small" color="#0D9488" />
+            <ActivityIndicator size="small" color="#b94a48" />
           ) : (
             <>
-              <CheckCircle size={18} color="#0D9488" />
-              <Text className="text-teal-600 font-medium ml-2">Validar</Text>
+              <CheckCircle size={18} color="#b94a48" />
+              <Text className="text-[#a03f3d] font-medium ml-2">Validar</Text>
             </>
           )}
         </TouchableOpacity>
@@ -179,7 +179,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           onPress={handleExportPdf}
           disabled={exporting || errors.length > 0}
           className={`flex-1 py-3 rounded-xl flex-row items-center justify-center ${
-            errors.length > 0 ? 'bg-gray-300' : 'bg-teal-600'
+            errors.length > 0 ? 'bg-gray-300' : 'bg-[#a03f3d]'
           }`}
         >
           {exporting ? (
@@ -198,11 +198,11 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           className="flex-1 bg-white border border-gray-200 py-3 rounded-xl flex-row items-center justify-center"
         >
           {exporting ? (
-            <ActivityIndicator size="small" color="#0D9488" />
+            <ActivityIndicator size="small" color="#b94a48" />
           ) : (
             <>
-              <FileSpreadsheet size={18} color="#0D9488" />
-              <Text className="text-teal-600 font-medium ml-2">CSV</Text>
+              <FileSpreadsheet size={18} color="#b94a48" />
+              <Text className="text-[#a03f3d] font-medium ml-2">CSV</Text>
             </>
           )}
         </TouchableOpacity>
@@ -211,12 +211,12 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
       {/* Validation Issues */}
       {validationIssues.length > 0 && (
         <View
-          className={`p-4 rounded-xl mb-4 ${errors.length > 0 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}`}
+          className={`p-4 rounded-xl mb-4 ${errors.length > 0 ? 'bg-[#fef2f2] border border-[#fca5a5]' : 'bg-amber-50 border border-amber-200'}`}
         >
           <View className="flex-row items-center mb-2">
             <AlertTriangle size={18} color={errors.length > 0 ? '#DC2626' : '#D97706'} />
             <Text
-              className={`font-bold ml-2 ${errors.length > 0 ? 'text-red-800' : 'text-amber-800'}`}
+              className={`font-bold ml-2 ${errors.length > 0 ? 'text-[#7f1d1d]' : 'text-amber-800'}`}
             >
               {errors.length > 0 ? `${errors.length} erro(s)` : ''}
               {errors.length > 0 && warnings.length > 0 ? ' e ' : ''}
@@ -225,8 +225,8 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           </View>
 
           {errors.map((issue, idx) => (
-            <View key={`err-${idx}`} className="bg-red-100 p-2 rounded-lg mb-1">
-              <Text className="text-sm text-red-800">{issue.message}</Text>
+            <View key={`err-${idx}`} className="bg-[#fee2e2] p-2 rounded-lg mb-1">
+              <Text className="text-sm text-[#7f1d1d]">{issue.message}</Text>
             </View>
           ))}
 
@@ -269,7 +269,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
               <Text className="text-gray-700">{month.month_name}</Text>
               <View className="flex-row items-center">
                 {month.income_pf > 0 && (
-                  <Text className="text-xs text-teal-600 mr-2">
+                  <Text className="text-xs text-[#a03f3d] mr-2">
                     PF: {formatCurrency(month.income_pf)}
                   </Text>
                 )}
@@ -307,7 +307,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
             </View>
           ))}
           {summary.payers_pf.length > 5 && (
-            <Text className="text-center text-teal-600 text-sm mt-2">
+            <Text className="text-center text-[#a03f3d] text-sm mt-2">
               + {summary.payers_pf.length - 5} pagadores
             </Text>
           )}
@@ -356,7 +356,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
               <Text className="text-gray-700">{cat.category}</Text>
               <View className="flex-row items-center">
                 <Text className="text-xs text-gray-500 mr-2">{cat.transaction_count}x</Text>
-                <Text className="font-semibold text-red-600">
+                <Text className="font-semibold text-[#a03f3d]">
                   {formatCurrency(cat.total_amount)}
                 </Text>
               </View>
@@ -366,9 +366,9 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
       )}
 
       {/* Info Card */}
-      <View className="bg-teal-50 p-4 rounded-xl border border-teal-200 mb-8">
-        <Text className="text-teal-800 font-medium mb-2">Exportar Relatório</Text>
-        <Text className="text-teal-700 text-sm">
+      <View className="bg-[#fef2f2] p-4 rounded-xl border border-[#fca5a5] mb-8">
+        <Text className="text-[#6b2a28] font-medium mb-2">Exportar Relatório</Text>
+        <Text className="text-[#8b3634] text-sm">
           Clique em PDF para gerar o Dossiê IR completo ou CSV para exportar os dados em planilha.
           O arquivo será compartilhado para salvar ou enviar.
         </Text>

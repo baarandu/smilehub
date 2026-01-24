@@ -70,13 +70,13 @@ export function PaymentsTab({
                                     <View className="flex-1">
                                         <Text className="font-medium text-gray-900">{getToothDisplayName(item.tooth.tooth)}</Text>
                                         <Text className="text-gray-500 text-sm">{item.tooth.treatments.join(', ')}</Text>
-                                        <Text className="text-teal-600 font-semibold mt-1">
+                                        <Text className="text-[#a03f3d] font-semibold mt-1">
                                             R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </Text>
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => onPaymentClick(item.budgetId, item.toothIndex, item.tooth, item.budgetDate)}
-                                        className="bg-teal-500 px-4 py-2 rounded-lg flex-row items-center gap-1"
+                                        className="bg-[#b94a48] px-4 py-2 rounded-lg flex-row items-center gap-1"
                                     >
                                         <Banknote size={16} color="#FFFFFF" />
                                         <Text className="text-white font-medium">Pagar</Text>

@@ -105,7 +105,7 @@ export default function ClinicSettings() {
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center">
-                <ActivityIndicator size="large" color="#0D9488" />
+                <ActivityIndicator size="large" color="#b94a48" />
             </SafeAreaView>
         );
     }
@@ -133,7 +133,7 @@ export default function ClinicSettings() {
                                 />
                                 <TouchableOpacity
                                     onPress={handleRemoveLogo}
-                                    className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1.5 shadow-sm"
+                                    className="absolute -top-2 -right-2 bg-[#b94a48] rounded-full p-1.5 shadow-sm"
                                 >
                                     <X size={14} color="white" />
                                 </TouchableOpacity>
@@ -149,14 +149,14 @@ export default function ClinicSettings() {
                     <TouchableOpacity
                         onPress={handlePickImage}
                         disabled={saving}
-                        className="bg-teal-50 px-4 py-2 rounded-xl flex-row items-center gap-2 border border-teal-100"
+                        className="bg-[#fef2f2] px-4 py-2 rounded-xl flex-row items-center gap-2 border border-[#fecaca]"
                     >
                         {saving ? (
-                            <ActivityIndicator size={16} color="#0D9488" />
+                            <ActivityIndicator size={16} color="#b94a48" />
                         ) : (
                             <>
-                                <Upload size={16} color="#0D9488" />
-                                <Text className="text-teal-700 font-medium">
+                                <Upload size={16} color="#b94a48" />
+                                <Text className="text-[#8b3634] font-medium">
                                     {logoUrl ? 'Alterar Logo' : 'Adicionar Logo'}
                                 </Text>
                             </>
@@ -183,7 +183,7 @@ export default function ClinicSettings() {
                     <TouchableOpacity
                         onPress={handleSaveName}
                         disabled={saving}
-                        className="bg-teal-600 mt-4 py-3 rounded-xl flex-row items-center justify-center gap-2"
+                        className="bg-[#a03f3d] mt-4 py-3 rounded-xl flex-row items-center justify-center gap-2"
                     >
                         {saving ? (
                             <ActivityIndicator size={20} color="white" />

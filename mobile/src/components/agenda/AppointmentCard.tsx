@@ -19,7 +19,7 @@ export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) 
     >
       <View className="flex-row items-center gap-4">
         <View className="items-center justify-center">
-          <Text className="text-2xl font-bold text-teal-600">
+          <Text className="text-2xl font-bold text-[#a03f3d]">
             {appointment.time?.slice(0, 5)}
           </Text>
         </View>

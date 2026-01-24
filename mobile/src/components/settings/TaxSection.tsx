@@ -56,16 +56,16 @@ export function TaxSection({ taxes, onRefresh }: TaxSectionProps) {
         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-6">
             <View className="p-5 border-b border-gray-100 flex-row justify-between items-center">
                 <View className="flex-row items-center gap-2">
-                    <Percent size={20} color="#0D9488" />
+                    <Percent size={20} color="#b94a48" />
                     <Text className="text-base font-bold text-gray-900">Impostos</Text>
                 </View>
-                <TouchableOpacity onPress={() => setShowForm(!showForm)} className="bg-teal-500 p-2 rounded-lg">
+                <TouchableOpacity onPress={() => setShowForm(!showForm)} className="bg-[#b94a48] p-2 rounded-lg">
                     <Plus size={20} color="white" />
                 </TouchableOpacity>
             </View>
 
             {showForm && (
-                <View className="p-4 border-b border-gray-100 bg-teal-50">
+                <View className="p-4 border-b border-gray-100 bg-[#fef2f2]">
                     <Text className="text-sm font-medium text-gray-700 mb-2">Novo Imposto</Text>
                     <View className="flex-row gap-2 mb-3">
                         <TextInput className="flex-1 bg-white border border-gray-200 rounded-lg px-4 py-3" placeholder="Nome (ex: ISS, IRPJ)" value={name} onChangeText={setName} />
@@ -74,7 +74,7 @@ export function TaxSection({ taxes, onRefresh }: TaxSectionProps) {
                             <Text className="text-gray-500">%</Text>
                         </View>
                     </View>
-                    <TouchableOpacity onPress={handleAdd} disabled={saving} className="bg-teal-500 rounded-lg py-3 items-center">
+                    <TouchableOpacity onPress={handleAdd} disabled={saving} className="bg-[#b94a48] rounded-lg py-3 items-center">
                         {saving ? <ActivityIndicator color="white" /> : <Text className="text-white font-medium">Adicionar Imposto</Text>}
                     </TouchableOpacity>
                 </View>
@@ -88,13 +88,13 @@ export function TaxSection({ taxes, onRefresh }: TaxSectionProps) {
                         <View key={tax.id} className="flex-row items-center justify-between py-3 border-b border-gray-100">
                             <View className="flex-row items-center gap-3">
                                 <Text className="font-medium text-gray-800">{tax.name}</Text>
-                                <Text className="text-red-600 font-semibold">{tax.rate}%</Text>
+                                <Text className="text-[#a03f3d] font-semibold">{tax.rate}%</Text>
                             </View>
                             <TouchableOpacity onPress={() => handleDelete(tax.id)}><Trash2 size={18} color="#ef4444" /></TouchableOpacity>
                         </View>
                     ))}
                     <View className="flex-row justify-end pt-3">
-                        <Text className="text-gray-500">Total: <Text className="font-bold text-red-600">{taxes.reduce((sum, t) => sum + t.rate, 0).toFixed(2)}%</Text></Text>
+                        <Text className="text-gray-500">Total: <Text className="font-bold text-[#a03f3d]">{taxes.reduce((sum, t) => sum + t.rate, 0).toFixed(2)}%</Text></Text>
                     </View>
                 </View>
             )}

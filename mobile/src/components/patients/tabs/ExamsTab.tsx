@@ -25,10 +25,10 @@ export function ExamsTab({
                 <Text className="text-sm text-gray-500">Exames e Documentos</Text>
                 <TouchableOpacity
                     onPress={onAdd}
-                    className="bg-teal-50 px-3 py-1.5 rounded-full border border-teal-100 flex-row items-center gap-1"
+                    className="bg-[#fef2f2] px-3 py-1.5 rounded-full border border-[#fecaca] flex-row items-center gap-1"
                 >
-                    <Plus size={14} color="#0D9488" />
-                    <Text className="text-teal-700 text-xs font-medium">Adicionar</Text>
+                    <Plus size={14} color="#b94a48" />
+                    <Text className="text-[#8b3634] text-xs font-medium">Adicionar</Text>
                 </TouchableOpacity>
             </View>
 
@@ -54,15 +54,15 @@ export function ExamsTab({
                                 {onEdit && (
                                     <TouchableOpacity
                                         onPress={() => onEdit(exam)}
-                                        className="bg-teal-50 p-2 rounded-lg"
+                                        className="bg-[#fef2f2] p-2 rounded-lg"
                                     >
-                                        <Edit3 size={16} color="#0D9488" />
+                                        <Edit3 size={16} color="#b94a48" />
                                     </TouchableOpacity>
                                 )}
                                 {onDelete && (
                                     <TouchableOpacity
                                         onPress={() => onDelete(exam)}
-                                        className="bg-red-50 p-2 rounded-lg"
+                                        className="bg-[#fef2f2] p-2 rounded-lg"
                                     >
                                         <Trash2 size={16} color="#EF4444" />
                                     </TouchableOpacity>

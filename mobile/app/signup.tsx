@@ -79,16 +79,16 @@ export default function SignUp() {
                             <View className="flex-row gap-3">
                                 <TouchableOpacity
                                     className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'solo'
-                                        ? 'border-teal-500 bg-teal-50'
+                                        ? 'border-[#b94a48] bg-[#fef2f2]'
                                         : 'border-gray-200 bg-gray-50'
                                         }`}
                                     onPress={() => setAccountType('solo')}
                                 >
                                     <Stethoscope
                                         size={28}
-                                        color={accountType === 'solo' ? '#14b8a6' : '#9CA3AF'}
+                                        color={accountType === 'solo' ? '#c75a58' : '#9CA3AF'}
                                     />
-                                    <Text className={`mt-2 font-medium ${accountType === 'solo' ? 'text-teal-600' : 'text-gray-500'
+                                    <Text className={`mt-2 font-medium ${accountType === 'solo' ? 'text-[#a03f3d]' : 'text-gray-500'
                                         }`}>
                                         Dentista Autônomo
                                     </Text>
@@ -99,16 +99,16 @@ export default function SignUp() {
 
                                 <TouchableOpacity
                                     className={`flex-1 p-4 rounded-xl border-2 items-center ${accountType === 'clinic'
-                                        ? 'border-teal-500 bg-teal-50'
+                                        ? 'border-[#b94a48] bg-[#fef2f2]'
                                         : 'border-gray-200 bg-gray-50'
                                         }`}
                                     onPress={() => setAccountType('clinic')}
                                 >
                                     <Building2
                                         size={28}
-                                        color={accountType === 'clinic' ? '#14b8a6' : '#9CA3AF'}
+                                        color={accountType === 'clinic' ? '#c75a58' : '#9CA3AF'}
                                     />
-                                    <Text className={`mt-2 font-medium ${accountType === 'clinic' ? 'text-teal-600' : 'text-gray-500'
+                                    <Text className={`mt-2 font-medium ${accountType === 'clinic' ? 'text-[#a03f3d]' : 'text-gray-500'
                                         }`}>
                                         Clínica
                                     </Text>
@@ -244,7 +244,7 @@ export default function SignUp() {
                         <TouchableOpacity
                             onPress={handleSignUp}
                             disabled={loading}
-                            className={`bg-teal-600 rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
+                            className={`bg-[#a03f3d] rounded-xl py-4 flex-row items-center justify-center mt-4 ${loading ? 'opacity-70' : ''}`}
                         >
                             {loading ? (
                                 <ActivityIndicator color="white" />

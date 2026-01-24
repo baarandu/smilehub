@@ -195,7 +195,7 @@ export default function FinancialSettings() {
     }).sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments);
 
     if (loading) {
-        return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-teal-600" /></div>;
+        return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-[#a03f3d]" /></div>;
     }
 
     return (
@@ -342,7 +342,7 @@ export default function FinancialSettings() {
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-teal-600 hover:bg-teal-700">
+                            <Button className="bg-[#a03f3d] hover:bg-[#8b3634]">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Adicionar Regra
                             </Button>
@@ -426,7 +426,7 @@ export default function FinancialSettings() {
                                     key={type}
                                     variant={filterType === type ? "default" : "outline"}
                                     size="sm"
-                                    className={filterType === type ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                    className={filterType === type ? "bg-[#a03f3d] hover:bg-[#8b3634]" : ""}
                                     onClick={() => setFilterType(type)}
                                 >
                                     {type === 'all' ? 'Todos' : type === 'credit' ? 'Crédito' : 'Débito'}
@@ -438,7 +438,7 @@ export default function FinancialSettings() {
                             <Button
                                 variant={filterBrand === 'all' ? "default" : "outline"}
                                 size="sm"
-                                className={filterBrand === 'all' ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                className={filterBrand === 'all' ? "bg-[#a03f3d] hover:bg-[#8b3634]" : ""}
                                 onClick={() => setFilterBrand('all')}
                             >
                                 Todas Bandeiras
@@ -448,7 +448,7 @@ export default function FinancialSettings() {
                                     key={brand}
                                     variant={filterBrand === brand ? "default" : "outline"}
                                     size="sm"
-                                    className={filterBrand === brand ? "bg-teal-600 hover:bg-teal-700" : ""}
+                                    className={filterBrand === brand ? "bg-[#a03f3d] hover:bg-[#8b3634]" : ""}
                                     onClick={() => setFilterBrand(brand)}
                                 >
                                     {formatBrandName(brand)}

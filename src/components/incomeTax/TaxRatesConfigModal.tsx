@@ -380,7 +380,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                   </div>
                 ) : (
                   <span
-                    className="cursor-pointer hover:text-teal-600"
+                    className="cursor-pointer hover:text-[#a03f3d]"
                     onClick={() => {
                       setEditingBracketId(`${bracket.id}-min`);
                       setEditValue(bracket.min_value.toString());
@@ -421,7 +421,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                   </div>
                 ) : (
                   <span
-                    className="cursor-pointer hover:text-teal-600"
+                    className="cursor-pointer hover:text-[#a03f3d]"
                     onClick={() => {
                       setEditingBracketId(`${bracket.id}-max`);
                       setEditValue(bracket.max_value?.toString() || '');
@@ -461,7 +461,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                   </div>
                 ) : (
                   <span
-                    className="cursor-pointer hover:text-teal-600 font-mono"
+                    className="cursor-pointer hover:text-[#a03f3d] font-mono"
                     onClick={() => {
                       setEditingBracketId(`${bracket.id}-rate`);
                       setEditValue((bracket.rate * 100).toFixed(2));
@@ -500,7 +500,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                   </div>
                 ) : (
                   <span
-                    className="cursor-pointer hover:text-teal-600"
+                    className="cursor-pointer hover:text-[#a03f3d]"
                     onClick={() => {
                       setEditingBracketId(`${bracket.id}-deduction`);
                       setEditValue(bracket.deduction.toString());
@@ -789,7 +789,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                       </div>
                     ) : (
                       <span
-                        className="cursor-pointer hover:text-teal-600 font-mono"
+                        className="cursor-pointer hover:text-[#a03f3d] font-mono"
                         onClick={() => {
                           setEditingISSId(iss.id);
                           setEditValue((iss.rate * 100).toFixed(2));
@@ -801,7 +801,7 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
                   </TableCell>
                   <TableCell className="text-center">
                     {iss.is_default && (
-                      <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded">
+                      <span className="text-xs bg-red-100 text-[#8b3634] px-2 py-0.5 rounded">
                         Padrao
                       </span>
                     )}

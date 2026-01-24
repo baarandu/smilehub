@@ -131,7 +131,7 @@ export default function AdminPlansScreen() {
                     </TouchableOpacity>
                     <Text className="text-xl font-bold text-gray-900">Gerenciar Planos</Text>
                 </View>
-                <TouchableOpacity onPress={() => handleOpenModal()} className="bg-teal-600 p-2 rounded-full">
+                <TouchableOpacity onPress={() => handleOpenModal()} className="bg-[#a03f3d] p-2 rounded-full">
                     <Plus size={24} color="white" />
                 </TouchableOpacity>
             </View>
@@ -139,12 +139,12 @@ export default function AdminPlansScreen() {
             {/* List */}
             {loading ? (
                 <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#0D9488" />
+                    <ActivityIndicator size="large" color="#b94a48" />
                 </View>
             ) : (
                 <ScrollView className="p-4" contentContainerStyle={{ paddingBottom: 100 }}>
                     {plans.map((plan) => (
-                        <View key={plan.id} className={`bg-white rounded-xl p-4 mb-4 shadow-sm border ${plan.is_active ? 'border-gray-100' : 'border-red-100 bg-red-50/50'}`}>
+                        <View key={plan.id} className={`bg-white rounded-xl p-4 mb-4 shadow-sm border ${plan.is_active ? 'border-gray-100' : 'border-[#fecaca] bg-[#fef2f2]/50'}`}>
                             <View className="flex-row justify-between items-start mb-2">
                                 <View className="flex-1">
                                     <Text className="text-lg font-bold text-gray-900">{plan.name}</Text>
@@ -175,8 +175,8 @@ export default function AdminPlansScreen() {
                             </View>
 
                             <View className="flex-row items-center gap-2 mt-2">
-                                <View className={`px-2 py-1 rounded-full ${plan.is_active ? 'bg-green-100' : 'bg-red-100'}`}>
-                                    <Text className={`text-xs font-bold ${plan.is_active ? 'text-green-700' : 'text-red-700'}`}>
+                                <View className={`px-2 py-1 rounded-full ${plan.is_active ? 'bg-green-100' : 'bg-[#fee2e2]'}`}>
+                                    <Text className={`text-xs font-bold ${plan.is_active ? 'text-green-700' : 'text-[#8b3634]'}`}>
                                         {plan.is_active ? 'ATIVO' : 'INATIVO'}
                                     </Text>
                                 </View>
@@ -276,7 +276,7 @@ export default function AdminPlansScreen() {
                                         <Switch
                                             value={formData.is_active}
                                             onValueChange={v => setFormData({ ...formData, is_active: v })}
-                                            trackColor={{ false: "#D1D5DB", true: "#0D9488" }}
+                                            trackColor={{ false: "#D1D5DB", true: "#b94a48" }}
                                         />
                                     </View>
                                 </View>
@@ -286,7 +286,7 @@ export default function AdminPlansScreen() {
                                 <TouchableOpacity
                                     onPress={handleSave}
                                     disabled={saving}
-                                    className="bg-teal-600 p-4 rounded-xl items-center"
+                                    className="bg-[#a03f3d] p-4 rounded-xl items-center"
                                 >
                                     {saving ? (
                                         <ActivityIndicator color="white" />

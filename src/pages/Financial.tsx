@@ -177,28 +177,28 @@ export default function Financial() {
                 <Button
                   variant={activePreset === 'today' ? 'default' : 'outline'}
                   onClick={() => setPreset('today')}
-                  className={activePreset === 'today' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                  className={activePreset === 'today' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 >
                   Hoje
                 </Button>
                 <Button
                   variant={activePreset === 'week' ? 'default' : 'outline'}
                   onClick={() => setPreset('week')}
-                  className={activePreset === 'week' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                  className={activePreset === 'week' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 >
                   Esta Semana
                 </Button>
                 <Button
                   variant={activePreset === 'month' ? 'default' : 'outline'}
                   onClick={() => setPreset('month')}
-                  className={activePreset === 'month' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                  className={activePreset === 'month' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 >
                   Este Mês
                 </Button>
                 <Button
                   variant={activePreset === 'year' ? 'default' : 'outline'}
                   onClick={() => setPreset('year')}
-                  className={activePreset === 'year' ? 'bg-teal-600 hover:bg-teal-700' : ''}
+                  className={activePreset === 'year' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
                 >
                   Este Ano
                 </Button>
@@ -246,7 +246,7 @@ export default function Financial() {
 
             {/* Apply Button for custom dates */}
             <Button
-              className="w-full bg-teal-600 hover:bg-teal-700"
+              className="w-full bg-[#a03f3d] hover:bg-[#8b3634]"
               onClick={() => setShowFilterModal(false)}
             >
               Aplicar Filtro

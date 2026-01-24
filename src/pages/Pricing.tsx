@@ -271,9 +271,9 @@ export default function Pricing() {
                 <h1 className="text-4xl font-bold tracking-tight mb-4">Planos e Assinaturas</h1>
                 <p className="text-lg text-muted-foreground mb-6">Gerencie seu plano atual ou faça upgrades conforme sua clínica cresce.</p>
 
-                <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 max-w-2xl mx-auto">
-                    <h3 className="text-teal-800 font-bold text-lg">30 Dias Grátis no Plano Mensal! 🎁</h3>
-                    <p className="text-teal-700">Cancelamento grátis a qualquer momento. A cobrança do cartão só acontece após o período de teste.</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-2xl mx-auto">
+                    <h3 className="text-[#6b2a28] font-bold text-lg">30 Dias Grátis no Plano Mensal! 🎁</h3>
+                    <p className="text-[#8b3634]">Cancelamento grátis a qualquer momento. A cobrança do cartão só acontece após o período de teste.</p>
                 </div>
             </div>
 

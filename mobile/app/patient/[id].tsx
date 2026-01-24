@@ -182,7 +182,7 @@ export default function PatientDetail() {
         return (
             <SafeAreaView className="flex-1 bg-gray-50">
                 <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#0D9488" />
+                    <ActivityIndicator size="large" color="#b94a48" />
                 </View>
             </SafeAreaView>
         );
@@ -193,7 +193,7 @@ export default function PatientDetail() {
             <SafeAreaView className="flex-1 bg-gray-50">
                 <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
                     <TouchableOpacity onPress={() => router.replace('/patients')} className="mr-4">
-                        <ArrowLeft size={24} color="#0D9488" />
+                        <ArrowLeft size={24} color="#b94a48" />
                     </TouchableOpacity>
                     <Text className="text-lg font-semibold text-gray-900">Paciente não encontrado</Text>
                 </View>
@@ -206,7 +206,7 @@ export default function PatientDetail() {
             {/* Header */}
             <View className="flex-row items-center px-4 py-4 bg-white border-b border-gray-100">
                 <TouchableOpacity onPress={() => router.replace('/patients')} className="mr-4">
-                    <ArrowLeft size={24} color="#0D9488" />
+                    <ArrowLeft size={24} color="#b94a48" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold text-gray-900 flex-1">Detalhes do Paciente</Text>
 
@@ -221,10 +221,10 @@ export default function PatientDetail() {
                     <FileText size={20} color="#3B82F6" />
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={() => setShowEditModal(true)} className="bg-teal-50 p-2 rounded-lg mr-2">
-                    <Edit3 size={20} color="#0D9488" />
+                <TouchableOpacity onPress={() => setShowEditModal(true)} className="bg-[#fef2f2] p-2 rounded-lg mr-2">
+                    <Edit3 size={20} color="#b94a48" />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleDelete} className="bg-red-50 p-2 rounded-lg">
+                <TouchableOpacity onPress={handleDelete} className="bg-[#fef2f2] p-2 rounded-lg">
                     <Trash2 size={20} color="#EF4444" />
                 </TouchableOpacity>
             </View>
@@ -235,15 +235,15 @@ export default function PatientDetail() {
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={handleRefresh}
-                        colors={['#0D9488']}
-                        tintColor="#0D9488"
+                        colors={['#b94a48']}
+                        tintColor="#b94a48"
                     />
                 }
             >
                 {/* Patient Card */}
                 <View className="bg-white m-4 p-5 rounded-xl border border-gray-100">
                     <View className="flex-row items-center gap-4">
-                        <View className="w-16 h-16 rounded-xl bg-teal-500 items-center justify-center">
+                        <View className="w-16 h-16 rounded-xl bg-[#b94a48] items-center justify-center">
                             <Text className="text-white font-bold text-xl">{getInitials(patient.name)}</Text>
                         </View>
                         <View className="flex-1">
@@ -270,13 +270,13 @@ export default function PatientDetail() {
                         </TouchableOpacity>
                         {patient.email && (
                             <View className="flex-row items-center gap-3">
-                                <Mail size={16} color="#0D9488" />
+                                <Mail size={16} color="#b94a48" />
                                 <Text className="text-gray-700">{patient.email}</Text>
                             </View>
                         )}
                         {patient.birth_date && (
                             <View className="flex-row items-center gap-3">
-                                <Calendar size={16} color="#0D9488" />
+                                <Calendar size={16} color="#b94a48" />
                                 <Text className="text-gray-700">
                                     {formatDateDisplay(patient.birth_date)}
                                     {calculateAge(patient.birth_date) && ` (${calculateAge(patient.birth_date)} anos)`}
@@ -291,12 +291,12 @@ export default function PatientDetail() {
                     <View className="flex-row bg-gray-100 rounded-xl p-1">
                         {availableTabs.map((t) => (
                             <TouchableOpacity key={t} onPress={() => setActiveTab(t)} className={`flex-1 py-4 rounded-lg items-center ${activeTab === t ? 'bg-white' : ''}`}>
-                                {t === 'anamnese' && <ClipboardList size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
-                                {t === 'budgets' && <Calculator size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
-                                {t === 'procedures' && <Hospital size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
-                                {t === 'exams' && <FileText size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
-                                {t === 'payments' && <CreditCard size={18} color={activeTab === t ? '#0D9488' : '#6B7280'} />}
-                                <Text className={`text-[10px] mt-1.5 ${activeTab === t ? 'text-teal-600 font-medium' : 'text-gray-500'}`}>
+                                {t === 'anamnese' && <ClipboardList size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                {t === 'budgets' && <Calculator size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                {t === 'procedures' && <Hospital size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                {t === 'exams' && <FileText size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                {t === 'payments' && <CreditCard size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                <Text className={`text-[10px] mt-1.5 ${activeTab === t ? 'text-[#a03f3d] font-medium' : 'text-gray-500'}`}>
                                     {t === 'anamnese' ? 'Anamnese' : t === 'budgets' ? 'Orcamentos' : t === 'procedures' ? 'Procedimentos' : t === 'exams' ? 'Exames' : 'Pagamentos'}
                                 </Text>
                             </TouchableOpacity>
@@ -315,7 +315,7 @@ export default function PatientDetail() {
                 {(patient.allergies || patient.health_insurance) && (
                     <View className="bg-white mx-4 mb-4 p-5 rounded-xl border border-gray-100">
                         <View className="flex-row items-center gap-2 mb-4">
-                            <Heart size={18} color="#0D9488" />
+                            <Heart size={18} color="#b94a48" />
                             <Text className="font-semibold text-gray-900">Informações de Saúde</Text>
                         </View>
                         {patient.health_insurance && (
@@ -325,9 +325,9 @@ export default function PatientDetail() {
                             </View>
                         )}
                         {patient.allergies && (
-                            <View className="p-3 bg-red-50 rounded-lg">
-                                <Text className="text-xs text-red-500 uppercase font-medium">⚠️ Alergias</Text>
-                                <Text className="text-red-700 mt-1">{patient.allergies}</Text>
+                            <View className="p-3 bg-[#fef2f2] rounded-lg">
+                                <Text className="text-xs text-[#b94a48] uppercase font-medium">⚠️ Alergias</Text>
+                                <Text className="text-[#8b3634] mt-1">{patient.allergies}</Text>
                             </View>
                         )}
                     </View>
@@ -381,7 +381,7 @@ export default function PatientDetail() {
                         </TouchableOpacity>
                         <Text className="text-lg font-semibold text-gray-900 flex-1 text-center">Visualizar Documento</Text>
                         <TouchableOpacity onPress={() => pdfUrl && Linking.openURL(pdfUrl)} className="ml-4 p-2">
-                            <Text className="text-teal-600 font-medium">Abrir</Text>
+                            <Text className="text-[#a03f3d] font-medium">Abrir</Text>
                         </TouchableOpacity>
                     </View>
                     {pdfUrl && (
@@ -389,7 +389,7 @@ export default function PatientDetail() {
                             source={Platform.OS === 'android' ? { uri: `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(pdfUrl)}` } : { uri: pdfUrl }}
                             style={{ flex: 1 }}
                             startInLoadingState
-                            renderLoading={() => <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#0D9488" /></View>}
+                            renderLoading={() => <View className="flex-1 items-center justify-center"><ActivityIndicator size="large" color="#b94a48" /></View>}
                         />
                     )}
                 </View>

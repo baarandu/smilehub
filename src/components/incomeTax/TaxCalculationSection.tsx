@@ -194,7 +194,7 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
               <CardDescription>{result.regime_label}</CardDescription>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-teal-600">
+              <p className="text-2xl font-bold text-[#a03f3d]">
                 {formatCurrency(result.total_taxes)}
               </p>
               <p className="text-sm text-muted-foreground">
@@ -238,7 +238,7 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-teal-600" />
+          <Calculator className="w-5 h-5 text-[#a03f3d]" />
           <h2 className="text-lg font-semibold">Calculo de Impostos</h2>
         </div>
         <Skeleton className="h-48 w-full" />
@@ -269,7 +269,7 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Calculator className="w-5 h-5 text-teal-600" />
+        <Calculator className="w-5 h-5 text-[#a03f3d]" />
         <h2 className="text-lg font-semibold">Calculo de Impostos - {year}</h2>
       </div>
 
@@ -278,7 +278,7 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
         <Card>
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Impostos PF</p>
-            <p className="text-xl font-bold text-teal-600">
+            <p className="text-xl font-bold text-[#a03f3d]">
               {formatCurrency(taxSummary.total_pf_taxes)}
             </p>
             <p className="text-xs text-muted-foreground">

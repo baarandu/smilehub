@@ -119,7 +119,7 @@ export default function IncomeTaxScreen({ onBack }: Props) {
     if (loading) {
       return (
         <View className="flex-1 items-center justify-center py-20">
-          <ActivityIndicator size="large" color="#0D9488" />
+          <ActivityIndicator size="large" color="#b94a48" />
           <Text className="text-gray-500 mt-4">Carregando...</Text>
         </View>
       );
@@ -174,9 +174,9 @@ export default function IncomeTaxScreen({ onBack }: Props) {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <TouchableOpacity onPress={onBack} className="mr-3 p-1">
-              <ArrowLeft size={24} color="#0D9488" />
+              <ArrowLeft size={24} color="#b94a48" />
             </TouchableOpacity>
-            <FileText size={24} color="#0D9488" />
+            <FileText size={24} color="#b94a48" />
             <Text className="text-lg font-bold text-gray-900 ml-2">Imposto de Renda</Text>
           </View>
 
@@ -184,9 +184,9 @@ export default function IncomeTaxScreen({ onBack }: Props) {
           <View className="flex-row items-center gap-2">
             <TouchableOpacity
               onPress={() => setShowTaxConfigModal(true)}
-              className="p-2 bg-teal-50 rounded-lg"
+              className="p-2 bg-[#fef2f2] rounded-lg"
             >
-              <Calculator size={18} color="#0D9488" />
+              <Calculator size={18} color="#b94a48" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowYearPicker(!showYearPicker)}
@@ -200,7 +200,7 @@ export default function IncomeTaxScreen({ onBack }: Props) {
               disabled={refreshing}
               className="p-2 bg-gray-100 rounded-lg"
             >
-              <RefreshCw size={18} color={refreshing ? '#9CA3AF' : '#0D9488'} />
+              <RefreshCw size={18} color={refreshing ? '#9CA3AF' : '#b94a48'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -215,9 +215,9 @@ export default function IncomeTaxScreen({ onBack }: Props) {
                   setSelectedYear(year);
                   setShowYearPicker(false);
                 }}
-                className={`px-6 py-3 border-b border-gray-100 ${selectedYear === year ? 'bg-teal-50' : ''}`}
+                className={`px-6 py-3 border-b border-gray-100 ${selectedYear === year ? 'bg-[#fef2f2]' : ''}`}
               >
-                <Text className={`text-center font-medium ${selectedYear === year ? 'text-teal-700' : 'text-gray-700'}`}>
+                <Text className={`text-center font-medium ${selectedYear === year ? 'text-[#8b3634]' : 'text-gray-700'}`}>
                   {year}
                 </Text>
               </TouchableOpacity>
@@ -235,10 +235,10 @@ export default function IncomeTaxScreen({ onBack }: Props) {
             <TouchableOpacity
               key={tab.key}
               onPress={() => setActiveTab(tab.key)}
-              className={`flex-1 py-3 items-center border-b-2 ${isActive ? 'border-teal-600' : 'border-transparent'}`}
+              className={`flex-1 py-3 items-center border-b-2 ${isActive ? 'border-[#a03f3d]' : 'border-transparent'}`}
             >
-              <Icon size={20} color={isActive ? '#0D9488' : '#9CA3AF'} />
-              <Text className={`text-xs mt-1 font-medium ${isActive ? 'text-teal-600' : 'text-gray-500'}`}>
+              <Icon size={20} color={isActive ? '#b94a48' : '#9CA3AF'} />
+              <Text className={`text-xs mt-1 font-medium ${isActive ? 'text-[#a03f3d]' : 'text-gray-500'}`}>
                 {tab.label}
               </Text>
             </TouchableOpacity>

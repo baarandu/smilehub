@@ -54,7 +54,7 @@ export default function PasswordSettings() {
         <View className="flex-1 bg-gray-50">
             {/* Header */}
             <View
-                className="bg-teal-600 px-4 pb-6 rounded-b-[32px] pt-4"
+                className="bg-[#a03f3d] px-4 pb-6 rounded-b-[32px] pt-4"
                 style={{ paddingTop: insets.top + 16 }}
             >
                 <View className="flex-row items-center gap-3">
@@ -87,7 +87,7 @@ export default function PasswordSettings() {
                         <View className="space-y-4 gap-4">
                             <View>
                                 <Text className="text-gray-700 font-medium mb-2 ml-1">Nova Senha</Text>
-                                <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                                <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-[#b94a48] focus:bg-white">
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900"
@@ -109,7 +109,7 @@ export default function PasswordSettings() {
 
                             <View>
                                 <Text className="text-gray-700 font-medium mb-2 ml-1">Confirmar Senha</Text>
-                                <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-teal-500 focus:bg-white">
+                                <View className="flex-row items-center border border-gray-200 rounded-xl px-4 py-3 bg-gray-50 focus:border-[#b94a48] focus:bg-white">
                                     <Lock size={20} color="#9CA3AF" />
                                     <TextInput
                                         className="flex-1 ml-3 text-gray-900"
@@ -134,7 +134,7 @@ export default function PasswordSettings() {
                     <TouchableOpacity
                         onPress={handleSave}
                         disabled={loading}
-                        className={`bg-teal-600 rounded-xl py-4 flex-row items-center justify-center gap-2 shadow-sm ${loading ? 'opacity-70' : ''}`}
+                        className={`bg-[#a03f3d] rounded-xl py-4 flex-row items-center justify-center gap-2 shadow-sm ${loading ? 'opacity-70' : ''}`}
                     >
                         {loading ? (
                             <ActivityIndicator color="white" />

@@ -46,7 +46,7 @@ export function BreakdownsSection({ transactions, formatCurrency }: BreakdownsPr
             <View className="bg-white p-6 rounded-xl border border-gray-100 mb-6">
                 <Text className="text-sm font-semibold text-gray-900 mb-4">Resumo por Forma de Pagamento</Text>
                 <View className="gap-3">
-                    <Row label="Pix" value={totals.pix} total={totalIncome} format={formatCurrency} color="bg-teal-500" />
+                    <Row label="Pix" value={totals.pix} total={totalIncome} format={formatCurrency} color="bg-[#b94a48]" />
                     <Row label="Dinheiro" value={totals.cash} total={totalIncome} format={formatCurrency} color="bg-green-600" />
                     <Row label="Crédito" value={totals.credit} total={totalIncome} format={formatCurrency} color="bg-blue-500" />
                     <Row label="Débito" value={totals.debit} total={totalIncome} format={formatCurrency} color="bg-blue-400" />

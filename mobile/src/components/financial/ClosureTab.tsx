@@ -121,17 +121,17 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false} refreshControl={onRefresh ? <RefreshControl refreshing={refreshing || false} onRefresh={onRefresh} colors={['#0D9488']} tintColor="#0D9488" /> : undefined}>
+            <ScrollView className="flex-1 px-4 py-2" showsVerticalScrollIndicator={false} refreshControl={onRefresh ? <RefreshControl refreshing={refreshing || false} onRefresh={onRefresh} colors={['#b94a48']} tintColor="#b94a48" /> : undefined}>
                 {/* Balance Card */}
-                <View className="bg-teal-600 p-6 rounded-2xl mb-6 shadow-md shadow-teal-900/20">
-                    <Text className="text-teal-100 text-sm font-medium mb-1">Saldo Final</Text>
+                <View className="bg-[#a03f3d] p-6 rounded-2xl mb-6 shadow-md shadow-[#5a2322]/20">
+                    <Text className="text-[#fee2e2] text-sm font-medium mb-1">Saldo Final</Text>
                     <Text className="text-4xl font-bold text-white mb-4">{formatCurrency(netResult)}</Text>
-                    <View className="flex-row bg-teal-800/30 rounded-xl p-3 justify-between">
-                        <View><Text className="text-teal-100 text-xs">Margem</Text><Text className="text-white font-bold">{profitMargin}%</Text></View>
-                        <View className="w-px bg-teal-500/30 mx-2" />
-                        <View><Text className="text-teal-100 text-xs">Entradas</Text><Text className="text-white font-bold">{formatCurrency(totalIncome)}</Text></View>
-                        <View className="w-px bg-teal-500/30 mx-2" />
-                        <View><Text className="text-teal-100 text-xs">Saídas</Text><Text className="text-white font-bold">{formatCurrency(totalExpenses)}</Text></View>
+                    <View className="flex-row bg-[#6b2a28]/30 rounded-xl p-3 justify-between">
+                        <View><Text className="text-[#fee2e2] text-xs">Margem</Text><Text className="text-white font-bold">{profitMargin}%</Text></View>
+                        <View className="w-px bg-[#b94a48]/30 mx-2" />
+                        <View><Text className="text-[#fee2e2] text-xs">Entradas</Text><Text className="text-white font-bold">{formatCurrency(totalIncome)}</Text></View>
+                        <View className="w-px bg-[#b94a48]/30 mx-2" />
+                        <View><Text className="text-[#fee2e2] text-xs">Saídas</Text><Text className="text-white font-bold">{formatCurrency(totalExpenses)}</Text></View>
                     </View>
                 </View>
 
@@ -144,13 +144,13 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
                         <DeductionRow label="(-) Taxa de Antecipação" value={totalAnticipation} formatCurrency={formatCurrency} color="yellow" />
                         <DeductionRow label="(-) Taxas de Procedimentos" value={totalFees} formatCurrency={formatCurrency} />
                         <DeductionRow label={`(-) Impostos (${taxRate}%)`} value={totalTaxes} formatCurrency={formatCurrency} />
-                        <View><View className="flex-row items-center gap-2 pl-2 border-l-2 border-red-100 mb-1"><Text className="text-gray-500 text-xs font-medium">(-) Despesas Operacionais</Text></View>
-                            {Object.entries(expensesByCategory).sort(([, a], [, b]) => b - a).map(([cat, amount]) => (<View key={cat} className="flex-row justify-between items-center pl-4 py-0.5"><Text className="text-gray-400 text-[10px]">{cat}</Text><Text className="text-red-400 text-[10px]">{formatCurrency(amount)}</Text></View>))}
+                        <View><View className="flex-row items-center gap-2 pl-2 border-l-2 border-[#fecaca] mb-1"><Text className="text-gray-500 text-xs font-medium">(-) Despesas Operacionais</Text></View>
+                            {Object.entries(expensesByCategory).sort(([, a], [, b]) => b - a).map(([cat, amount]) => (<View key={cat} className="flex-row justify-between items-center pl-4 py-0.5"><Text className="text-gray-400 text-[10px]">{cat}</Text><Text className="text-[#b94a48] text-[10px]">{formatCurrency(amount)}</Text></View>))}
                             {totalExpenses === 0 && <View className="flex-row justify-between items-center pl-4"><Text className="text-gray-400 text-[10px]">-</Text><Text className="text-gray-400 text-[10px]">R$ 0,00</Text></View>}
                         </View>
                     </View>
                     <View className="h-px bg-gray-200 mb-4 border-t border-dashed" />
-                    <View className="flex-row justify-between items-center"><Text className="text-gray-900 font-bold text-base">Receita Líquida</Text><Text className={`text-xl font-bold ${netResult >= 0 ? 'text-teal-600' : 'text-red-600'}`}>{formatCurrency(netResult)}</Text></View>
+                    <View className="flex-row justify-between items-center"><Text className="text-gray-900 font-bold text-base">Receita Líquida</Text><Text className={`text-xl font-bold ${netResult >= 0 ? 'text-[#a03f3d]' : 'text-[#a03f3d]'}`}>{formatCurrency(netResult)}</Text></View>
                     <Text className="text-right text-[10px] text-gray-400 mt-1">(Bruto - Taxas - Impostos - Despesas)</Text>
                 </View>
 
@@ -164,7 +164,7 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
                 )}
 
                 {/* Expenses by Location */}
-                {totalExpenses > 0 && (<View className="mb-6"><Text className="text-sm font-semibold text-gray-900 mb-4">Despesas por Local</Text>{Object.keys(expensesByLocation).length > 0 ? (<ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">{Object.entries(expensesByLocation).map(([loc, amount]) => (<View key={loc} className="bg-red-50 p-3 rounded-lg border border-red-100 mr-2 min-w-[140px]"><Text className="text-xs text-gray-500" numberOfLines={1}>{loc}</Text><Text className="text-lg font-bold text-red-600">- {formatCurrency(amount)}</Text></View>))}</ScrollView>) : (<Text className="text-gray-400 text-sm italic">Nenhuma despesa com local informado.</Text>)}</View>)}
+                {totalExpenses > 0 && (<View className="mb-6"><Text className="text-sm font-semibold text-gray-900 mb-4">Despesas por Local</Text>{Object.keys(expensesByLocation).length > 0 ? (<ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-3">{Object.entries(expensesByLocation).map(([loc, amount]) => (<View key={loc} className="bg-[#fef2f2] p-3 rounded-lg border border-[#fecaca] mr-2 min-w-[140px]"><Text className="text-xs text-gray-500" numberOfLines={1}>{loc}</Text><Text className="text-lg font-bold text-[#a03f3d]">- {formatCurrency(amount)}</Text></View>))}</ScrollView>) : (<Text className="text-gray-400 text-sm italic">Nenhuma despesa com local informado.</Text>)}</View>)}
 
                 <BreakdownsSection transactions={filteredTransactions} formatCurrency={formatCurrency} />
             </ScrollView>
@@ -177,8 +177,8 @@ export function ClosureTab({ transactions, loading, onRefresh, refreshing }: Clo
 function DeductionRow({ label, value, formatCurrency, color = 'red' }: { label: string; value: number; formatCurrency: (v: number) => string; color?: 'red' | 'yellow' }) {
     return (
         <View className="flex-row justify-between items-center">
-            <View className={`flex-row items-center gap-2 pl-2 border-l-2 ${color === 'yellow' ? 'border-yellow-100' : 'border-red-100'}`}><Text className="text-gray-500 text-xs">{label}</Text></View>
-            <Text className={value > 0 ? (color === 'yellow' ? "text-yellow-600 font-medium text-xs" : "text-red-500 font-medium text-xs") : "text-gray-400 text-xs"}>{value > 0 ? formatCurrency(value) : 'R$ 0,00'}</Text>
+            <View className={`flex-row items-center gap-2 pl-2 border-l-2 ${color === 'yellow' ? 'border-yellow-100' : 'border-[#fecaca]'}`}><Text className="text-gray-500 text-xs">{label}</Text></View>
+            <Text className={value > 0 ? (color === 'yellow' ? "text-yellow-600 font-medium text-xs" : "text-[#b94a48] font-medium text-xs") : "text-gray-400 text-xs"}>{value > 0 ? formatCurrency(value) : 'R$ 0,00'}</Text>
         </View>
     );
 }

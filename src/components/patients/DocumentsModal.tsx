@@ -386,7 +386,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                                 <ArrowLeft className="w-4 h-4" />
                             </Button>
                         )}
-                        <FileText className="w-5 h-5 text-teal-600" />
+                        <FileText className="w-5 h-5 text-[#a03f3d]" />
                         {view === 'list' && 'Modelos de Documentos'}
                         {view === 'create' && 'Novo Modelo'}
                         {view === 'edit' && 'Editar Modelo'}
@@ -423,7 +423,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
                         {loading ? (
                             <div className="flex justify-center py-8">
-                                <Loader2 className="w-6 h-6 animate-spin text-teal-600" />
+                                <Loader2 className="w-6 h-6 animate-spin text-[#a03f3d]" />
                             </div>
                         ) : templates.length === 0 ? (
                             <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -518,7 +518,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {uploadingLetterhead ? (
-                                    <Loader2 className="w-10 h-10 mx-auto text-teal-600 animate-spin" />
+                                    <Loader2 className="w-10 h-10 mx-auto text-[#a03f3d] animate-spin" />
                                 ) : (
                                     <>
                                         <Image className="w-10 h-10 mx-auto text-gray-400" />

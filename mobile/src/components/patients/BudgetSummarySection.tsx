@@ -33,12 +33,12 @@ export function BudgetSummarySection({
         tooth.includes('Arcada') ? tooth : `Dente ${tooth}`;
 
     return (
-        <View className="bg-teal-50 rounded-xl border border-teal-100 overflow-hidden mb-4">
+        <View className="bg-[#fef2f2] rounded-xl border border-[#fecaca] overflow-hidden mb-4">
             {/* Header */}
-            <View className="p-4 border-b border-teal-100">
-                <Text className="text-teal-800 font-medium">Resumo do Orçamento</Text>
+            <View className="p-4 border-b border-[#fecaca]">
+                <Text className="text-[#6b2a28] font-medium">Resumo do Orçamento</Text>
                 <View className="flex-row items-center gap-2 mt-1">
-                    <Text className="text-teal-600 text-sm">{teethList.length} item(s)</Text>
+                    <Text className="text-[#a03f3d] text-sm">{teethList.length} item(s)</Text>
                     <Text className="text-gray-400">•</Text>
                     <Text className="text-green-600 text-sm">{approvedCount} aprovado(s)</Text>
                     <Text className="text-gray-400">•</Text>
@@ -60,7 +60,7 @@ export function BudgetSummarySection({
                         key={index}
                         onPress={() => onSelectItem?.(item, index)}
                         activeOpacity={onSelectItem ? 0.7 : 1}
-                        className={`p-4 border-b border-teal-100 ${item.status === 'approved' ? 'bg-green-50' : item.status === 'paid' ? 'bg-blue-50' : ''} ${selectedIndex === index ? 'border-l-4 border-l-teal-500' : ''}`}
+                        className={`p-4 border-b border-[#fecaca] ${item.status === 'approved' ? 'bg-green-50' : item.status === 'paid' ? 'bg-blue-50' : ''} ${selectedIndex === index ? 'border-l-4 border-l-[#b94a48]' : ''}`}
                     >
                         {/* Header Row */}
                         <View className="flex-row items-center justify-between mb-2">
@@ -87,7 +87,7 @@ export function BudgetSummarySection({
                             </View>
                             <TouchableOpacity
                                 onPress={() => onRemoveTooth(index)}
-                                className="bg-red-100 p-1.5 rounded"
+                                className="bg-[#fee2e2] p-1.5 rounded"
                             >
                                 <Trash2 size={14} color="#EF4444" />
                             </TouchableOpacity>
@@ -118,9 +118,9 @@ export function BudgetSummarySection({
                         }
 
                         {/* Subtotal */}
-                        <View className="flex-row justify-between mt-2 pt-2 border-t border-teal-200 ml-2">
-                            <Text className="font-medium text-teal-700">Subtotal {getDisplayName(item.tooth)}</Text>
-                            <Text className="font-semibold text-teal-700">
+                        <View className="flex-row justify-between mt-2 pt-2 border-t border-[#fca5a5] ml-2">
+                            <Text className="font-medium text-[#8b3634]">Subtotal {getDisplayName(item.tooth)}</Text>
+                            <Text className="font-semibold text-[#8b3634]">
                                 R$ {toothTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </Text>
                         </View>
@@ -129,10 +129,10 @@ export function BudgetSummarySection({
             })}
 
             {/* Grand Total */}
-            <View className="p-4 bg-teal-100">
+            <View className="p-4 bg-[#fee2e2]">
                 <View className="flex-row justify-between items-center">
-                    <Text className="text-teal-800 font-bold text-lg">TOTAL DO ORÇAMENTO</Text>
-                    <Text className="text-teal-800 font-bold text-xl">
+                    <Text className="text-[#6b2a28] font-bold text-lg">TOTAL DO ORÇAMENTO</Text>
+                    <Text className="text-[#6b2a28] font-bold text-xl">
                         R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </Text>
                 </View>

@@ -57,13 +57,13 @@ export function BudgetAddItemForm({
 }: BudgetAddItemFormProps) {
 
     return (
-        <View className={`bg-white rounded-xl border ${isEditing ? 'border-teal-500' : 'border-gray-100'} overflow-hidden mb-4`}>
-            <View className={`p-4 border-b border-gray-100 ${isEditing ? 'bg-teal-100' : 'bg-teal-50'}`}>
-                <Text className="text-teal-800 font-medium">
+        <View className={`bg-white rounded-xl border ${isEditing ? 'border-[#b94a48]' : 'border-gray-100'} overflow-hidden mb-4`}>
+            <View className={`p-4 border-b border-gray-100 ${isEditing ? 'bg-[#fee2e2]' : 'bg-[#fef2f2]'}`}>
+                <Text className="text-[#6b2a28] font-medium">
                     {isEditing ? 'Editando Item do Orçamento' : 'Adicionar Dente ao Orçamento'}
                 </Text>
                 {isEditing && (
-                    <Text className="text-teal-600 text-xs mt-1">Toque no item no resumo para selecionar outro</Text>
+                    <Text className="text-[#a03f3d] text-xs mt-1">Toque no item no resumo para selecionar outro</Text>
                 )}
             </View>
 
@@ -91,7 +91,7 @@ export function BudgetAddItemForm({
                                 key={treatment}
                                 onPress={() => onToggleTreatment(treatment)}
                                 className={`px-3 py-2 rounded-lg border ${selectedTreatments.includes(treatment)
-                                    ? 'bg-teal-500 border-teal-500'
+                                    ? 'bg-[#b94a48] border-[#b94a48]'
                                     : 'bg-gray-50 border-gray-200'
                                     }`}
                             >
@@ -118,7 +118,7 @@ export function BudgetAddItemForm({
                                 key={face.id}
                                 onPress={() => onToggleFace(face.id)}
                                 className={`px-3 py-2 rounded-lg border ${selectedFaces.includes(face.id)
-                                    ? 'bg-teal-500 border-teal-500'
+                                    ? 'bg-[#b94a48] border-[#b94a48]'
                                     : 'bg-white border-gray-200'
                                     }`}
                             >
@@ -203,7 +203,7 @@ export function BudgetAddItemForm({
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={onAddTooth}
-                                className="flex-1 bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
+                                className="flex-1 bg-[#b94a48] rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
                             >
                                 <Save size={18} color="#FFFFFF" />
                                 <Text className="text-white font-medium">Salvar Alterações</Text>
@@ -212,7 +212,7 @@ export function BudgetAddItemForm({
                     ) : (
                         <TouchableOpacity
                             onPress={onAddTooth}
-                            className="bg-teal-500 rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
+                            className="bg-[#b94a48] rounded-lg px-4 py-3 flex-row items-center justify-center gap-2"
                         >
                             <Plus size={18} color="#FFFFFF" />
                             <Text className="text-white font-medium">Adicionar {selectedTooth.includes('Arcada') ? selectedTooth : `Dente ${selectedTooth}`} ao Orçamento</Text>

@@ -137,7 +137,7 @@ export function NewAppointmentDialog({
                 <Button
                   variant="link"
                   size="sm"
-                  className="h-auto p-0 text-teal-600"
+                  className="h-auto p-0 text-[#a03f3d]"
                   onClick={() => {
                     onOpenChange(false);
                     navigate(`/pacientes/${form.patientId}`);

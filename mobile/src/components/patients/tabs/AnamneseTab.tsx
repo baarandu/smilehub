@@ -22,7 +22,7 @@ export function AnamneseTab({ anamneses, onAdd, onEdit, onDelete, onView }: Anam
             <View className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
                     <Text className="font-semibold text-gray-900">Anamnese do Paciente</Text>
-                    <TouchableOpacity onPress={onAdd} className="bg-teal-500 p-2 rounded-lg">
+                    <TouchableOpacity onPress={onAdd} className="bg-[#b94a48] p-2 rounded-lg">
                         <Plus size={16} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
@@ -49,13 +49,13 @@ export function AnamneseTab({ anamneses, onAdd, onEdit, onDelete, onView }: Anam
                                     <View className="flex-row gap-2">
                                         <TouchableOpacity
                                             onPress={(e) => { e.stopPropagation(); onEdit(anamnese); }}
-                                            className="bg-teal-50 p-2 rounded-lg"
+                                            className="bg-[#fef2f2] p-2 rounded-lg"
                                         >
-                                            <Edit3 size={16} color="#0D9488" />
+                                            <Edit3 size={16} color="#b94a48" />
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={(e) => { e.stopPropagation(); onDelete(anamnese); }}
-                                            className="bg-red-50 p-2 rounded-lg"
+                                            className="bg-[#fef2f2] p-2 rounded-lg"
                                         >
                                             <Trash2 size={16} color="#EF4444" />
                                         </TouchableOpacity>
@@ -66,13 +66,13 @@ export function AnamneseTab({ anamneses, onAdd, onEdit, onDelete, onView }: Anam
                                     {anamnese.recent_surgery && <View className="bg-purple-100 px-2 py-0.5 rounded"><Text className="text-xs text-purple-700">Cirurgia recente</Text></View>}
                                     {anamnese.healing_problems && <View className="bg-orange-100 px-2 py-0.5 rounded"><Text className="text-xs text-orange-700">Cicatrização</Text></View>}
                                     {anamnese.current_medication && <View className="bg-blue-100 px-2 py-0.5 rounded"><Text className="text-xs text-blue-700">Medicação</Text></View>}
-                                    {anamnese.local_anesthesia_history && <View className="bg-teal-100 px-2 py-0.5 rounded"><Text className="text-xs text-teal-700">Anestesia prévia</Text></View>}
-                                    {anamnese.anesthesia_reaction && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Reação anestesia</Text></View>}
+                                    {anamnese.local_anesthesia_history && <View className="bg-[#fee2e2] px-2 py-0.5 rounded"><Text className="text-xs text-[#8b3634]">Anestesia prévia</Text></View>}
+                                    {anamnese.anesthesia_reaction && <View className="bg-[#fee2e2] px-2 py-0.5 rounded"><Text className="text-xs text-[#8b3634]">Reação anestesia</Text></View>}
                                     {anamnese.diabetes && <View className="bg-violet-100 px-2 py-0.5 rounded"><Text className="text-xs text-violet-700">Diabetes</Text></View>}
                                     {anamnese.depression_anxiety_panic && <View className="bg-indigo-100 px-2 py-0.5 rounded"><Text className="text-xs text-indigo-700">Ansiedade/Depressão</Text></View>}
                                     {anamnese.seizure_epilepsy && <View className="bg-cyan-100 px-2 py-0.5 rounded"><Text className="text-xs text-cyan-700">Epilepsia</Text></View>}
                                     {anamnese.heart_disease && <View className="bg-rose-100 px-2 py-0.5 rounded"><Text className="text-xs text-rose-700">Cardíaco</Text></View>}
-                                    {anamnese.hypertension && <View className="bg-red-100 px-2 py-0.5 rounded"><Text className="text-xs text-red-700">Hipertensão</Text></View>}
+                                    {anamnese.hypertension && <View className="bg-[#fee2e2] px-2 py-0.5 rounded"><Text className="text-xs text-[#8b3634]">Hipertensão</Text></View>}
                                     {anamnese.pacemaker && <View className="bg-slate-100 px-2 py-0.5 rounded"><Text className="text-xs text-slate-700">Marcapasso</Text></View>}
                                     {anamnese.arthritis && <View className="bg-amber-100 px-2 py-0.5 rounded"><Text className="text-xs text-amber-700">Artrite</Text></View>}
                                     {anamnese.gastritis_reflux && <View className="bg-lime-100 px-2 py-0.5 rounded"><Text className="text-xs text-lime-700">Gastrite/Refluxo</Text></View>}

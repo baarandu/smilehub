@@ -81,24 +81,24 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                 />
                 <View className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-xl" style={{ maxHeight: '85%' }}>
                     {/* Header */}
-                    <View className="bg-teal-500 p-6 pt-8">
+                    <View className="bg-[#b94a48] p-6 pt-8">
                         <View className="flex-row justify-between items-start">
                             <View>
-                                <Text className="text-teal-100 font-medium mb-1">Receita</Text>
+                                <Text className="text-[#fee2e2] font-medium mb-1">Receita</Text>
                                 <Text className="text-white text-3xl font-bold">
                                     {formatCurrency(transaction.amount)}
                                 </Text>
                             </View>
                             <TouchableOpacity
                                 onPress={onClose}
-                                className="bg-teal-600 p-2 rounded-full"
+                                className="bg-[#a03f3d] p-2 rounded-full"
                             >
                                 <X size={20} color="white" />
                             </TouchableOpacity>
                         </View>
                         <View className="mt-4">
-                            <Text className="text-teal-50 text-sm opacity-90">{parsed.displayDescription}</Text>
-                            <Text className="text-teal-100 text-xs mt-1">
+                            <Text className="text-[#fef2f2] text-sm opacity-90">{parsed.displayDescription}</Text>
+                            <Text className="text-[#fee2e2] text-xs mt-1">
                                 {parsed.installmentInfo ? `(Parcela ${parsed.installmentInfo})` : ''}
                             </Text>
                         </View>

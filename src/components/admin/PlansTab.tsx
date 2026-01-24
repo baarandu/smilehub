@@ -192,21 +192,21 @@ export function PlansTab() {
     };
 
     if (loading) {
-        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-teal-600" /></div>;
+        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-[#a03f3d]" /></div>;
     }
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-800">Planos de Assinatura</h3>
-                <Button onClick={() => handleOpenDialog()} className="bg-teal-600 hover:bg-teal-700">
+                <Button onClick={() => handleOpenDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">
                     <Plus className="mr-2 h-4 w-4" /> Novo Plano
                 </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {plans.map((plan) => (
-                    <Card key={plan.id} className={`border-l-4 ${plan.is_active ? 'border-l-teal-500' : 'border-l-gray-300'}`}>
+                    <Card key={plan.id} className={`border-l-4 ${plan.is_active ? 'border-l-red-500' : 'border-l-gray-300'}`}>
                         <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -228,7 +228,7 @@ export function PlansTab() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-2">
-                                <p className="text-2xl font-bold text-teal-700">{formatCurrency(plan.price_monthly)}<span className="text-sm font-normal text-gray-500">/mês</span></p>
+                                <p className="text-2xl font-bold text-[#8b3634]">{formatCurrency(plan.price_monthly)}<span className="text-sm font-normal text-gray-500">/mês</span></p>
                                 <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">{plan.description}</p>
 
                                 <div className="text-xs text-gray-500 space-y-1 mt-4 pt-4 border-t border-gray-100">
@@ -376,7 +376,7 @@ export function PlansTab() {
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={saving} className="bg-teal-600">
+                        <Button onClick={handleSave} disabled={saving} className="bg-[#a03f3d]">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                             Salvar
                         </Button>

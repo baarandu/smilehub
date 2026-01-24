@@ -61,7 +61,7 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                 {/* Header */}
                 <View className="bg-white border-b border-gray-200 px-4 py-4 flex-row items-center justify-between">
                     <View className="flex-row items-center gap-2">
-                        <Calendar size={20} color="#0D9488" />
+                        <Calendar size={20} color="#b94a48" />
                         <Text className="text-xl font-semibold text-gray-900">Resumo da Anamnese</Text>
                     </View>
                     <TouchableOpacity onPress={onClose} className="bg-gray-100 p-3 rounded-full">
@@ -79,15 +79,15 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                     {/* Itens marcados como "sim" */}
                     {positiveItems.length > 0 ? (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 bg-teal-50">
-                                <Text className="font-semibold text-teal-800">Itens identificados</Text>
+                            <View className="p-3 border-b border-gray-100 bg-[#fef2f2]">
+                                <Text className="font-semibold text-[#6b2a28]">Itens identificados</Text>
                             </View>
                             {positiveItems.map((item, index) => (
                                 <View key={index}>
                                     <View className="p-4">
                                         <Text className="font-medium text-gray-900 mb-2">{item.label}</Text>
                                         {item.details && item.details.trim() && (
-                                            <View className="pl-4 border-l-2 border-teal-200 mt-2">
+                                            <View className="pl-4 border-l-2 border-[#fca5a5] mt-2">
                                                 <Text className="text-sm text-gray-600">{item.details}</Text>
                                             </View>
                                         )}
@@ -109,11 +109,11 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                     {/* Observações */}
                     {anamnese.notes && anamnese.notes.trim() && (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 bg-teal-50">
-                                <Text className="font-semibold text-teal-800">Queixa Principal</Text>
+                            <View className="p-3 border-b border-gray-100 bg-[#fef2f2]">
+                                <Text className="font-semibold text-[#6b2a28]">Queixa Principal</Text>
                             </View>
                             <View className="p-4">
-                                <View className="pl-4 border-l-2 border-teal-200">
+                                <View className="pl-4 border-l-2 border-[#fca5a5]">
                                     <Text className="text-sm text-gray-600">{anamnese.notes}</Text>
                                 </View>
                             </View>
@@ -123,11 +123,11 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
                     {/* Observations */}
                     {anamnese.observations && anamnese.observations.trim() && (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 bg-teal-50">
-                                <Text className="font-semibold text-teal-800">Observações</Text>
+                            <View className="p-3 border-b border-gray-100 bg-[#fef2f2]">
+                                <Text className="font-semibold text-[#6b2a28]">Observações</Text>
                             </View>
                             <View className="p-4">
-                                <View className="pl-4 border-l-2 border-teal-200">
+                                <View className="pl-4 border-l-2 border-[#fca5a5]">
                                     <Text className="text-sm text-gray-600">{anamnese.observations}</Text>
                                 </View>
                             </View>

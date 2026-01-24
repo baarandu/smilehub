@@ -575,7 +575,7 @@ export default function Materials() {
                     data={pendingOrders}
                     keyExtractor={item => item.id}
                     contentContainerStyle={{ padding: 16 }}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#b94a48" />}
                     ListHeaderComponent={() => (
                         <Text style={styles.listHeaderText}>{pendingOrders.length} pedido(s) pendente(s)</Text>
                     )}
@@ -607,7 +607,7 @@ export default function Materials() {
                     data={historyOrders}
                     keyExtractor={item => item.id}
                     contentContainerStyle={{ padding: 16 }}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D9488" />}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#b94a48" />}
                     ListHeaderComponent={() => (
                         <Text style={styles.listHeaderText}>{historyOrders.length} pedido(s) no histórico</Text>
                     )}
@@ -673,7 +673,7 @@ export default function Materials() {
                         onPress={() => setActiveTab('pending')}
                         style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
                     >
-                        <ClipboardList size={18} color={activeTab === 'pending' ? '#0D9488' : '#6B7280'} />
+                        <ClipboardList size={18} color={activeTab === 'pending' ? '#b94a48' : '#6B7280'} />
                         <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
                             Novos Pedidos
                         </Text>
@@ -682,7 +682,7 @@ export default function Materials() {
                         onPress={() => setActiveTab('history')}
                         style={[styles.tab, activeTab === 'history' && styles.tabActive]}
                     >
-                        <Clock size={18} color={activeTab === 'history' ? '#0D9488' : '#6B7280'} />
+                        <Clock size={18} color={activeTab === 'history' ? '#b94a48' : '#6B7280'} />
                         <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
                             Histórico
                         </Text>
@@ -692,7 +692,7 @@ export default function Materials() {
 
             {loadingOrders ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#0D9488" />
+                    <ActivityIndicator size="large" color="#b94a48" />
                 </View>
             ) : activeTab === 'pending' ? renderPendingContent() : renderHistoryContent()}
 

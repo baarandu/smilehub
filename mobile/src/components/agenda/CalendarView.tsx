@@ -65,7 +65,7 @@ export function CalendarView({
       {/* Month Navigation */}
       <View className="flex-row items-center justify-between mb-4">
         <TouchableOpacity onPress={onPrevMonth} className="p-2">
-          <ChevronLeft size={24} color="#0D9488" />
+          <ChevronLeft size={24} color="#b94a48" />
         </TouchableOpacity>
         <View className="items-center">
           <Text className="text-lg font-bold text-gray-900">
@@ -73,12 +73,12 @@ export function CalendarView({
           </Text>
           {!isCurrentMonth && (
             <TouchableOpacity onPress={onGoToToday}>
-              <Text className="text-teal-600 text-sm mt-1">Ir para hoje</Text>
+              <Text className="text-[#a03f3d] text-sm mt-1">Ir para hoje</Text>
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity onPress={onNextMonth} className="p-2">
-          <ChevronRight size={24} color="#0D9488" />
+          <ChevronRight size={24} color="#b94a48" />
         </TouchableOpacity>
       </View>
 
@@ -100,9 +100,9 @@ export function CalendarView({
                 onPress={() => onSelectDate(date)}
                 className={`flex-1 items-center justify-center rounded-lg relative ${
                   isSelectedDate(date)
-                    ? 'bg-teal-600'
+                    ? 'bg-[#a03f3d]'
                     : isTodayDate(date)
-                    ? 'bg-teal-100'
+                    ? 'bg-[#fee2e2]'
                     : ''
                 }`}
               >
@@ -111,7 +111,7 @@ export function CalendarView({
                     isSelectedDate(date)
                       ? 'text-white'
                       : isTodayDate(date)
-                      ? 'text-teal-700'
+                      ? 'text-[#8b3634]'
                       : 'text-gray-700'
                   }`}
                 >

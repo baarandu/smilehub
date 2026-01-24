@@ -435,7 +435,7 @@ export function NewProcedureModal({
               {saving ? (
                 <Text className="text-gray-400">Salvando...</Text>
               ) : (
-                <Text className="font-semibold text-teal-500">Salvar</Text>
+                <Text className="font-semibold text-[#b94a48]">Salvar</Text>
               )}
             </TouchableOpacity>
           </View>

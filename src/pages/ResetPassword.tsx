@@ -108,7 +108,7 @@ export default function ResetPassword() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo/Header */}
                 <div className="text-center mb-8">
@@ -129,19 +129,19 @@ export default function ResetPassword() {
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                     {verifying ? (
                         <div className="text-center py-8">
-                            <Loader2 className="w-10 h-10 animate-spin text-teal-500 mx-auto mb-4" />
+                            <Loader2 className="w-10 h-10 animate-spin text-red-500 mx-auto mb-4" />
                             <p className="text-gray-600">Verificando link...</p>
                         </div>
                     ) : success ? (
                         <div className="text-center">
-                            <CheckCircle className="w-16 h-16 text-teal-500 mx-auto mb-4" />
+                            <CheckCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                             <h2 className="text-xl font-semibold text-gray-900 mb-2">
                                 Senha Alterada!
                             </h2>
                             <p className="text-gray-600 mb-6">
                                 Você será redirecionado para o login em instantes...
                             </p>
-                            <Loader2 className="w-6 h-6 animate-spin mx-auto text-teal-500" />
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto text-red-500" />
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
@@ -188,7 +188,7 @@ export default function ResetPassword() {
 
                             <Button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                                className="w-full bg-gradient-to-r from-red-500 to-[#b94a48] hover:from-[#a03f3d] hover:to-[#a03f3d]"
                                 disabled={loading}
                             >
                                 {loading ? (

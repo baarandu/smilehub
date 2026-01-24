@@ -152,7 +152,7 @@ export function ReportGenerationModal({
                         <div>
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-teal-600" />
+                                    <FileText className="w-5 h-5 text-[#a03f3d]" />
                                     Procedimentos ({selectedProcedures.length}/{procedures.length})
                                 </h3>
                                 <Button
@@ -211,7 +211,7 @@ export function ReportGenerationModal({
                         <div>
                             <div className="flex items-center justify-between mb-3">
                                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                                    <Search className="w-5 h-5 text-teal-600" />
+                                    <Search className="w-5 h-5 text-[#a03f3d]" />
                                     Exames ({selectedExams.length}/{exams.length})
                                 </h3>
                                 <Button
@@ -285,7 +285,7 @@ export function ReportGenerationModal({
                     <Button
                         onClick={handleGenerate}
                         disabled={generating}
-                        className="bg-teal-600 hover:bg-teal-700 text-white"
+                        className="bg-[#a03f3d] hover:bg-[#8b3634] text-white"
                     >
                         {generating ? 'Gerando...' : 'Gerar Relatório PDF'}
                     </Button>

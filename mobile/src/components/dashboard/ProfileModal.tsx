@@ -78,7 +78,7 @@ export function ProfileModal({
                 >
                     <View className="flex-1 bg-gray-50">
                         {/* Header Profile Section */}
-                        <View className="bg-teal-600 p-6 pt-12 pb-8 rounded-br-[40px]">
+                        <View className="bg-[#a03f3d] p-6 pt-12 pb-8 rounded-br-[40px]">
                             <View className="flex-row justify-end mb-4">
                                 <TouchableOpacity onPress={onClose} className="p-2 bg-white/20 rounded-full">
                                     <X size={20} color="#FFFFFF" />
@@ -86,12 +86,12 @@ export function ProfileModal({
                             </View>
 
                             <View className="flex-row items-center gap-4">
-                                <View className="w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg border-2 border-teal-100">
-                                    <User size={30} color="#0D9488" />
+                                <View className="w-16 h-16 bg-white rounded-full items-center justify-center shadow-lg border-2 border-[#fecaca]">
+                                    <User size={30} color="#b94a48" />
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-white text-lg font-bold" numberOfLines={1}>{displayName || 'Usuário'}</Text>
-                                    <Text className="text-teal-100 text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
+                                    <Text className="text-[#fee2e2] text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
                                 </View>
                             </View>
                         </View>
@@ -102,14 +102,14 @@ export function ProfileModal({
                             {hasAISecretaryAccess && (
                                 <>
                                     <TouchableOpacity
-                                        className="flex-row items-center gap-4 p-4 bg-white border border-teal-100 rounded-2xl shadow-sm mb-2"
+                                        className="flex-row items-center gap-4 p-4 bg-white border border-[#fecaca] rounded-2xl shadow-sm mb-2"
                                         onPress={() => {
                                             onClose();
                                             router.push('/secretary');
                                         }}
                                     >
-                                        <View className="w-10 h-10 bg-teal-50 rounded-full items-center justify-center">
-                                            <Bot size={22} color="#0D9488" />
+                                        <View className="w-10 h-10 bg-[#fef2f2] rounded-full items-center justify-center">
+                                            <Bot size={22} color="#b94a48" />
                                         </View>
                                         <View>
                                             <Text className="text-gray-900 font-bold">Secretária IA</Text>
@@ -204,11 +204,11 @@ export function ProfileModal({
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                className="flex-row items-center gap-4 p-4 mt-4 bg-red-50 rounded-xl border border-red-100"
+                                className="flex-row items-center gap-4 p-4 mt-4 bg-[#fef2f2] rounded-xl border border-[#fecaca]"
                                 onPress={onLogout}
                             >
                                 <LogOut size={20} color="#EF4444" />
-                                <Text className="text-red-600 font-medium">Sair da Conta</Text>
+                                <Text className="text-[#a03f3d] font-medium">Sair da Conta</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

@@ -137,7 +137,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                     className="flex-row items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100"
                                     onPress={() => setIncludeHeader(!includeHeader)}
                                 >
-                                    {includeHeader ? <CheckSquare size={24} color="#0D9488" /> : <Square size={24} color="#9CA3AF" />}
+                                    {includeHeader ? <CheckSquare size={24} color="#b94a48" /> : <Square size={24} color="#9CA3AF" />}
                                     <View>
                                         <Text className="text-gray-900 font-semibold">Incluir Papel Timbrado</Text>
                                         <Text className="text-gray-500 text-xs">Exibe logo e nome da clínica no topo</Text>
@@ -151,7 +151,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                     <View className="flex-row justify-between items-center mb-3">
                                         <Text className="text-sm font-bold text-gray-900 uppercase tracking-wider">Procedimentos</Text>
                                         <TouchableOpacity onPress={() => setSelectedProcedures(selectedProcedures.length === procedures.length ? [] : procedures.map(p => p.id))}>
-                                            <Text className="text-teal-600 font-medium text-xs">
+                                            <Text className="text-[#a03f3d] font-medium text-xs">
                                                 {selectedProcedures.length === procedures.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                                             </Text>
                                         </TouchableOpacity>
@@ -164,7 +164,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                                 onPress={() => toggleProcedure(proc.id)}
                                             >
                                                 <View className="mt-0.5">
-                                                    {selectedProcedures.includes(proc.id) ? <CheckSquare size={20} color="#0D9488" /> : <Square size={20} color="#9CA3AF" />}
+                                                    {selectedProcedures.includes(proc.id) ? <CheckSquare size={20} color="#b94a48" /> : <Square size={20} color="#9CA3AF" />}
                                                 </View>
                                                 <View className="flex-1">
                                                     <Text className="text-gray-900 font-medium">{sanitizeDescription(proc.description)}</Text>
@@ -182,7 +182,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                     <View className="flex-row justify-between items-center mb-3">
                                         <Text className="text-sm font-bold text-gray-900 uppercase tracking-wider">Exames</Text>
                                         <TouchableOpacity onPress={() => setSelectedExams(selectedExams.length === exams.length ? [] : exams.map(e => e.id))}>
-                                            <Text className="text-teal-600 font-medium text-xs">
+                                            <Text className="text-[#a03f3d] font-medium text-xs">
                                                 {selectedExams.length === exams.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                                             </Text>
                                         </TouchableOpacity>
@@ -195,7 +195,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                                 onPress={() => toggleExam(exam.id)}
                                             >
                                                 <View className="mt-0.5">
-                                                    {selectedExams.includes(exam.id) ? <CheckSquare size={20} color="#0D9488" /> : <Square size={20} color="#9CA3AF" />}
+                                                    {selectedExams.includes(exam.id) ? <CheckSquare size={20} color="#b94a48" /> : <Square size={20} color="#9CA3AF" />}
                                                 </View>
                                                 <View className="flex-1">
                                                     <Text className="text-gray-900 font-medium">{exam.name}</Text>
@@ -224,12 +224,12 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                         {/* Footer Action */}
                         <View className="p-5 border-t border-gray-100 bg-white shadow-lg">
                             <TouchableOpacity
-                                className={`rounded-xl py-4 flex-row justify-center items-center gap-2 ${generating ? 'bg-gray-100' : 'bg-teal-600'}`}
+                                className={`rounded-xl py-4 flex-row justify-center items-center gap-2 ${generating ? 'bg-gray-100' : 'bg-[#a03f3d]'}`}
                                 onPress={handleGenerate}
                                 disabled={generating}
                             >
                                 {generating ? (
-                                    <ActivityIndicator color="#0D9488" />
+                                    <ActivityIndicator color="#b94a48" />
                                 ) : (
                                     <>
                                         <Printer size={20} color="white" />

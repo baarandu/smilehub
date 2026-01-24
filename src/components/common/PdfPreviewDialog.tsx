@@ -31,7 +31,7 @@ export function PdfPreviewDialog({
                 <div className="flex-1 min-h-[60vh] bg-gray-100">
                     {loading ? (
                         <div className="flex items-center justify-center h-full">
-                            <Loader2 className="w-8 h-8 animate-spin text-teal-600" />
+                            <Loader2 className="w-8 h-8 animate-spin text-[#a03f3d]" />
                             <span className="ml-2 text-gray-600">Gerando pré-visualização...</span>
                         </div>
                     ) : pdfUrl ? (
@@ -55,7 +55,7 @@ export function PdfPreviewDialog({
                     <Button
                         onClick={onDownload}
                         disabled={!pdfUrl || loading}
-                        className="bg-teal-600 hover:bg-teal-700"
+                        className="bg-[#a03f3d] hover:bg-[#8b3634]"
                     >
                         <Download className="w-4 h-4 mr-2" />
                         Baixar PDF

@@ -98,7 +98,7 @@ export function BudgetForm({
                                     />
                                     <TouchableOpacity
                                         onPress={() => setShowDatePicker(false)}
-                                        className="mt-4 bg-teal-500 py-3 px-6 rounded-lg w-full items-center"
+                                        className="mt-4 bg-[#b94a48] py-3 px-6 rounded-lg w-full items-center"
                                     >
                                         <Text className="text-white font-semibold text-lg">Confirmar</Text>
                                     </TouchableOpacity>
@@ -120,7 +120,7 @@ export function BudgetForm({
                 {/* ... rest of component ... */}
 
                 <Text className="text-gray-900 font-medium mb-2">
-                    Local de Atendimento <Text className="text-red-500">*</Text>
+                    Local de Atendimento <Text className="text-[#b94a48]">*</Text>
                 </Text>
                 {!showLocationPicker ? (
                     <TouchableOpacity

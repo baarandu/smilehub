@@ -398,7 +398,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
 
                 {loading ? (
                     <View className="flex-1 items-center justify-center">
-                        <ActivityIndicator size="large" color="#0D9488" />
+                        <ActivityIndicator size="large" color="#b94a48" />
                     </View>
                 ) : (
                     <ScrollView className="flex-1 px-4 py-4">
@@ -415,7 +415,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={handleCreate}
-                                        className="flex-1 bg-teal-500 rounded-xl py-3 flex-row items-center justify-center gap-2"
+                                        className="flex-1 bg-[#b94a48] rounded-xl py-3 flex-row items-center justify-center gap-2"
                                     >
                                         <Plus size={18} color="#FFFFFF" />
                                         <Text className="text-white font-medium">Novo Modelo</Text>
@@ -453,10 +453,10 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                                 <View className="flex-row gap-2 mt-3">
                                                     <TouchableOpacity
                                                         onPress={() => handleGenerate(template)}
-                                                        className="flex-1 bg-teal-50 py-2 rounded-lg flex-row items-center justify-center gap-1"
+                                                        className="flex-1 bg-[#fef2f2] py-2 rounded-lg flex-row items-center justify-center gap-1"
                                                     >
-                                                        <FileDown size={16} color="#0D9488" />
-                                                        <Text className="text-teal-600 font-medium">Gerar</Text>
+                                                        <FileDown size={16} color="#b94a48" />
+                                                        <Text className="text-[#a03f3d] font-medium">Gerar</Text>
                                                     </TouchableOpacity>
                                                     <TouchableOpacity
                                                         onPress={() => handleEdit(template)}
@@ -466,7 +466,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                                     </TouchableOpacity>
                                                     <TouchableOpacity
                                                         onPress={() => handleDelete(template)}
-                                                        className="p-2 bg-red-50 rounded-lg"
+                                                        className="p-2 bg-[#fef2f2] rounded-lg"
                                                     >
                                                         <Trash2 size={16} color="#EF4444" />
                                                     </TouchableOpacity>
@@ -505,10 +505,10 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                             </TouchableOpacity>
                                             <TouchableOpacity
                                                 onPress={handleRemoveLetterhead}
-                                                className="flex-1 bg-red-50 py-3 rounded-xl flex-row items-center justify-center gap-2"
+                                                className="flex-1 bg-[#fef2f2] py-3 rounded-xl flex-row items-center justify-center gap-2"
                                             >
                                                 <X size={18} color="#EF4444" />
-                                                <Text className="text-red-500 font-medium">Remover</Text>
+                                                <Text className="text-[#b94a48] font-medium">Remover</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -519,7 +519,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                         className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-12 items-center"
                                     >
                                         {uploadingLetterhead ? (
-                                            <ActivityIndicator size="large" color="#0D9488" />
+                                            <ActivityIndicator size="large" color="#b94a48" />
                                         ) : (
                                             <>
                                                 <ImageIcon size={40} color="#9CA3AF" />
@@ -562,7 +562,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                 <TouchableOpacity
                                     onPress={handleSave}
                                     disabled={saving}
-                                    className="bg-teal-500 py-4 rounded-xl items-center"
+                                    className="bg-[#b94a48] py-4 rounded-xl items-center"
                                 >
                                     {saving ? (
                                         <ActivityIndicator color="#FFFFFF" />
@@ -602,16 +602,16 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     <TouchableOpacity
                                         onPress={handleDownloadPDF}
                                         disabled={!previewContent || generating}
-                                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${previewContent ? 'bg-teal-50' : 'bg-gray-100'}`}
+                                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${previewContent ? 'bg-[#fef2f2]' : 'bg-gray-100'}`}
                                     >
-                                        <FileDown size={20} color={previewContent ? "#0D9488" : "#9CA3AF"} />
-                                        <Text className={`font-semibold ${previewContent ? 'text-teal-600' : 'text-gray-400'}`}>Compartilhar</Text>
+                                        <FileDown size={20} color={previewContent ? "#b94a48" : "#9CA3AF"} />
+                                        <Text className={`font-semibold ${previewContent ? 'text-[#a03f3d]' : 'text-gray-400'}`}>Compartilhar</Text>
                                     </TouchableOpacity>
 
                                     <TouchableOpacity
                                         onPress={handleSaveToExams}
                                         disabled={!previewContent || generating}
-                                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${previewContent ? 'bg-teal-500' : 'bg-gray-300'}`}
+                                        className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${previewContent ? 'bg-[#b94a48]' : 'bg-gray-300'}`}
                                     >
                                         {generating ? (
                                             <ActivityIndicator size="small" color="#FFFFFF" />

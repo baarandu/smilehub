@@ -84,7 +84,7 @@ export function PendingBudgetsModal({ visible, onClose, budgets, loading }: Pend
 
                 {loading ? (
                     <View className="flex-1 items-center justify-center">
-                        <ActivityIndicator size="large" color="#0D9488" />
+                        <ActivityIndicator size="large" color="#b94a48" />
                     </View>
                 ) : (
                     <ScrollView className="flex-1 px-4 py-4">
@@ -105,8 +105,8 @@ export function PendingBudgetsModal({ visible, onClose, budgets, loading }: Pend
                                     onPress={handleBack}
                                     className="flex-row items-center gap-2 mb-2"
                                 >
-                                    <ChevronRight size={16} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-                                    <Text className="text-teal-600 font-medium">Voltar à lista</Text>
+                                    <ChevronRight size={16} color="#b94a48" style={{ transform: [{ rotate: '180deg' }] }} />
+                                    <Text className="text-[#a03f3d] font-medium">Voltar à lista</Text>
                                 </TouchableOpacity>
 
                                 {selectedPatient.items.map((item, idx) => (
@@ -134,7 +134,7 @@ export function PendingBudgetsModal({ visible, onClose, budgets, loading }: Pend
                                             <Text className="text-sm text-yellow-600">
                                                 {item.tooth.treatments.join(', ')}
                                             </Text>
-                                            <Text className="text-teal-600 font-bold mt-1">
+                                            <Text className="text-[#a03f3d] font-bold mt-1">
                                                 R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </Text>
                                         </View>
@@ -149,7 +149,7 @@ export function PendingBudgetsModal({ visible, onClose, budgets, loading }: Pend
                                             params: { tab: 'budgets' }
                                         });
                                     }}
-                                    className="bg-teal-600 p-4 rounded-xl mt-2"
+                                    className="bg-[#a03f3d] p-4 rounded-xl mt-2"
                                 >
                                     <Text className="text-white font-bold text-center">
                                         Abrir Ficha do Paciente

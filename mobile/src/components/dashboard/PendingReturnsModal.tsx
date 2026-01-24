@@ -39,7 +39,7 @@ export function PendingReturnsModal({
 
                 {loading ? (
                     <View className="flex-1 items-center justify-center">
-                        <ActivityIndicator size="large" color="#0D9488" />
+                        <ActivityIndicator size="large" color="#b94a48" />
                     </View>
                 ) : (
                     <View className="flex-1">
@@ -103,10 +103,10 @@ export function PendingReturnsModal({
                                                         onClose();
                                                         router.push('/agenda');
                                                     }}
-                                                    className="bg-teal-50 px-3 py-2 rounded-lg flex-row items-center gap-1"
+                                                    className="bg-[#fef2f2] px-3 py-2 rounded-lg flex-row items-center gap-1"
                                                 >
-                                                    <Calendar size={14} color="#0D9488" />
-                                                    <Text className="text-teal-700 font-medium text-sm">Agendar</Text>
+                                                    <Calendar size={14} color="#b94a48" />
+                                                    <Text className="text-[#8b3634] font-medium text-sm">Agendar</Text>
                                                 </TouchableOpacity>
                                             </View>
                                             <TouchableOpacity

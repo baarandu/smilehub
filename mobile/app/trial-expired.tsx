@@ -40,7 +40,7 @@ export default function TrialExpiredScreen() {
                             'Alertas de retorno automaticos'
                         ].map((benefit, index) => (
                             <View key={index} className="flex-row items-center">
-                                <View className="w-2 h-2 rounded-full bg-teal-500 mr-3" />
+                                <View className="w-2 h-2 rounded-full bg-[#b94a48] mr-3" />
                                 <Text className="text-gray-600">{benefit}</Text>
                             </View>
                         ))}
@@ -50,7 +50,7 @@ export default function TrialExpiredScreen() {
                 {/* CTA Button */}
                 <TouchableOpacity
                     onPress={() => router.push('/settings/subscription')}
-                    className="w-full bg-teal-600 py-4 rounded-xl flex-row items-center justify-center"
+                    className="w-full bg-[#a03f3d] py-4 rounded-xl flex-row items-center justify-center"
                     activeOpacity={0.8}
                 >
                     <Text className="text-white font-semibold text-base mr-2">

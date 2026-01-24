@@ -65,7 +65,7 @@ export function PatientSelectModal({
                                 <Text className="font-semibold text-gray-900">{patient.name}</Text>
                                 <Text className="text-gray-500 text-sm">{patient.phone}</Text>
                             </View>
-                            <MessageCircle size={20} color="#0D9488" />
+                            <MessageCircle size={20} color="#b94a48" />
                         </TouchableOpacity>
                     ))}
                     <View className="h-4" />

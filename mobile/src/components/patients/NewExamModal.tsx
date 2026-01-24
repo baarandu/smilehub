@@ -248,24 +248,24 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
               <View className="flex-row gap-2 mb-4">
                 <TouchableOpacity
                   onPress={() => pickImage(false)}
-                  className="flex-1 bg-teal-50 p-3 rounded-xl items-center justify-center border border-teal-100"
+                  className="flex-1 bg-[#fef2f2] p-3 rounded-xl items-center justify-center border border-[#fecaca]"
                 >
-                  <ImageIcon size={20} color="#0D9488" className="mb-1" />
-                  <Text className="text-xs text-teal-700 font-medium">Galeria</Text>
+                  <ImageIcon size={20} color="#b94a48" className="mb-1" />
+                  <Text className="text-xs text-[#8b3634] font-medium">Galeria</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => pickImage(true)}
-                  className="flex-1 bg-teal-50 p-3 rounded-xl items-center justify-center border border-teal-100"
+                  className="flex-1 bg-[#fef2f2] p-3 rounded-xl items-center justify-center border border-[#fecaca]"
                 >
-                  <Camera size={20} color="#0D9488" className="mb-1" />
-                  <Text className="text-xs text-teal-700 font-medium">Câmera</Text>
+                  <Camera size={20} color="#b94a48" className="mb-1" />
+                  <Text className="text-xs text-[#8b3634] font-medium">Câmera</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={pickDocument}
-                  className="flex-1 bg-teal-50 p-3 rounded-xl items-center justify-center border border-teal-100"
+                  className="flex-1 bg-[#fef2f2] p-3 rounded-xl items-center justify-center border border-[#fecaca]"
                 >
-                  <FileText size={20} color="#0D9488" className="mb-1" />
-                  <Text className="text-xs text-teal-700 font-medium">Arquivo</Text>
+                  <FileText size={20} color="#b94a48" className="mb-1" />
+                  <Text className="text-xs text-[#8b3634] font-medium">Arquivo</Text>
                 </TouchableOpacity>
               </View>
 
@@ -328,7 +328,7 @@ export function NewExamModal({ visible, patientId, onClose, onSuccess, exam }: N
             <TouchableOpacity
               onPress={handleSave}
               disabled={loading || !title.trim() || (files.length === 0 && existingFiles.length === 0)}
-              className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${loading || !title.trim() || (files.length === 0 && existingFiles.length === 0) ? 'bg-gray-300' : 'bg-teal-500'
+              className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${loading || !title.trim() || (files.length === 0 && existingFiles.length === 0) ? 'bg-gray-300' : 'bg-[#b94a48]'
                 }`}
             >
               {loading ? (

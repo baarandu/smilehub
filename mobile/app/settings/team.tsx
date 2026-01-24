@@ -187,8 +187,8 @@ export default function TeamScreen() {
                             className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-center mb-4"
                             onPress={() => setShowInvite(true)}
                         >
-                            <UserPlus size={20} color="#14b8a6" />
-                            <Text className="text-teal-600 font-medium ml-2">Convidar Membro</Text>
+                            <UserPlus size={20} color="#c75a58" />
+                            <Text className="text-[#a03f3d] font-medium ml-2">Convidar Membro</Text>
                         </TouchableOpacity>
                     </SubscriptionGuard>
                 ) : (
@@ -205,11 +205,11 @@ export default function TeamScreen() {
                             {(Object.keys(ROLE_CONFIG) as Role[]).map((role) => (
                                 <TouchableOpacity
                                     key={role}
-                                    className={`flex-1 p-2 rounded-lg border ${inviteRole === role ? 'border-teal-500 bg-teal-50' : 'border-gray-200'
+                                    className={`flex-1 p-2 rounded-lg border ${inviteRole === role ? 'border-[#b94a48] bg-[#fef2f2]' : 'border-gray-200'
                                         }`}
                                     onPress={() => setInviteRole(role)}
                                 >
-                                    <Text className={`text-center text-sm ${inviteRole === role ? 'text-teal-600' : 'text-gray-600'
+                                    <Text className={`text-center text-sm ${inviteRole === role ? 'text-[#a03f3d]' : 'text-gray-600'
                                         }`}>
                                         {ROLE_CONFIG[role].label}
                                     </Text>
@@ -224,7 +224,7 @@ export default function TeamScreen() {
                                 <Text className="text-center text-gray-600">Cancelar</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                className="flex-1 p-3 bg-teal-500 rounded-lg"
+                                className="flex-1 p-3 bg-[#b94a48] rounded-lg"
                                 onPress={handleInvite}
                             >
                                 <Text className="text-center text-white font-medium">Enviar</Text>
@@ -238,7 +238,7 @@ export default function TeamScreen() {
 
                 {loading ? (
                     <View className="py-8 items-center">
-                        <ActivityIndicator size="large" color="#14b8a6" />
+                        <ActivityIndicator size="large" color="#c75a58" />
                     </View>
                 ) : members.length === 0 ? (
                     <Text className="text-center text-gray-400 py-8">Nenhum membro encontrado</Text>
