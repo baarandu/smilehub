@@ -37,6 +37,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import JSZip from 'jszip';
 import { useClinic } from '../../contexts/ClinicContext';
 import { supabase } from '../../lib/supabase';
 import { fiscalDocumentsService } from '../../services/fiscalDocuments';
@@ -469,7 +470,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
         }
     };
 
-    // Export all documents (share multiple files)
+    // Export all documents as ZIP organized by category
     const handleExportDocuments = async () => {
         if (documents.length === 0) {
             Alert.alert('Aviso', 'Nenhum documento para exportar');
@@ -484,44 +485,64 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                 return;
             }
 
-            // Download all files to cache
-            const downloadedFiles: string[] = [];
-            for (const doc of documents) {
-                try {
-                    const fileExt = doc.file_url.split('.').pop() || 'file';
-                    const safeName = doc.name.replace(/[^a-zA-Z0-9]/g, '_');
-                    const localUri = `${FileSystem.cacheDirectory}${safeName}.${fileExt}`;
+            const zip = new JSZip();
 
-                    const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
-                    if (downloadResult.status === 200) {
-                        downloadedFiles.push(downloadResult.uri);
+            // Group documents by category
+            const docsByCategory: Record<string, FiscalDocument[]> = {};
+            documents.forEach(doc => {
+                if (!docsByCategory[doc.category]) {
+                    docsByCategory[doc.category] = [];
+                }
+                docsByCategory[doc.category].push(doc);
+            });
+
+            // Download and add each file to the ZIP
+            for (const [category, docs] of Object.entries(docsByCategory)) {
+                const categoryLabel = FISCAL_CATEGORY_LABELS[category as FiscalDocumentCategory] || category;
+                // Remove special characters for folder name
+                const folderName = categoryLabel.replace(/[/\\?%*:|"<>]/g, '-');
+                const folder = zip.folder(folderName);
+
+                for (const doc of docs) {
+                    try {
+                        const fileExt = doc.file_url.split('.').pop() || 'file';
+                        const localUri = `${FileSystem.cacheDirectory}temp_${Date.now()}.${fileExt}`;
+
+                        const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
+                        if (downloadResult.status === 200) {
+                            // Read file as base64
+                            const base64 = await FileSystem.readAsStringAsync(downloadResult.uri, {
+                                encoding: FileSystem.EncodingType.Base64,
+                            });
+
+                            const safeName = doc.name.replace(/[/\\?%*:|"<>]/g, '-');
+                            folder?.file(`${safeName}.${fileExt}`, base64, { base64: true });
+
+                            // Clean up temp file
+                            await FileSystem.deleteAsync(downloadResult.uri, { idempotent: true });
+                        }
+                    } catch (error) {
+                        console.error(`Error downloading ${doc.name}:`, error);
                     }
-                } catch (error) {
-                    console.error(`Error downloading ${doc.name}:`, error);
                 }
             }
 
-            if (downloadedFiles.length === 0) {
-                throw new Error('Nenhum arquivo baixado');
-            }
+            // Generate ZIP
+            const zipContent = await zip.generateAsync({ type: 'base64' });
 
-            // Share first file (iOS limitation - can only share one at a time)
-            // Show message about sharing one by one
-            Alert.alert(
-                'Exportar Documentos',
-                `${downloadedFiles.length} documentos prontos. No iOS, você pode compartilhar um de cada vez. Deseja continuar?`,
-                [
-                    { text: 'Cancelar', style: 'cancel' },
-                    {
-                        text: 'Compartilhar',
-                        onPress: async () => {
-                            for (const fileUri of downloadedFiles) {
-                                await Sharing.shareAsync(fileUri);
-                            }
-                        },
-                    },
-                ]
-            );
+            // Save ZIP to cache
+            const zipName = `Documentos_Fiscais_${year}_${TAX_REGIME_LABELS[taxRegime].replace(/\s/g, '_')}.zip`;
+            const zipUri = `${FileSystem.cacheDirectory}${zipName}`;
+            await FileSystem.writeAsStringAsync(zipUri, zipContent, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            // Share ZIP
+            await Sharing.shareAsync(zipUri, {
+                mimeType: 'application/zip',
+                dialogTitle: 'Exportar documentos fiscais',
+            });
+
         } catch (error: any) {
             console.error('Error exporting documents:', error);
             Alert.alert('Erro', error?.message || 'Falha ao exportar documentos');
@@ -610,7 +631,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                             <Package size={18} color="white" />
                         )}
                         <Text className="ml-2 font-medium text-white">
-                            {exporting ? 'Exportando...' : 'Exportar'}
+                            {exporting ? 'Gerando ZIP...' : 'Exportar ZIP'}
                         </Text>
                     </TouchableOpacity>
                 </View>
