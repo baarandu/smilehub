@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import {
   TrendingUp,
@@ -42,7 +43,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
       const issues = await incomeTaxService.validateTransactionsForYear(year);
       setValidationIssues(issues);
       if (issues.length === 0) {
-        Alert.alert('Sucesso', 'Todos os dados estao completos!');
+        Alert.alert('Sucesso', 'Todos os dados estão completos!');
       }
     } catch (error) {
       Alert.alert('Erro', 'Falha ao validar dados');
@@ -87,13 +88,13 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
   if (!summary) {
     return (
       <View className="flex-1 items-center justify-center p-4">
-        <Text className="text-gray-500">Nenhum dado disponivel para {year}</Text>
+        <Text className="text-gray-500">Nenhum dado disponível para {year}</Text>
       </View>
     );
   }
 
   return (
-    <View className="p-4">
+    <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
       {/* Summary Overview */}
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
         <Text className="font-bold text-lg text-gray-900 mb-4">Resumo Anual - {year}</Text>
@@ -133,7 +134,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
             <View className="bg-red-50 p-3 rounded-xl">
               <View className="flex-row items-center mb-2">
                 <TrendingDown size={16} color="#DC2626" />
-                <Text className="text-xs text-red-700 ml-1">Deducoes</Text>
+                <Text className="text-xs text-red-700 ml-1">Deduções</Text>
               </View>
               <Text className="font-bold text-red-700">
                 {formatCurrency(summary.total_expenses_deductible)}
@@ -149,7 +150,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
             <Text className="font-bold text-gray-900">{formatCurrency(summary.total_income)}</Text>
           </View>
           <View className="flex-row justify-between items-center bg-teal-50 p-3 rounded-xl">
-            <Text className="text-teal-700 font-medium">Resultado Liquido</Text>
+            <Text className="text-teal-700 font-medium">Resultado Líquido</Text>
             <Text className="font-bold text-teal-700 text-lg">
               {formatCurrency(summary.net_result)}
             </Text>
@@ -245,7 +246,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
             onPress={onRefresh}
             className="mt-3 py-2 border border-amber-300 rounded-lg items-center"
           >
-            <Text className="text-amber-800 font-medium">Atualizar apos correcoes</Text>
+            <Text className="text-amber-800 font-medium">Atualizar após correções</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -257,7 +258,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
 
       {/* Monthly Breakdown */}
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
-        <Text className="font-bold text-gray-900 mb-3">Receitas por Mes</Text>
+        <Text className="font-bold text-gray-900 mb-3">Receitas por Mês</Text>
         {summary.monthly
           .filter((m) => m.income_total > 0)
           .map((month) => (
@@ -346,7 +347,7 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
       {/* Expense Categories */}
       {summary.expenses_by_category.length > 0 && (
         <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
-          <Text className="font-bold text-gray-900 mb-3">Despesas Dedutiveis por Categoria</Text>
+          <Text className="font-bold text-gray-900 mb-3">Despesas Dedutíveis por Categoria</Text>
           {summary.expenses_by_category.map((cat, idx) => (
             <View
               key={idx}
@@ -366,12 +367,12 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
 
       {/* Info Card */}
       <View className="bg-teal-50 p-4 rounded-xl border border-teal-200 mb-8">
-        <Text className="text-teal-800 font-medium mb-2">Exportar Relatorio</Text>
+        <Text className="text-teal-800 font-medium mb-2">Exportar Relatório</Text>
         <Text className="text-teal-700 text-sm">
-          Clique em PDF para gerar o Dossie IR completo ou CSV para exportar os dados em planilha.
-          O arquivo sera compartilhado para salvar ou enviar.
+          Clique em PDF para gerar o Dossiê IR completo ou CSV para exportar os dados em planilha.
+          O arquivo será compartilhado para salvar ou enviar.
         </Text>
       </View>
-    </View>
+    </ScrollView>
   );
 }
