@@ -29,9 +29,12 @@ import {
     FolderOpen,
     Camera,
     Folder,
+    Share2,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { useClinic } from '../../contexts/ClinicContext';
 import { supabase } from '../../lib/supabase';
 import { fiscalDocumentsService } from '../../services/fiscalDocuments';
@@ -369,6 +372,38 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
             setPreviewDoc(doc);
         } else {
             Linking.openURL(doc.file_url);
+        }
+    };
+
+    // Share/download document
+    const shareDocument = async (doc: FiscalDocument) => {
+        try {
+            // Check if sharing is available
+            const isAvailable = await Sharing.isAvailableAsync();
+            if (!isAvailable) {
+                Alert.alert('Erro', 'Compartilhamento não disponível neste dispositivo');
+                return;
+            }
+
+            // Download the file to cache
+            const fileExt = doc.file_url.split('.').pop() || 'file';
+            const localUri = `${FileSystem.cacheDirectory}${doc.name}.${fileExt}`;
+
+            const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
+
+            if (downloadResult.status !== 200) {
+                throw new Error('Falha ao baixar arquivo');
+            }
+
+            // Share the file
+            await Sharing.shareAsync(downloadResult.uri, {
+                mimeType: doc.file_type === 'image' ? 'image/*' :
+                          doc.file_type === 'pdf' ? 'application/pdf' : '*/*',
+                dialogTitle: doc.name,
+            });
+        } catch (error: any) {
+            console.error('Error sharing document:', error);
+            Alert.alert('Erro', error?.message || 'Falha ao compartilhar arquivo');
         }
     };
 
@@ -776,11 +811,11 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                             {previewDoc?.name}
                         </Text>
                         <TouchableOpacity
-                            onPress={() => previewDoc && Linking.openURL(previewDoc.file_url)}
+                            onPress={() => previewDoc && shareDocument(previewDoc)}
                             className="p-2"
                             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                         >
-                            <Download size={28} color="white" />
+                            <Share2 size={28} color="white" />
                         </TouchableOpacity>
                     </View>
                     {previewDoc && (
