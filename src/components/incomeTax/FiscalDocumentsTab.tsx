@@ -295,7 +295,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         });
     };
 
-    // Export documents as ZIP
+    // Export documents as ZIP and share
     const handleExportZip = async () => {
         if (documents.length === 0) {
             toast.error('Nenhum documento para exportar');
@@ -333,15 +333,38 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                 }
             }
 
-            // Generate and download ZIP
+            // Generate ZIP
             const content = await zip.generateAsync({ type: 'blob' });
             const zipName = `Documentos_Fiscais_${year}_${TAX_REGIME_LABELS[taxRegime].replace(/\s/g, '_')}.zip`;
-            saveAs(content, zipName);
 
-            toast.success('Documentos exportados com sucesso');
-        } catch (error) {
-            console.error('Error exporting ZIP:', error);
-            toast.error('Erro ao exportar documentos');
+            // Try Web Share API first (works on mobile browsers and some desktop)
+            if (navigator.share && navigator.canShare) {
+                const file = new File([content], zipName, { type: 'application/zip' });
+                const shareData = { files: [file] };
+
+                if (navigator.canShare(shareData)) {
+                    await navigator.share({
+                        files: [file],
+                        title: `Documentos Fiscais ${year}`,
+                        text: `Documentos fiscais organizados por categoria - ${TAX_REGIME_LABELS[taxRegime]}`,
+                    });
+                    toast.success('Documentos compartilhados com sucesso');
+                } else {
+                    // Fallback to download
+                    saveAs(content, zipName);
+                    toast.success('Documentos exportados com sucesso');
+                }
+            } else {
+                // Fallback to download
+                saveAs(content, zipName);
+                toast.success('Documentos exportados com sucesso');
+            }
+        } catch (error: any) {
+            // User cancelled share or error occurred
+            if (error?.name !== 'AbortError') {
+                console.error('Error exporting ZIP:', error);
+                toast.error('Erro ao exportar documentos');
+            }
         } finally {
             setExporting(false);
         }
@@ -463,9 +486,9 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                 {exporting ? (
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                 ) : (
-                                    <Package className="w-4 h-4 mr-2" />
+                                    <Share2 className="w-4 h-4 mr-2" />
                                 )}
-                                {exporting ? 'Exportando...' : 'Exportar ZIP'}
+                                {exporting ? 'Gerando ZIP...' : 'Compartilhar ZIP'}
                             </Button>
                         </div>
                     </div>
