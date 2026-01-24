@@ -760,19 +760,27 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
             <Modal
                 visible={!!previewDoc}
                 animationType="fade"
-                transparent
+                transparent={false}
                 onRequestClose={() => setPreviewDoc(null)}
             >
-                <View className="flex-1 bg-black">
-                    <View className="flex-row items-center justify-between px-4 py-4">
-                        <TouchableOpacity onPress={() => setPreviewDoc(null)}>
-                            <X size={24} color="white" />
+                <View className="flex-1 bg-black pt-14">
+                    <View className="flex-row items-center justify-between px-4 py-4 bg-black/80">
+                        <TouchableOpacity
+                            onPress={() => setPreviewDoc(null)}
+                            className="p-2"
+                            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                        >
+                            <X size={28} color="white" />
                         </TouchableOpacity>
-                        <Text className="text-white font-medium flex-1 text-center" numberOfLines={1}>
+                        <Text className="text-white font-medium flex-1 text-center mx-4" numberOfLines={1}>
                             {previewDoc?.name}
                         </Text>
-                        <TouchableOpacity onPress={() => previewDoc && Linking.openURL(previewDoc.file_url)}>
-                            <Download size={24} color="white" />
+                        <TouchableOpacity
+                            onPress={() => previewDoc && Linking.openURL(previewDoc.file_url)}
+                            className="p-2"
+                            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                        >
+                            <Download size={28} color="white" />
                         </TouchableOpacity>
                     </View>
                     {previewDoc && (
