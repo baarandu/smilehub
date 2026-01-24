@@ -218,7 +218,7 @@ export const fiscalDocumentsService = {
                 ? 'pdf'
                 : 'document';
 
-        // Create document record
+        // Create document record (uploaded_by is optional to avoid FK constraint issues)
         const documentData: FiscalDocumentInsert = {
             clinic_id: clinicId,
             name: metadata.name || file.name,
@@ -231,7 +231,7 @@ export const fiscalDocumentsService = {
             subcategory: metadata.subcategory,
             fiscal_year: metadata.fiscalYear,
             reference_month: metadata.referenceMonth,
-            uploaded_by: userId,
+            // Note: uploaded_by removed to avoid FK constraint issues with profiles table
             notes: metadata.notes,
         };
 

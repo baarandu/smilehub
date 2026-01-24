@@ -305,7 +305,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                     ? 'pdf'
                     : 'document';
 
-            // Create document record
+            // Create document record (uploaded_by is optional to avoid FK constraint issues)
             const { error: dbError } = await supabase
                 .from('fiscal_documents')
                 .insert({
@@ -320,7 +320,6 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                     subcategory: selectedItem.subcategory,
                     fiscal_year: year,
                     reference_month: uploadMonth || null,
-                    uploaded_by: user.id,
                 } as any);
 
             if (dbError) throw dbError;
