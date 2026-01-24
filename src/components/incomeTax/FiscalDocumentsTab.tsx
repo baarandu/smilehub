@@ -106,7 +106,7 @@ const getCategoryIcon = (category: FiscalDocumentCategory) => {
 };
 
 export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps) {
-    const { clinic } = useClinic();
+    const { clinicId } = useClinic();
 
     const [loading, setLoading] = useState(true);
     const [sections, setSections] = useState<FiscalChecklistSection[]>([]);
@@ -141,9 +141,9 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
         // Try to get documents from database
         let docsData: FiscalDocument[] = [];
-        if (clinic?.id) {
+        if (clinicId) {
             try {
-                docsData = await fiscalDocumentsService.getByRegime(clinic.id, taxRegime, year);
+                docsData = await fiscalDocumentsService.getByRegime(clinicId, taxRegime, year);
             } catch (error) {
                 console.error('Error fetching documents:', error);
                 // Continue without documents
@@ -178,7 +178,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         setDocuments(docsData);
         setCompletionStats(stats);
         setLoading(false);
-    }, [clinic?.id, taxRegime, year]);
+    }, [clinicId, taxRegime, year]);
 
     useEffect(() => {
         loadData();
@@ -206,7 +206,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
             toast.error('Item não selecionado');
             return;
         }
-        if (!clinic?.id) {
+        if (!clinicId) {
             toast.error('Clínica não encontrada');
             return;
         }
@@ -216,7 +216,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Não autenticado');
 
-            await fiscalDocumentsService.upload(uploadFile, clinic.id, user.id, {
+            await fiscalDocumentsService.upload(uploadFile, clinicId, user.id, {
                 name: uploadName || uploadFile.name,
                 description: uploadDescription || undefined,
                 taxRegime: taxRegime,
