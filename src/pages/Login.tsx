@@ -83,7 +83,7 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-rose-50 flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo/Header */}
                 <div className="text-center mb-8">
@@ -155,7 +155,7 @@ export default function Login() {
 
                             <Link
                                 to="/forgot-password"
-                                className="text-sm text-teal-600 hover:text-teal-700"
+                                className="text-sm text-[#b94a48] hover:text-[#a03f3d]"
                             >
                                 Esqueceu a senha?
                             </Link>
@@ -163,7 +163,7 @@ export default function Login() {
 
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700"
+                            className="w-full bg-gradient-to-r from-[#b94a48] to-[#8b3634] hover:from-[#a03f3d] hover:to-[#7a2f2d]"
                             disabled={loading}
                         >
                             {loading ? (
@@ -180,7 +180,7 @@ export default function Login() {
                     <div className="mt-6 text-center">
                         <p className="text-gray-500">
                             Não tem uma conta?{' '}
-                            <Link to="/signup" className="text-teal-600 hover:text-teal-700 font-medium">
+                            <Link to="/signup" className="text-[#b94a48] hover:text-[#a03f3d] font-medium">
                                 Criar conta
                             </Link>
                         </p>
