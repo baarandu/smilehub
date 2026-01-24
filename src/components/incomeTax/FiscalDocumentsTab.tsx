@@ -71,6 +71,7 @@ import {
     TAX_REGIME_LABELS,
     FISCAL_DOCUMENTS_CHECKLIST,
     getChecklistByRegime,
+    groupChecklistByCategory,
 } from '@/types/fiscalDocuments';
 
 interface FiscalDocumentsTabProps {
@@ -133,15 +134,42 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Load data
     const loadData = useCallback(async () => {
-        if (!clinic?.id) return;
+        if (!clinic?.id) {
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
         try {
-            const [sectionsData, docsData, stats] = await Promise.all([
-                fiscalDocumentsService.getChecklistStatus(clinic.id, taxRegime, year),
-                fiscalDocumentsService.getByRegime(clinic.id, taxRegime, year),
-                fiscalDocumentsService.getCompletionPercentage(clinic.id, taxRegime, year),
-            ]);
+            // Get documents from database
+            const docsData = await fiscalDocumentsService.getByRegime(clinic.id, taxRegime, year);
+
+            // Get checklist items for the regime (from types, not service)
+            const checklistItems = getChecklistByRegime(taxRegime);
+
+            // Map documents to checklist items
+            const itemsWithDocs = checklistItems.map(item => {
+                const itemDocs = docsData.filter(
+                    d => d.category === item.category && d.subcategory === item.subcategory
+                );
+                return {
+                    ...item,
+                    documents: itemDocs,
+                    isComplete: itemDocs.length > 0,
+                };
+            });
+
+            // Group by category
+            const sectionsData = groupChecklistByCategory(itemsWithDocs);
+
+            // Calculate completion
+            const completed = itemsWithDocs.filter(i => i.isComplete).length;
+            const total = itemsWithDocs.length;
+            const stats = {
+                completed,
+                total,
+                percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+            };
 
             setSections(sectionsData);
             setDocuments(docsData);
