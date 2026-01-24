@@ -16,6 +16,7 @@ import {
   BarChart3,
   ChevronDown,
   RefreshCw,
+  Calculator,
 } from 'lucide-react-native';
 import { incomeTaxService } from '../../services/incomeTax';
 import type {
@@ -28,6 +29,7 @@ import { FiscalSettingsTab } from './FiscalSettingsTab';
 import { IRIncomeTab } from './IRIncomeTab';
 import { IRExpensesTab } from './IRExpensesTab';
 import { AnnualReportTab } from './AnnualReportTab';
+import { TaxRatesConfigModal } from './TaxRatesConfigModal';
 
 interface Props {
   onBack?: () => void;
@@ -49,6 +51,7 @@ export default function IncomeTaxScreen({ onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showTaxConfigModal, setShowTaxConfigModal] = useState(false);
 
   // Data state
   const [fiscalProfile, setFiscalProfile] = useState<FiscalProfile | null>(null);
@@ -177,8 +180,14 @@ export default function IncomeTaxScreen({ onBack }: Props) {
             <Text className="text-lg font-bold text-gray-900 ml-2">Imposto de Renda</Text>
           </View>
 
-          {/* Year Selector */}
+          {/* Year Selector and Actions */}
           <View className="flex-row items-center gap-2">
+            <TouchableOpacity
+              onPress={() => setShowTaxConfigModal(true)}
+              className="p-2 bg-teal-50 rounded-lg"
+            >
+              <Calculator size={18} color="#0D9488" />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowYearPicker(!showYearPicker)}
               className="flex-row items-center bg-gray-100 px-3 py-2 rounded-lg"
@@ -241,6 +250,13 @@ export default function IncomeTaxScreen({ onBack }: Props) {
       <View className="flex-1">
         {renderTabContent()}
       </View>
+
+      {/* Tax Rates Config Modal */}
+      <TaxRatesConfigModal
+        visible={showTaxConfigModal}
+        onClose={() => setShowTaxConfigModal(false)}
+        onConfigUpdated={onRefresh}
+      />
     </SafeAreaView>
   );
 }

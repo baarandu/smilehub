@@ -13,6 +13,7 @@ import { FiscalSettingsTab } from '@/components/incomeTax/FiscalSettingsTab';
 import { IRIncomeTab } from '@/components/incomeTax/IRIncomeTab';
 import { IRExpensesTab } from '@/components/incomeTax/IRExpensesTab';
 import { AnnualReportTab } from '@/components/incomeTax/AnnualReportTab';
+import { TaxRatesConfigModal } from '@/components/incomeTax/TaxRatesConfigModal';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { FiscalProfile, PJSource, TransactionWithIR, IRSummary } from '@/types/incomeTax';
 import { toast } from 'sonner';
@@ -92,6 +93,13 @@ export default function IncomeTax() {
     });
   };
 
+  const handleTaxConfigUpdated = () => {
+    // Trigger recalculation when tax rates are updated
+    if (summary) {
+      incomeTaxService.generateIRSummary(selectedYear).then(setSummary);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -106,6 +114,9 @@ export default function IncomeTax() {
           </p>
         </div>
         <div className="flex gap-2 items-center">
+          {/* Tax Rates Config Modal */}
+          <TaxRatesConfigModal onConfigUpdated={handleTaxConfigUpdated} />
+
           {/* Year Selector */}
           <Select
             value={selectedYear.toString()}

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ValidationWarnings } from './ValidationWarnings';
+import { TaxCalculationSection } from './TaxCalculationSection';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import { generateIRPdf } from '@/utils/incomeTaxPdfGenerator';
 import type { IRSummary, IRValidationIssue } from '@/types/incomeTax';
@@ -211,6 +212,9 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
       {validationIssues.length > 0 && (
         <ValidationWarnings issues={validationIssues} onRefresh={onRefresh} />
       )}
+
+      {/* Tax Calculations */}
+      <TaxCalculationSection summary={summary} year={year} />
 
       {/* Detailed Tables */}
       <Tabs defaultValue="monthly" className="w-full">

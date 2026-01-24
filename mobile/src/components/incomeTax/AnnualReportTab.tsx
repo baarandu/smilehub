@@ -17,6 +17,7 @@ import {
   Building2,
 } from 'lucide-react-native';
 import { incomeTaxService } from '../../services/incomeTax';
+import { TaxCalculationSection } from './TaxCalculationSection';
 import type { IRSummary, IRValidationIssue } from '../../types/incomeTax';
 
 interface Props {
@@ -200,6 +201,11 @@ export function AnnualReportTab({ year, summary, onRefresh }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Tax Calculations */}
+      <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
+        <TaxCalculationSection summary={summary} year={year} />
+      </View>
 
       {/* Monthly Breakdown */}
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
