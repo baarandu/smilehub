@@ -15,7 +15,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PJSourcesManager } from './PJSourcesManager';
 import { incomeTaxService } from '@/services/incomeTaxService';
-import type { FiscalProfile, PJSource, FiscalProfileFormData, TaxRegime } from '@/types/incomeTax';
+import type { FiscalProfile, PJSource, FiscalProfileFormData, TaxRegime, SimplesFatorRMode, SimplesAnexo } from '@/types/incomeTax';
 import { toast } from 'sonner';
 
 interface FiscalSettingsTabProps {
@@ -79,6 +79,9 @@ export function FiscalSettingsTab({
     pj_nome_fantasia: '',
     pj_regime_tributario: '',
     pj_cnae: '',
+    simples_fator_r_mode: 'manual',
+    simples_monthly_payroll: '',
+    simples_anexo: 'anexo_iii',
   });
 
   // Load profile data into form
@@ -99,6 +102,9 @@ export function FiscalSettingsTab({
         pj_nome_fantasia: fiscalProfile.pj_nome_fantasia || '',
         pj_regime_tributario: fiscalProfile.pj_regime_tributario || '',
         pj_cnae: fiscalProfile.pj_cnae || '',
+        simples_fator_r_mode: fiscalProfile.simples_fator_r_mode || 'manual',
+        simples_monthly_payroll: fiscalProfile.simples_monthly_payroll?.toString() || '',
+        simples_anexo: fiscalProfile.simples_anexo || 'anexo_iii',
       });
     }
   }, [fiscalProfile]);
@@ -303,6 +309,76 @@ export function FiscalSettingsTab({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Simples Nacional - Fator R Configuration */}
+            {formData.pj_regime_tributario === 'simples' && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
+                <div>
+                  <h4 className="font-medium text-blue-900">Configuracao do Fator R</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    O Fator R determina se sua empresa se enquadra no Anexo III (aliquotas menores) ou Anexo V (aliquotas maiores).
+                    Fator R = Folha de Pagamento / Receita Bruta dos ultimos 12 meses.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Como calcular o Fator R?</Label>
+                  <Select
+                    value={formData.simples_fator_r_mode}
+                    onValueChange={(value) => setFormData({ ...formData, simples_fator_r_mode: value as SimplesFatorRMode })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Automatico (informar folha de pagamento)</SelectItem>
+                      <SelectItem value="manual">Manual (escolher anexo diretamente)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.simples_fator_r_mode === 'auto' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="simples_payroll">Folha de Pagamento Mensal (R$)</Label>
+                    <Input
+                      id="simples_payroll"
+                      type="number"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={formData.simples_monthly_payroll}
+                      onChange={(e) => setFormData({ ...formData, simples_monthly_payroll: e.target.value })}
+                    />
+                    <p className="text-xs text-blue-600">
+                      Inclua pro-labore, salarios e encargos. O sistema calculara o Fator R automaticamente
+                      e aplicara o Anexo III (se Fator R &gt;= 28%) ou Anexo V (se Fator R &lt; 28%).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Anexo do Simples Nacional</Label>
+                    <Select
+                      value={formData.simples_anexo}
+                      onValueChange={(value) => setFormData({ ...formData, simples_anexo: value as SimplesAnexo })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="anexo_iii">
+                          Anexo III - Fator R &gt;= 28% (aliquotas de 6% a 33%)
+                        </SelectItem>
+                        <SelectItem value="anexo_v">
+                          Anexo V - Fator R &lt; 28% (aliquotas de 15,5% a 30,5%)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-blue-600">
+                      Consulte seu contador para confirmar em qual anexo sua empresa se enquadra.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         )}
       </Card>

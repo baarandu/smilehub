@@ -86,6 +86,13 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
   const [newISSState, setNewISSState] = useState('');
   const [newISSRate, setNewISSRate] = useState('');
 
+  // New Tax form
+  const [showNewTax, setShowNewTax] = useState(false);
+  const [newTaxType, setNewTaxType] = useState('');
+  const [newTaxRate, setNewTaxRate] = useState('');
+  const [newTaxDescription, setNewTaxDescription] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
   useEffect(() => {
     if (open) {
       loadData();
@@ -203,6 +210,52 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
     } catch (error) {
       console.error('Error deleting ISS rate:', error);
       toast.error('Erro ao remover aliquota ISS');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateTax = async () => {
+    if (!newTaxType || !newTaxRate) {
+      toast.error('Preencha tipo e aliquota');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await taxConfigService.createConfiguration({
+        tax_regime: activeTab,
+        tax_type: newTaxType as any,
+        rate_type: 'flat',
+        flat_rate: parseFloat(newTaxRate) / 100,
+        description: newTaxDescription || undefined,
+      });
+      await loadData();
+      setShowNewTax(false);
+      setNewTaxType('');
+      setNewTaxRate('');
+      setNewTaxDescription('');
+      toast.success('Imposto adicionado');
+      onConfigUpdated?.();
+    } catch (error) {
+      console.error('Error creating tax:', error);
+      toast.error('Erro ao adicionar imposto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTax = async (configId: string) => {
+    setSaving(true);
+    try {
+      await taxConfigService.deleteConfiguration(configId);
+      await loadData();
+      setShowDeleteConfirm(null);
+      toast.success('Imposto removido');
+      onConfigUpdated?.();
+    } catch (error) {
+      console.error('Error deleting tax:', error);
+      toast.error('Erro ao remover imposto');
     } finally {
       setSaving(false);
     }
@@ -467,35 +520,113 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
   const renderFlatRatesTable = (configs: TaxRateConfiguration[]) => {
     const flatConfigs = configs.filter(c => c.rate_type === 'flat');
 
-    if (flatConfigs.length === 0) return null;
-
     return (
       <Card className="mb-4">
         <CardHeader className="py-3">
-          <CardTitle className="text-base">Aliquotas</CardTitle>
-          <CardDescription className="text-xs">Clique na aliquota para editar</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Aliquotas</CardTitle>
+              <CardDescription className="text-xs">Clique na aliquota para editar</CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowNewTax(true)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Imposto</TableHead>
-                <TableHead>Descricao</TableHead>
-                <TableHead className="text-right">Aliquota</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {flatConfigs.map((config) => (
-                <TableRow key={config.id}>
-                  <TableCell className="font-medium">{getTaxTypeLabel(config.tax_type)}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{config.description || '-'}</TableCell>
-                  <TableCell className="text-right">
-                    {renderFlatRateEditor(config)}
-                  </TableCell>
+          {/* New Tax Form */}
+          {showNewTax && (
+            <div className="mb-4 p-3 border rounded-lg bg-muted/50">
+              <div className="grid grid-cols-4 gap-2">
+                <div>
+                  <Label className="text-xs">Tipo</Label>
+                  <Input
+                    value={newTaxType}
+                    onChange={(e) => setNewTaxType(e.target.value)}
+                    placeholder="Ex: outro_imposto"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Aliquota (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={newTaxRate}
+                    onChange={(e) => setNewTaxRate(e.target.value)}
+                    placeholder="5.00"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Descricao</Label>
+                  <Input
+                    value={newTaxDescription}
+                    onChange={(e) => setNewTaxDescription(e.target.value)}
+                    placeholder="Descricao do imposto"
+                  />
+                </div>
+                <div className="flex items-end gap-1">
+                  <Button size="sm" onClick={handleCreateTax} disabled={saving}>
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowNewTax(false);
+                      setNewTaxType('');
+                      setNewTaxRate('');
+                      setNewTaxDescription('');
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {flatConfigs.length === 0 ? (
+            <div className="py-4 text-center text-muted-foreground text-sm">
+              Nenhuma aliquota cadastrada. Clique em "Adicionar" para criar.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Imposto</TableHead>
+                  <TableHead>Descricao</TableHead>
+                  <TableHead className="text-right">Aliquota</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {flatConfigs.map((config) => (
+                  <TableRow key={config.id}>
+                    <TableCell className="font-medium">{getTaxTypeLabel(config.tax_type)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{config.description || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      {renderFlatRateEditor(config)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => setShowDeleteConfirm(config.id)}
+                        disabled={saving}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     );
@@ -532,14 +663,6 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
 
   const renderRegimeContent = (regime: TaxRegime) => {
     const configs = getConfigsForRegime(regime);
-
-    if (configs.length === 0) {
-      return (
-        <div className="py-8 text-center text-muted-foreground">
-          Nenhuma configuracao encontrada para este regime.
-        </div>
-      );
-    }
 
     return (
       <div className="space-y-4">
@@ -823,6 +946,26 @@ export function TaxRatesConfigModal({ onConfigUpdated }: TaxRatesConfigModalProp
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleResetToDefaults}>
               Restaurar Valores de Fabrica
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!showDeleteConfirm} onOpenChange={() => setShowDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir imposto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acao nao pode ser desfeita. O imposto sera removido permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => showDeleteConfirm && handleDeleteTax(showDeleteConfirm)}
+            >
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

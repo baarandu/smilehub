@@ -339,6 +339,18 @@ export const taxConfigService = {
     return data as TaxRateConfiguration;
   },
 
+  /**
+   * Delete a tax configuration
+   */
+  async deleteConfiguration(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('tax_rate_configurations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
   // ============================================
   // TAX BRACKETS
   // ============================================

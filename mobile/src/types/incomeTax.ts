@@ -1,5 +1,8 @@
 // Income Tax types for mobile app
 
+export type SimplesFatorRMode = 'auto' | 'manual';
+export type SimplesAnexo = 'anexo_iii' | 'anexo_v';
+
 export interface FiscalProfile {
   id: string;
   clinic_id: string;
@@ -17,6 +20,9 @@ export interface FiscalProfile {
   pj_nome_fantasia: string | null;
   pj_regime_tributario: 'simples' | 'lucro_presumido' | 'lucro_real' | null;
   pj_cnae: string | null;
+  simples_fator_r_mode: SimplesFatorRMode;
+  simples_monthly_payroll: number;
+  simples_anexo: SimplesAnexo;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +42,9 @@ export interface FiscalProfileFormData {
   pj_nome_fantasia: string;
   pj_regime_tributario: string;
   pj_cnae: string;
+  simples_fator_r_mode: SimplesFatorRMode;
+  simples_monthly_payroll: string;
+  simples_anexo: SimplesAnexo;
 }
 
 export interface PJSource {

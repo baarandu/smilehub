@@ -1,6 +1,7 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
+import * as XLSX from 'xlsx';
 import type { IRSummary } from '../types/incomeTax';
 
 const formatCurrency = (value: number) => {
@@ -363,24 +364,15 @@ function generateHtmlContent(summary: IRSummary): string {
 export async function generateIRPdf(summary: IRSummary): Promise<void> {
   const html = generateHtmlContent(summary);
 
-  // Generate PDF
+  // Generate PDF - the file is created in a temp location
   const { uri } = await Print.printToFileAsync({
     html,
     base64: false,
   });
 
-  // Rename file to meaningful name
-  const pdfName = `dossie-ir-${summary.year}.pdf`;
-  const newUri = FileSystem.documentDirectory + pdfName;
-
-  await FileSystem.moveAsync({
-    from: uri,
-    to: newUri,
-  });
-
-  // Share the PDF
+  // Share the PDF directly from the generated location
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(newUri, {
+    await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
       dialogTitle: `Dossie IR ${summary.year}`,
       UTI: 'com.adobe.pdf',
@@ -389,67 +381,217 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
 }
 
 /**
- * Generate CSV content for export
+ * Get a writable temp directory using expo-print as fallback
  */
-export function generateIncomeCSV(summary: IRSummary): string {
-  const headers = ['Mes', 'Receita PF', 'Receita PJ', 'Total', 'IRRF', 'Deducoes'];
-  const rows = summary.monthly.map(m => [
-    m.month_name,
-    m.income_pf.toFixed(2),
-    m.income_pj.toFixed(2),
-    m.income_total.toFixed(2),
-    m.irrf_total.toFixed(2),
-    m.expenses_deductible.toFixed(2),
-  ]);
+async function getWritableDirectory(): Promise<string> {
+  // Try normal directories first
+  const directory = LegacyFileSystem.cacheDirectory || LegacyFileSystem.documentDirectory;
+  if (directory) {
+    return directory;
+  }
 
-  // Add total row
-  rows.push([
-    'TOTAL',
-    summary.total_income_pf.toFixed(2),
-    summary.total_income_pj.toFixed(2),
-    summary.total_income.toFixed(2),
-    summary.total_irrf.toFixed(2),
-    summary.total_expenses_deductible.toFixed(2),
-  ]);
+  // Fallback: use expo-print to discover a writable temp directory
+  const { uri: tempPdfUri } = await Print.printToFileAsync({
+    html: '<html><body></body></html>',
+    base64: false,
+  });
 
-  return [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-}
+  // Extract the directory from the PDF path
+  const lastSlash = tempPdfUri.lastIndexOf('/');
+  const tempDir = tempPdfUri.substring(0, lastSlash + 1);
 
-export function generateExpenseCSV(summary: IRSummary): string {
-  const headers = ['Categoria', 'Quantidade', 'Valor Total'];
-  const rows = summary.expenses_by_category.map(c => [
-    c.category,
-    c.transaction_count.toString(),
-    c.total_amount.toFixed(2),
-  ]);
+  // Clean up the dummy PDF
+  try {
+    await LegacyFileSystem.deleteAsync(tempPdfUri, { idempotent: true });
+  } catch {
+    // Ignore cleanup errors
+  }
 
-  return [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  return tempDir;
 }
 
 /**
- * Export CSV files and share
+ * Generate Excel workbook with all IR data
+ */
+function generateWorkbook(summary: IRSummary): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Resumo Anual
+  const resumoData = [
+    ['DOSSIE IMPOSTO DE RENDA'],
+    [`Ano-Calendario: ${summary.year}`],
+    [''],
+    ['RESUMO ANUAL'],
+    [''],
+    ['Descricao', 'Valor (R$)'],
+    ['Receita PF', summary.total_income_pf],
+    ['Receita PJ', summary.total_income_pj],
+    ['Receita Total', summary.total_income],
+    ['IRRF Retido', summary.total_irrf],
+    ['Despesas Dedutiveis', summary.total_expenses_deductible],
+    ['Resultado Liquido', summary.net_result],
+  ];
+
+  // Add fiscal profile info if available
+  if (summary.fiscal_profile) {
+    resumoData.push(['']);
+    resumoData.push(['IDENTIFICACAO DO CONTRIBUINTE']);
+    if (summary.fiscal_profile.pf_enabled) {
+      resumoData.push(['CPF', summary.fiscal_profile.pf_cpf || 'Nao informado']);
+      resumoData.push(['CRO', summary.fiscal_profile.pf_cro || 'Nao informado']);
+      if (summary.fiscal_profile.pf_address) {
+        resumoData.push(['Endereco', summary.fiscal_profile.pf_address]);
+      }
+      if (summary.fiscal_profile.pf_city || summary.fiscal_profile.pf_state) {
+        resumoData.push(['Cidade/UF', `${summary.fiscal_profile.pf_city || ''} - ${summary.fiscal_profile.pf_state || ''}`]);
+      }
+    }
+    if (summary.fiscal_profile.pj_enabled) {
+      resumoData.push(['CNPJ', summary.fiscal_profile.pj_cnpj || 'Nao informado']);
+      resumoData.push(['Razao Social', summary.fiscal_profile.pj_razao_social || 'Nao informado']);
+      if (summary.fiscal_profile.pj_regime_tributario) {
+        const regimeLabel =
+          summary.fiscal_profile.pj_regime_tributario === 'simples' ? 'Simples Nacional' :
+          summary.fiscal_profile.pj_regime_tributario === 'lucro_presumido' ? 'Lucro Presumido' :
+          summary.fiscal_profile.pj_regime_tributario === 'lucro_real' ? 'Lucro Real' :
+          summary.fiscal_profile.pj_regime_tributario;
+        resumoData.push(['Regime Tributario', regimeLabel]);
+      }
+    }
+  }
+
+  const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
+  wsResumo['!cols'] = [{ wch: 25 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+
+  // Sheet 2: Receitas por Mes
+  const mensalData = [
+    ['RECEITAS POR MES'],
+    [''],
+    ['Mes', 'Receita PF', 'Receita PJ', 'Total', 'IRRF', 'Deducoes'],
+    ...summary.monthly.map(m => [
+      m.month_name,
+      m.income_pf,
+      m.income_pj,
+      m.income_total,
+      m.irrf_total,
+      m.expenses_deductible,
+    ]),
+    ['TOTAL', summary.total_income_pf, summary.total_income_pj, summary.total_income, summary.total_irrf, summary.total_expenses_deductible],
+  ];
+
+  const wsMensal = XLSX.utils.aoa_to_sheet(mensalData);
+  wsMensal['!cols'] = [{ wch: 12 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsMensal, 'Mensal');
+
+  // Sheet 3: Despesas Dedutiveis
+  const despesasData = [
+    ['DESPESAS DEDUTIVEIS (LIVRO CAIXA)'],
+    [''],
+    ['Categoria', 'Quantidade', 'Valor Total'],
+    ...summary.expenses_by_category.map(c => [
+      c.category,
+      c.transaction_count,
+      c.total_amount,
+    ]),
+  ];
+
+  if (summary.expenses_by_category.length > 0) {
+    despesasData.push([
+      'TOTAL',
+      summary.expenses_by_category.reduce((sum, c) => sum + c.transaction_count, 0),
+      summary.total_expenses_deductible,
+    ]);
+  }
+
+  const wsDespesas = XLSX.utils.aoa_to_sheet(despesasData);
+  wsDespesas['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsDespesas, 'Despesas');
+
+  // Sheet 4: Pagadores PF
+  const pfData = [
+    ['RELACAO DE PAGADORES PESSOA FISICA'],
+    [''],
+    ['CPF', 'Nome', 'Qtd. Transacoes', 'Valor Total'],
+    ...summary.payers_pf.map(p => [
+      p.cpf,
+      p.name,
+      p.transaction_count,
+      p.total_amount,
+    ]),
+  ];
+
+  const wsPF = XLSX.utils.aoa_to_sheet(pfData);
+  wsPF['!cols'] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsPF, 'Pagadores PF');
+
+  // Sheet 5: Fontes PJ
+  const pjData = [
+    ['RELACAO DE FONTES PAGADORAS PESSOA JURIDICA'],
+    [''],
+    ['CNPJ', 'Razao Social', 'Qtd. Transacoes', 'Valor Total', 'IRRF Retido'],
+    ...summary.payers_pj.map(p => [
+      p.cnpj,
+      p.nome_fantasia || p.razao_social,
+      p.transaction_count,
+      p.total_amount,
+      p.irrf_total,
+    ]),
+  ];
+
+  const wsPJ = XLSX.utils.aoa_to_sheet(pjData);
+  wsPJ['!cols'] = [{ wch: 18 }, { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+  XLSX.utils.book_append_sheet(wb, wsPJ, 'Fontes PJ');
+
+  return wb;
+}
+
+/**
+ * Export Excel spreadsheet (.xlsx) with all IR data
  */
 export async function exportCSV(summary: IRSummary): Promise<void> {
-  const incomeCSV = generateIncomeCSV(summary);
-  const expenseCSV = generateExpenseCSV(summary);
+  // Generate workbook
+  const wb = generateWorkbook(summary);
 
-  // Save income CSV
-  const incomeUri = FileSystem.documentDirectory + `receitas-ir-${summary.year}.csv`;
-  await FileSystem.writeAsStringAsync(incomeUri, '\ufeff' + incomeCSV, {
-    encoding: FileSystem.EncodingType.UTF8,
+  // Write to base64
+  const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+  // Use expo-print to create a temp file, then use its path pattern for our xlsx
+  const { uri: tempPdfUri } = await Print.printToFileAsync({
+    html: '<html><body></body></html>',
+    base64: false,
   });
 
-  // Save expense CSV
-  const expenseUri = FileSystem.documentDirectory + `despesas-ir-${summary.year}.csv`;
-  await FileSystem.writeAsStringAsync(expenseUri, '\ufeff' + expenseCSV, {
-    encoding: FileSystem.EncodingType.UTF8,
-  });
+  // Create xlsx file path by replacing the PDF path
+  const xlsxUri = tempPdfUri.replace(/\.pdf$/i, '.xlsx');
 
-  // Share income CSV
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(incomeUri, {
-      mimeType: 'text/csv',
-      dialogTitle: `Receitas IR ${summary.year}`,
+  try {
+    // Write the xlsx file
+    await LegacyFileSystem.writeAsStringAsync(xlsxUri, wbout, {
+      encoding: 'base64' as LegacyFileSystem.EncodingType,
     });
+
+    // Clean up the dummy PDF
+    try {
+      await LegacyFileSystem.deleteAsync(tempPdfUri, { idempotent: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+
+    // Share the Excel file
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(xlsxUri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: `Planilha IR ${summary.year}`,
+      });
+    }
+  } catch (error) {
+    // Clean up temp PDF on error
+    try {
+      await LegacyFileSystem.deleteAsync(tempPdfUri, { idempotent: true });
+    } catch {
+      // Ignore
+    }
+    throw error;
   }
 }

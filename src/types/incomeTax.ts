@@ -4,6 +4,9 @@ export type PayerType = 'PF' | 'PJ';
 
 export type TaxRegime = 'simples' | 'lucro_presumido' | 'lucro_real';
 
+export type SimplesFatorRMode = 'auto' | 'manual';
+export type SimplesAnexo = 'anexo_iii' | 'anexo_v';
+
 // Fiscal Profile - PF/PJ settings for IR
 export interface FiscalProfile {
   id: string;
@@ -27,6 +30,11 @@ export interface FiscalProfile {
   pj_regime_tributario: TaxRegime | null;
   pj_cnae: string | null;
 
+  // Simples Nacional - Fator R
+  simples_fator_r_mode: SimplesFatorRMode;
+  simples_monthly_payroll: number;
+  simples_anexo: SimplesAnexo;
+
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +56,9 @@ export interface FiscalProfileInsert {
   pj_nome_fantasia?: string | null;
   pj_regime_tributario?: TaxRegime | null;
   pj_cnae?: string | null;
+  simples_fator_r_mode?: SimplesFatorRMode;
+  simples_monthly_payroll?: number;
+  simples_anexo?: SimplesAnexo;
   created_at?: string;
   updated_at?: string;
 }
@@ -67,6 +78,9 @@ export interface FiscalProfileUpdate {
   pj_nome_fantasia?: string | null;
   pj_regime_tributario?: TaxRegime | null;
   pj_cnae?: string | null;
+  simples_fator_r_mode?: SimplesFatorRMode;
+  simples_monthly_payroll?: number;
+  simples_anexo?: SimplesAnexo;
   updated_at?: string;
 }
 
@@ -255,6 +269,9 @@ export interface FiscalProfileFormData {
   pj_nome_fantasia: string;
   pj_regime_tributario: TaxRegime | '';
   pj_cnae: string;
+  simples_fator_r_mode: SimplesFatorRMode;
+  simples_monthly_payroll: string;
+  simples_anexo: SimplesAnexo;
 }
 
 export interface PJSourceFormData {

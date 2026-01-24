@@ -248,6 +248,44 @@ export const taxConfigService = {
     return result as TaxRateConfiguration;
   },
 
+  async createConfiguration(data: {
+    tax_regime: TaxRegime;
+    tax_type: string;
+    rate_type: 'flat' | 'progressive';
+    flat_rate?: number;
+    description?: string;
+  }): Promise<TaxRateConfiguration> {
+    const clinicId = await this.getClinicId();
+    if (!clinicId) throw new Error('Clinica nao encontrada');
+
+    const { data: result, error } = await supabase
+      .from('tax_rate_configurations')
+      .insert({
+        clinic_id: clinicId,
+        tax_regime: data.tax_regime,
+        tax_type: data.tax_type,
+        rate_type: data.rate_type,
+        flat_rate: data.flat_rate || null,
+        description: data.description || null,
+        effective_from: new Date().toISOString().split('T')[0],
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return result as TaxRateConfiguration;
+  },
+
+  async deleteConfiguration(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('tax_rate_configurations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
   async updateBracket(
     id: string,
     data: { min_value?: number; max_value?: number | null; rate?: number; deduction?: number }

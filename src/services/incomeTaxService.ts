@@ -79,6 +79,9 @@ export const incomeTaxService = {
       pj_nome_fantasia: formData.pj_nome_fantasia || null,
       pj_regime_tributario: formData.pj_regime_tributario || null,
       pj_cnae: formData.pj_cnae || null,
+      simples_fator_r_mode: formData.simples_fator_r_mode || 'manual',
+      simples_monthly_payroll: formData.simples_monthly_payroll ? parseFloat(formData.simples_monthly_payroll) : 0,
+      simples_anexo: formData.simples_anexo || 'anexo_iii',
       updated_at: new Date().toISOString(),
     };
 

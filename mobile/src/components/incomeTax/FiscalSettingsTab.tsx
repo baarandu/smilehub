@@ -25,6 +25,8 @@ import type {
   PJSource,
   FiscalProfileFormData,
   PJSourceFormData,
+  SimplesFatorRMode,
+  SimplesAnexo,
 } from '../../types/incomeTax';
 
 interface Props {
@@ -73,6 +75,8 @@ export function FiscalSettingsTab({
   const [showStateModal, setShowStateModal] = useState(false);
   const [showRegimeModal, setShowRegimeModal] = useState(false);
   const [showPJModal, setShowPJModal] = useState(false);
+  const [showFatorRModeModal, setShowFatorRModeModal] = useState(false);
+  const [showAnexoModal, setShowAnexoModal] = useState(false);
   const [editingPJSource, setEditingPJSource] = useState<PJSource | null>(null);
   const [pjFormData, setPJFormData] = useState<PJSourceFormData>({
     cnpj: '',
@@ -96,6 +100,9 @@ export function FiscalSettingsTab({
     pj_nome_fantasia: '',
     pj_regime_tributario: '',
     pj_cnae: '',
+    simples_fator_r_mode: 'manual',
+    simples_monthly_payroll: '',
+    simples_anexo: 'anexo_iii',
   });
 
   useEffect(() => {
@@ -115,6 +122,9 @@ export function FiscalSettingsTab({
         pj_nome_fantasia: fiscalProfile.pj_nome_fantasia || '',
         pj_regime_tributario: fiscalProfile.pj_regime_tributario || '',
         pj_cnae: fiscalProfile.pj_cnae || '',
+        simples_fator_r_mode: fiscalProfile.simples_fator_r_mode || 'manual',
+        simples_monthly_payroll: fiscalProfile.simples_monthly_payroll?.toString() || '',
+        simples_anexo: fiscalProfile.simples_anexo || 'anexo_iii',
       });
     }
   }, [fiscalProfile]);
@@ -378,6 +388,60 @@ export function FiscalSettingsTab({
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Simples Nacional - Fator R Configuration */}
+            {formData.pj_regime_tributario === 'simples' && (
+              <View className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <Text className="font-medium text-blue-900 mb-2">Configuracao do Fator R</Text>
+                <Text className="text-xs text-blue-700 mb-3">
+                  O Fator R determina se sua empresa usa Anexo III (aliquotas menores) ou Anexo V (aliquotas maiores).
+                </Text>
+
+                <View className="mb-3">
+                  <Text className="text-xs text-blue-800 mb-1">Como calcular?</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowFatorRModeModal(true)}
+                    className="bg-white border border-blue-200 rounded-lg px-3 py-2"
+                  >
+                    <Text className="text-blue-800">
+                      {formData.simples_fator_r_mode === 'auto'
+                        ? 'Automatico (informar folha)'
+                        : 'Manual (escolher anexo)'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {formData.simples_fator_r_mode === 'auto' ? (
+                  <View>
+                    <Text className="text-xs text-blue-800 mb-1">Folha de Pagamento Mensal (R$)</Text>
+                    <TextInput
+                      className="bg-white border border-blue-200 rounded-lg px-3 py-2"
+                      placeholder="0,00"
+                      value={formData.simples_monthly_payroll}
+                      onChangeText={(v) => setFormData({ ...formData, simples_monthly_payroll: v })}
+                      keyboardType="decimal-pad"
+                    />
+                    <Text className="text-xs text-blue-600 mt-1">
+                      Inclua pro-labore, salarios e encargos.
+                    </Text>
+                  </View>
+                ) : (
+                  <View>
+                    <Text className="text-xs text-blue-800 mb-1">Anexo do Simples</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowAnexoModal(true)}
+                      className="bg-white border border-blue-200 rounded-lg px-3 py-2"
+                    >
+                      <Text className="text-blue-800">
+                        {formData.simples_anexo === 'anexo_iii'
+                          ? 'Anexo III (Fator R >= 28%)'
+                          : 'Anexo V (Fator R < 28%)'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -563,6 +627,91 @@ export function FiscalSettingsTab({
               >
                 <Text className="text-white font-bold">Salvar</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Fator R Mode Modal */}
+      <Modal visible={showFatorRModeModal} transparent animationType="slide">
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
+              <Text className="font-bold text-lg">Como calcular o Fator R?</Text>
+              <TouchableOpacity onPress={() => setShowFatorRModeModal(false)}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <View className="p-4">
+              {[
+                { value: 'auto', label: 'Automatico', desc: 'Informar folha de pagamento mensal' },
+                { value: 'manual', label: 'Manual', desc: 'Escolher anexo diretamente' },
+              ].map((mode) => (
+                <TouchableOpacity
+                  key={mode.value}
+                  onPress={() => {
+                    setFormData({ ...formData, simples_fator_r_mode: mode.value as SimplesFatorRMode });
+                    setShowFatorRModeModal(false);
+                  }}
+                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${
+                    formData.simples_fator_r_mode === mode.value
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-gray-50'
+                  }`}
+                >
+                  <View>
+                    <Text className={formData.simples_fator_r_mode === mode.value ? 'text-blue-700 font-medium' : 'text-gray-700'}>
+                      {mode.label}
+                    </Text>
+                    <Text className="text-xs text-gray-500">{mode.desc}</Text>
+                  </View>
+                  {formData.simples_fator_r_mode === mode.value && <Check size={20} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Anexo Modal */}
+      <Modal visible={showAnexoModal} transparent animationType="slide">
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-white rounded-t-3xl">
+            <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
+              <Text className="font-bold text-lg">Anexo do Simples</Text>
+              <TouchableOpacity onPress={() => setShowAnexoModal(false)}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <View className="p-4">
+              {[
+                { value: 'anexo_iii', label: 'Anexo III', desc: 'Fator R >= 28% (aliquotas de 6% a 33%)' },
+                { value: 'anexo_v', label: 'Anexo V', desc: 'Fator R < 28% (aliquotas de 15,5% a 30,5%)' },
+              ].map((anexo) => (
+                <TouchableOpacity
+                  key={anexo.value}
+                  onPress={() => {
+                    setFormData({ ...formData, simples_anexo: anexo.value as SimplesAnexo });
+                    setShowAnexoModal(false);
+                  }}
+                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${
+                    formData.simples_anexo === anexo.value
+                      ? 'bg-blue-50 border border-blue-200'
+                      : 'bg-gray-50'
+                  }`}
+                >
+                  <View>
+                    <Text className={formData.simples_anexo === anexo.value ? 'text-blue-700 font-medium' : 'text-gray-700'}>
+                      {anexo.label}
+                    </Text>
+                    <Text className="text-xs text-gray-500">{anexo.desc}</Text>
+                  </View>
+                  {formData.simples_anexo === anexo.value && <Check size={20} color="#2563EB" />}
+                </TouchableOpacity>
+              ))}
+              <Text className="text-xs text-gray-500 text-center mt-2">
+                Consulte seu contador para confirmar o anexo correto.
+              </Text>
             </View>
           </View>
         </View>
