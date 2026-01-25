@@ -145,20 +145,19 @@ function generateHtmlContent(summary: IRSummary): string {
         ${summary.fiscal_profile.pf_enabled ? `
           <p>CPF: ${summary.fiscal_profile.pf_cpf || 'Nao informado'}</p>
           <p>CRO: ${summary.fiscal_profile.pf_cro || 'Nao informado'}</p>
-          ${summary.fiscal_profile.pf_address ? `<p>Endereco: ${summary.fiscal_profile.pf_address}</p>` : ''}
+          ${summary.fiscal_profile.pf_address ? `<p>Endereço: ${summary.fiscal_profile.pf_address}</p>` : ''}
           ${summary.fiscal_profile.pf_city || summary.fiscal_profile.pf_state ?
-            `<p>${summary.fiscal_profile.pf_city || ''} - ${summary.fiscal_profile.pf_state || ''}</p>` : ''}
+          `<p>${summary.fiscal_profile.pf_city || ''} - ${summary.fiscal_profile.pf_state || ''}</p>` : ''}
         ` : ''}
         ${summary.fiscal_profile.pj_enabled ? `
           <p>CNPJ: ${summary.fiscal_profile.pj_cnpj || 'Nao informado'}</p>
           <p>Razao Social: ${summary.fiscal_profile.pj_razao_social || 'Nao informado'}</p>
           ${summary.fiscal_profile.pj_regime_tributario ? `
-            <p>Regime: ${
-              summary.fiscal_profile.pj_regime_tributario === 'simples' ? 'Simples Nacional' :
-              summary.fiscal_profile.pj_regime_tributario === 'lucro_presumido' ? 'Lucro Presumido' :
+            <p>Regime: ${summary.fiscal_profile.pj_regime_tributario === 'simples' ? 'Simples Nacional' :
+            summary.fiscal_profile.pj_regime_tributario === 'lucro_presumido' ? 'Lucro Presumido' :
               summary.fiscal_profile.pj_regime_tributario === 'lucro_real' ? 'Lucro Real' :
-              summary.fiscal_profile.pj_regime_tributario
-            }</p>
+                summary.fiscal_profile.pj_regime_tributario
+          }</p>
           ` : ''}
         ` : ''}
       </div>
@@ -286,7 +285,7 @@ function generateHtmlContent(summary: IRSummary): string {
       <div class="section page-break">
         <div class="section-title">DESPESAS DEDUTIVEIS (LIVRO CAIXA)</div>
         ${summary.expenses_by_category.length === 0 ?
-          '<p>Nenhuma despesa dedutivel registrada no periodo.</p>' : `
+      '<p>Nenhuma despesa dedutivel registrada no periodo.</p>' : `
           <table>
             <thead>
               <tr>
@@ -311,7 +310,7 @@ function generateHtmlContent(summary: IRSummary): string {
       <div class="section page-break">
         <div class="section-title">RELACAO DE PAGADORES PESSOA FISICA</div>
         ${summary.payers_pf.length === 0 ?
-          '<p>Nenhum pagador PF registrado no periodo.</p>' : `
+      '<p>Nenhum pagador PF registrado no periodo.</p>' : `
           <table>
             <thead>
               <tr>
@@ -332,7 +331,7 @@ function generateHtmlContent(summary: IRSummary): string {
       <div class="section page-break">
         <div class="section-title">RELACAO DE FONTES PAGADORAS PESSOA JURIDICA</div>
         ${summary.payers_pj.length === 0 ?
-          '<p>Nenhuma fonte PJ registrada no periodo.</p>' : `
+      '<p>Nenhuma fonte PJ registrada no periodo.</p>' : `
           <table>
             <thead>
               <tr>
@@ -470,9 +469,9 @@ function generateWorkbook(summary: IRSummary): XLSX.WorkBook {
       if (summary.fiscal_profile.pj_regime_tributario) {
         const regimeLabel =
           summary.fiscal_profile.pj_regime_tributario === 'simples' ? 'Simples Nacional' :
-          summary.fiscal_profile.pj_regime_tributario === 'lucro_presumido' ? 'Lucro Presumido' :
-          summary.fiscal_profile.pj_regime_tributario === 'lucro_real' ? 'Lucro Real' :
-          summary.fiscal_profile.pj_regime_tributario;
+            summary.fiscal_profile.pj_regime_tributario === 'lucro_presumido' ? 'Lucro Presumido' :
+              summary.fiscal_profile.pj_regime_tributario === 'lucro_real' ? 'Lucro Real' :
+                summary.fiscal_profile.pj_regime_tributario;
         resumoData.push(['Regime Tributario', regimeLabel]);
       }
     }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
-import { X, CreditCard, Banknote, Wallet, Landmark, ArrowRight, Calendar, PiggyBank, Receipt, Percent } from 'lucide-react-native';
+import { X, CreditCard, Banknote, Wallet, Landmark, ArrowRight, Calendar, PiggyBank, Receipt, Percent, User, Building2, AlertCircle } from 'lucide-react-native';
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig, FinancialSettings } from '../../types/database';
+import type { PJSource } from '../../types/incomeTax';
 
 export interface PaymentTransaction {
     date: string; // YYYY-MM-DD
@@ -24,18 +25,38 @@ export interface FinancialBreakdown {
     isAnticipated: boolean;
 }
 
+export interface PayerData {
+    payer_is_patient: boolean;
+    payer_type: 'PF' | 'PJ';
+    payer_name: string | null;
+    payer_cpf: string | null;
+    pj_source_id: string | null;
+}
+
+// CPF mask
+const applyCPFMask = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+};
+
 interface PaymentMethodModalProps {
     visible: boolean;
     onClose: () => void;
-    onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string, breakdown?: FinancialBreakdown) => void;
+    onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData) => void;
     itemName: string;
     value: number;
     locationRate?: number;
     budgetDate?: string;
     loading?: boolean;
+    patientName?: string;
+    patientCpf?: string;
+    pjSources?: PJSource[];
 }
 
-export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value, locationRate = 0, budgetDate, loading = false }: PaymentMethodModalProps) {
+export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, value, locationRate = 0, budgetDate, loading = false, patientName, patientCpf, pjSources = [] }: PaymentMethodModalProps) {
     const [loadingSettings, setLoadingSettings] = useState(false);
 
     // Settings State
@@ -51,6 +72,13 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     // Anticipation State
     const [isAnticipated, setIsAnticipated] = useState(false);
+
+    // Payer Data State
+    const [payerIsPatient, setPayerIsPatient] = useState(true);
+    const [payerType, setPayerType] = useState<'PF' | 'PJ'>('PF');
+    const [payerName, setPayerName] = useState('');
+    const [payerCpf, setPayerCpf] = useState('');
+    const [selectedPJSource, setSelectedPJSource] = useState('');
 
     useEffect(() => {
         if (visible) {
@@ -82,6 +110,12 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         setInstallmentItems([]);
         setSelectedBrand(null);
         setIsAnticipated(false);
+        // Reset payer data
+        setPayerIsPatient(true);
+        setPayerType('PF');
+        setPayerName('');
+        setPayerCpf('');
+        setSelectedPJSource('');
     };
 
     // ... (keep installment generation logic same) ...
@@ -242,7 +276,16 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             }];
         }
 
-        onConfirm(selectedMethod, transactions, selectedBrand || undefined, breakdown);
+        // Build payer data
+        const payerData: PayerData = {
+            payer_is_patient: payerIsPatient,
+            payer_type: payerType,
+            payer_name: payerIsPatient ? null : (payerType === 'PF' ? payerName : null),
+            payer_cpf: payerIsPatient ? (patientCpf || null) : (payerType === 'PF' ? payerCpf : null),
+            pj_source_id: payerType === 'PJ' ? selectedPJSource : null,
+        };
+
+        onConfirm(selectedMethod, transactions, selectedBrand || undefined, breakdown, payerData);
     };
 
     const methods = [
@@ -495,6 +538,142 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                 )}
                             </View>
                         )}
+
+                        {/* Payer Section */}
+                        <View className="mb-6">
+                            <Text className="text-sm font-semibold text-gray-900 mb-3">Quem está pagando?</Text>
+
+                            {/* Patient is payer toggle */}
+                            <View className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3">
+                                <View className="flex-row items-center flex-1">
+                                    <User size={18} color="#6B7280" />
+                                    <View className="ml-3 flex-1">
+                                        <Text className="font-medium text-gray-900">Paciente é o pagador</Text>
+                                        {patientName && (
+                                            <Text className="text-xs text-gray-500">{patientName}</Text>
+                                        )}
+                                    </View>
+                                </View>
+                                <Switch
+                                    value={payerIsPatient}
+                                    onValueChange={(checked) => {
+                                        setPayerIsPatient(checked);
+                                        if (checked) {
+                                            setPayerType('PF');
+                                        }
+                                    }}
+                                    trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                                    thumbColor={payerIsPatient ? '#a03f3d' : '#9CA3AF'}
+                                />
+                            </View>
+
+                            {/* Show patient CPF status */}
+                            {payerIsPatient && (
+                                <View className={`p-3 rounded-lg flex-row items-center mb-3 ${patientCpf ? 'bg-green-50' : 'bg-amber-50'}`}>
+                                    {patientCpf ? (
+                                        <>
+                                            <User size={14} color="#15803D" />
+                                            <Text className="text-xs text-green-700 ml-2">CPF: {patientCpf}</Text>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertCircle size={14} color="#D97706" />
+                                            <Text className="text-xs text-amber-700 ml-2 flex-1">
+                                                CPF não cadastrado - pode ser preenchido depois no menu IR
+                                            </Text>
+                                        </>
+                                    )}
+                                </View>
+                            )}
+
+                            {/* Alternative payer options */}
+                            {!payerIsPatient && (
+                                <View className="gap-3">
+                                    {/* PF/PJ Toggle */}
+                                    <View className="flex-row gap-2">
+                                        <TouchableOpacity
+                                            onPress={() => setPayerType('PF')}
+                                            className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${payerType === 'PF' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
+                                        >
+                                            <User size={16} color={payerType === 'PF' ? '#FFFFFF' : '#6B7280'} />
+                                            <Text className={`ml-2 font-medium ${payerType === 'PF' ? 'text-white' : 'text-gray-700'}`}>
+                                                Pessoa Física
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => setPayerType('PJ')}
+                                            className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${payerType === 'PJ' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
+                                        >
+                                            <Building2 size={16} color={payerType === 'PJ' ? '#FFFFFF' : '#6B7280'} />
+                                            <Text className={`ml-2 font-medium ${payerType === 'PJ' ? 'text-white' : 'text-gray-700'}`}>
+                                                Convênio/PJ
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {/* PF Fields */}
+                                    {payerType === 'PF' && (
+                                        <View className="gap-3">
+                                            <View>
+                                                <Text className="text-xs text-gray-500 mb-1">Nome do Pagador</Text>
+                                                <TextInput
+                                                    placeholder="Nome completo"
+                                                    value={payerName}
+                                                    onChangeText={setPayerName}
+                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
+                                                />
+                                            </View>
+                                            <View>
+                                                <Text className="text-xs text-gray-500 mb-1">CPF do Pagador</Text>
+                                                <TextInput
+                                                    placeholder="000.000.000-00"
+                                                    value={payerCpf}
+                                                    onChangeText={(v) => setPayerCpf(applyCPFMask(v))}
+                                                    keyboardType="numeric"
+                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    {/* PJ Fields */}
+                                    {payerType === 'PJ' && (
+                                        <View>
+                                            <Text className="text-xs text-gray-500 mb-1">Fonte Pagadora (Convênio)</Text>
+                                            {pjSources.length === 0 ? (
+                                                <View className="p-3 bg-amber-50 rounded-lg">
+                                                    <Text className="text-xs text-amber-700">
+                                                        Nenhum convênio cadastrado. Adicione nas configurações do IR.
+                                                    </Text>
+                                                </View>
+                                            ) : (
+                                                <View className="gap-2">
+                                                    {pjSources.filter(s => s.is_active).map((source) => (
+                                                        <TouchableOpacity
+                                                            key={source.id}
+                                                            onPress={() => setSelectedPJSource(source.id)}
+                                                            className={`p-3 rounded-lg border flex-row items-center justify-between ${selectedPJSource === source.id ? 'bg-[#fef2f2] border-[#b94a48]' : 'bg-gray-50 border-gray-200'}`}
+                                                        >
+                                                            <View>
+                                                                <Text className={`font-medium ${selectedPJSource === source.id ? 'text-[#8b3634]' : 'text-gray-700'}`}>
+                                                                    {source.nome_fantasia || source.razao_social}
+                                                                </Text>
+                                                                <Text className="text-xs text-gray-500">{source.cnpj}</Text>
+                                                            </View>
+                                                            {selectedPJSource === source.id && (
+                                                                <View className="w-5 h-5 bg-[#b94a48] rounded-full items-center justify-center">
+                                                                    <Text className="text-white text-xs">✓</Text>
+                                                                </View>
+                                                            )}
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </View>
                     </ScrollView>
 
                     <View className="p-4 border-t border-gray-100 bg-white">

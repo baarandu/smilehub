@@ -144,7 +144,7 @@ export function FiscalSettingsTab({
 
   const handleSavePJSource = async () => {
     if (!pjFormData.cnpj || !pjFormData.razao_social) {
-      Alert.alert('Erro', 'CNPJ e Razao Social sao obrigatorios');
+      Alert.alert('Erro', 'CNPJ e Razão Social são obrigatórios');
       return;
     }
 
@@ -166,7 +166,7 @@ export function FiscalSettingsTab({
 
   const handleDeletePJSource = (source: PJSource) => {
     Alert.alert(
-      'Confirmar exclusao',
+      'Confirmar exclusão',
       `Remover "${source.razao_social}"?`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -214,8 +214,8 @@ export function FiscalSettingsTab({
               <User size={20} color="#b94a48" />
             </View>
             <View>
-              <Text className="font-bold text-gray-900">Pessoa Fisica (PF)</Text>
-              <Text className="text-xs text-gray-500">Dados para declaracao PF</Text>
+              <Text className="font-bold text-gray-900">Pessoa Física (PF)</Text>
+              <Text className="text-xs text-gray-500">Dados para declaração PF</Text>
             </View>
           </View>
           <Switch
@@ -254,7 +254,7 @@ export function FiscalSettingsTab({
               <Text className="text-xs text-gray-500 mb-1">Endereço</Text>
               <TextInput
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
-                placeholder="Rua, numero, complemento"
+                placeholder="Rua, número, complemento"
                 value={formData.pf_address}
                 onChangeText={(v) => setFormData({ ...formData, pf_address: v })}
                 multiline
@@ -319,7 +319,7 @@ export function FiscalSettingsTab({
               <Building2 size={20} color="#2563EB" />
             </View>
             <View>
-              <Text className="font-bold text-gray-900">Pessoa Juridica (PJ)</Text>
+              <Text className="font-bold text-gray-900">Pessoa Jurídica (PJ)</Text>
               <Text className="text-xs text-gray-500">Dados da empresa</Text>
             </View>
           </View>
@@ -356,7 +356,7 @@ export function FiscalSettingsTab({
             </View>
 
             <View>
-              <Text className="text-xs text-gray-500 mb-1">Razao Social</Text>
+              <Text className="text-xs text-gray-500 mb-1">Razão Social</Text>
               <TextInput
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
                 placeholder="Nome empresarial"
@@ -376,7 +376,7 @@ export function FiscalSettingsTab({
             </View>
 
             <View>
-              <Text className="text-xs text-gray-500 mb-1">Regime Tributario</Text>
+              <Text className="text-xs text-gray-500 mb-1">Regime Tributário</Text>
               <TouchableOpacity
                 onPress={() => setShowRegimeModal(true)}
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
@@ -392,9 +392,9 @@ export function FiscalSettingsTab({
             {/* Simples Nacional - Fator R Configuration */}
             {formData.pj_regime_tributario === 'simples' && (
               <View className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <Text className="font-medium text-blue-900 mb-2">Configuracao do Fator R</Text>
+                <Text className="font-medium text-blue-900 mb-2">Configuração do Fator R</Text>
                 <Text className="text-xs text-blue-700 mb-3">
-                  O Fator R determina se sua empresa usa Anexo III (aliquotas menores) ou Anexo V (aliquotas maiores).
+                  O Fator R determina se sua empresa usa Anexo III (alíquotas menores) ou Anexo V (alíquotas maiores).
                 </Text>
 
                 <View className="mb-3">
@@ -405,7 +405,7 @@ export function FiscalSettingsTab({
                   >
                     <Text className="text-blue-800">
                       {formData.simples_fator_r_mode === 'auto'
-                        ? 'Automatico (informar folha)'
+                        ? 'Automático (informar folha)'
                         : 'Manual (escolher anexo)'}
                     </Text>
                   </TouchableOpacity>
@@ -422,7 +422,7 @@ export function FiscalSettingsTab({
                       keyboardType="decimal-pad"
                     />
                     <Text className="text-xs text-blue-600 mt-1">
-                      Inclua pro-labore, salarios e encargos.
+                      Inclua pró-labore, salários e encargos.
                     </Text>
                   </View>
                 ) : (
@@ -451,7 +451,7 @@ export function FiscalSettingsTab({
         <View className="flex-row items-center justify-between mb-4">
           <View className="flex-row items-center">
             <Building2 size={20} color="#b94a48" />
-            <Text className="font-bold text-gray-900 ml-2">Fontes PJ (Convenios)</Text>
+            <Text className="font-bold text-gray-900 ml-2">Fontes PJ (Convênios)</Text>
           </View>
           <TouchableOpacity
             onPress={() => {
@@ -505,7 +505,7 @@ export function FiscalSettingsTab({
         ) : (
           <>
             <Save size={20} color="white" />
-            <Text className="text-white font-bold ml-2">Salvar Configuracoes</Text>
+            <Text className="text-white font-bold ml-2">Salvar Configurações</Text>
           </>
         )}
       </TouchableOpacity>
@@ -545,7 +545,7 @@ export function FiscalSettingsTab({
         <View className="flex-1 justify-end bg-black/50">
           <View className="bg-white rounded-t-3xl">
             <View className="flex-row justify-between items-center p-4 border-b border-gray-100">
-              <Text className="font-bold text-lg">Regime Tributario</Text>
+              <Text className="font-bold text-lg">Regime Tributário</Text>
               <TouchableOpacity onPress={() => setShowRegimeModal(false)}>
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
@@ -595,7 +595,7 @@ export function FiscalSettingsTab({
                 />
               </View>
               <View>
-                <Text className="text-xs text-gray-500 mb-1">Razao Social *</Text>
+                <Text className="text-xs text-gray-500 mb-1">Razão Social *</Text>
                 <TextInput
                   className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
                   placeholder="Nome empresarial"
@@ -644,7 +644,7 @@ export function FiscalSettingsTab({
             </View>
             <View className="p-4">
               {[
-                { value: 'auto', label: 'Automatico', desc: 'Informar folha de pagamento mensal' },
+                { value: 'auto', label: 'Automático', desc: 'Informar folha de pagamento mensal' },
                 { value: 'manual', label: 'Manual', desc: 'Escolher anexo diretamente' },
               ].map((mode) => (
                 <TouchableOpacity
@@ -684,8 +684,8 @@ export function FiscalSettingsTab({
             </View>
             <View className="p-4">
               {[
-                { value: 'anexo_iii', label: 'Anexo III', desc: 'Fator R >= 28% (aliquotas de 6% a 33%)' },
-                { value: 'anexo_v', label: 'Anexo V', desc: 'Fator R < 28% (aliquotas de 15,5% a 30,5%)' },
+                { value: 'anexo_iii', label: 'Anexo III', desc: 'Fator R >= 28% (alíquotas de 6% a 33%)' },
+                { value: 'anexo_v', label: 'Anexo V', desc: 'Fator R < 28% (alíquotas de 15,5% a 30,5%)' },
               ].map((anexo) => (
                 <TouchableOpacity
                   key={anexo.value}

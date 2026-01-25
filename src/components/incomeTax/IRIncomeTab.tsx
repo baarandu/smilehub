@@ -117,14 +117,14 @@ export function IRIncomeTab({
       return {
         type: 'PF',
         name: t.patient.name,
-        document: t.patient.cpf || 'CPF nao informado',
+        document: t.patient.cpf || 'CPF não informado',
       };
     }
 
     return {
       type: t.payer_type || 'PF',
-      name: t.payer_name || 'Nao informado',
-      document: t.payer_cpf || 'Documento nao informado',
+      name: t.payer_name || 'Não informado',
+      document: t.payer_cpf || 'Documento não informado',
     };
   };
 
@@ -145,6 +145,10 @@ export function IRIncomeTab({
         pjTotal={summaries.pjTotal}
         irrfTotal={summaries.irrfTotal}
         incompleteCount={summaries.incompleteCount}
+        onIncompleteClick={() => {
+          setPayerTypeFilter('incomplete');
+          setShowFilterSection(true);
+        }}
       />
 
       {/* Transactions List */}
@@ -177,8 +181,8 @@ export function IRIncomeTab({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pf">Pessoa Fisica</SelectItem>
-                  <SelectItem value="pj">Pessoa Juridica</SelectItem>
+                  <SelectItem value="pf">Pessoa Física</SelectItem>
+                  <SelectItem value="pj">Pessoa Jurídica</SelectItem>
                   <SelectItem value="incomplete">Dados incompletos</SelectItem>
                 </SelectContent>
               </Select>
@@ -188,7 +192,7 @@ export function IRIncomeTab({
         <CardContent>
           {filteredTransactions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhuma receita encontrada para o periodo selecionado.
+              Nenhuma receita encontrada para o período selecionado.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -196,7 +200,7 @@ export function IRIncomeTab({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descricao</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Pagador</TableHead>
                     <TableHead>CPF/CNPJ</TableHead>
@@ -209,9 +213,9 @@ export function IRIncomeTab({
                   {filteredTransactions.map((transaction) => {
                     const payerInfo = getPayerInfo(transaction);
                     const hasIssue =
-                      payerInfo.document === 'CPF nao informado' ||
-                      payerInfo.document === 'Documento nao informado' ||
-                      payerInfo.name === 'Nao informado';
+                      payerInfo.document === 'CPF não informado' ||
+                      payerInfo.document === 'Documento não informado' ||
+                      payerInfo.name === 'Não informado';
 
                     return (
                       <TableRow key={transaction.id}>

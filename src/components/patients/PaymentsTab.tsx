@@ -7,8 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
 import { formatMoney, getToothDisplayName, formatDisplayDate, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
-import { PaymentMethodDialog } from './PaymentMethodDialog';
+import { PaymentMethodDialog, type PayerData } from './PaymentMethodDialog';
 import { financialService } from '@/services/financial';
+import { getPatientById } from '@/services/patients';
+import { incomeTaxService } from '@/services/incomeTaxService';
+import type { PJSource } from '@/types/incomeTax';
 
 interface PaymentsTabProps {
   patientId: string;
@@ -32,6 +35,10 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const [selectedItem, setSelectedItem] = useState<ItemToPay | null>(null);
   const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
 
+  // Patient and PJ data for payer selection
+  const [patientData, setPatientData] = useState<{ name: string; cpf: string | null } | null>(null);
+  const [pjSources, setPjSources] = useState<PJSource[]>([]);
+
   useEffect(() => {
     loadData();
   }, [patientId]);
@@ -39,9 +46,21 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await budgetsService.getByPatient(patientId);
+
+      // Load budgets, patient data and PJ sources in parallel
+      const [data, patient, sources] = await Promise.all([
+        budgetsService.getByPatient(patientId),
+        getPatientById(patientId),
+        incomeTaxService.getPJSources().catch(() => [] as PJSource[])
+      ]);
+
       setBudgets(data);
       processItems(data);
+
+      if (patient) {
+        setPatientData({ name: patient.name, cpf: patient.cpf || null });
+      }
+      setPjSources(sources);
     } catch (error) {
       console.error(error);
       toast({ variant: "destructive", title: "Erro", description: "Erro ao carregar pagamentos." });
@@ -113,7 +132,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   // ... (existing code)
 
-  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any) => {
+  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
     if (!selectedItem || isSubmitting) return;
 
     try {
@@ -224,7 +243,13 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           anticipation_rate: breakdown?.anticipationRate,
           anticipation_amount: anticipationAmountPerTx,
           location_rate: targetLocationRate,
-          location_amount: locationAmountPerTx
+          location_amount: locationAmountPerTx,
+          // Payer data
+          payer_is_patient: payerData?.payer_is_patient ?? true,
+          payer_type: payerData?.payer_type || 'PF',
+          payer_name: payerData?.payer_name || null,
+          payer_cpf: payerData?.payer_cpf || null,
+          pj_source_id: payerData?.pj_source_id || null,
         } as any);
       }
 
@@ -408,6 +433,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           value={getItemValue(selectedItem)}
           locationRate={selectedItem.locationRate || 0}
           loading={isSubmitting}
+          patientName={patientData?.name}
+          patientCpf={patientData?.cpf || undefined}
+          pjSources={pjSources}
         />
       )}
     </div>

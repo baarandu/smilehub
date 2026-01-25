@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Calendar, Edit3, Trash2, MapPin, Plus, Hospital } from 'lucide-react-native';
+import { Swipeable } from 'react-native-gesture-handler';
+import { Calendar, Trash2, MapPin, Plus, Hospital, Edit3 } from 'lucide-react-native';
 import type { Procedure, Exam } from '../../../types/database';
 
 interface ProceduresTabProps {
     procedures: Procedure[];
     exams: Exam[];
     onAdd: () => void;
+    onView: (procedure: Procedure) => void;
     onEdit: (procedure: Procedure) => void;
     onDelete: (procedure: Procedure) => void;
     onPreviewImage: (url: string) => void;
@@ -16,11 +18,17 @@ export function ProceduresTab({
     procedures,
     exams,
     onAdd,
+    onView,
     onEdit,
     onDelete,
     onPreviewImage,
 }: ProceduresTabProps) {
+    const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
 
+    const closeSwipeable = (id: string) => {
+        const ref = swipeableRefs.current.get(id);
+        if (ref) ref.close();
+    };
 
     const getPaymentMethodLabel = (method: string) => {
         switch (method) {
@@ -63,7 +71,6 @@ export function ProceduresTab({
                 structuredItems.push({
                     treatment: sections[0].trim(),
                     tooth: sections[1].trim(),
-                    // value: sections.slice(2).join(' - ').trim() // Removed value
                 });
             } else if (!cleanLine.startsWith('Obs:')) {
                 unstructuredLines.push(line);
@@ -71,6 +78,33 @@ export function ProceduresTab({
         });
 
         return { structuredItems, unstructuredLines, obsPart };
+    };
+
+    const renderRightActions = (procedure: Procedure) => {
+        return (
+            <View className="flex-row">
+                <TouchableOpacity
+                    onPress={() => {
+                        closeSwipeable(procedure.id);
+                        onEdit(procedure);
+                    }}
+                    className="bg-[#475569] justify-center items-center px-5"
+                >
+                    <Edit3 size={20} color="#FFFFFF" />
+                    <Text className="text-white text-xs mt-1">Editar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => {
+                        closeSwipeable(procedure.id);
+                        onDelete(procedure);
+                    }}
+                    className="bg-red-500 justify-center items-center px-5"
+                >
+                    <Trash2 size={20} color="#FFFFFF" />
+                    <Text className="text-white text-xs mt-1">Excluir</Text>
+                </TouchableOpacity>
+            </View>
+        );
     };
 
     return (
@@ -94,10 +128,21 @@ export function ProceduresTab({
                                 : { structuredItems: [], unstructuredLines: [], obsPart: null };
 
                             return (
-                                <View key={procedure.id} className="p-4 border-b border-gray-50 bg-white">
-                                    {/* Date, Status and Actions */}
-                                    <View className="flex-row items-center justify-between mb-2">
-                                        <View className="flex-row items-center gap-2">
+                                <Swipeable
+                                    key={procedure.id}
+                                    ref={(ref) => {
+                                        if (ref) swipeableRefs.current.set(procedure.id, ref);
+                                    }}
+                                    renderRightActions={() => renderRightActions(procedure)}
+                                    overshootRight={false}
+                                >
+                                    <TouchableOpacity
+                                        className="p-4 border-b border-gray-50 bg-white active:bg-gray-50"
+                                        onPress={() => onView(procedure)}
+                                        activeOpacity={0.7}
+                                    >
+                                        {/* Date and Status */}
+                                        <View className="flex-row items-center gap-2 mb-2">
                                             <Calendar size={14} color="#6B7280" />
                                             <Text className="text-sm text-gray-500">
                                                 {new Date(procedure.date + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -108,99 +153,88 @@ export function ProceduresTab({
                                                 </Text>
                                             </View>
                                         </View>
-                                        <View className="flex-row gap-2">
-                                            <TouchableOpacity onPress={() => onEdit(procedure)} className="bg-[#fef2f2] p-2 rounded-lg">
-                                                <Edit3 size={16} color="#b94a48" />
-                                            </TouchableOpacity>
-                                            <TouchableOpacity onPress={() => onDelete(procedure)} className="bg-[#fef2f2] p-2 rounded-lg">
-                                                <Trash2 size={16} color="#EF4444" />
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
 
-                                    {/* Location and Description */}
-                                    <View className="mb-2">
-                                        {procedure.location && (
-                                            <View className="flex-row items-center gap-1 mb-2">
-                                                <MapPin size={14} color="#6B7280" />
-                                                <Text className="text-gray-600 text-sm">{procedure.location}</Text>
-                                            </View>
-                                        )}
+                                        {/* Location and Description */}
+                                        <View className="mb-2">
+                                            {procedure.location && (
+                                                <View className="flex-row items-center gap-1 mb-2">
+                                                    <MapPin size={14} color="#6B7280" />
+                                                    <Text className="text-gray-600 text-sm">{procedure.location}</Text>
+                                                </View>
+                                            )}
 
-                                        {procedure.description && (
-                                            <View className="gap-3 mt-2">
-                                                {/* Structured Breakdown */}
-                                                {structuredItems.length > 0 && (
-                                                    <View className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-                                                        <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Detalhamento</Text>
-                                                        <View className="gap-3">
-                                                            {structuredItems.map((item, idx) => (
-                                                                <View key={idx} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                                                                    <Text className="font-bold text-gray-900 text-base mb-1">{item.tooth}</Text>
-                                                                    <View className="flex-row flex-wrap">
-                                                                        <Text className="text-gray-600 text-sm">
-                                                                            {item.treatment}
-                                                                        </Text>
+                                            {procedure.description && (
+                                                <View className="gap-3 mt-2">
+                                                    {/* Structured Breakdown */}
+                                                    {structuredItems.length > 0 && (
+                                                        <View className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                                            <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Detalhamento</Text>
+                                                            <View className="gap-3">
+                                                                {structuredItems.map((item, idx) => (
+                                                                    <View key={idx} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                                                        <Text className="font-bold text-gray-900 text-base mb-1">{item.tooth}</Text>
+                                                                        <View className="flex-row flex-wrap">
+                                                                            <Text className="text-gray-600 text-sm">
+                                                                                {item.treatment}
+                                                                            </Text>
+                                                                        </View>
                                                                     </View>
-                                                                </View>
-                                                            ))}
+                                                                ))}
+                                                            </View>
                                                         </View>
-                                                    </View>
-                                                )}
+                                                    )}
 
-                                                {/* Unstructured Text */}
-                                                {structuredItems.length === 0 && unstructuredLines.map((line, idx) => (
-                                                    <Text key={idx} className="text-gray-800 text-sm leading-5">{line}</Text>
-                                                ))}
+                                                    {/* Unstructured Text */}
+                                                    {structuredItems.length === 0 && unstructuredLines.map((line, idx) => (
+                                                        <Text key={idx} className="text-gray-800 text-sm leading-5">{line}</Text>
+                                                    ))}
 
-                                                {/* Observations */}
-                                                {obsPart && (
-                                                    <View className="bg-amber-50 rounded-lg p-3 border border-amber-100">
-                                                        <Text className="text-xs font-bold text-amber-700 uppercase mb-1">Observações</Text>
-                                                        <Text className="text-gray-800 text-sm">{obsPart}</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* Value and Payment */}
-                                    <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-gray-50">
-                                        <View>
-                                            {/* Value removed as requested */}
-                                        </View>
-                                        {procedure.payment_method && (
-                                            <View className="bg-gray-100 px-2 py-1 rounded">
-                                                <Text className="text-xs text-gray-600 capitalize">
-                                                    {getPaymentMethodLabel(procedure.payment_method)}
-                                                    {(procedure.installments ?? 0) > 1 && ` (${procedure.installments}x)`}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* Attachments */}
-                                    {procedureExams.length > 0 && (
-                                        <View className="mt-3 pt-3 border-t border-gray-100">
-                                            <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Anexos</Text>
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                                <View className="flex-row gap-2">
-                                                    {procedureExams.flatMap(exam =>
-                                                        (exam.file_urls || []).map((url, idx) => (
-                                                            <TouchableOpacity
-                                                                key={`${exam.id}-${idx}`}
-                                                                onPress={() => onPreviewImage(url)}
-                                                                className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden border border-gray-200"
-                                                            >
-                                                                <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
-                                                            </TouchableOpacity>
-                                                        ))
+                                                    {/* Observations */}
+                                                    {obsPart && (
+                                                        <View className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                                                            <Text className="text-xs font-bold text-amber-700 uppercase mb-1">Observações</Text>
+                                                            <Text className="text-gray-800 text-sm">{obsPart}</Text>
+                                                        </View>
                                                     )}
                                                 </View>
-                                            </ScrollView>
+                                            )}
                                         </View>
-                                    )}
-                                </View>
+
+                                        {/* Value and Payment */}
+                                        {procedure.payment_method && (
+                                            <View className="flex-row items-center justify-end mt-2 pt-2 border-t border-gray-50">
+                                                <View className="bg-gray-100 px-2 py-1 rounded">
+                                                    <Text className="text-xs text-gray-600 capitalize">
+                                                        {getPaymentMethodLabel(procedure.payment_method)}
+                                                        {(procedure.installments ?? 0) > 1 && ` (${procedure.installments}x)`}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {/* Attachments */}
+                                        {procedureExams.length > 0 && (
+                                            <View className="mt-3 pt-3 border-t border-gray-100">
+                                                <Text className="text-xs font-bold text-gray-500 uppercase mb-2">Anexos</Text>
+                                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                                    <View className="flex-row gap-2">
+                                                        {procedureExams.flatMap(exam =>
+                                                            (exam.file_urls || []).map((url, idx) => (
+                                                                <TouchableOpacity
+                                                                    key={`${exam.id}-${idx}`}
+                                                                    onPress={() => onPreviewImage(url)}
+                                                                    className="w-16 h-16 rounded-lg bg-gray-100 overflow-hidden border border-gray-200"
+                                                                >
+                                                                    <Image source={{ uri: url }} className="w-full h-full" resizeMode="cover" />
+                                                                </TouchableOpacity>
+                                                            ))
+                                                        )}
+                                                    </View>
+                                                </ScrollView>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
+                                </Swipeable>
                             );
                         })}
                     </View>

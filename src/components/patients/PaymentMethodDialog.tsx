@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Banknote, CreditCard, Smartphone, ArrowRight, Loader2, Info } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone, ArrowRight, Loader2, Info, User, Building2, AlertCircle } from 'lucide-react';
 import { formatMoney } from '@/utils/budgetUtils';
 import { settingsService } from '@/services/settings';
 import { CardFeeConfig } from '@/types/database';
+import type { PJSource } from '@/types/incomeTax';
 
 export interface FinancialBreakdown {
     grossAmount: number;
@@ -24,15 +25,35 @@ export interface FinancialBreakdown {
     isAnticipated: boolean;
 }
 
+export interface PayerData {
+    payer_is_patient: boolean;
+    payer_type: 'PF' | 'PJ';
+    payer_name: string | null;
+    payer_cpf: string | null;
+    pj_source_id: string | null;
+}
+
 interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
-    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown) => void;
+    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData) => void;
     itemName: string;
     value: number;
     locationRate?: number;
     loading?: boolean;
+    patientName?: string;
+    patientCpf?: string;
+    pjSources?: PJSource[];
 }
+
+// CPF mask
+const applyCPFMask = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+};
 
 // Payment method icons and labels
 const PAYMENT_METHODS = [
@@ -51,11 +72,18 @@ const CARD_BRANDS = [
     { id: 'hipercard', label: 'Hipercard' },
 ];
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0, loading = false }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [] }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
     const [anticipate, setAnticipate] = useState(false);
+
+    // Payer Data
+    const [payerIsPatient, setPayerIsPatient] = useState(true);
+    const [payerType, setPayerType] = useState<'PF' | 'PJ'>('PF');
+    const [payerName, setPayerName] = useState('');
+    const [payerCpf, setPayerCpf] = useState('');
+    const [selectedPJSource, setSelectedPJSource] = useState('');
 
     // Financial Settings
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
@@ -84,6 +112,12 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
             // Set initial brand to the first available one
             setSelectedBrand('visa');
             setSelectedMethod(null);
+            // Reset payer data
+            setPayerIsPatient(true);
+            setPayerType('PF');
+            setPayerName('');
+            setPayerCpf('');
+            setSelectedPJSource('');
         }
     }, [open]);
 
@@ -205,7 +239,17 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
     const handleConfirm = () => {
         if (!selectedMethod) return;
         const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
-        onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown);
+
+        // Build payer data
+        const payerData: PayerData = {
+            payer_is_patient: payerIsPatient,
+            payer_type: payerType,
+            payer_name: payerIsPatient ? null : (payerType === 'PF' ? payerName : null),
+            payer_cpf: payerIsPatient ? (patientCpf || null) : (payerType === 'PF' ? payerCpf : null),
+            pj_source_id: payerType === 'PJ' ? selectedPJSource : null,
+        };
+
+        onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown, payerData);
         setSelectedMethod(null);
         setInstallments('1');
     };
@@ -327,6 +371,124 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                                 </div>
                             </div>
                         )}
+
+                        {/* Payer Section */}
+                        <div className="space-y-3 pt-2 border-t mt-4">
+                            <Label>Quem está pagando?</Label>
+
+                            {/* Patient is payer toggle */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-gray-600" />
+                                    <div>
+                                        <span className="font-medium text-sm">Paciente é o pagador</span>
+                                        {patientName && (
+                                            <p className="text-xs text-gray-500">{patientName}</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <Switch
+                                    checked={payerIsPatient}
+                                    onCheckedChange={(checked) => {
+                                        setPayerIsPatient(checked);
+                                        if (checked) {
+                                            setPayerType('PF');
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            {/* Show patient CPF status */}
+                            {payerIsPatient && (
+                                <div className={`p-2 rounded-lg text-xs flex items-center gap-2 ${patientCpf ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                    {patientCpf ? (
+                                        <>
+                                            <User className="w-3 h-3" />
+                                            CPF: {patientCpf}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <AlertCircle className="w-3 h-3" />
+                                            CPF não cadastrado - pode ser preenchido depois no menu IR
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Alternative payer options */}
+                            {!payerIsPatient && (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                    {/* PF/PJ Toggle */}
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant={payerType === 'PF' ? 'default' : 'outline'}
+                                            className={payerType === 'PF' ? 'flex-1 bg-[#a03f3d] hover:bg-[#8b3634]' : 'flex-1'}
+                                            onClick={() => setPayerType('PF')}
+                                        >
+                                            <User className="w-4 h-4 mr-2" />
+                                            Pessoa Física
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={payerType === 'PJ' ? 'default' : 'outline'}
+                                            className={payerType === 'PJ' ? 'flex-1 bg-[#a03f3d] hover:bg-[#8b3634]' : 'flex-1'}
+                                            onClick={() => setPayerType('PJ')}
+                                        >
+                                            <Building2 className="w-4 h-4 mr-2" />
+                                            Convênio/PJ
+                                        </Button>
+                                    </div>
+
+                                    {/* PF Fields */}
+                                    {payerType === 'PF' && (
+                                        <div className="space-y-2">
+                                            <div>
+                                                <Label className="text-xs">Nome do Pagador</Label>
+                                                <Input
+                                                    placeholder="Nome completo"
+                                                    value={payerName}
+                                                    onChange={(e) => setPayerName(e.target.value)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">CPF do Pagador</Label>
+                                                <Input
+                                                    placeholder="000.000.000-00"
+                                                    value={payerCpf}
+                                                    onChange={(e) => setPayerCpf(applyCPFMask(e.target.value))}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* PJ Fields */}
+                                    {payerType === 'PJ' && (
+                                        <div className="space-y-2">
+                                            <Label className="text-xs">Fonte Pagadora (Convênio)</Label>
+                                            {pjSources.length === 0 ? (
+                                                <p className="text-xs text-amber-600 p-2 bg-amber-50 rounded">
+                                                    Nenhum convênio cadastrado. Adicione nas configurações do IR.
+                                                </p>
+                                            ) : (
+                                                <Select value={selectedPJSource} onValueChange={setSelectedPJSource}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione o convênio" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {pjSources.filter(s => s.is_active).map((source) => (
+                                                            <SelectItem key={source.id} value={source.id}>
+                                                                {source.nome_fantasia || source.razao_social}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Financial Breakdown Summary */}
                         <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm">

@@ -30,13 +30,13 @@ export function ValidationWarnings({ issues, onRefresh }: ValidationWarningsProp
             <AlertTriangle className="w-5 h-5 text-amber-600" />
           )}
           <CardTitle className={errors.length > 0 ? 'text-red-900' : 'text-amber-900'}>
-            {errors.length > 0 ? 'Erros encontrados' : 'Avisos de validacao'}
+            {errors.length > 0 ? 'Erros encontrados' : 'Avisos de validação'}
           </CardTitle>
         </div>
         <CardDescription className={errors.length > 0 ? 'text-red-700' : 'text-amber-700'}>
           {errors.length > 0
-            ? 'Corrija os erros abaixo antes de gerar o relatorio'
-            : 'Os avisos nao impedem a geracao do relatorio, mas podem impactar a declaracao'}
+            ? 'Corrija os erros abaixo antes de gerar o relatório'
+            : 'Os avisos não impedem a geração do relatório, mas podem impactar a declaração'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -98,7 +98,7 @@ export function ValidationWarnings({ issues, onRefresh }: ValidationWarningsProp
               onClick={onRefresh}
               className="border-amber-300 text-amber-800 hover:bg-amber-100"
             >
-              Atualizar apos correcoes
+              Atualizar após correções
             </Button>
           </div>
         </div>

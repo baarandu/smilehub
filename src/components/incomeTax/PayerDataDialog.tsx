@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Building } from 'lucide-react';
+import { User, Building, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,6 +65,7 @@ export function PayerDataDialog({
   onSaved,
 }: PayerDataDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [patientCpf, setPatientCpf] = useState('');
   const [formData, setFormData] = useState<PayerFormData>({
     payer_is_patient: true,
     payer_name: '',
@@ -87,6 +88,8 @@ export function PayerDataDialog({
           ? transaction.irrf_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
           : '',
       });
+      // Set patient CPF
+      setPatientCpf(transaction.patient?.cpf || '');
     }
   }, [transaction]);
 
@@ -96,7 +99,7 @@ export function PayerDataDialog({
     // Validation
     if (formData.payer_type === 'PF' && !formData.payer_is_patient) {
       if (!formData.payer_name || !formData.payer_cpf) {
-        toast.error('Nome e CPF do pagador sao obrigatorios');
+        toast.error('Nome e CPF do pagador são obrigatórios');
         return;
       }
     }
@@ -108,8 +111,21 @@ export function PayerDataDialog({
 
     setSaving(true);
     try {
+      // Update transaction payer fields
       await incomeTaxService.updateTransactionPayerFields(transaction.id, formData);
-      toast.success('Dados do pagador atualizados');
+
+      // If patient is the payer and CPF was updated, also update patient record
+      if (formData.payer_is_patient && transaction.patient && patientCpf) {
+        const originalCpf = transaction.patient.cpf || '';
+        if (patientCpf !== originalCpf) {
+          await incomeTaxService.updatePatientCPF(transaction.patient_id!, patientCpf);
+          toast.success('Dados do pagador e cadastro do paciente atualizados');
+        } else {
+          toast.success('Dados do pagador atualizados');
+        }
+      } else {
+        toast.success('Dados do pagador atualizados');
+      }
       onSaved();
     } catch (error) {
       console.error('Error updating payer data:', error);
@@ -153,7 +169,7 @@ export function PayerDataDialog({
                 onClick={() => setFormData({ ...formData, payer_type: 'PF', pj_source_id: '' })}
               >
                 <User className="w-4 h-4 mr-2" />
-                Pessoa Fisica
+                Pessoa Física
               </Button>
               <Button
                 type="button"
@@ -162,7 +178,7 @@ export function PayerDataDialog({
                 onClick={() => setFormData({ ...formData, payer_type: 'PJ', payer_is_patient: false })}
               >
                 <Building className="w-4 h-4 mr-2" />
-                Pessoa Juridica
+                Pessoa Jurídica
               </Button>
             </div>
           </div>
@@ -174,7 +190,7 @@ export function PayerDataDialog({
               {transaction.patient && (
                 <div className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <Label htmlFor="payer_is_patient">Paciente e o pagador</Label>
+                    <Label htmlFor="payer_is_patient">Paciente é o pagador</Label>
                     <p className="text-sm text-muted-foreground">
                       Usar dados do paciente ({transaction.patient.name})
                     </p>
@@ -216,17 +232,30 @@ export function PayerDataDialog({
                 </>
               )}
 
-              {/* Show patient CPF info when using patient data */}
+              {/* Show patient CPF - editable if missing */}
               {formData.payer_is_patient && transaction.patient && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm">
-                    <span className="font-medium">CPF:</span>{' '}
-                    {transaction.patient.cpf || (
-                      <span className="text-amber-600">
-                        Nao cadastrado - atualize o cadastro do paciente
-                      </span>
-                    )}
-                  </p>
+                <div className="space-y-2">
+                  <Label htmlFor="patient_cpf">CPF do Paciente</Label>
+                  {!transaction.patient.cpf ? (
+                    <>
+                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg mb-2">
+                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span className="text-sm text-amber-700">
+                          CPF não cadastrado - preencha abaixo para atualizar o cadastro do paciente
+                        </span>
+                      </div>
+                      <Input
+                        id="patient_cpf"
+                        placeholder="000.000.000-00"
+                        value={patientCpf}
+                        onChange={(e) => setPatientCpf(applyCPFMask(e.target.value))}
+                      />
+                    </>
+                  ) : (
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm font-mono">{transaction.patient.cpf}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -253,7 +282,7 @@ export function PayerDataDialog({
               </Select>
               {pjSources.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma fonte PJ cadastrada. Adicione nas configuracoes.
+                  Nenhuma fonte PJ cadastrada. Adicione nas configurações.
                 </p>
               )}
             </div>

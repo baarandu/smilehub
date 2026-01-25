@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useProcedures, useDeleteProcedure } from '@/hooks/useProcedures';
 import { locationsService, type Location } from '@/services/locations';
 import { NewProcedureDialog } from './NewProcedureDialog';
+import { ProcedureViewDialog } from './ProcedureViewDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,9 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
   const deleteProcedure = useDeleteProcedure();
   const [locations, setLocations] = useState<Location[]>([]);
   const [showDialog, setShowDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
   const [editingProcedure, setEditingProcedure] = useState<Procedure | null>(null);
+  const [viewingProcedure, setViewingProcedure] = useState<Procedure | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
 
@@ -72,6 +75,11 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
       case 'completed': return { label: 'Finalizado', className: 'bg-green-100 text-green-700' };
       default: return { label: 'Em Progresso', className: 'bg-blue-100 text-blue-700' };
     }
+  };
+
+  const handleView = (procedure: Procedure) => {
+    setViewingProcedure(procedure);
+    setShowViewDialog(true);
   };
 
   const handleEdit = (procedure: Procedure) => {
@@ -126,7 +134,8 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
             {procedures?.map((procedure) => (
               <div
                 key={procedure.id}
-                className="p-4 bg-muted/50 rounded-lg border border-border"
+                className="p-4 bg-muted/50 rounded-lg border border-border cursor-pointer hover:bg-muted/70 transition-colors"
+                onClick={() => handleView(procedure)}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
@@ -167,7 +176,10 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleEdit(procedure)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(procedure);
+                      }}
                     >
                       <Edit3 className="w-4 h-4" />
                     </Button>
@@ -175,7 +187,10 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteClick(procedure)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(procedure);
+                      }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -187,13 +202,27 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
         )}
       </div>
 
+      <ProcedureViewDialog
+        open={showViewDialog}
+        onOpenChange={(open) => {
+          setShowViewDialog(open);
+          if (!open) {
+            setTimeout(() => setViewingProcedure(null), 300);
+          }
+        }}
+        procedure={viewingProcedure}
+        onEdit={() => {
+          if (viewingProcedure) {
+            handleEdit(viewingProcedure);
+          }
+        }}
+      />
+
       <NewProcedureDialog
         open={showDialog}
         onOpenChange={(open) => {
           setShowDialog(open);
-          // Só resetar editingProcedure quando o modal fechar completamente
           if (!open) {
-            // Usar setTimeout para garantir que o modal feche antes de resetar
             setTimeout(() => {
               setEditingProcedure(null);
             }, 300);

@@ -30,6 +30,14 @@ interface Transaction {
     method: string;
 }
 
+interface PayerData {
+    payer_is_patient: boolean;
+    payer_type: 'PF' | 'PJ';
+    payer_name: string | null;
+    payer_cpf: string | null;
+    pj_source_id: string | null;
+}
+
 export function usePatientPayments(
     budgets: BudgetWithItems[],
     patient: Patient | null,
@@ -84,7 +92,8 @@ export function usePatientPayments(
         transactions?: Transaction[],
         brand?: string,
         breakdown?: PaymentBreakdown,
-        onComplete?: () => void
+        onComplete?: () => void,
+        payerData?: PayerData
     ) => {
         try {
             const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
@@ -167,7 +176,13 @@ export function usePatientPayments(
                         location: budgetLocation,
                         patient_id: patient?.id,
                         related_entity_id: budget.id,
-                        ...deductionPayload
+                        ...deductionPayload,
+                        // Payer data
+                        payer_is_patient: payerData?.payer_is_patient ?? true,
+                        payer_type: payerData?.payer_type || 'PF',
+                        payer_name: payerData?.payer_name || null,
+                        payer_cpf: payerData?.payer_cpf || null,
+                        pj_source_id: payerData?.pj_source_id || null,
                     });
                 }
             } else {
@@ -207,7 +222,13 @@ export function usePatientPayments(
                     location: budgetLocation,
                     patient_id: patient?.id,
                     related_entity_id: budget.id,
-                    ...deductionPayload
+                    ...deductionPayload,
+                    // Payer data
+                    payer_is_patient: payerData?.payer_is_patient ?? true,
+                    payer_type: payerData?.payer_type || 'PF',
+                    payer_name: payerData?.payer_name || null,
+                    payer_cpf: payerData?.payer_cpf || null,
+                    pj_source_id: payerData?.pj_source_id || null,
                 });
             }
 

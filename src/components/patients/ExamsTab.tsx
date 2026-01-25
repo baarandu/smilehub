@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Plus, Calendar as CalendarIcon, Trash2, Eye, Download, Edit } from 'lucide-react';
+import { FileText, Plus, Calendar as CalendarIcon, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useExams, useDeleteExam } from '@/hooks/useExams';
@@ -84,7 +84,8 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
             {exams?.map((exam) => (
               <div
                 key={exam.id}
-                className="p-4 bg-muted/50 rounded-lg border border-border"
+                className="p-4 bg-muted/50 rounded-lg border border-border cursor-pointer hover:bg-muted/70 transition-colors"
+                onClick={() => handleView(exam)}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
@@ -112,28 +113,22 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setEditingExam(exam);
                         setShowDialog(true);
                       }}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
-                    {(exam.file_url || (exam.file_urls && exam.file_urls.length > 0)) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleView(exam)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    )}
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(exam)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(exam);
+                      }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

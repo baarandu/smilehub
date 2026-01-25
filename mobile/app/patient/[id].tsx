@@ -4,14 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle } from 'lucide-react-native';
 import { deletePatient, patientsService } from '../../src/services/patients';
-import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal } from '../../src/components/patients';
+import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal, ProcedureViewModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
+import type { PJSource } from '../../src/types/incomeTax';
 import { usePatientData } from '../../src/hooks/usePatientData';
 import { usePatientPayments } from '../../src/hooks/usePatientPayments';
 import { usePatientHandlers } from '../../src/hooks/usePatientHandlers';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
 import { useClinic } from '../../src/contexts/ClinicContext';
+import { incomeTaxService } from '../../src/services/incomeTax';
 import * as Linking from 'expo-linking';
 import ImageViewing from 'react-native-image-viewing';
 import { WebView } from 'react-native-webview';
@@ -60,7 +62,9 @@ export default function PatientDetail() {
     const [showBudgetViewModal, setShowBudgetViewModal] = useState(false);
     const [viewBudget, setViewBudget] = useState<BudgetWithItems | null>(null);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
+    const [showProcedureViewModal, setShowProcedureViewModal] = useState(false);
     const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
+    const [viewingProcedure, setViewingProcedure] = useState<Procedure | null>(null);
     const [showExamModal, setShowExamModal] = useState(false);
     const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -71,6 +75,7 @@ export default function PatientDetail() {
     const [isPaying, setIsPaying] = useState(false);
     const [showAlertDaysModal, setShowAlertDaysModal] = useState(false);
     const [alertDays, setAlertDays] = useState('180');
+    const [pjSources, setPjSources] = useState<PJSource[]>([]);
 
     // Pull-to-refresh handler
     const handleRefresh = useCallback(async () => {
@@ -81,9 +86,15 @@ export default function PatientDetail() {
             loadBudgets(),
             loadProcedures(),
             loadExams(),
+            incomeTaxService.getPJSources().then(setPjSources).catch(() => []),
         ]);
         setRefreshing(false);
     }, [loadPatient, loadAnamneses, loadBudgets, loadProcedures, loadExams]);
+
+    // Load PJ sources on mount
+    useEffect(() => {
+        incomeTaxService.getPJSources().then(setPjSources).catch(() => []);
+    }, []);
 
     useEffect(() => {
         if (tab && tab !== activeTab) setActiveTab(tab as TabType);
@@ -115,6 +126,7 @@ export default function PatientDetail() {
     const handleEditBudget = (budget: BudgetWithItems) => { setSelectedBudget(budget); setShowBudgetModal(true); };
     const handleViewBudget = (budget: BudgetWithItems) => { setViewBudget(budget); setShowBudgetViewModal(true); };
     const handleAddProcedure = () => { setSelectedProcedure(null); setShowProcedureModal(true); };
+    const handleViewProcedure = (procedure: Procedure) => { setViewingProcedure(procedure); setShowProcedureViewModal(true); };
     const handleEditProcedure = (procedure: Procedure) => { setSelectedProcedure(procedure); setShowProcedureModal(true); };
     const handleEditExam = (exam: Exam) => { setSelectedExam(exam); setShowExamModal(true); };
     const handlePaymentClick = (budgetId: string, toothIndex: number, tooth: ToothEntry, budgetDate?: string) => { setSelectedPaymentItem({ budgetId, toothIndex, tooth, budgetDate }); setShowPaymentModal(true); };
@@ -316,7 +328,7 @@ export default function PatientDetail() {
                 {/* Tab Contents */}
                 {activeTab === 'anamnese' && !isSecretary && <AnamneseTab anamneses={anamneses} onAdd={handleAddAnamnese} onEdit={handleEditAnamnese} onDelete={handleDeleteAnamnese} onView={handleViewAnamnese} />}
                 {activeTab === 'budgets' && <BudgetsTab budgets={budgets} onAdd={handleAddBudget} onEdit={handleEditBudget} onDelete={handleDeleteBudget} onView={handleViewBudget} />}
-                {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
+                {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onView={handleViewProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
                 {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} />}
                 {activeTab === 'payments' && <PaymentsTab paymentItems={getAllPaymentItems()} onPaymentClick={handlePaymentClick} />}
 
@@ -352,13 +364,13 @@ export default function PatientDetail() {
             <PaymentMethodModal
                 visible={showPaymentModal}
                 onClose={() => { setShowPaymentModal(false); setSelectedPaymentItem(null); }}
-                onConfirm={async (method, transactions, brand, breakdown) => {
+                onConfirm={async (method, transactions, brand, breakdown, payerData) => {
                     if (selectedPaymentItem && !isPaying) {
                         setIsPaying(true);
                         await handleConfirmPayment(selectedPaymentItem, method, transactions, brand, breakdown, () => {
                             setShowPaymentModal(false);
                             setSelectedPaymentItem(null);
-                        });
+                        }, payerData);
                         setIsPaying(false);
                     }
                 }}
@@ -367,6 +379,9 @@ export default function PatientDetail() {
                 value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
                 locationRate={selectedPaymentItem ? getLocationRate(selectedPaymentItem) : 0}
                 budgetDate={selectedPaymentItem?.budgetDate}
+                patientName={patient?.name}
+                patientCpf={patient?.cpf || undefined}
+                pjSources={pjSources}
             />
             <BudgetViewModal
                 visible={showBudgetViewModal}
@@ -377,6 +392,7 @@ export default function PatientDetail() {
                 onNavigateToPayments={() => setActiveTab('payments')}
             />
             <NewProcedureModal visible={showProcedureModal} patientId={patient.id} onClose={() => { setShowProcedureModal(false); setSelectedProcedure(null); }} onSuccess={() => { loadProcedures(); loadExams(); }} procedure={selectedProcedure} />
+            <ProcedureViewModal visible={showProcedureViewModal} procedure={viewingProcedure} onClose={() => { setShowProcedureViewModal(false); setViewingProcedure(null); }} onEdit={() => viewingProcedure && handleEditProcedure(viewingProcedure)} />
             <NewExamModal visible={showExamModal} patientId={id!} onClose={() => { setShowExamModal(false); setSelectedExam(null); }} onSuccess={loadExams} exam={selectedExam} />
             <ReportGenerationModal visible={showReportModal} onClose={() => setShowReportModal(false)} patient={patient} procedures={procedures} exams={exams} />
             <ImageViewing images={previewImage ? [{ uri: previewImage }] : []} imageIndex={0} visible={isImageViewVisible} onRequestClose={() => setIsImageViewVisible(false)} />

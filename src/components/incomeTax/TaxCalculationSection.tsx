@@ -337,7 +337,7 @@ export function TaxCalculationSection({ summary, year, onConfigUpdated }: TaxCal
       {taxSummary.pf_calculation && (
         renderCalculationResult(
           taxSummary.pf_calculation,
-          'Impostos Pessoa Fisica',
+          'Impostos Pessoa Física',
           showPFDetails,
           setShowPFDetails
         )

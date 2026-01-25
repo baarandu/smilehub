@@ -273,6 +273,21 @@ export const incomeTaxService = {
   },
 
   /**
+   * Update patient CPF
+   */
+  async updatePatientCPF(patientId: string, cpf: string): Promise<void> {
+    const { error } = await supabase
+      .from('patients')
+      .update({
+        cpf: cpf || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', patientId);
+
+    if (error) throw error;
+  },
+
+  /**
    * Update transaction supplier fields (for expense - Livro Caixa)
    */
   async updateTransactionSupplierFields(id: string, formData: SupplierFormData): Promise<void> {

@@ -56,9 +56,11 @@ const applyCurrencyMask = (value: string): string => {
 
 export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, refreshing, onRefresh }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithIR | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showPJPicker, setShowPJPicker] = useState(false);
+  const [patientCpf, setPatientCpf] = useState('');
   const [formData, setFormData] = useState<PayerFormData>({
     payer_is_patient: true,
     payer_name: '',
@@ -69,15 +71,34 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
   });
 
   const filteredTransactions = useMemo(() => {
-    if (!searchTerm) return transactions;
-    const term = searchTerm.toLowerCase();
-    return transactions.filter(
-      (t) =>
-        t.description.toLowerCase().includes(term) ||
-        t.patient?.name?.toLowerCase().includes(term) ||
-        t.payer_name?.toLowerCase().includes(term)
-    );
-  }, [transactions, searchTerm]);
+    let result = transactions;
+
+    // Filter incomplete
+    if (showOnlyIncomplete) {
+      result = result.filter((t) => {
+        if (t.payer_type === 'PF' || t.payer_is_patient) {
+          return !t.payer_cpf && !t.patient?.cpf;
+        }
+        if (t.payer_type === 'PJ') {
+          return !t.pj_source_id;
+        }
+        return false;
+      });
+    }
+
+    // Search filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.description.toLowerCase().includes(term) ||
+          t.patient?.name?.toLowerCase().includes(term) ||
+          t.payer_name?.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [transactions, searchTerm, showOnlyIncomplete]);
 
   const summaries = useMemo(() => {
     const pfTotal = transactions
@@ -116,6 +137,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
           ? transaction.irrf_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
           : '',
     });
+    setPatientCpf(transaction.patient?.cpf || '');
     setShowModal(true);
   };
 
@@ -124,7 +146,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
 
     if (formData.payer_type === 'PF' && !formData.payer_is_patient) {
       if (!formData.payer_name || !formData.payer_cpf) {
-        Alert.alert('Erro', 'Nome e CPF do pagador sao obrigatorios');
+        Alert.alert('Erro', 'Nome e CPF do pagador são obrigatórios');
         return;
       }
     }
@@ -136,10 +158,23 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
 
     try {
       await incomeTaxService.updateTransactionPayerFields(editingTransaction.id, formData);
+
+      // If patient is the payer and CPF was updated, also update patient record
+      if (formData.payer_is_patient && editingTransaction.patient && patientCpf) {
+        const originalCpf = editingTransaction.patient.cpf || '';
+        if (patientCpf !== originalCpf) {
+          await incomeTaxService.updatePatientCPF(editingTransaction.patient_id!, patientCpf);
+          Alert.alert('Sucesso', 'Dados do pagador e cadastro do paciente atualizados');
+        } else {
+          Alert.alert('Sucesso', 'Dados do pagador atualizados');
+        }
+      } else {
+        Alert.alert('Sucesso', 'Dados do pagador atualizados');
+      }
+
       setShowModal(false);
       setEditingTransaction(null);
       onTransactionUpdated();
-      Alert.alert('Sucesso', 'Dados do pagador atualizados');
     } catch (error) {
       Alert.alert('Erro', 'Falha ao atualizar');
     }
@@ -208,7 +243,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
             </View>
 
             <Text className="text-sm text-gray-700 flex-1" numberOfLines={1}>
-              {payerInfo.name || 'Nao informado'}
+              {payerInfo.name || 'Não informado'}
             </Text>
 
             {hasIssue && <AlertCircle size={16} color="#F59E0B" />}
@@ -243,12 +278,22 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
       </View>
 
       {summaries.incompleteCount > 0 && (
-        <View className="bg-amber-50 p-3 rounded-xl border border-amber-200 mb-4 flex-row items-center">
-          <AlertCircle size={18} color="#D97706" />
-          <Text className="text-amber-800 ml-2 text-sm">
-            {summaries.incompleteCount} receita(s) com dados incompletos
+        <TouchableOpacity
+          onPress={() => setShowOnlyIncomplete(!showOnlyIncomplete)}
+          className={`p-3 rounded-xl border mb-4 flex-row items-center justify-between ${showOnlyIncomplete ? 'bg-amber-100 border-amber-400' : 'bg-amber-50 border-amber-200'}`}
+        >
+          <View className="flex-row items-center flex-1">
+            <AlertCircle size={18} color="#D97706" />
+            <Text className="text-amber-800 ml-2 text-sm flex-1">
+              {showOnlyIncomplete
+                ? `Mostrando ${summaries.incompleteCount} receita(s) incompleta(s)`
+                : `${summaries.incompleteCount} receita(s) com dados incompletos`}
+            </Text>
+          </View>
+          <Text className="text-amber-700 text-xs font-medium">
+            {showOnlyIncomplete ? 'Ver todas' : 'Filtrar'}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
 
       {/* Search */}
@@ -315,7 +360,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                   <Text
                     className={`ml-2 font-medium ${formData.payer_type === 'PF' ? 'text-white' : 'text-gray-700'}`}
                   >
-                    Pessoa Fisica
+                    Pessoa Física
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -328,7 +373,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                   <Text
                     className={`ml-2 font-medium ${formData.payer_type === 'PJ' ? 'text-white' : 'text-gray-700'}`}
                   >
-                    Pessoa Juridica
+                    Pessoa Jurídica
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -339,7 +384,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                   {editingTransaction?.patient && (
                     <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-4">
                       <View>
-                        <Text className="font-medium">Paciente e o pagador</Text>
+                        <Text className="font-medium">Paciente é o pagador</Text>
                         <Text className="text-xs text-gray-500">
                           {editingTransaction.patient.name}
                         </Text>
@@ -378,12 +423,29 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                   )}
 
                   {formData.payer_is_patient && editingTransaction?.patient && (
-                    <View className="bg-gray-50 p-3 rounded-lg mb-4">
-                      <Text className="text-sm">
-                        CPF: {editingTransaction.patient.cpf || (
-                          <Text className="text-amber-600">Nao cadastrado</Text>
-                        )}
-                      </Text>
+                    <View className="mb-4">
+                      <Text className="text-xs text-gray-500 mb-1">CPF do Paciente</Text>
+                      {!editingTransaction.patient.cpf ? (
+                        <>
+                          <View className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2 flex-row items-center">
+                            <AlertCircle size={14} color="#D97706" />
+                            <Text className="text-xs text-amber-700 ml-2 flex-1">
+                              CPF não cadastrado - preencha para atualizar o cadastro
+                            </Text>
+                          </View>
+                          <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
+                            placeholder="000.000.000-00"
+                            value={patientCpf}
+                            onChangeText={(v) => setPatientCpf(applyCPFMask(v))}
+                            keyboardType="numeric"
+                          />
+                        </>
+                      ) : (
+                        <View className="bg-gray-50 p-3 rounded-lg">
+                          <Text className="text-sm font-mono">{editingTransaction.patient.cpf}</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </>
@@ -393,7 +455,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
               {formData.payer_type === 'PJ' && (
                 <>
                   <View className="mb-3">
-                    <Text className="text-xs text-gray-500 mb-1">Fonte Pagadora (Convenio)</Text>
+                    <Text className="text-xs text-gray-500 mb-1">Fonte Pagadora (Convênio)</Text>
                     <TouchableOpacity
                       onPress={() => setShowPJPicker(true)}
                       className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
@@ -448,7 +510,7 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
             <View className="p-4">
               {pjSources.filter((s) => s.is_active).length === 0 ? (
                 <Text className="text-center text-gray-500 py-4">
-                  Nenhuma fonte PJ cadastrada. Adicione nas configuracoes.
+                  Nenhuma fonte PJ cadastrada. Adicione nas configurações.
                 </Text>
               ) : (
                 pjSources

@@ -5,5 +5,6 @@ export { NewBudgetModal } from './NewBudgetModal';
 export { PaymentMethodModal } from './PaymentMethodModal';
 export { BudgetViewModal } from './BudgetViewModal';
 export { NewProcedureModal } from './NewProcedureModal';
+export { ProcedureViewModal } from './ProcedureViewModal';
 export { NewExamModal } from './NewExamModal';
 export { ReportGenerationModal } from './ReportGenerationModal';

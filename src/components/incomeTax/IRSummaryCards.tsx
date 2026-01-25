@@ -7,6 +7,7 @@ interface IRSummaryCardsProps {
   irrfTotal?: number;
   expensesTotal?: number;
   incompleteCount?: number;
+  onIncompleteClick?: () => void;
 }
 
 const formatCurrency = (value: number) => {
@@ -19,6 +20,7 @@ export function IRSummaryCards({
   irrfTotal = 0,
   expensesTotal = 0,
   incompleteCount = 0,
+  onIncompleteClick,
 }: IRSummaryCardsProps) {
   const total = pfTotal + pjTotal;
 
@@ -75,7 +77,7 @@ export function IRSummaryCards({
       ) : (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Despesas Dedutiveis</CardTitle>
+            <CardTitle className="text-sm font-medium">Despesas Dedutíveis</CardTitle>
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -90,7 +92,10 @@ export function IRSummaryCards({
       )}
 
       {/* Incomplete Data Warning */}
-      <Card className={incompleteCount > 0 ? 'border-amber-200 bg-amber-50' : ''}>
+      <Card
+        className={`${incompleteCount > 0 ? 'border-amber-200 bg-amber-50' : ''} ${incompleteCount > 0 && onIncompleteClick ? 'cursor-pointer hover:border-amber-300 hover:bg-amber-100 transition-colors' : ''}`}
+        onClick={incompleteCount > 0 ? onIncompleteClick : undefined}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Dados Incompletos</CardTitle>
           <AlertCircle className={`h-4 w-4 ${incompleteCount > 0 ? 'text-amber-600' : 'text-muted-foreground'}`} />
@@ -100,7 +105,7 @@ export function IRSummaryCards({
             {incompleteCount}
           </div>
           <p className="text-xs text-muted-foreground">
-            {incompleteCount > 0 ? 'Transacoes para revisar' : 'Tudo em ordem'}
+            {incompleteCount > 0 ? 'Clique para revisar' : 'Tudo em ordem'}
           </p>
         </CardContent>
       </Card>

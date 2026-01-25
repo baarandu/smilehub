@@ -130,7 +130,7 @@ export function FiscalSettingsTab({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <User className="w-5 h-5 text-[#a03f3d]" />
-              <CardTitle>Pessoa Fisica (PF)</CardTitle>
+              <CardTitle>Pessoa Física (PF)</CardTitle>
             </div>
             <Switch
               checked={formData.pf_enabled}
@@ -138,7 +138,7 @@ export function FiscalSettingsTab({
             />
           </div>
           <CardDescription>
-            Dados do profissional para declaracao como pessoa fisica
+            Dados do profissional para declaração como pessoa física
           </CardDescription>
         </CardHeader>
 
@@ -166,10 +166,10 @@ export function FiscalSettingsTab({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pf_address">Endereco Profissional</Label>
+              <Label htmlFor="pf_address">Endereço Profissional</Label>
               <Textarea
                 id="pf_address"
-                placeholder="Rua, numero, complemento"
+                placeholder="Rua, número, complemento"
                 value={formData.pf_address}
                 onChange={(e) => setFormData({ ...formData, pf_address: e.target.value })}
                 rows={2}
@@ -217,9 +217,9 @@ export function FiscalSettingsTab({
 
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
               <div>
-                <Label htmlFor="pf_carne_leao" className="text-base">Utiliza Carne-Leao</Label>
+                <Label htmlFor="pf_carne_leao" className="text-base">Utiliza Carnê-Leão</Label>
                 <p className="text-sm text-muted-foreground">
-                  Marque se você recolhe IR mensalmente via carnê-leao
+                  Marque se você recolhe IR mensalmente via carnê-leão
                 </p>
               </div>
               <Switch
@@ -238,7 +238,7 @@ export function FiscalSettingsTab({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="w-5 h-5 text-[#a03f3d]" />
-              <CardTitle>Pessoa Juridica (PJ)</CardTitle>
+              <CardTitle>Pessoa Jurídica (PJ)</CardTitle>
             </div>
             <Switch
               checked={formData.pj_enabled}
@@ -246,7 +246,7 @@ export function FiscalSettingsTab({
             />
           </div>
           <CardDescription>
-            Dados da empresa para declaracao como pessoa juridica
+            Dados da empresa para declaração como pessoa jurídica
           </CardDescription>
         </CardHeader>
 
@@ -274,7 +274,7 @@ export function FiscalSettingsTab({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pj_razao_social">Razao Social</Label>
+              <Label htmlFor="pj_razao_social">Razão Social</Label>
               <Input
                 id="pj_razao_social"
                 placeholder="Nome empresarial completo"
@@ -294,7 +294,7 @@ export function FiscalSettingsTab({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pj_regime">Regime Tributario</Label>
+              <Label htmlFor="pj_regime">Regime Tributário</Label>
               <Select
                 value={formData.pj_regime_tributario}
                 onValueChange={(value) => setFormData({ ...formData, pj_regime_tributario: value as TaxRegime })}
@@ -314,10 +314,10 @@ export function FiscalSettingsTab({
             {formData.pj_regime_tributario === 'simples' && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-4">
                 <div>
-                  <h4 className="font-medium text-blue-900">Configuracao do Fator R</h4>
+                  <h4 className="font-medium text-blue-900">Configuração do Fator R</h4>
                   <p className="text-sm text-blue-700 mt-1">
-                    O Fator R determina se sua empresa se enquadra no Anexo III (aliquotas menores) ou Anexo V (aliquotas maiores).
-                    Fator R = Folha de Pagamento / Receita Bruta dos ultimos 12 meses.
+                    O Fator R determina se sua empresa se enquadra no Anexo III (alíquotas menores) ou Anexo V (alíquotas maiores).
+                    Fator R = Folha de Pagamento / Receita Bruta dos últimos 12 meses.
                   </p>
                 </div>
 
@@ -331,7 +331,7 @@ export function FiscalSettingsTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="auto">Automatico (informar folha de pagamento)</SelectItem>
+                      <SelectItem value="auto">Automático (informar folha de pagamento)</SelectItem>
                       <SelectItem value="manual">Manual (escolher anexo diretamente)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -365,10 +365,10 @@ export function FiscalSettingsTab({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="anexo_iii">
-                          Anexo III - Fator R &gt;= 28% (aliquotas de 6% a 33%)
+                          Anexo III - Fator R &gt;= 28% (alíquotas de 6% a 33%)
                         </SelectItem>
                         <SelectItem value="anexo_v">
-                          Anexo V - Fator R &lt; 28% (aliquotas de 15,5% a 30,5%)
+                          Anexo V - Fator R &lt; 28% (alíquotas de 15,5% a 30,5%)
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -397,7 +397,7 @@ export function FiscalSettingsTab({
           className="bg-[#a03f3d] hover:bg-[#8b3634]"
         >
           <Save className="w-4 h-4 mr-2" />
-          {saving ? 'Salvando...' : 'Salvar Configuracoes'}
+          {saving ? 'Salvando...' : 'Salvar Configurações'}
         </Button>
       </div>
     </div>
