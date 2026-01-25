@@ -101,9 +101,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setIsFirstAccess(true);
       }
     } else {
-      // First access - show onboarding automatically
+      // First access - don't open automatically, wait for user click
       setIsFirstAccess(true);
-      setIsOnboardingOpen(true);
     }
   }, [clinicId, getStorageKey]);
 
