@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl, TextInput, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle } from 'lucide-react-native';
@@ -69,6 +69,8 @@ export default function PatientDetail() {
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
+    const [showAlertDaysModal, setShowAlertDaysModal] = useState(false);
+    const [alertDays, setAlertDays] = useState('180');
 
     // Pull-to-refresh handler
     const handleRefresh = useCallback(async () => {
@@ -152,29 +154,36 @@ export default function PatientDetail() {
     const handleToggleReturnAlert = () => {
         if (!patient) return;
 
-        const toggle = async () => {
-            try {
-                const newState = !patient.return_alert_flag;
-                await patientsService.toggleReturnAlert(patient.id, newState);
-                Alert.alert('Sucesso', newState ? 'Alerta de retorno importante ativado' : 'Alerta removido');
-                loadPatient();
-            } catch (error) {
-                console.error(error);
-                Alert.alert('Erro', 'Erro ao atualizar alerta');
-            }
-        };
-
         if (!patient.return_alert_flag) {
-            Alert.alert(
-                'Alertar Retorno Importante?',
-                'Deseja marcar este paciente para um retorno importante? Um alerta será gerado automaticamente daqui a 6 meses.',
-                [
-                    { text: 'Cancelar', style: 'cancel' },
-                    { text: 'Confirmar', onPress: toggle }
-                ]
-            );
+            setAlertDays('180');
+            setShowAlertDaysModal(true);
         } else {
-            toggle();
+            // Desativar alerta
+            (async () => {
+                try {
+                    await patientsService.toggleReturnAlert(patient.id, false);
+                    Alert.alert('Sucesso', 'Alerta removido');
+                    loadPatient();
+                } catch (error) {
+                    console.error(error);
+                    Alert.alert('Erro', 'Erro ao atualizar alerta');
+                }
+            })();
+        }
+    };
+
+    const confirmReturnAlert = async () => {
+        if (!patient) return;
+        try {
+            const days = parseInt(alertDays, 10) || 180;
+            await patientsService.toggleReturnAlert(patient.id, true, days);
+            Alert.alert('Sucesso', 'Alerta de retorno importante ativado');
+            loadPatient();
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Erro', 'Erro ao atualizar alerta');
+        } finally {
+            setShowAlertDaysModal(false);
         }
     };
 
@@ -371,6 +380,47 @@ export default function PatientDetail() {
             <NewExamModal visible={showExamModal} patientId={id!} onClose={() => { setShowExamModal(false); setSelectedExam(null); }} onSuccess={loadExams} exam={selectedExam} />
             <ReportGenerationModal visible={showReportModal} onClose={() => setShowReportModal(false)} patient={patient} procedures={procedures} exams={exams} />
             <ImageViewing images={previewImage ? [{ uri: previewImage }] : []} imageIndex={0} visible={isImageViewVisible} onRequestClose={() => setIsImageViewVisible(false)} />
+
+            {/* Alert Days Modal */}
+            <Modal visible={showAlertDaysModal} transparent animationType="fade" onRequestClose={() => setShowAlertDaysModal(false)}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+                    <View className="flex-1 bg-black/50 justify-center items-center px-6">
+                        <View className="bg-white rounded-2xl w-full max-w-sm p-6">
+                            <Text className="text-lg font-bold text-gray-900 text-center">Alertar Retorno Importante?</Text>
+                            <Text className="text-gray-500 text-center mt-2 text-sm">
+                                Informe em quantos dias o alerta deve aparecer.
+                            </Text>
+                            <View className="mt-4">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Dias para o retorno</Text>
+                                <TextInput
+                                    value={alertDays}
+                                    onChangeText={setAlertDays}
+                                    keyboardType="numeric"
+                                    placeholder="Ex: 180"
+                                    className="border border-gray-200 rounded-lg px-4 py-3 text-base"
+                                />
+                                <Text className="text-xs text-gray-400 mt-2">
+                                    Sugestões: 30 (1 mês), 90 (3 meses), 180 (6 meses), 365 (1 ano)
+                                </Text>
+                            </View>
+                            <View className="flex-row gap-3 mt-6">
+                                <TouchableOpacity
+                                    onPress={() => setShowAlertDaysModal(false)}
+                                    className="flex-1 py-3 rounded-lg bg-gray-100"
+                                >
+                                    <Text className="text-center font-medium text-gray-700">Cancelar</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={confirmReturnAlert}
+                                    className="flex-1 py-3 rounded-lg bg-[#b94a48]"
+                                >
+                                    <Text className="text-center font-medium text-white">Confirmar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
 
             {/* PDF Modal */}
             <Modal visible={showPdfModal} onRequestClose={() => setShowPdfModal(false)} animationType="slide" presentationStyle="pageSheet">

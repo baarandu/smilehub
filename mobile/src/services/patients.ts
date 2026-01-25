@@ -117,10 +117,14 @@ export const patientsService = {
   update: updatePatient,
   delete: deletePatient,
   count: getPatientsCount,
-  toggleReturnAlert: async (patientId: string, active: boolean) => {
+  toggleReturnAlert: async (patientId: string, active: boolean, days?: number) => {
+    const alertDate = active
+      ? new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      : null;
+
     const updates: any = {
       return_alert_flag: active,
-      return_alert_date: active ? new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0] : null
+      return_alert_date: alertDate
     };
 
     const { data, error } = await (supabase

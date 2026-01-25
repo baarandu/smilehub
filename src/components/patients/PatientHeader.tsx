@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
 import { toggleReturnAlert } from '@/services/patients';
@@ -35,6 +37,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
   const [showAlertConfirm, setShowAlertConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [togglingAlert, setTogglingAlert] = useState(false);
+  const [alertDays, setAlertDays] = useState('180');
 
   const getInitials = (name: string) => {
     return name
@@ -115,7 +118,8 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     try {
       setTogglingAlert(true);
       const newState = !patient.return_alert_flag;
-      await toggleReturnAlert(patient.id, newState);
+      const days = newState ? parseInt(alertDays, 10) || 180 : undefined;
+      await toggleReturnAlert(patient.id, newState, days);
       toast.success(newState ? 'Alerta de retorno importante ativado' : 'Alerta removido');
       if (onRefresh) onRefresh();
     } catch (error) {
@@ -124,6 +128,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     } finally {
       setTogglingAlert(false);
       setShowAlertConfirm(false);
+      setAlertDays('180');
     }
   };
 
@@ -183,7 +188,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Sinalizar retorno importante em 6 meses</p>
+                      <p>Sinalizar retorno importante</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -275,14 +280,34 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={showAlertConfirm} onOpenChange={setShowAlertConfirm}>
+      <AlertDialog open={showAlertConfirm} onOpenChange={(open) => {
+        setShowAlertConfirm(open);
+        if (!open) setAlertDays('180');
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Alertar Retorno Importante?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja marcar este paciente para um retorno importante? Um alerta será gerado automaticamente daqui a 6 meses.
+              Deseja marcar este paciente para um retorno importante? Informe em quantos dias o alerta deve aparecer.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="alertDays" className="text-sm font-medium">
+              Dias para o retorno
+            </Label>
+            <Input
+              id="alertDays"
+              type="number"
+              min="1"
+              value={alertDays}
+              onChange={(e) => setAlertDays(e.target.value)}
+              placeholder="Ex: 180 (6 meses)"
+              className="mt-2"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Sugestões: 30 (1 mês), 90 (3 meses), 180 (6 meses), 365 (1 ano)
+            </p>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={executeToggleAlert}>

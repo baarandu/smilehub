@@ -162,10 +162,14 @@ export async function searchPatients(query: string): Promise<Patient[]> {
   return data || [];
 }
 
-export async function toggleReturnAlert(patientId: string, active: boolean): Promise<Patient> {
+export async function toggleReturnAlert(patientId: string, active: boolean, days?: number): Promise<Patient> {
+  const alertDate = active
+    ? new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    : null;
+
   const updates: any = {
     return_alert_flag: active,
-    return_alert_date: active ? new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString().split('T')[0] : null
+    return_alert_date: alertDate
   };
 
   const { data, error } = await supabase
