@@ -41,8 +41,8 @@ function QuestionField({
                     <Switch
                         value={value}
                         onValueChange={onValueChange}
-                        trackColor={{ false: '#E5E7EB', true: '#99F6E4' }}
-                        thumbColor={value ? '#b94a48' : '#9CA3AF'}
+                        trackColor={{ false: '#E5E7EB', true: '#D1D5DB' }}
+                        thumbColor={value ? '#a03f3d' : '#9CA3AF'}
                         ios_backgroundColor="#E5E7EB"
                     />
                     <Text className={`text-sm ${value ? 'text-[#a03f3d] font-medium' : 'text-gray-400'}`}>Sim</Text>

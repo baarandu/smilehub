@@ -221,8 +221,8 @@ export function FiscalSettingsTab({
           <Switch
             value={formData.pf_enabled}
             onValueChange={(v) => setFormData({ ...formData, pf_enabled: v })}
-            trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-            thumbColor={formData.pf_enabled ? '#b94a48' : '#9CA3AF'}
+            trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+            thumbColor={formData.pf_enabled ? '#a03f3d' : '#9CA3AF'}
           />
         </View>
 
@@ -251,7 +251,7 @@ export function FiscalSettingsTab({
             </View>
 
             <View>
-              <Text className="text-xs text-gray-500 mb-1">Endereco</Text>
+              <Text className="text-xs text-gray-500 mb-1">Endereço</Text>
               <TextInput
                 className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
                 placeholder="Rua, numero, complemento"
@@ -297,14 +297,14 @@ export function FiscalSettingsTab({
 
             <View className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mt-2">
               <View>
-                <Text className="font-medium text-gray-900">Carne-Leao</Text>
+                <Text className="font-medium text-gray-900">Carnê-Leão</Text>
                 <Text className="text-xs text-gray-500">Recolhe IR mensalmente</Text>
               </View>
               <Switch
                 value={formData.pf_uses_carne_leao}
                 onValueChange={(v) => setFormData({ ...formData, pf_uses_carne_leao: v })}
-                trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                thumbColor={formData.pf_uses_carne_leao ? '#b94a48' : '#9CA3AF'}
+                trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                thumbColor={formData.pf_uses_carne_leao ? '#a03f3d' : '#9CA3AF'}
               />
             </View>
           </View>
@@ -326,8 +326,8 @@ export function FiscalSettingsTab({
           <Switch
             value={formData.pj_enabled}
             onValueChange={(v) => setFormData({ ...formData, pj_enabled: v })}
-            trackColor={{ false: '#D1D5DB', true: '#93C5FD' }}
-            thumbColor={formData.pj_enabled ? '#2563EB' : '#9CA3AF'}
+            trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+            thumbColor={formData.pj_enabled ? '#a03f3d' : '#9CA3AF'}
           />
         </View>
 
@@ -617,8 +617,8 @@ export function FiscalSettingsTab({
                 <Switch
                   value={pjFormData.is_active}
                   onValueChange={(v) => setPJFormData({ ...pjFormData, is_active: v })}
-                  trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                  thumbColor={pjFormData.is_active ? '#b94a48' : '#9CA3AF'}
+                  trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                  thumbColor={pjFormData.is_active ? '#a03f3d' : '#9CA3AF'}
                 />
               </View>
               <TouchableOpacity
@@ -653,11 +653,10 @@ export function FiscalSettingsTab({
                     setFormData({ ...formData, simples_fator_r_mode: mode.value as SimplesFatorRMode });
                     setShowFatorRModeModal(false);
                   }}
-                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${
-                    formData.simples_fator_r_mode === mode.value
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'bg-gray-50'
-                  }`}
+                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.simples_fator_r_mode === mode.value
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'bg-gray-50'
+                    }`}
                 >
                   <View>
                     <Text className={formData.simples_fator_r_mode === mode.value ? 'text-blue-700 font-medium' : 'text-gray-700'}>
@@ -694,11 +693,10 @@ export function FiscalSettingsTab({
                     setFormData({ ...formData, simples_anexo: anexo.value as SimplesAnexo });
                     setShowAnexoModal(false);
                   }}
-                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${
-                    formData.simples_anexo === anexo.value
-                      ? 'bg-blue-50 border border-blue-200'
-                      : 'bg-gray-50'
-                  }`}
+                  className={`p-4 mb-2 rounded-lg flex-row items-center justify-between ${formData.simples_anexo === anexo.value
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'bg-gray-50'
+                    }`}
                 >
                   <View>
                     <Text className={formData.simples_anexo === anexo.value ? 'text-blue-700 font-medium' : 'text-gray-700'}>

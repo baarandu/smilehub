@@ -333,9 +333,9 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         </View>
                         <Switch
-                            trackColor={{ false: "#E5E7EB", true: "#b94a48" }}
-                            thumbColor={"#FFFFFF"}
-                            ios_backgroundColor="#E5E7EB"
+                            trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                            thumbColor={settings.is_active ? "#a03f3d" : "#9CA3AF"}
+                            ios_backgroundColor="#D1D5DB"
                             onValueChange={toggleActive}
                             value={settings.is_active}
                         />

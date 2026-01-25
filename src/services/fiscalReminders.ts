@@ -111,20 +111,36 @@ export const fiscalRemindersService = {
         futureDate.setDate(futureDate.getDate() + daysAhead);
         const futureDateStr = futureDate.toISOString().split('T')[0];
 
-        const { data, error } = await supabase
-            .from('fiscal_documents')
-            .select('id, name, category, expiration_date')
-            .eq('clinic_id', clinicId)
-            .not('expiration_date', 'is', null)
-            .lte('expiration_date', futureDateStr)
-            .order('expiration_date', { ascending: true });
+        try {
+            const { data, error } = await supabase
+                .from('fiscal_documents')
+                .select('id, name, category, expiration_date')
+                .eq('clinic_id', clinicId)
+                .not('expiration_date', 'is', null)
+                .lte('expiration_date', futureDateStr)
+                .order('expiration_date', { ascending: true });
 
-        if (error) throw error;
+            if (error) {
+                // Column might not exist yet - return empty array
+                if (error.code === '42703') {
+                    console.warn('expiration_date column not found - migration needed');
+                    return [];
+                }
+                throw error;
+            }
 
-        return (data || []).map(doc => ({
-            ...doc,
-            days_until_expiration: daysBetween(today, doc.expiration_date),
-        })) as ExpiringDocument[];
+            return (data || []).map(doc => ({
+                ...doc,
+                days_until_expiration: daysBetween(today, doc.expiration_date),
+            })) as ExpiringDocument[];
+        } catch (err: any) {
+            // Handle column not exists error gracefully
+            if (err?.code === '42703') {
+                console.warn('expiration_date column not found - migration needed');
+                return [];
+            }
+            throw err;
+        }
     },
 
     // Get all fiscal alerts (missing docs, expiring docs, deadlines)

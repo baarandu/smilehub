@@ -322,7 +322,8 @@ export default function Alerts() {
                                         <Switch
                                             value={reminder.is_active}
                                             onValueChange={() => handleToggleReminder(reminder.id, reminder.is_active)}
-                                            trackColor={{ false: "#D1D5DB", true: "#b94a48" }}
+                                            trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                                            thumbColor={reminder.is_active ? "#a03f3d" : "#9CA3AF"}
                                         />
                                     </View>
                                     <View className="flex-row justify-between items-center mt-3 pt-3 border-t border-gray-100">

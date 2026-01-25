@@ -276,7 +276,8 @@ export default function AdminPlansScreen() {
                                         <Switch
                                             value={formData.is_active}
                                             onValueChange={v => setFormData({ ...formData, is_active: v })}
-                                            trackColor={{ false: "#D1D5DB", true: "#b94a48" }}
+                                            trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                                            thumbColor={formData.is_active ? "#a03f3d" : "#9CA3AF"}
                                         />
                                     </View>
                                 </View>

@@ -347,8 +347,8 @@ export function IRIncomeTab({ transactions, pjSources, onTransactionUpdated, ref
                       <Switch
                         value={formData.payer_is_patient}
                         onValueChange={(v) => setFormData({ ...formData, payer_is_patient: v })}
-                        trackColor={{ false: '#D1D5DB', true: '#5EEAD4' }}
-                        thumbColor={formData.payer_is_patient ? '#b94a48' : '#9CA3AF'}
+                        trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                        thumbColor={formData.payer_is_patient ? '#a03f3d' : '#9CA3AF'}
                       />
                     </View>
                   )}

@@ -406,7 +406,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                                 setIsInstallments(val);
                                                 if (val && installmentItems.length === 0) handleGenerateClick();
                                             }}
-                                            trackColor={{ false: '#E5E7EB', true: '#b94a48' }}
+                                            trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                                            thumbColor={isInstallments ? '#a03f3d' : '#9CA3AF'}
                                         />
                                     </View>
                                 )}
@@ -487,7 +488,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                         <Switch
                                             value={isAnticipated}
                                             onValueChange={setIsAnticipated}
-                                            trackColor={{ false: '#E5E7EB', true: '#4F46E5' }}
+                                            trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                                            thumbColor={isAnticipated ? '#a03f3d' : '#9CA3AF'}
                                         />
                                     </View>
                                 )}

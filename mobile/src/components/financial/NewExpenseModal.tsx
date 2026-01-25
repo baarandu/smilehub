@@ -335,7 +335,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                         <Text className="text-blue-600 text-xs">Aplicar alterações a todas as parcelas?{'\n'}(Valor, Nome, Categoria)</Text>
                                     </View>
                                 </View>
-                                <Switch value={updateAllRecurring} onValueChange={setUpdateAllRecurring} trackColor={{ false: "#E5E7EB", true: "#93C5FD" }} thumbColor={updateAllRecurring ? "#2563EB" : "#F9FAFB"} />
+                                <Switch value={updateAllRecurring} onValueChange={setUpdateAllRecurring} trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }} thumbColor={updateAllRecurring ? "#a03f3d" : "#9CA3AF"} />
                             </View>
                         )}
 
@@ -422,8 +422,8 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                     setIsFixedExpense(val);
                                     if (val) setIsInstallment(false);
                                 }}
-                                trackColor={{ false: "#E5E7EB", true: "#BBF7D0" }}
-                                thumbColor={isFixedExpense ? "#22C55E" : "#F9FAFB"}
+                                trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                                thumbColor={isFixedExpense ? "#a03f3d" : "#9CA3AF"}
                             />
                         </View>
 
@@ -505,8 +505,8 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                     setIsInstallment(val);
                                     if (val) setIsFixedExpense(false);
                                 }}
-                                trackColor={{ false: "#E5E7EB", true: "#FECACA" }}
-                                thumbColor={isInstallment ? "#EF4444" : "#F9FAFB"}
+                                trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                                thumbColor={isInstallment ? "#a03f3d" : "#9CA3AF"}
                             />
                         </View>
 

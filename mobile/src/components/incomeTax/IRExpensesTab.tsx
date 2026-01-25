@@ -269,8 +269,8 @@ export function IRExpensesTab({ transactions, onTransactionUpdated, refreshing, 
                 <Switch
                   value={formData.is_deductible}
                   onValueChange={(v) => setFormData({ ...formData, is_deductible: v })}
-                  trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-                  thumbColor={formData.is_deductible ? '#16A34A' : '#9CA3AF'}
+                  trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                  thumbColor={formData.is_deductible ? '#a03f3d' : '#9CA3AF'}
                 />
               </View>
 
