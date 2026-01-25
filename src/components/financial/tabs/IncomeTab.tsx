@@ -8,6 +8,7 @@ import {
     X,
     Calendar,
     Eye,
+    EyeOff,
     Trash2,
     Loader2
 } from 'lucide-react';
@@ -63,6 +64,20 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+    // Card visibility state
+    const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
+    const toggleCardVisibility = (cardId: string) => {
+        setHiddenCards(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(cardId)) {
+                newSet.delete(cardId);
+            } else {
+                newSet.add(cardId);
+            }
+            return newSet;
+        });
+    };
 
     // Load Locations
     const { data: locations = [] } = useQuery({
@@ -145,6 +160,39 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const displayTotal = subTab === 'gross' ? totalGrossIncome : totalNetIncome;
     const displayLabel = subTab === 'gross' ? 'Receita Bruta' : 'Receita Líquida';
 
+    // Additional stats
+    const transactionCount = filteredTransactions.length;
+    const averageTicket = transactionCount > 0 ? displayTotal / transactionCount : 0;
+    const highestTransaction = filteredTransactions.length > 0
+        ? Math.max(...filteredTransactions.map(t => subTab === 'gross' ? t.amount : (t.net_amount || t.amount)))
+        : 0;
+
+    // Income by payment method
+    const incomeByMethod = filteredTransactions.reduce((acc, t) => {
+        const pm = (t as any).payment_method;
+        let method = 'Outros';
+        if (pm === 'credit') method = 'Cartão de Crédito';
+        else if (pm === 'debit') method = 'Cartão de Débito';
+        else if (pm === 'pix') method = 'Pix';
+        else if (pm === 'cash') method = 'Dinheiro';
+        else if (pm) method = pm;
+        else {
+            // Try to parse from description
+            const match = t.description.match(/\((.*?)\)/);
+            if (match) {
+                const parts = match[1].split(' - ');
+                let m = parts[0].trim().toLowerCase();
+                if (m === 'crédito' || m === 'credit') method = 'Cartão de Crédito';
+                else if (m === 'débito' || m === 'debit') method = 'Cartão de Débito';
+                else if (m === 'pix') method = 'Pix';
+                else if (m === 'dinheiro' || m === 'cash') method = 'Dinheiro';
+            }
+        }
+        const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
+        acc[method] = (acc[method] || 0) + amount;
+        return acc;
+    }, {} as Record<string, number>);
+
     const incomeByLocation = filteredTransactions
         .filter(t => t.location)
         .reduce((acc, t) => {
@@ -180,24 +228,26 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Controls */}
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
+                <div className="flex bg-slate-100 p-1.5 rounded-xl gap-1">
                     <button
                         onClick={() => setSubTab('gross')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${subTab === 'gross'
-                            ? 'bg-white text-green-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${subTab === 'gross'
+                            ? 'bg-white text-green-600 shadow-md border border-green-100'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                             }`}
                     >
-                        Bruta
+                        <TrendingUp className="h-4 w-4" />
+                        Receita Bruta
                     </button>
                     <button
                         onClick={() => setSubTab('net')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${subTab === 'net'
-                            ? 'bg-white text-green-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${subTab === 'net'
+                            ? 'bg-white text-green-600 shadow-md border border-green-100'
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
                             }`}
                     >
-                        Líquida
+                        <TrendingUp className="h-4 w-4" />
+                        Receita Líquida
                     </button>
                 </div>
 
@@ -237,9 +287,16 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 </div>
             </div>
 
-            {/* Summary Card */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="border-green-100 shadow-sm bg-gradient-to-br from-white to-green-50/30">
+            {/* Summary Cards */}
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+                <Card className={`relative group border-green-100 shadow-sm bg-gradient-to-br from-white to-green-50/30 transition-all ${hiddenCards.has('total') ? 'opacity-50' : ''}`}>
+                    <button
+                        onClick={() => toggleCardVisibility('total')}
+                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                        title={hiddenCards.has('total') ? 'Mostrar' : 'Ocultar'}
+                    >
+                        {hiddenCards.has('total') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                    </button>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
                             {displayLabel}
@@ -249,14 +306,92 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className={`text-2xl font-bold text-green-600 ${hiddenCards.has('total') ? 'blur-md select-none' : ''}`}>
                             {formatCurrency(displayTotal)}
                         </div>
                         {subTab === 'net' && (
-                            <p className="text-xs text-muted-foreground mt-1">
+                            <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('total') ? 'blur-md select-none' : ''}`}>
                                 Deduções: {formatCurrency(totalGrossIncome - totalNetIncome)}
                             </p>
                         )}
+                    </CardContent>
+                </Card>
+
+                <Card className={`relative group border-blue-100 shadow-sm bg-gradient-to-br from-white to-blue-50/30 transition-all ${hiddenCards.has('count') ? 'opacity-50' : ''}`}>
+                    <button
+                        onClick={() => toggleCardVisibility('count')}
+                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                        title={hiddenCards.has('count') ? 'Mostrar' : 'Ocultar'}
+                    >
+                        {hiddenCards.has('count') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                    </button>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Transações
+                        </CardTitle>
+                        <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <ArrowUpRight className="h-4 w-4 text-blue-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={`text-2xl font-bold text-blue-600 ${hiddenCards.has('count') ? 'blur-md select-none' : ''}`}>
+                            {transactionCount}
+                        </div>
+                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('count') ? 'blur-md select-none' : ''}`}>
+                            receitas no período
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className={`relative group border-purple-100 shadow-sm bg-gradient-to-br from-white to-purple-50/30 transition-all ${hiddenCards.has('average') ? 'opacity-50' : ''}`}>
+                    <button
+                        onClick={() => toggleCardVisibility('average')}
+                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                        title={hiddenCards.has('average') ? 'Mostrar' : 'Ocultar'}
+                    >
+                        {hiddenCards.has('average') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                    </button>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Ticket Médio
+                        </CardTitle>
+                        <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <TrendingUp className="h-4 w-4 text-purple-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={`text-2xl font-bold text-purple-600 ${hiddenCards.has('average') ? 'blur-md select-none' : ''}`}>
+                            {formatCurrency(averageTicket)}
+                        </div>
+                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('average') ? 'blur-md select-none' : ''}`}>
+                            por transação
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className={`relative group border-amber-100 shadow-sm bg-gradient-to-br from-white to-amber-50/30 transition-all ${hiddenCards.has('highest') ? 'opacity-50' : ''}`}>
+                    <button
+                        onClick={() => toggleCardVisibility('highest')}
+                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                        title={hiddenCards.has('highest') ? 'Mostrar' : 'Ocultar'}
+                    >
+                        {hiddenCards.has('highest') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                    </button>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                            Maior Receita
+                        </CardTitle>
+                        <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                            <TrendingUp className="h-4 w-4 text-amber-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className={`text-2xl font-bold text-amber-600 ${hiddenCards.has('highest') ? 'blur-md select-none' : ''}`}>
+                            {formatCurrency(highestTransaction)}
+                        </div>
+                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('highest') ? 'blur-md select-none' : ''}`}>
+                            valor máximo
+                        </p>
                     </CardContent>
                 </Card>
             </div>
@@ -265,11 +400,18 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Revenue by Location */}
                 {Object.keys(incomeByLocation).length > 0 && (
-                    <Card>
+                    <Card className={`relative group transition-all ${hiddenCards.has('location') ? 'opacity-50' : ''}`}>
+                        <button
+                            onClick={() => toggleCardVisibility('location')}
+                            className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                            title={hiddenCards.has('location') ? 'Mostrar' : 'Ocultar'}
+                        >
+                            {hiddenCards.has('location') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                        </button>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-medium">Receita por Unidade</CardTitle>
+                            <CardTitle className="text-base font-medium">Receita por Local de Atendimento</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className={hiddenCards.has('location') ? 'blur-md select-none' : ''}>
                             <ScrollArea className="h-[180px] w-full pr-4">
                                 <div className="space-y-4">
                                     {Object.entries(incomeByLocation).sort((a, b) => b[1] - a[1]).map(([loc, amount]) => (
@@ -289,7 +431,60 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                     </Card>
                 )}
 
-
+                {/* Revenue by Payment Method */}
+                {Object.keys(incomeByMethod).length > 0 && (
+                    <Card className={`relative group transition-all ${hiddenCards.has('method') ? 'opacity-50' : ''}`}>
+                        <button
+                            onClick={() => toggleCardVisibility('method')}
+                            className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                            title={hiddenCards.has('method') ? 'Mostrar' : 'Ocultar'}
+                        >
+                            {hiddenCards.has('method') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                        </button>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Receita por Forma de Pagamento</CardTitle>
+                        </CardHeader>
+                        <CardContent className={hiddenCards.has('method') ? 'blur-md select-none' : ''}>
+                            <ScrollArea className="h-[180px] w-full pr-4">
+                                <div className="space-y-4">
+                                    {Object.entries(incomeByMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => {
+                                        const getMethodStyle = (m: string) => {
+                                            if (m.includes('Crédito')) return { bg: 'bg-purple-50', color: 'text-purple-600', bar: 'bg-purple-500' };
+                                            if (m.includes('Débito')) return { bg: 'bg-blue-50', color: 'text-blue-600', bar: 'bg-blue-500' };
+                                            if (m === 'Pix') return { bg: 'bg-teal-50', color: 'text-teal-600', bar: 'bg-teal-500' };
+                                            if (m === 'Dinheiro') return { bg: 'bg-green-50', color: 'text-green-600', bar: 'bg-green-500' };
+                                            return { bg: 'bg-gray-50', color: 'text-gray-600', bar: 'bg-gray-500' };
+                                        };
+                                        const style = getMethodStyle(method);
+                                        const percentage = displayTotal > 0 ? ((amount / displayTotal) * 100).toFixed(1) : '0';
+                                        return (
+                                            <div key={method} className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`p-1.5 ${style.bg} rounded-md`}>
+                                                            <ArrowUpRight className={`h-3.5 w-3.5 ${style.color}`} />
+                                                        </div>
+                                                        <span className="text-sm font-medium">{method}</span>
+                                                    </div>
+                                                    <span className="text-sm font-bold text-green-600">{formatCurrency(amount)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 pl-8">
+                                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full ${style.bar} rounded-full transition-all`}
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-xs text-muted-foreground w-12 text-right">{percentage}%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
 
             {/* List */}
