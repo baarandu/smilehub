@@ -358,6 +358,23 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
         }
     };
 
+    const handleUpdateRole = async (memberId: string, newRole: Role) => {
+        try {
+            const { error } = await supabase
+                .from('clinic_users')
+                .update({ role: newRole })
+                .eq('id', memberId);
+
+            if (error) throw error;
+
+            toast.success('Cargo atualizado');
+            loadTeamData();
+        } catch (error) {
+            console.error('Error updating role:', error);
+            toast.error('Erro ao atualizar cargo');
+        }
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md md:max-w-lg">
@@ -545,26 +562,40 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                             ) : (
                                 <div className="space-y-2">
                                     {members.map(member => (
-                                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg bg-card">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg bg-card gap-2">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                                     <Users className="w-4 h-4 text-primary" />
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-medium">{member.email}</p>
-                                                    <p className="text-xs text-muted-foreground capitalize">{ROLE_CONFIG[member.role]?.label || member.role}</p>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium truncate">{member.email}</p>
                                                 </div>
                                             </div>
-                                            {members.length > 1 && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleRemoveMember(member.id)}
-                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            <div className="flex items-center gap-2">
+                                                <Select
+                                                    value={member.role}
+                                                    onValueChange={(value) => handleUpdateRole(member.id, value as Role)}
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
-                                            )}
+                                                    <SelectTrigger className="w-[130px] h-8 text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="admin">Administrador</SelectItem>
+                                                        <SelectItem value="dentist">Dentista</SelectItem>
+                                                        <SelectItem value="assistant">Secretária</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {members.length > 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleRemoveMember(member.id)}
+                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
