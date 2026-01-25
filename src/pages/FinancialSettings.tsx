@@ -9,9 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { settingsService } from "@/services/settings";
 import { profileService } from "@/services/profile";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, X, Tag, ArrowLeft } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, X, Tag, ArrowLeft, Wallet, CreditCard, Receipt, CheckCircle2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { SectionHeader } from '@/components/onboarding';
 
 // Helper to format brand names with proper capitalization
 const formatBrandName = (brand: string): string => {
@@ -26,9 +28,15 @@ const formatBrandName = (brand: string): string => {
 export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { markStepCompleted } = useOnboarding();
     const [loading, setLoading] = useState(true);
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+
+    // Mark financial step as completed when visiting this page
+    useEffect(() => {
+        markStepCompleted('financial');
+    }, [markStepCompleted]);
 
     // Multiple Taxes State
     const [taxes, setTaxes] = useState<{ id: string; name: string; rate: number }[]>([]);
@@ -200,21 +208,53 @@ export default function FinancialSettings() {
 
     return (
         <div className="container mx-auto p-6 space-y-6 max-w-4xl">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate('/financeiro')}>
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
+            {/* Header com contexto */}
+            <div className="bg-gradient-to-r from-emerald-50 to-transparent rounded-2xl p-6 border border-emerald-100">
+                <div className="flex items-start gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/financeiro')} className="shrink-0 mt-1">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                <Wallet className="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-slate-900">Configurações Financeiras</h1>
+                        </div>
+                        <p className="text-slate-600">
+                            Configure impostos e taxas de cartão para ter relatórios precisos sobre seus ganhos reais.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dica inicial */}
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                    <Info className="w-4 h-4 text-amber-600" />
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-amber-900">Para que servem essas configurações?</p>
+                    <p className="text-sm text-amber-700 mt-1">
+                        Ao cadastrar suas taxas, o sistema calcula automaticamente quanto você realmente recebe em cada pagamento.
+                        Isso ajuda a entender melhor sua lucratividade.
+                    </p>
+                </div>
             </div>
 
 
 
             {/* Tax Configuration Section - Multiple Taxes */}
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Impostos</CardTitle>
-                        <CardDescription>Configure os impostos que incidem sobre as transações.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-red-50 to-transparent rounded-t-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                            <Receipt className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-red-900">Impostos</CardTitle>
+                            <CardDescription>Quanto você paga de imposto sobre cada atendimento?</CardDescription>
+                        </div>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setShowTaxForm(!showTaxForm)}>
                         <Plus className="w-4 h-4 mr-1" /> Adicionar
@@ -335,10 +375,15 @@ export default function FinancialSettings() {
 
             {/* Card Fees Section */}
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle>Taxas de Cartão</CardTitle>
-                        <CardDescription>Configure as taxas cobradas pela maquininha por bandeira e parcelamento.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-purple-50 to-transparent rounded-t-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                            <CreditCard className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-purple-900">Taxas de Cartão</CardTitle>
+                            <CardDescription>Quanto sua maquininha desconta em cada venda?</CardDescription>
+                        </div>
                     </div>
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>

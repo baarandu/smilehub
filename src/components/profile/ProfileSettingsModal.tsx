@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Building2, Upload, X, Loader2, Image as ImageIcon, Users, UserPlus, Shield, Edit3, Eye, Trash2, Activity } from 'lucide-react';
+import { Building2, Upload, X, Loader2, Image as ImageIcon, Users, UserPlus, Shield, Edit3, Eye, Trash2, Activity, Info, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -347,22 +347,32 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             <DialogContent className="sm:max-w-md md:max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-primary" />
+                        <div className="w-9 h-9 rounded-xl bg-[#a03f3d]/10 flex items-center justify-center">
+                            <Building2 className="w-5 h-5 text-[#a03f3d]" />
+                        </div>
                         Minha Clínica
                     </DialogTitle>
                     <DialogDescription>
-                        Configurações da clínica e gerenciamento de equipe.
+                        Personalize sua clínica e gerencie quem trabalha com você.
                     </DialogDescription>
                 </DialogHeader>
 
                 <Tabs defaultValue="clinic" value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="clinic">Dados da Clínica</TabsTrigger>
+                        <TabsTrigger value="clinic">Dados</TabsTrigger>
                         <TabsTrigger value="team">Equipe</TabsTrigger>
                         {isAdmin && <TabsTrigger value="audit">Auditoria</TabsTrigger>}
                     </TabsList>
 
                     <TabsContent value="clinic" className="space-y-6 py-4">
+                        {/* Helper text */}
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                            <p className="text-xs text-blue-700">
+                                Essas informações aparecem nos documentos e relatórios que você gera para pacientes.
+                            </p>
+                        </div>
+
                         {/* Clinic Name Section */}
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-foreground">Nome da Clínica</label>
@@ -454,6 +464,14 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                     </TabsContent>
 
                     <TabsContent value="team" className="space-y-6 py-4">
+                        {/* Helper text */}
+                        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                            <p className="text-xs text-blue-700">
+                                Adicione sua equipe para que possam acessar o sistema com suas próprias contas e permissões.
+                            </p>
+                        </div>
+
                         {/* Permission Warning / Debug Info */}
                         {!isAdmin && (
                             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg text-sm mb-4">
@@ -462,9 +480,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                                     Acesso Restrito
                                 </p>
                                 <p>
-                                    Você não possui privilégios de administrador para gerenciar a equipe.
-                                    <br />
-                                    Seu cargo atual: <strong>{role || 'Sem cargo (Null)'}</strong>
+                                    Apenas administradores podem adicionar ou remover membros da equipe.
                                 </p>
                             </div>
                         )}
@@ -472,8 +488,8 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                         {/* Invite Section */}
                         <div className={`space-y-3 p-4 bg-muted/30 rounded-lg border ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
                             <h3 className="text-sm font-medium flex items-center gap-2">
-                                <UserPlus className="w-4 h-4" />
-                                Convidar Novo Membro
+                                <UserPlus className="w-4 h-4 text-[#a03f3d]" />
+                                Adicionar novo membro
                             </h3>
                             <div className="flex gap-2 flex-col sm:flex-row">
                                 <Input

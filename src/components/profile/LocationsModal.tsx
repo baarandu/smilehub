@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, MapPin } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Info, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { locationsService, type Location } from '@/services/locations';
 import { toast } from 'sonner';
@@ -101,9 +102,14 @@ export function LocationsModal({ open, onOpenChange }: LocationsModalProps) {
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
-            Gerenciar Locais de Atendimento
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <MapPin className="w-5 h-5 text-emerald-600" />
+            </div>
+            Locais de Atendimento
           </DialogTitle>
+          <DialogDescription>
+            Cadastre os diferentes locais onde você atende pacientes.
+          </DialogDescription>
         </DialogHeader>
 
         {editMode ? (
@@ -143,9 +149,15 @@ export function LocationsModal({ open, onOpenChange }: LocationsModalProps) {
             {loading ? (
               <p className="text-center text-muted-foreground py-8">Carregando...</p>
             ) : locations.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum local cadastrado
-              </p>
+              <div className="text-center py-8 px-4">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                  <Building2 className="w-7 h-7 text-emerald-500" />
+                </div>
+                <p className="font-medium text-gray-900 mb-1">Nenhum local cadastrado</p>
+                <p className="text-sm text-muted-foreground">
+                  Útil se você trabalha em mais de uma clínica ou consultório.
+                </p>
+              </div>
             ) : (
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {locations.map((location) => (

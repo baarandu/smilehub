@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Key, MapPin, LogOut, Users, Building2 } from 'lucide-react';
+import { User, Key, MapPin, LogOut, Users, Building2, Sparkles, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -13,6 +13,7 @@ import { LocationsModal } from './LocationsModal';
 
 import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ export function ProfileMenu({ className }: ProfileMenuProps) {
 
   const [profileOpen, setProfileOpen] = useState(false);
   const { isAdmin, clinicName, displayName } = useClinic();
+  const { setIsOnboardingOpen, isCompleted, progress } = useOnboarding();
 
   const handleLogout = async () => {
     try {
@@ -68,6 +70,22 @@ export function ProfileMenu({ className }: ProfileMenuProps) {
           >
             <MapPin className="mr-2 h-4 w-4" />
             <span>Gerenciar Locais</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Onboarding / Setup option */}
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setIsOnboardingOpen(true)}
+          >
+            <Sparkles className="mr-2 h-4 w-4 text-[#a03f3d]" />
+            <span className="flex-1">Configuração inicial</span>
+            {!isCompleted && (
+              <span className="text-xs font-medium text-[#a03f3d] bg-red-50 px-1.5 py-0.5 rounded">
+                {Math.round(progress)}%
+              </span>
+            )}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, FileText, FileClock, Loader2, RefreshCw } from 'lucide-react';
+import { Users, FileText, FileClock, Loader2, RefreshCw, UserPlus, Sparkles } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
@@ -9,6 +9,7 @@ import { useInfinitePatients, usePatientSearch, useCreatePatient } from '@/hooks
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { budgetsService } from '@/services/budgets';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import type { PatientFormData } from '@/types/database';
 
 export default function Patients() {
@@ -17,6 +18,7 @@ export default function Patients() {
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { markStepCompleted } = useOnboarding();
 
   // Infinite Scroll Hook (Pagination)
   const {
@@ -69,6 +71,8 @@ export default function Patients() {
 
   const handleAddPatient = async (formData: PatientFormData) => {
     await createPatient.mutateAsync(formData);
+    // Mark onboarding step as completed
+    markStepCompleted('first_patient');
   };
 
   return (
@@ -138,11 +142,26 @@ export default function Patients() {
           ))}
         </div>
       ) : currentPatients.length === 0 ? (
-        <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
-          <Users className="w-12 h-12 mx-auto text-muted-foreground/40" />
-          <p className="mt-4 text-muted-foreground">
-            {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
-          </p>
+        <div className="bg-card rounded-2xl p-12 text-center shadow-card border border-border">
+          {search ? (
+            <>
+              <Users className="w-12 h-12 mx-auto text-muted-foreground/40" />
+              <p className="mt-4 text-muted-foreground">Nenhum paciente encontrado</p>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <UserPlus className="w-10 h-10 text-blue-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Comece cadastrando seu primeiro paciente
+              </h3>
+              <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+                Adicione um paciente para começar a organizar seus atendimentos e criar históricos completos.
+              </p>
+              <NewPatientDialog onAdd={handleAddPatient} isLoading={createPatient.isPending} />
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

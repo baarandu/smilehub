@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
 import { ClinicProvider } from "@/contexts/ClinicContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -107,13 +108,15 @@ const AppContent = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ClinicProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </TooltipProvider>
+      <OnboardingProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </TooltipProvider>
+      </OnboardingProvider>
     </ClinicProvider>
   </QueryClientProvider>
 );

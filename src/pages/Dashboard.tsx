@@ -15,9 +15,14 @@ import { remindersService, type Reminder } from '@/services/reminders';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
+import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
+import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { markStepCompleted } = useOnboarding();
+
   // const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount(); // Removing patients stats
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
   const { data: todayCount, isLoading: loadingTodayCount } = useTodayAppointmentsCount();
@@ -30,6 +35,9 @@ export default function Dashboard() {
   const { data: pendingReturnsList, isLoading: loadingPendingList, refetch: refetchPendingReturns } = usePendingReturnsList();
   const markCompleted = useMarkProcedureCompleted();
   const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
+
+  // Profile Settings Modal (for onboarding)
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   // Reminders Count
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
@@ -323,6 +331,25 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Onboarding Components */}
+      <OnboardingModal
+        onOpenClinicSettings={() => setShowProfileSettings(true)}
+      />
+      <OnboardingFloatingButton />
+
+      {/* Profile Settings Modal (triggered from onboarding) */}
+      <ProfileSettingsModal
+        open={showProfileSettings}
+        onOpenChange={(open) => {
+          setShowProfileSettings(open);
+          // Mark clinic_data and team steps as completed when closing
+          if (!open) {
+            markStepCompleted('clinic_data');
+            markStepCompleted('team');
+          }
+        }}
+      />
     </div>
   );
 }
