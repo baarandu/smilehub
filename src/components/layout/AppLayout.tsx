@@ -56,13 +56,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     return navItems;
   }, [role]);
 
-  // Emails with early access to AI Secretary (beta testers)
-  const AI_SECRETARY_ALLOWED_EMAILS = [
-    'vitor_cb@hotmail.com',
-    'sorria@barbaraqueiroz.com.br',
-  ];
-
-  const hasAISecretaryAccess = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
+  // AI Secretary only available for super admins
+  const hasAISecretaryAccess = isSuperAdmin;
 
   useEffect(() => {
     const checkAdmin = async () => {
