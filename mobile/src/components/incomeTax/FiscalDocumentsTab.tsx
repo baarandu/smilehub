@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -32,6 +32,10 @@ import {
     Share2,
     Mail,
     Package,
+    Search,
+    Bell,
+    Clock,
+    AlertCircle,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -41,6 +45,7 @@ import JSZip from 'jszip';
 import { useClinic } from '../../contexts/ClinicContext';
 import { supabase } from '../../lib/supabase';
 import { fiscalDocumentsService } from '../../services/fiscalDocuments';
+import { fiscalRemindersService, type FiscalAlert } from '../../services/fiscalReminders';
 import type {
     FiscalDocument,
     FiscalDocumentCategory,
@@ -103,6 +108,13 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
     // Export state
     const [exporting, setExporting] = useState(false);
 
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Alerts state
+    const [alerts, setAlerts] = useState<FiscalAlert[]>([]);
+    const [showAlerts, setShowAlerts] = useState(true);
+
     // Load data
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -147,6 +159,17 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
         setSections(sectionsData);
         setDocuments(docsData);
         setCompletionStats(stats);
+
+        // Load alerts
+        if (clinicId) {
+            try {
+                const alertsData = await fiscalRemindersService.getFiscalAlerts(clinicId, taxRegime, year);
+                setAlerts(alertsData);
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+            }
+        }
+
         setLoading(false);
     }, [clinicId, taxRegime, year]);
 
@@ -420,6 +443,39 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
         );
     };
 
+    // Filter sections based on search query
+    const filteredSections = useMemo(() => {
+        if (!searchQuery.trim()) return sections;
+
+        const query = searchQuery.toLowerCase().trim();
+        return sections.map(section => ({
+            ...section,
+            items: section.items.filter(item => {
+                // Check if item matches search
+                const itemMatches =
+                    item.label.toLowerCase().includes(query) ||
+                    item.description.toLowerCase().includes(query) ||
+                    section.label.toLowerCase().includes(query);
+
+                // Check if any document in this item matches
+                const itemDocs = getItemDocuments(item);
+                const docMatches = itemDocs.some(doc =>
+                    doc.name.toLowerCase().includes(query) ||
+                    (doc.description?.toLowerCase().includes(query))
+                );
+
+                return itemMatches || docMatches;
+            }),
+        })).filter(section => section.items.length > 0);
+    }, [sections, searchQuery, documents]);
+
+    // Get alert counts for badge
+    const alertCounts = useMemo(() => {
+        const critical = alerts.filter(a => a.urgency === 'critical').length;
+        const warning = alerts.filter(a => a.urgency === 'warning').length;
+        return { critical, warning, total: alerts.length };
+    }, [alerts]);
+
     // Share summary with accountant via WhatsApp/Email
     const handleShareWithAccountant = async () => {
         const pendingItems = sections.flatMap(s => s.items.filter(i => !i.isComplete && i.required));
@@ -637,19 +693,127 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                 </View>
             </View>
 
+            {/* Alerts Section */}
+            {alerts.length > 0 && (
+                <View className={`mx-4 mt-4 rounded-2xl overflow-hidden ${alertCounts.critical > 0 ? 'bg-red-50 border border-red-200' : 'bg-amber-50 border border-amber-200'}`}>
+                    <TouchableOpacity
+                        onPress={() => setShowAlerts(!showAlerts)}
+                        className="flex-row items-center justify-between p-4"
+                    >
+                        <View className="flex-row items-center flex-1">
+                            {showAlerts ? (
+                                <ChevronDown size={20} color="#6b7280" />
+                            ) : (
+                                <ChevronRight size={20} color="#6b7280" />
+                            )}
+                            <Bell size={20} color={alertCounts.critical > 0 ? '#ef4444' : '#f59e0b'} style={{ marginLeft: 8 }} />
+                            <View className="ml-3">
+                                <Text className="font-semibold text-gray-900">Alertas e Lembretes</Text>
+                                <Text className="text-xs text-gray-500">
+                                    {alertCounts.critical > 0 && (
+                                        <Text className="text-red-600">{alertCounts.critical} crítico{alertCounts.critical > 1 ? 's' : ''}</Text>
+                                    )}
+                                    {alertCounts.critical > 0 && alertCounts.warning > 0 && ', '}
+                                    {alertCounts.warning > 0 && (
+                                        <Text className="text-amber-600">{alertCounts.warning} aviso{alertCounts.warning > 1 ? 's' : ''}</Text>
+                                    )}
+                                </Text>
+                            </View>
+                        </View>
+                        <View className={`px-2 py-1 rounded-full ${alertCounts.critical > 0 ? 'bg-red-200' : 'bg-amber-200'}`}>
+                            <Text className={`text-xs font-medium ${alertCounts.critical > 0 ? 'text-red-700' : 'text-amber-700'}`}>
+                                {alertCounts.total} alerta{alertCounts.total !== 1 ? 's' : ''}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    {showAlerts && (
+                        <View className="px-4 pb-4">
+                            {alerts.map(alert => (
+                                <View
+                                    key={alert.id}
+                                    className={`flex-row items-start p-3 rounded-lg mt-2 ${
+                                        alert.urgency === 'critical' ? 'bg-red-100 border border-red-200' :
+                                        alert.urgency === 'warning' ? 'bg-amber-100 border border-amber-200' :
+                                        'bg-blue-50 border border-blue-200'
+                                    }`}
+                                >
+                                    {alert.urgency === 'critical' ? (
+                                        <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2 }} />
+                                    ) : alert.urgency === 'warning' ? (
+                                        <AlertTriangle size={20} color="#f59e0b" style={{ marginTop: 2 }} />
+                                    ) : (
+                                        <Clock size={20} color="#3b82f6" style={{ marginTop: 2 }} />
+                                    )}
+                                    <View className="flex-1 ml-3">
+                                        <View className="flex-row items-center flex-wrap gap-2">
+                                            <Text className="font-medium text-gray-900">{alert.title}</Text>
+                                            <View className="bg-white/60 px-2 py-0.5 rounded">
+                                                <Text className="text-xs text-gray-600">{alert.categoryLabel}</Text>
+                                            </View>
+                                        </View>
+                                        <Text className="text-sm text-gray-600 mt-1">{alert.description}</Text>
+                                        <Text className="text-xs text-gray-500 mt-1">
+                                            {alert.daysUntilDue < 0 ? (
+                                                <Text className="text-red-600 font-medium">
+                                                    Vencido há {Math.abs(alert.daysUntilDue)} dia{Math.abs(alert.daysUntilDue) !== 1 ? 's' : ''}
+                                                </Text>
+                                            ) : alert.daysUntilDue === 0 ? (
+                                                <Text className="text-red-600 font-medium">Vence hoje!</Text>
+                                            ) : (
+                                                <Text>
+                                                    Vence em {alert.daysUntilDue} dia{alert.daysUntilDue !== 1 ? 's' : ''} ({new Date(alert.dueDate).toLocaleDateString('pt-BR')})
+                                                </Text>
+                                            )}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            )}
+
+            {/* Search */}
+            <View className="mx-4 mt-4">
+                <View className="flex-row items-center bg-white rounded-xl px-4 py-3 shadow-sm">
+                    <Search size={18} color="#9ca3af" />
+                    <TextInput
+                        placeholder="Buscar documentos, categorias..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        className="flex-1 ml-2 text-gray-900"
+                        placeholderTextColor="#9ca3af"
+                    />
+                    {searchQuery !== '' && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <X size={18} color="#9ca3af" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                {searchQuery !== '' && (
+                    <Text className="text-sm text-gray-500 mt-2">
+                        {filteredSections.reduce((acc, s) => acc + s.items.length, 0)} resultado{filteredSections.reduce((acc, s) => acc + s.items.length, 0) !== 1 ? 's' : ''} para "{searchQuery}"
+                    </Text>
+                )}
+            </View>
+
             {/* Empty State */}
-            {sections.length === 0 && (
+            {filteredSections.length === 0 && (
                 <View className="bg-white mx-4 mt-4 rounded-2xl p-8 items-center">
                     <FolderOpen size={48} color="#9ca3af" />
                     <Text className="text-gray-500 mt-4 text-center">
-                        Nenhum item no checklist para o regime {TAX_REGIME_LABELS[taxRegime]}.
+                        {searchQuery
+                            ? `Nenhum resultado encontrado para "${searchQuery}".`
+                            : `Nenhum item no checklist para o regime ${TAX_REGIME_LABELS[taxRegime]}.`
+                        }
                     </Text>
                 </View>
             )}
 
             {/* Checklist Sections */}
             <View className="px-4 pb-6">
-                {sections.map((section) => (
+                {filteredSections.map((section) => (
                     <View key={section.category} className="bg-white mt-4 rounded-2xl overflow-hidden shadow-sm">
                         {/* Section Header */}
                         <TouchableOpacity

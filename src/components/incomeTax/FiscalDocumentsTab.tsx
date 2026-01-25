@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Upload,
     FileText,
@@ -20,6 +20,10 @@ import {
     Mail,
     Package,
     Loader2,
+    Search,
+    Bell,
+    Clock,
+    AlertCircle,
 } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -63,6 +67,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { fiscalDocumentsService } from '@/services/fiscalDocuments';
+import { fiscalRemindersService, type FiscalAlert } from '@/services/fiscalReminders';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import type {
@@ -141,6 +146,13 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     // Expanded sections
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['identificacao']));
 
+    // Search state
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Alerts state
+    const [alerts, setAlerts] = useState<FiscalAlert[]>([]);
+    const [showAlerts, setShowAlerts] = useState(true);
+
     // Load data
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -186,6 +198,17 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         setSections(sectionsData);
         setDocuments(docsData);
         setCompletionStats(stats);
+
+        // Load alerts
+        if (clinicId) {
+            try {
+                const alertsData = await fiscalRemindersService.getFiscalAlerts(clinicId, taxRegime, year);
+                setAlerts(alertsData);
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+            }
+        }
+
         setLoading(false);
     }, [clinicId, taxRegime, year]);
 
@@ -417,6 +440,39 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         );
     };
 
+    // Filter sections based on search query
+    const filteredSections = useMemo(() => {
+        if (!searchQuery.trim()) return sections;
+
+        const query = searchQuery.toLowerCase().trim();
+        return sections.map(section => ({
+            ...section,
+            items: section.items.filter(item => {
+                // Check if item matches search
+                const itemMatches =
+                    item.label.toLowerCase().includes(query) ||
+                    item.description.toLowerCase().includes(query) ||
+                    section.label.toLowerCase().includes(query);
+
+                // Check if any document in this item matches
+                const itemDocs = getItemDocuments(item);
+                const docMatches = itemDocs.some(doc =>
+                    doc.name.toLowerCase().includes(query) ||
+                    (doc.description?.toLowerCase().includes(query))
+                );
+
+                return itemMatches || docMatches;
+            }),
+        })).filter(section => section.items.length > 0);
+    }, [sections, searchQuery, documents]);
+
+    // Get alert counts for badge
+    const alertCounts = useMemo(() => {
+        const critical = alerts.filter(a => a.urgency === 'critical').length;
+        const warning = alerts.filter(a => a.urgency === 'warning').length;
+        return { critical, warning, total: alerts.length };
+    }, [alerts]);
+
     if (loading) {
         return (
             <div className="space-y-6">
@@ -495,19 +551,135 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                 </CardContent>
             </Card>
 
+            {/* Alerts Section */}
+            {alerts.length > 0 && (
+                <Card className={alertCounts.critical > 0 ? 'border-red-300 bg-red-50/50' : alertCounts.warning > 0 ? 'border-amber-300 bg-amber-50/50' : ''}>
+                    <Collapsible open={showAlerts} onOpenChange={setShowAlerts}>
+                        <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors pb-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {showAlerts ? (
+                                            <ChevronDown className="w-5 h-5" />
+                                        ) : (
+                                            <ChevronRight className="w-5 h-5" />
+                                        )}
+                                        <Bell className={`w-5 h-5 ${alertCounts.critical > 0 ? 'text-red-500' : 'text-amber-500'}`} />
+                                        <div>
+                                            <CardTitle className="text-base">Alertas e Lembretes</CardTitle>
+                                            <CardDescription>
+                                                {alertCounts.critical > 0 && (
+                                                    <span className="text-red-600">{alertCounts.critical} crítico{alertCounts.critical > 1 ? 's' : ''}</span>
+                                                )}
+                                                {alertCounts.critical > 0 && alertCounts.warning > 0 && ', '}
+                                                {alertCounts.warning > 0 && (
+                                                    <span className="text-amber-600">{alertCounts.warning} aviso{alertCounts.warning > 1 ? 's' : ''}</span>
+                                                )}
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <Badge variant={alertCounts.critical > 0 ? 'destructive' : 'secondary'}>
+                                        {alertCounts.total} alerta{alertCounts.total !== 1 ? 's' : ''}
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <CardContent className="pt-0">
+                                <div className="space-y-2">
+                                    {alerts.map(alert => (
+                                        <div
+                                            key={alert.id}
+                                            className={`flex items-start gap-3 p-3 rounded-lg ${
+                                                alert.urgency === 'critical' ? 'bg-red-100 border border-red-200' :
+                                                alert.urgency === 'warning' ? 'bg-amber-100 border border-amber-200' :
+                                                'bg-blue-50 border border-blue-200'
+                                            }`}
+                                        >
+                                            {alert.urgency === 'critical' ? (
+                                                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                                            ) : alert.urgency === 'warning' ? (
+                                                <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                            ) : (
+                                                <Clock className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-medium">{alert.title}</span>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {alert.categoryLabel}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    {alert.description}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {alert.daysUntilDue < 0 ? (
+                                                        <span className="text-red-600 font-medium">
+                                                            Vencido há {Math.abs(alert.daysUntilDue)} dia{Math.abs(alert.daysUntilDue) !== 1 ? 's' : ''}
+                                                        </span>
+                                                    ) : alert.daysUntilDue === 0 ? (
+                                                        <span className="text-red-600 font-medium">Vence hoje!</span>
+                                                    ) : (
+                                                        <span>
+                                                            Vence em {alert.daysUntilDue} dia{alert.daysUntilDue !== 1 ? 's' : ''} ({new Date(alert.dueDate).toLocaleDateString('pt-BR')})
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Collapsible>
+                </Card>
+            )}
+
+            {/* Search */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                    placeholder="Buscar documentos, categorias..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                />
+                {searchQuery && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => setSearchQuery('')}
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                )}
+            </div>
+
+            {/* Search results info */}
+            {searchQuery && (
+                <p className="text-sm text-muted-foreground">
+                    {filteredSections.reduce((acc, s) => acc + s.items.length, 0)} resultado{filteredSections.reduce((acc, s) => acc + s.items.length, 0) !== 1 ? 's' : ''} para "{searchQuery}"
+                </p>
+            )}
+
             {/* Checklist by Category */}
             <div className="space-y-4">
-                {sections.length === 0 && (
+                {filteredSections.length === 0 && (
                     <Card>
                         <CardContent className="py-8 text-center">
                             <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                             <p className="text-muted-foreground">
-                                Nenhum item no checklist para o regime {TAX_REGIME_LABELS[taxRegime]}.
+                                {searchQuery
+                                    ? `Nenhum resultado encontrado para "${searchQuery}".`
+                                    : `Nenhum item no checklist para o regime ${TAX_REGIME_LABELS[taxRegime]}.`
+                                }
                             </p>
                         </CardContent>
                     </Card>
                 )}
-                {sections.map((section) => (
+                {filteredSections.map((section) => (
                     <Card key={section.category}>
                         <Collapsible
                             open={expandedSections.has(section.category)}
