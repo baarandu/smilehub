@@ -32,7 +32,7 @@ const STEP_ICONS: Record<string, React.ElementType> = {
 };
 
 interface OnboardingModalProps {
-  onOpenClinicSettings?: () => void;
+  onOpenClinicSettings?: (tab?: 'clinic' | 'team') => void;
 }
 
 export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) {
@@ -60,9 +60,11 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
     setShouldReturnToOnboarding(true);
     setIsOnboardingOpen(false);
 
-    // For clinic_data and team, open the profile settings modal
-    if (stepId === 'clinic_data' || stepId === 'team') {
-      onOpenClinicSettings?.();
+    // For clinic_data and team, open the profile settings modal with correct tab
+    if (stepId === 'clinic_data') {
+      onOpenClinicSettings?.('clinic');
+    } else if (stepId === 'team') {
+      onOpenClinicSettings?.('team');
     } else {
       navigate(route);
     }

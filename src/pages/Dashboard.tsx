@@ -38,7 +38,7 @@ export default function Dashboard() {
 
   // Profile Settings Modal (for onboarding)
   const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const [profileSettingsFromOnboarding, setProfileSettingsFromOnboarding] = useState(false);
+  const [profileSettingsTab, setProfileSettingsTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
   // Reminders Count
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
@@ -335,7 +335,10 @@ export default function Dashboard() {
 
       {/* Onboarding Components */}
       <OnboardingModal
-        onOpenClinicSettings={() => setShowProfileSettings(true)}
+        onOpenClinicSettings={(tab) => {
+          setProfileSettingsTab(tab || 'clinic');
+          setShowProfileSettings(true);
+        }}
       />
       <OnboardingFloatingButton />
 
@@ -349,6 +352,7 @@ export default function Dashboard() {
             returnToOnboardingIfNeeded();
           }
         }}
+        initialTab={profileSettingsTab}
       />
     </div>
   );

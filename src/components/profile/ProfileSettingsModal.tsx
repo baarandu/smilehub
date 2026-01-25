@@ -35,6 +35,7 @@ import { supabase } from '@/lib/supabase';
 interface ProfileSettingsModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    initialTab?: 'clinic' | 'team' | 'audit';
 }
 
 type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
@@ -67,7 +68,7 @@ function StethoscopeIcon(props: any) {
     return <Users {...props} />;
 }
 
-export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModalProps) {
+export function ProfileSettingsModal({ open, onOpenChange, initialTab }: ProfileSettingsModalProps) {
     const { refetch, isAdmin, clinicId, clinicName: contextClinicName, role } = useClinic();
     const { markStepCompleted } = useOnboarding();
 
@@ -81,7 +82,14 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
     const logoInputRef = useRef<HTMLInputElement>(null);
 
     // Team Management State
-    const [activeTab, setActiveTab] = useState('clinic');
+    const [activeTab, setActiveTab] = useState(initialTab || 'clinic');
+
+    // Update active tab when initialTab changes and modal opens
+    useEffect(() => {
+        if (open && initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [open, initialTab]);
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [invites, setInvites] = useState<TeamInvite[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(false);
