@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw, Search, X, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Bell, MessageCircle, Phone, Clock, AlertTriangle, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, RotateCcw, Search, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -12,6 +12,7 @@ import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAp
 import { useBirthdayAlerts, useProcedureReminders, useDismissAlert } from '@/hooks/useAlerts';
 import { remindersService, Reminder } from '@/services/reminders';
 import { getPatients } from '@/services/patients';
+import { evolutionApi } from '@/services/evolutionApi';
 import { Patient } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -56,9 +57,35 @@ export default function Alerts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // WhatsApp Integration
+  const [whatsappConnected, setWhatsappConnected] = useState(false);
+  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState<string | null>(null);
+
+  // Check WhatsApp connection status
+  const checkWhatsappStatus = useCallback(async () => {
+    try {
+      const isHealthy = await evolutionApi.healthCheck();
+      if (!isHealthy) {
+        setWhatsappConnected(false);
+        return;
+      }
+      const state = await evolutionApi.getConnectionState();
+      setWhatsappConnected(state.instance?.state === 'open');
+    } catch {
+      setWhatsappConnected(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkWhatsappStatus();
+    // Check every 30 seconds
+    const interval = setInterval(checkWhatsappStatus, 30000);
+    return () => clearInterval(interval);
+  }, [checkWhatsappStatus]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadReminders();
+    await Promise.all([loadReminders(), checkWhatsappStatus()]);
     setIsRefreshing(false);
   };
 
@@ -177,35 +204,66 @@ export default function Alerts() {
     }
   };
 
-  const handleWhatsApp = (
+  const handleWhatsApp = async (
     phone: string,
     name: string,
     type: 'birthday' | 'return' | 'reminder',
     alertInfo?: { patientId: string; alertDate: string }
   ) => {
     const cleanPhone = phone.replace(/\D/g, '');
+    const firstName = name.split(' ')[0];
     let message = '';
 
     if (type === 'birthday') {
-      message = birthdayTemplate.replace('{name}', name);
+      message = birthdayTemplate.replace('{name}', firstName);
     } else if (type === 'return') {
-      message = returnTemplate.replace('{name}', name);
+      message = returnTemplate.replace('{name}', firstName);
     } else {
-      message = confirmationTemplate.replace('{name}', name);
+      message = confirmationTemplate.replace('{name}', firstName);
     }
 
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+    // Try to send via Evolution API if connected
+    if (whatsappConnected) {
+      const messageId = `${cleanPhone}-${Date.now()}`;
+      setIsSendingWhatsapp(messageId);
+      try {
+        await evolutionApi.sendText(cleanPhone, message);
+        toast.success('Mensagem enviada via WhatsApp!');
 
-    // Mark alert as handled if alertInfo is provided
-    if (alertInfo) {
-      const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
-      dismissAlert.mutate({
-        alertType: alertType as 'birthday' | 'procedure_return',
-        patientId: alertInfo.patientId,
-        alertDate: alertInfo.alertDate,
-        action: 'messaged'
-      });
+        // Mark alert as handled
+        if (alertInfo) {
+          const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
+          dismissAlert.mutate({
+            alertType: alertType as 'birthday' | 'procedure_return',
+            patientId: alertInfo.patientId,
+            alertDate: alertInfo.alertDate,
+            action: 'messaged'
+          });
+        }
+      } catch (error) {
+        console.error('Error sending WhatsApp:', error);
+        toast.error('Falha ao enviar. Abrindo WhatsApp Web...');
+        // Fallback to wa.me link
+        const encoded = encodeURIComponent(message);
+        window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+      } finally {
+        setIsSendingWhatsapp(null);
+      }
+    } else {
+      // Fallback: open WhatsApp Web link
+      const encoded = encodeURIComponent(message);
+      window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+
+      // Mark alert as handled if alertInfo is provided
+      if (alertInfo) {
+        const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
+        dismissAlert.mutate({
+          alertType: alertType as 'birthday' | 'procedure_return',
+          patientId: alertInfo.patientId,
+          alertDate: alertInfo.alertDate,
+          action: 'messaged'
+        });
+      }
     }
   };
 
@@ -238,14 +296,30 @@ export default function Alerts() {
     setTimeout(() => setShowPatientSelect(true), 200);
   };
 
-  const handleSelectPatient = (patient: Patient) => {
+  const handleSelectPatient = async (patient: Patient) => {
     if (!sendingTemplate) return;
     const cleanPhone = patient.phone.replace(/\D/g, '');
     const firstName = patient.name.split(' ')[0];
     const message = sendingTemplate.replace('{name}', firstName);
 
-    const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+    if (whatsappConnected) {
+      const messageId = `${cleanPhone}-${Date.now()}`;
+      setIsSendingWhatsapp(messageId);
+      try {
+        await evolutionApi.sendText(cleanPhone, message);
+        toast.success(`Mensagem enviada para ${firstName}!`);
+      } catch (error) {
+        console.error('Error sending WhatsApp:', error);
+        toast.error('Falha ao enviar. Abrindo WhatsApp Web...');
+        const encoded = encodeURIComponent(message);
+        window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+      } finally {
+        setIsSendingWhatsapp(null);
+      }
+    } else {
+      const encoded = encodeURIComponent(message);
+      window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+    }
 
     setShowPatientSelect(false);
     setSendingTemplate(null);

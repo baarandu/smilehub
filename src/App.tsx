@@ -18,6 +18,7 @@ const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Alerts = lazy(() => import("./pages/Alerts"));
+const AISecretary = lazy(() => import("./pages/AISecretary"));
 const Materials = lazy(() => import("./pages/Materials"));
 const Financial = lazy(() => import("./pages/Financial"));
 const FinancialSettings = lazy(() => import("./pages/FinancialSettings"));
@@ -86,6 +87,7 @@ const AppContent = () => (
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
         <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
         <Route path="/alertas" element={<AppLayout><Alerts /></AppLayout>} />
+        <Route path="/secretaria-ia" element={<AppLayout><AISecretary /></AppLayout>} />
         <Route path="/materiais" element={<AppLayout><Materials /></AppLayout>} />
         <Route path="/financeiro" element={<AppLayout><Financial /></AppLayout>} />
         <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
