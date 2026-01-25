@@ -45,6 +45,7 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
     isCompleted,
     isFirstAccess,
     dismissOnboarding,
+    setShouldReturnToOnboarding,
   } = useOnboarding();
 
   const [showSuccess, setShowSuccess] = useState(false);
@@ -55,12 +56,14 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
   }
 
   const handleStepClick = (stepId: string, route: string) => {
+    // Mark that we should return to onboarding after this action
+    setShouldReturnToOnboarding(true);
+    setIsOnboardingOpen(false);
+
     // For clinic_data and team, open the profile settings modal
     if (stepId === 'clinic_data' || stepId === 'team') {
-      setIsOnboardingOpen(false);
       onOpenClinicSettings?.();
     } else {
-      setIsOnboardingOpen(false);
       navigate(route);
     }
   };

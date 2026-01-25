@@ -25,6 +25,10 @@ interface OnboardingContextType {
   setShowTooltips: (show: boolean) => void;
   dismissOnboarding: () => Promise<void>;
   checkAndShowOnboarding: () => void;
+  // Track if user came from onboarding to return after action
+  shouldReturnToOnboarding: boolean;
+  setShouldReturnToOnboarding: (value: boolean) => void;
+  returnToOnboardingIfNeeded: () => void;
 }
 
 const ONBOARDING_STEPS: Omit<OnboardingStep, 'completed'>[] = [
@@ -75,6 +79,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [showTooltips, setShowTooltips] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
+  const [shouldReturnToOnboarding, setShouldReturnToOnboarding] = useState(false);
 
   const getStorageKey = useCallback(() => {
     return clinicId ? `${STORAGE_KEY}_${clinicId}` : STORAGE_KEY;
@@ -155,6 +160,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
   }, [isDismissed, isCompleted, completedSteps.length]);
 
+  const returnToOnboardingIfNeeded = useCallback(() => {
+    if (shouldReturnToOnboarding) {
+      setShouldReturnToOnboarding(false);
+      setIsOnboardingOpen(true);
+    }
+  }, [shouldReturnToOnboarding]);
+
   const value: OnboardingContextType = {
     isOnboardingOpen,
     setIsOnboardingOpen,
@@ -172,6 +184,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     },
     dismissOnboarding,
     checkAndShowOnboarding,
+    shouldReturnToOnboarding,
+    setShouldReturnToOnboarding,
+    returnToOnboardingIfNeeded,
   };
 
   return (

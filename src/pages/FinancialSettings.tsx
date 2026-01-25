@@ -28,7 +28,7 @@ const formatBrandName = (brand: string): string => {
 export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { markStepCompleted } = useOnboarding();
+    const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
     const [loading, setLoading] = useState(true);
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
@@ -102,8 +102,13 @@ export default function FinancialSettings() {
             setNewTaxRate('');
             setShowTaxForm(false);
             loadData();
-            // Mark onboarding step as completed
+            // Mark onboarding step as completed and return if needed
             markStepCompleted('financial');
+            if (shouldReturnToOnboarding) {
+                setShouldReturnToOnboarding(false);
+                setIsOnboardingOpen(true);
+                navigate('/inicio');
+            }
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar imposto." });
@@ -145,8 +150,13 @@ export default function FinancialSettings() {
             setNewFee({ ...newFee, brand: '', rate: '', anticipation_rate: '' });
             setIsAddOpen(false);
             loadData();
-            // Mark onboarding step as completed
+            // Mark onboarding step as completed and return if needed
             markStepCompleted('financial');
+            if (shouldReturnToOnboarding) {
+                setShouldReturnToOnboarding(false);
+                setIsOnboardingOpen(true);
+                navigate('/inicio');
+            }
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar regra." });
@@ -176,8 +186,13 @@ export default function FinancialSettings() {
             setNewBrandName('');
             setShowBrandForm(false);
             loadData();
-            // Mark onboarding step as completed
+            // Mark onboarding step as completed and return if needed
             markStepCompleted('financial');
+            if (shouldReturnToOnboarding) {
+                setShouldReturnToOnboarding(false);
+                setIsOnboardingOpen(true);
+                navigate('/inicio');
+            }
         } catch (error: any) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: error.message || "Falha ao adicionar bandeira." });
@@ -209,10 +224,45 @@ export default function FinancialSettings() {
 
     return (
         <div className="container mx-auto p-6 space-y-6 max-w-4xl">
+            {/* Onboarding context banner */}
+            {shouldReturnToOnboarding && (
+                <div className="flex items-center justify-between gap-3 p-3 bg-[#a03f3d]/5 border border-[#a03f3d]/20 rounded-xl">
+                    <p className="text-sm text-[#a03f3d]">
+                        <span className="font-medium">Configuração inicial:</span> Configure pelo menos um imposto ou taxa de cartão
+                    </p>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            setShouldReturnToOnboarding(false);
+                            setIsOnboardingOpen(true);
+                            navigate('/inicio');
+                        }}
+                        className="text-[#a03f3d] hover:text-[#8b3634] hover:bg-[#a03f3d]/10"
+                    >
+                        <ArrowLeft className="w-4 h-4 mr-1" />
+                        Voltar
+                    </Button>
+                </div>
+            )}
+
             {/* Header com contexto */}
             <div className="bg-gradient-to-r from-emerald-50 to-transparent rounded-2xl p-6 border border-emerald-100">
                 <div className="flex items-start gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/financeiro')} className="shrink-0 mt-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            if (shouldReturnToOnboarding) {
+                                setShouldReturnToOnboarding(false);
+                                setIsOnboardingOpen(true);
+                                navigate('/inicio');
+                            } else {
+                                navigate('/financeiro');
+                            }
+                        }}
+                        className="shrink-0 mt-1"
+                    >
                         <ArrowLeft className="w-5 h-5" />
                     </Button>
                     <div className="flex-1">

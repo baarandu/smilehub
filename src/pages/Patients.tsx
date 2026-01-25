@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Users, FileText, FileClock, Loader2, RefreshCw, UserPlus, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, FileText, FileClock, Loader2, RefreshCw, UserPlus, Sparkles, ArrowLeft } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
@@ -13,12 +14,13 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import type { PatientFormData } from '@/types/database';
 
 export default function Patients() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { markStepCompleted } = useOnboarding();
+  const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
 
   // Infinite Scroll Hook (Pagination)
   const {
@@ -73,10 +75,40 @@ export default function Patients() {
     await createPatient.mutateAsync(formData);
     // Mark onboarding step as completed
     markStepCompleted('first_patient');
+    // Return to onboarding if came from there
+    if (shouldReturnToOnboarding) {
+      setShouldReturnToOnboarding(false);
+      setIsOnboardingOpen(true);
+      navigate('/inicio');
+    }
+  };
+
+  const handleBackToOnboarding = () => {
+    setShouldReturnToOnboarding(false);
+    setIsOnboardingOpen(true);
+    navigate('/inicio');
   };
 
   return (
     <div className="space-y-6">
+      {/* Onboarding context banner */}
+      {shouldReturnToOnboarding && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-[#a03f3d]/5 border border-[#a03f3d]/20 rounded-xl">
+          <p className="text-sm text-[#a03f3d]">
+            <span className="font-medium">Configuração inicial:</span> Cadastre seu primeiro paciente para continuar
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBackToOnboarding}
+            className="text-[#a03f3d] hover:text-[#8b3634] hover:bg-[#a03f3d]/10"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Voltar
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

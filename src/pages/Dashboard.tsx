@@ -17,9 +17,11 @@ import { useNavigate } from 'react-router-dom';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
 import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
 import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { returnToOnboardingIfNeeded } = useOnboarding();
 
   // const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount(); // Removing patients stats
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
@@ -36,6 +38,7 @@ export default function Dashboard() {
 
   // Profile Settings Modal (for onboarding)
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [profileSettingsFromOnboarding, setProfileSettingsFromOnboarding] = useState(false);
 
   // Reminders Count
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
@@ -339,7 +342,13 @@ export default function Dashboard() {
       {/* Profile Settings Modal (triggered from onboarding) */}
       <ProfileSettingsModal
         open={showProfileSettings}
-        onOpenChange={setShowProfileSettings}
+        onOpenChange={(open) => {
+          setShowProfileSettings(open);
+          // Return to onboarding if it was opened from there
+          if (!open) {
+            returnToOnboardingIfNeeded();
+          }
+        }}
       />
     </div>
   );
