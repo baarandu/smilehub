@@ -36,11 +36,13 @@ import {
     Bell,
     Clock,
     AlertCircle,
+    Calendar,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import JSZip from 'jszip';
 import { useClinic } from '../../contexts/ClinicContext';
 import { supabase } from '../../lib/supabase';
@@ -96,8 +98,10 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
     const [uploadName, setUploadName] = useState('');
     const [uploadDescription, setUploadDescription] = useState('');
     const [uploadMonth, setUploadMonth] = useState<number | null>(null);
+    const [uploadExpirationDate, setUploadExpirationDate] = useState<Date | null>(null);
     const [uploading, setUploading] = useState(false);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     // Preview modal state
     const [previewDoc, setPreviewDoc] = useState<FiscalDocument | null>(null);
@@ -197,6 +201,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
         setUploadName('');
         setUploadDescription('');
         setUploadMonth(null);
+        setUploadExpirationDate(null);
         setUploadModalVisible(true);
     };
 
@@ -352,6 +357,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                     subcategory: selectedItem.subcategory,
                     fiscal_year: year,
                     reference_month: uploadMonth || null,
+                    expiration_date: uploadExpirationDate ? uploadExpirationDate.toISOString().split('T')[0] : null,
                 } as any);
 
             if (dbError) throw dbError;
@@ -1047,6 +1053,49 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                                     <ChevronDown size={20} color="#6b7280" />
                                 </TouchableOpacity>
                             </>
+                        )}
+
+                        {/* Expiration Date */}
+                        <Text className="text-sm font-medium text-gray-700 mb-1">Data de validade (opcional)</Text>
+                        <Text className="text-xs text-gray-500 mb-2">
+                            Para documentos com prazo de validade (ex: alvará, CRO, certidões)
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() => setShowDatePicker(true)}
+                            className="bg-gray-50 rounded-xl px-4 py-3 mb-4 flex-row items-center justify-between"
+                        >
+                            <Text className={uploadExpirationDate ? 'text-gray-900' : 'text-gray-400'}>
+                                {uploadExpirationDate ? uploadExpirationDate.toLocaleDateString('pt-BR') : 'Selecione a data'}
+                            </Text>
+                            <View className="flex-row items-center">
+                                {uploadExpirationDate && (
+                                    <TouchableOpacity
+                                        onPress={(e) => {
+                                            e.stopPropagation();
+                                            setUploadExpirationDate(null);
+                                        }}
+                                        className="mr-2 p-1"
+                                    >
+                                        <X size={16} color="#9ca3af" />
+                                    </TouchableOpacity>
+                                )}
+                                <Calendar size={20} color="#6b7280" />
+                            </View>
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={uploadExpirationDate || new Date()}
+                                mode="date"
+                                display="default"
+                                minimumDate={new Date()}
+                                onChange={(event, selectedDate) => {
+                                    setShowDatePicker(false);
+                                    if (event.type === 'set' && selectedDate) {
+                                        setUploadExpirationDate(selectedDate);
+                                    }
+                                }}
+                            />
                         )}
 
                         {/* Description */}

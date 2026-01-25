@@ -200,6 +200,7 @@ export const fiscalDocumentsService = {
             subcategory?: string;
             fiscalYear: number;
             referenceMonth?: number;
+            expirationDate?: string;
             notes?: string;
         }
     ): Promise<FiscalDocument> {
@@ -231,6 +232,7 @@ export const fiscalDocumentsService = {
             subcategory: metadata.subcategory,
             fiscal_year: metadata.fiscalYear,
             reference_month: metadata.referenceMonth,
+            expiration_date: metadata.expirationDate || null,
             // Note: uploaded_by removed to avoid FK constraint issues with profiles table
             notes: metadata.notes,
         };

@@ -131,6 +131,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     const [uploadName, setUploadName] = useState('');
     const [uploadDescription, setUploadDescription] = useState('');
     const [uploadMonth, setUploadMonth] = useState<string>('');
+    const [uploadExpirationDate, setUploadExpirationDate] = useState<string>('');
     const [uploading, setUploading] = useState(false);
 
     // Preview dialog state
@@ -256,6 +257,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                 subcategory: selectedItem.subcategory,
                 fiscalYear: year,
                 referenceMonth: uploadMonth ? parseInt(uploadMonth) : undefined,
+                expirationDate: uploadExpirationDate || undefined,
             });
 
             toast.success('Documento enviado com sucesso');
@@ -295,6 +297,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         setUploadName('');
         setUploadDescription('');
         setUploadMonth('');
+        setUploadExpirationDate('');
         setSelectedItem(null);
     };
 
@@ -907,6 +910,21 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                 </Select>
                             </div>
                         )}
+
+                        {/* Expiration date */}
+                        <div>
+                            <Label htmlFor="upload-expiration">Data de validade (opcional)</Label>
+                            <p className="text-xs text-muted-foreground mb-2">
+                                Para documentos com prazo de validade (ex: alvará, CRO, certidões)
+                            </p>
+                            <Input
+                                id="upload-expiration"
+                                type="date"
+                                value={uploadExpirationDate}
+                                onChange={(e) => setUploadExpirationDate(e.target.value)}
+                                className="mt-1"
+                            />
+                        </div>
 
                         {/* Description */}
                         <div>
