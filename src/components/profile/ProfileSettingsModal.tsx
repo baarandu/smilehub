@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { profileService } from '@/services/profile';
 import { auditService, type AuditLog } from '@/services/audit';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
@@ -68,6 +69,7 @@ function StethoscopeIcon(props: any) {
 
 export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModalProps) {
     const { refetch, isAdmin, clinicId, clinicName: contextClinicName, role } = useClinic();
+    const { markStepCompleted } = useOnboarding();
 
     // Clinic Info State
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -234,6 +236,8 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             setInitialName(clinicName.trim());
             await refetch();
             toast.success('Nome da clínica atualizado com sucesso!');
+            // Mark onboarding step as completed
+            markStepCompleted('clinic_data');
         } catch (error) {
             console.error('Error updating clinic name:', error);
             toast.error('Não foi possível atualizar o nome da clínica.');
@@ -262,6 +266,8 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             setLogoUrl(url);
             await refetch();
             toast.success('Logo atualizado com sucesso!');
+            // Mark onboarding step as completed
+            markStepCompleted('clinic_data');
         } catch (error) {
             console.error('Error uploading logo:', error);
             toast.error('Não foi possível fazer upload do logo.');
@@ -311,6 +317,8 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
             toast.success(result.message || 'Usuário processado com sucesso');
             setInviteEmail('');
             loadTeamData();
+            // Mark onboarding step as completed
+            markStepCompleted('team');
         } catch (error) {
             console.error('Error sending invite:', error);
             toast.error('Erro ao enviar convite');

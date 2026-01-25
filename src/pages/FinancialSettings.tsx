@@ -33,11 +33,6 @@ export default function FinancialSettings() {
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 
-    // Mark financial step as completed when visiting this page
-    useEffect(() => {
-        markStepCompleted('financial');
-    }, [markStepCompleted]);
-
     // Multiple Taxes State
     const [taxes, setTaxes] = useState<{ id: string; name: string; rate: number }[]>([]);
     const [newTaxName, setNewTaxName] = useState('');
@@ -107,6 +102,8 @@ export default function FinancialSettings() {
             setNewTaxRate('');
             setShowTaxForm(false);
             loadData();
+            // Mark onboarding step as completed
+            markStepCompleted('financial');
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar imposto." });
@@ -147,7 +144,9 @@ export default function FinancialSettings() {
             toast({ title: "Sucesso", description: "Regra de taxa adicionada." });
             setNewFee({ ...newFee, brand: '', rate: '', anticipation_rate: '' });
             setIsAddOpen(false);
-            loadData(); // Reload list
+            loadData();
+            // Mark onboarding step as completed
+            markStepCompleted('financial');
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Erro ao salvar regra." });
@@ -177,6 +176,8 @@ export default function FinancialSettings() {
             setNewBrandName('');
             setShowBrandForm(false);
             loadData();
+            // Mark onboarding step as completed
+            markStepCompleted('financial');
         } catch (error: any) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: error.message || "Falha ao adicionar bandeira." });
