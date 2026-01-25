@@ -13,7 +13,8 @@ import {
   Bot,
   Crown,
   CreditCard,
-  FileText
+  FileText,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -139,20 +140,24 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-40 transition-transform duration-300 ease-in-out shadow-elevated lg:shadow-card",
+          "fixed top-0 left-0 h-full w-64 bg-card border-r border-border z-40 transition-transform duration-300 ease-in-out shadow-elevated lg:shadow-card flex flex-col",
           "lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo */}
-        <div className="h-20 flex items-center gap-3 px-6 border-b border-border">
+        <div className="h-20 flex items-center gap-3 px-6 border-b border-border shrink-0">
           <img src="/logo-login.png" alt="Logo" className="w-11 h-11 rounded-xl object-contain" />
           <div>
             <h1 className="font-bold text-lg text-foreground">Organiza Odonto</h1>
-            <p className="text-xs text-muted-foreground">Prontuário Digital</p>
+            <p className="text-xs text-muted-foreground">
+              Prontuário Digital {isSuperAdmin && <span className="text-primary">(Admin)</span>}
+            </p>
           </div>
         </div>
 
+        {/* Scrollable Navigation Area */}
+        <div className="flex-1 overflow-y-auto">
         {/* Navigation */}
         <nav className="p-4 space-y-1">
           {filteredNavItems.map((item) => {
@@ -182,7 +187,20 @@ export function AppLayout({ children }: AppLayoutProps) {
         </nav>
 
         {isSuperAdmin && (
-          <div className="px-4">
+          <div className="px-4 space-y-1">
+            <NavLink
+              to="/admin/dashboard"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                location.pathname === '/admin/dashboard'
+                  ? "bg-red-100 text-[#8b3634]"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <ShieldCheck className={cn("w-5 h-5", location.pathname === '/admin/dashboard' && "text-[#a03f3d]")} />
+              <span className="flex-1">Painel Admin</span>
+            </NavLink>
             <NavLink
               to="/admin/planos"
               onClick={() => setSidebarOpen(false)}
@@ -214,6 +232,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </button>
           </div>
         )}
+        </div>{/* End Scrollable Navigation Area */}
       </aside>
 
       {/* Overlay */}

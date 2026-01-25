@@ -29,7 +29,7 @@ function RootLayoutNav() {
         const isPublicRoute = publicRoutes.includes(firstSegment as string);
 
         // Protected routes (tabs and other authenticated pages)
-        const protectedRoutes = ['(tabs)', 'patient', 'settings'];
+        const protectedRoutes = ['(tabs)', 'patient', 'settings', 'admin'];
         const isProtectedRoute = protectedRoutes.includes(firstSegment as string);
 
         // Routes that should be accessible even without subscription (to allow payment)
@@ -103,6 +103,7 @@ function RootLayoutNav() {
                 <Stack.Screen name="reset-password" />
                 <Stack.Screen name="trial-expired" />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="admin" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" />
         </>

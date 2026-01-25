@@ -26,6 +26,7 @@ const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const AdminPlans = lazy(() => import("./pages/AdminPlans"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const TrialExpired = lazy(() => import("./pages/TrialExpired"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -94,6 +95,7 @@ const AppContent = () => (
 
       {/* Admin Routes */}
       <Route element={<AdminRoute />}>
+        <Route path="/admin/dashboard" element={<AppLayout><AdminDashboard /></AppLayout>} />
         <Route path="/admin/planos" element={<AppLayout><AdminPlans /></AppLayout>} />
       </Route>
 

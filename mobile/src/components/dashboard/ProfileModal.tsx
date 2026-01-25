@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText } from 'lucide-react-native';
+import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -130,6 +130,29 @@ export function ProfileModal({
                                         <View>
                                             <Text className="text-gray-900 font-bold">Planos e Preços (Admin)</Text>
                                             <Text className="text-gray-500 text-xs">Gerenciar Assinaturas</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* Admin Section - Only for Super Admins */}
+                            {isSuperAdmin && (
+                                <>
+                                    <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Administração</Text>
+
+                                    <TouchableOpacity
+                                        className="flex-row items-center gap-4 p-4 bg-white border border-red-100 rounded-2xl shadow-sm mb-2"
+                                        onPress={() => {
+                                            onClose();
+                                            router.push('/admin/dashboard');
+                                        }}
+                                    >
+                                        <View className="w-10 h-10 bg-red-50 rounded-full items-center justify-center">
+                                            <ShieldCheck size={22} color="#a03f3d" />
+                                        </View>
+                                        <View>
+                                            <Text className="text-gray-900 font-bold">Painel Admin</Text>
+                                            <Text className="text-gray-500 text-xs">Visão geral do SaaS</Text>
                                         </View>
                                     </TouchableOpacity>
                                 </>
