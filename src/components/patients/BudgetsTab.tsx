@@ -206,6 +206,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 onUpdate={loadBudgets}
                 onEdit={handleEditBudget}
                 patientName={patientName}
+                patientId={patientId}
                 onNavigateToPayments={onNavigateToPayments}
             />
 
