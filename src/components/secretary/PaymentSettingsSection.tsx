@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import {
 import { Edit3, AlertCircle, QrCode, CreditCard, CheckCircle } from 'lucide-react';
 import { AISecretaryBehavior } from '@/services/secretary';
 import { cn } from '@/lib/utils';
+import { validatePixKey } from '@/lib/validation';
 
 interface Props {
   behavior: AISecretaryBehavior;
@@ -48,6 +49,17 @@ const MESSAGE_LABELS: Record<MessageField, string> = {
 export function PaymentSettingsSection({ behavior, onUpdate, onUpdateMultiple }: Props) {
   const [editingMessage, setEditingMessage] = useState<MessageField | null>(null);
   const [tempMessage, setTempMessage] = useState('');
+  const [pixKeyError, setPixKeyError] = useState<string | null>(null);
+
+  // Validate PIX key when it changes
+  useEffect(() => {
+    if (behavior.pix_key && behavior.pix_key_type) {
+      const validation = validatePixKey(behavior.pix_key, behavior.pix_key_type);
+      setPixKeyError(validation.valid ? null : validation.error || null);
+    } else {
+      setPixKeyError(null);
+    }
+  }, [behavior.pix_key, behavior.pix_key_type]);
 
   const openMessageEditor = (field: MessageField) => {
     setTempMessage(behavior[field]);
@@ -173,7 +185,11 @@ export function PaymentSettingsSection({ behavior, onUpdate, onUpdateMultiple }:
                 value={behavior.pix_key || ''}
                 onChange={(e) => onUpdate('pix_key', e.target.value)}
                 placeholder={PIX_KEY_TYPES.find(t => t.id === behavior.pix_key_type)?.placeholder || 'Digite sua chave PIX'}
+                className={pixKeyError ? 'border-red-300 focus:border-red-500' : ''}
               />
+              {pixKeyError && (
+                <p className="text-xs text-red-500 mt-1">{pixKeyError}</p>
+              )}
             </div>
 
             <div className="p-4">

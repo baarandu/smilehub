@@ -63,8 +63,6 @@ export default function Login() {
             toast.success('Login realizado com sucesso!');
             navigate('/inicio');
         } catch (error: any) {
-            console.error('Login error:', error);
-
             // Record failed attempt
             const isLockedOut = recordFailedAttempt();
             const remaining = getRemainingAttempts();

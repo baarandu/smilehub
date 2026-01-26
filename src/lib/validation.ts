@@ -133,6 +133,52 @@ export const anamneseSchema = z.object({
 });
 
 // =====================================================
+// PIX Key Validation
+// =====================================================
+const cnpjRegex = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$|^\d{14}$/;
+const pixPhoneRegex = /^\+55\d{10,11}$|^\d{10,11}$/;
+const pixRandomKeyRegex = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+
+export function validatePixKey(key: string, type: string): { valid: boolean; error?: string } {
+    if (!key || key.trim() === '') {
+        return { valid: false, error: 'Chave PIX é obrigatória' };
+    }
+
+    const cleanKey = key.trim();
+
+    switch (type) {
+        case 'cpf':
+            if (!cpfRegex.test(cleanKey)) {
+                return { valid: false, error: 'CPF inválido. Use formato 000.000.000-00' };
+            }
+            break;
+        case 'cnpj':
+            if (!cnpjRegex.test(cleanKey)) {
+                return { valid: false, error: 'CNPJ inválido. Use formato 00.000.000/0001-00' };
+            }
+            break;
+        case 'email':
+            const emailResult = z.string().email().safeParse(cleanKey);
+            if (!emailResult.success) {
+                return { valid: false, error: 'E-mail inválido' };
+            }
+            break;
+        case 'phone':
+            if (!pixPhoneRegex.test(cleanKey.replace(/\D/g, ''))) {
+                return { valid: false, error: 'Telefone inválido. Use formato +5511999999999' };
+            }
+            break;
+        case 'random':
+            if (!pixRandomKeyRegex.test(cleanKey) && cleanKey.length < 10) {
+                return { valid: false, error: 'Chave aleatória inválida' };
+            }
+            break;
+    }
+
+    return { valid: true };
+}
+
+// =====================================================
 // Export validation helper
 // =====================================================
 export type PatientData = z.infer<typeof patientSchema>;
