@@ -30,11 +30,10 @@ async function migrateFromAsyncStorage(key: string): Promise<string | null> {
             await SecureStore.setItemAsync(key, oldValue);
             // Remove from AsyncStorage
             await AsyncStorage.removeItem(key);
-            console.log(`Migrated ${key} to SecureStore`);
             return oldValue;
         }
-    } catch (error) {
-        console.error('Migration error:', error);
+    } catch {
+        // Migration failed, will retry on next access
     }
     return null;
 }
@@ -43,8 +42,8 @@ async function markMigrationComplete(): Promise<void> {
     try {
         await SecureStore.setItemAsync(MIGRATION_KEY, 'true');
         migrationDone = true;
-    } catch (error) {
-        console.error('Error marking migration complete:', error);
+    } catch {
+        // Will retry on next setItem
     }
 }
 
@@ -64,10 +63,9 @@ export const SecureStorageAdapter = {
             }
 
             return null;
-        } catch (error) {
-            // Use warn instead of error to avoid RedBox on iOS when device is locked ("User interaction is not allowed")
-            console.warn('SecureStorage getItem error:', error);
-            // Fallback to AsyncStorage if SecureStore fails
+        } catch {
+            // Fallback to AsyncStorage if SecureStore fails (e.g., device locked on iOS)
+            // Note: This is a security trade-off for reliability
             return AsyncStorage.getItem(key);
         }
     },
@@ -79,9 +77,9 @@ export const SecureStorageAdapter = {
             });
             // Mark migration as complete when we successfully set a value
             await markMigrationComplete();
-        } catch (error) {
-            console.warn('SecureStorage setItem error:', error);
-            // Fallback to AsyncStorage if SecureStore fails
+        } catch {
+            // Fallback to AsyncStorage if SecureStore fails (e.g., device locked on iOS)
+            // Note: This is a security trade-off for reliability
             await AsyncStorage.setItem(key, value);
         }
     },
@@ -91,8 +89,8 @@ export const SecureStorageAdapter = {
             await SecureStore.deleteItemAsync(key);
             // Also remove from AsyncStorage in case it exists there
             await AsyncStorage.removeItem(key);
-        } catch (error) {
-            console.error('SecureStorage removeItem error:', error);
+        } catch {
+            // Ensure item is removed from AsyncStorage even if SecureStore fails
             await AsyncStorage.removeItem(key);
         }
     },

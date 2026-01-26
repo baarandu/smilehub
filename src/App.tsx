@@ -8,6 +8,7 @@ import { PrivateRoute } from "@/components/auth/PrivateRoute";
 import { AdminRoute } from "@/components/auth/AdminRoute";
 import { ClinicProvider } from "@/contexts/ClinicContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -112,11 +113,13 @@ const App = () => (
     <ClinicProvider>
       <OnboardingProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
+          <ErrorBoundary>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </ErrorBoundary>
         </TooltipProvider>
       </OnboardingProvider>
     </ClinicProvider>
