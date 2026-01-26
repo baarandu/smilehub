@@ -595,7 +595,7 @@ export default function AISecretarySettingsScreen() {
                 </SettingsSection>
 
                 {/* Schedule Manager */}
-                <CollapsibleSection title="Horários e Disponibilidade" icon={Clock} defaultOpen={true}>
+                <CollapsibleSection title="Horários e Disponibilidade" icon={Clock}>
                     {scheduleEntries.length === 0 ? (
                         <View className="items-center py-4">
                             <Text className="text-gray-500 text-sm mb-3">Nenhum horário configurado</Text>
