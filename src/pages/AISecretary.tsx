@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bot, MessageCircle, Calendar, Bell, Sparkles, Clock, Settings, Zap, Mic, CreditCard, Shield, BarChart3, ChevronDown, Loader2, Plus, Trash2, MapPin } from 'lucide-react';
+import { Bot, MessageCircle, Calendar, Bell, Sparkles, Clock, Settings, Zap, Mic, CreditCard, Shield, BarChart3, ChevronDown, Loader2, Plus, Trash2, Pencil, MapPin, User, Ban, Save } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -23,16 +23,35 @@ import {
   getSecretaryStats,
   getScheduleEntries,
   addScheduleEntry,
+  updateScheduleEntry,
   deleteScheduleEntry,
   createDefaultSchedule,
+  getClinicProfessionals,
+  addClinicProfessional,
+  updateClinicProfessional,
+  deleteClinicProfessional,
+  getCustomMessages,
+  addCustomMessage,
+  updateCustomMessage,
+  deleteCustomMessage,
+  getBlockedNumbers,
+  addBlockedNumber,
+  removeBlockedNumber,
   AISecretarySettings,
   AISecretaryBehavior,
   AISecretaryStats,
   ScheduleEntry,
+  ClinicProfessional,
+  CustomMessage,
+  BlockedNumber,
   DEFAULT_BEHAVIOR_SETTINGS,
   DAY_NAMES_FULL,
+  PREDEFINED_MESSAGE_TYPES,
 } from '@/services/secretary';
 import { cn } from '@/lib/utils';
+
+// Format time to HH:MM (removes seconds if present)
+const formatTime = (time: string) => time?.slice(0, 5) || time;
 
 // Collapsible Section Component
 function CollapsibleSection({
@@ -55,8 +74,8 @@ function CollapsibleSection({
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-violet-100 rounded-lg">
-                  <Icon className="w-4 h-4 text-violet-600" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Icon className="w-4 h-4 text-primary" />
                 </div>
                 <CardTitle className="text-base">{title}</CardTitle>
               </div>
@@ -99,6 +118,48 @@ export default function AISecretary() {
   const [newScheduleDay, setNewScheduleDay] = useState(1);
   const [newScheduleStart, setNewScheduleStart] = useState('08:00');
   const [newScheduleEnd, setNewScheduleEnd] = useState('18:00');
+
+  // Edit schedule
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null);
+  const [editScheduleDay, setEditScheduleDay] = useState(1);
+  const [editScheduleStart, setEditScheduleStart] = useState('08:00');
+  const [editScheduleEnd, setEditScheduleEnd] = useState('18:00');
+
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+
+  // Professionals
+  const [professionals, setProfessionals] = useState<ClinicProfessional[]>([]);
+  const [showProfessionalModal, setShowProfessionalModal] = useState(false);
+  const [editingProfessional, setEditingProfessional] = useState<ClinicProfessional | null>(null);
+  const [profName, setProfName] = useState('');
+  const [profTitle, setProfTitle] = useState('Dr.');
+  const [profSpecialty, setProfSpecialty] = useState('');
+
+  // Custom Messages
+  const [customMessages, setCustomMessages] = useState<CustomMessage[]>([]);
+  const [showCustomMessageModal, setShowCustomMessageModal] = useState(false);
+  const [editingCustomMessage, setEditingCustomMessage] = useState<CustomMessage | null>(null);
+  const [newMessageTitle, setNewMessageTitle] = useState('');
+  const [newMessageContent, setNewMessageContent] = useState('');
+  const [newMessageKey, setNewMessageKey] = useState('');
+
+  // Blocked Numbers
+  const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
+  const [showBlockedNumberModal, setShowBlockedNumberModal] = useState(false);
+  const [newBlockedNumber, setNewBlockedNumber] = useState('');
+
+  // Human Keywords
+  const [showKeywordModal, setShowKeywordModal] = useState(false);
+  const [editingKeywordIndex, setEditingKeywordIndex] = useState<number | null>(null);
+  const [newKeyword, setNewKeyword] = useState('');
+
+  // Scheduling Rules (local state with save button)
+  const [localMinAdvanceHours, setLocalMinAdvanceHours] = useState('2');
+  const [localIntervalMinutes, setLocalIntervalMinutes] = useState('30');
+  const [rulesChanged, setRulesChanged] = useState(false);
 
   // Group schedule by day
   const scheduleByDay = useMemo(() => {
@@ -161,15 +222,21 @@ export default function AISecretary() {
         }
       };
 
-      const [settingsData, statsData, behaviorData, scheduleData] = await Promise.all([
+      const [settingsData, statsData, behaviorData, scheduleData, professionalsData, customMessagesData, blockedData] = await Promise.all([
         safeLoad(() => getSecretarySettings(clinicId), null),
         safeLoad(() => getSecretaryStats(clinicId), { total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 }),
         safeLoad(() => getBehaviorSettings(clinicId), null),
         safeLoad(() => getScheduleEntries(clinicId), []),
+        safeLoad(() => getClinicProfessionals(clinicId), []),
+        safeLoad(() => getCustomMessages(clinicId), []),
+        safeLoad(() => getBlockedNumbers(clinicId), []),
       ]);
 
       if (settingsData) {
         setSettings(settingsData);
+        setLocalMinAdvanceHours(String(settingsData.min_advance_hours || 2));
+        setLocalIntervalMinutes(String(settingsData.interval_minutes || 30));
+        setRulesChanged(false);
       } else {
         setSettings({
           clinic_id: clinicId,
@@ -193,6 +260,9 @@ export default function AISecretary() {
 
       setStats(statsData);
       setScheduleEntries(scheduleData);
+      setProfessionals(professionalsData);
+      setCustomMessages(customMessagesData);
+      setBlockedNumbers(blockedData);
 
       if (behaviorData) {
         setBehavior(behaviorData);
@@ -305,14 +375,53 @@ export default function AISecretary() {
     }
   };
 
-  const handleDeleteScheduleEntry = async (id: string) => {
-    const success = await deleteScheduleEntry(id);
+  // Open edit modal
+  const handleOpenEditModal = (entry: ScheduleEntry) => {
+    setEditingEntry(entry);
+    setEditScheduleDay(entry.day_of_week);
+    setEditScheduleStart(formatTime(entry.start_time));
+    setEditScheduleEnd(formatTime(entry.end_time));
+    setShowEditModal(true);
+  };
+
+  // Save edit
+  const handleEditScheduleEntry = async () => {
+    if (!editingEntry?.id) return;
+
+    const result = await updateScheduleEntry(editingEntry.id, {
+      day_of_week: editScheduleDay,
+      start_time: editScheduleStart,
+      end_time: editScheduleEnd,
+    });
+    if (result) {
+      setScheduleEntries(prev => prev.map(e => e.id === editingEntry.id ? result : e));
+      setShowEditModal(false);
+      setEditingEntry(null);
+      toast({ title: 'Horário atualizado' });
+    } else {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar o horário.' });
+    }
+  };
+
+  // Ask for delete confirmation
+  const handleAskDeleteConfirmation = (id: string) => {
+    setDeletingEntryId(id);
+    setShowDeleteConfirm(true);
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!deletingEntryId) return;
+
+    const success = await deleteScheduleEntry(deletingEntryId);
     if (success) {
-      setScheduleEntries(prev => prev.filter(e => e.id !== id));
+      setScheduleEntries(prev => prev.filter(e => e.id !== deletingEntryId));
       toast({ title: 'Horário removido' });
     } else {
       toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover.' });
     }
+    setShowDeleteConfirm(false);
+    setDeletingEntryId(null);
   };
 
   const handleCreateDefaultSchedule = async () => {
@@ -328,11 +437,264 @@ export default function AISecretary() {
     }
   };
 
+  // =====================================================
+  // Professional Handlers
+  // =====================================================
+  const handleOpenProfessionalModal = (prof?: ClinicProfessional) => {
+    if (prof) {
+      setEditingProfessional(prof);
+      setProfName(prof.name);
+      setProfTitle(prof.title || 'Dr.');
+      setProfSpecialty(prof.specialty || '');
+    } else {
+      setEditingProfessional(null);
+      setProfName('');
+      setProfTitle('Dr.');
+      setProfSpecialty('');
+    }
+    setShowProfessionalModal(true);
+  };
+
+  const handleSaveProfessional = async () => {
+    if (!clinicId || !profName.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Digite o nome do profissional.' });
+      return;
+    }
+
+    if (editingProfessional?.id) {
+      const success = await updateClinicProfessional(editingProfessional.id, {
+        name: profName.trim(),
+        title: profTitle,
+        specialty: profSpecialty,
+      });
+      if (success) {
+        setProfessionals(prev => prev.map(p =>
+          p.id === editingProfessional.id
+            ? { ...p, name: profName.trim(), title: profTitle, specialty: profSpecialty }
+            : p
+        ));
+        setShowProfessionalModal(false);
+        setEditingProfessional(null);
+        toast({ title: 'Profissional atualizado' });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível atualizar.' });
+      }
+    } else {
+      const result = await addClinicProfessional(clinicId, {
+        name: profName.trim(),
+        title: profTitle,
+        specialty: profSpecialty,
+        profession: 'Dentista',
+        default_appointment_duration: 30,
+        is_active: true,
+        accepts_new_patients: true,
+      });
+      if (result) {
+        setProfessionals(prev => [...prev, result]);
+        setShowProfessionalModal(false);
+        toast({ title: 'Profissional adicionado' });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar.' });
+      }
+    }
+  };
+
+  const handleDeleteProfessional = async (prof: ClinicProfessional) => {
+    if (!prof.id) return;
+    const success = await deleteClinicProfessional(prof.id);
+    if (success) {
+      setProfessionals(prev => prev.filter(p => p.id !== prof.id));
+      toast({ title: 'Profissional removido' });
+    } else {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover.' });
+    }
+  };
+
+  // =====================================================
+  // Custom Message Handlers
+  // =====================================================
+  const availablePredefinedTypes = PREDEFINED_MESSAGE_TYPES.filter(
+    type => !customMessages.some(m => m.message_key === type.key)
+  );
+
+  const handleOpenCustomMessageModal = (message?: CustomMessage, predefinedType?: typeof PREDEFINED_MESSAGE_TYPES[number]) => {
+    if (message) {
+      setEditingCustomMessage(message);
+      setNewMessageTitle(message.title);
+      setNewMessageContent(message.message);
+      setNewMessageKey(message.message_key);
+    } else if (predefinedType) {
+      setEditingCustomMessage(null);
+      setNewMessageTitle(predefinedType.title);
+      setNewMessageContent(predefinedType.defaultMessage);
+      setNewMessageKey(predefinedType.key);
+    } else {
+      setEditingCustomMessage(null);
+      setNewMessageTitle('');
+      setNewMessageContent('');
+      setNewMessageKey('custom_' + Date.now());
+    }
+    setShowCustomMessageModal(true);
+  };
+
+  const handleSaveCustomMessage = async () => {
+    if (!clinicId || !newMessageTitle.trim() || !newMessageContent.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Preencha o título e a mensagem.' });
+      return;
+    }
+
+    if (editingCustomMessage?.id) {
+      const success = await updateCustomMessage(editingCustomMessage.id, {
+        title: newMessageTitle,
+        message: newMessageContent,
+      });
+      if (success) {
+        setCustomMessages(prev => prev.map(m =>
+          m.id === editingCustomMessage.id
+            ? { ...m, title: newMessageTitle, message: newMessageContent }
+            : m
+        ));
+        setShowCustomMessageModal(false);
+        setEditingCustomMessage(null);
+        toast({ title: 'Mensagem atualizada' });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar.' });
+      }
+    } else {
+      const result = await addCustomMessage(clinicId, newMessageKey, newMessageTitle, newMessageContent, false);
+      if (result) {
+        setCustomMessages(prev => [...prev, result]);
+        setShowCustomMessageModal(false);
+        toast({ title: 'Mensagem adicionada' });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível adicionar.' });
+      }
+    }
+  };
+
+  const handleDeleteCustomMessage = async (message: CustomMessage) => {
+    if (!message.id) return;
+    const success = await deleteCustomMessage(message.id);
+    if (success) {
+      setCustomMessages(prev => prev.filter(m => m.id !== message.id));
+      toast({ title: 'Mensagem removida' });
+    } else {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível remover.' });
+    }
+  };
+
+  const handleToggleCustomMessageActive = async (message: CustomMessage) => {
+    if (!message.id) return;
+    const success = await updateCustomMessage(message.id, { is_active: !message.is_active });
+    if (success) {
+      setCustomMessages(prev => prev.map(m =>
+        m.id === message.id ? { ...m, is_active: !m.is_active } : m
+      ));
+    }
+  };
+
+  // =====================================================
+  // Blocked Numbers Handlers
+  // =====================================================
+  const handleSaveBlockedNumber = async () => {
+    if (!clinicId || !newBlockedNumber.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Digite um número válido.' });
+      return;
+    }
+    const result = await addBlockedNumber(clinicId, newBlockedNumber.trim());
+    if (result) {
+      setBlockedNumbers(prev => [result, ...prev]);
+      setShowBlockedNumberModal(false);
+      setNewBlockedNumber('');
+      toast({ title: 'Número bloqueado' });
+    } else {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível bloquear.' });
+    }
+  };
+
+  const handleRemoveBlockedNumber = async (item: BlockedNumber) => {
+    if (!item.id) return;
+    const success = await removeBlockedNumber(item.id);
+    if (success) {
+      setBlockedNumbers(prev => prev.filter(n => n.id !== item.id));
+      toast({ title: 'Número desbloqueado' });
+    }
+  };
+
+  // =====================================================
+  // Human Keywords Handlers
+  // =====================================================
+  const handleOpenKeywordModal = (index?: number) => {
+    if (index !== undefined && settings?.human_keywords) {
+      setEditingKeywordIndex(index);
+      setNewKeyword(settings.human_keywords[index]);
+    } else {
+      setEditingKeywordIndex(null);
+      setNewKeyword('');
+    }
+    setShowKeywordModal(true);
+  };
+
+  const handleSaveKeyword = async () => {
+    if (!settings || !newKeyword.trim()) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Digite uma palavra-chave.' });
+      return;
+    }
+
+    const currentKeywords = settings.human_keywords || [];
+    let updatedKeywords: string[];
+
+    if (editingKeywordIndex !== null) {
+      updatedKeywords = [...currentKeywords];
+      updatedKeywords[editingKeywordIndex] = newKeyword.trim().toLowerCase();
+    } else {
+      if (currentKeywords.includes(newKeyword.trim().toLowerCase())) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Esta palavra-chave já existe.' });
+        return;
+      }
+      updatedKeywords = [...currentKeywords, newKeyword.trim().toLowerCase()];
+    }
+
+    const success = await updateSetting('human_keywords', updatedKeywords);
+    if (success) {
+      setShowKeywordModal(false);
+      setEditingKeywordIndex(null);
+      setNewKeyword('');
+      toast({ title: 'Palavra-chave salva' });
+    }
+  };
+
+  const handleDeleteKeyword = async (index: number) => {
+    if (!settings?.human_keywords) return;
+    const updatedKeywords = settings.human_keywords.filter((_, i) => i !== index);
+    await updateSetting('human_keywords', updatedKeywords);
+  };
+
+  // =====================================================
+  // Scheduling Rules Handlers
+  // =====================================================
+  const handleSaveSchedulingRules = async () => {
+    if (!clinicId) return;
+
+    const minHours = parseInt(localMinAdvanceHours) || 2;
+    const interval = parseInt(localIntervalMinutes) || 30;
+
+    const success1 = await updateSetting('min_advance_hours', minHours);
+    const success2 = await updateSetting('interval_minutes', interval);
+
+    if (success1 && success2) {
+      setRulesChanged(false);
+      toast({ title: 'Regras de agendamento salvas' });
+    } else {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar as regras.' });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-violet-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando configurações...</p>
         </div>
       </div>
@@ -342,20 +704,22 @@ export default function AISecretary() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg">
-            <Bot className="w-8 h-8 text-white" />
+      <div className="bg-gradient-to-r from-red-50 to-transparent rounded-2xl p-6 border border-red-100">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-3 rounded-xl shadow-sm border border-red-50">
+              <Bot className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Secretária IA</h1>
+              <p className="text-primary/80 mt-1 font-medium">Automatize o atendimento e comunicação com pacientes</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Secretária IA</h1>
-            <p className="text-muted-foreground mt-1">Automatize o atendimento e comunicação com pacientes</p>
-          </div>
+          <Badge variant="secondary" className="bg-white text-primary border-primary/20">
+            <Sparkles className="w-3 h-3 mr-1" />
+            Beta
+          </Badge>
         </div>
-        <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-200">
-          <Sparkles className="w-3 h-3 mr-1" />
-          Beta
-        </Badge>
       </div>
 
       {/* Main Toggle */}
@@ -417,7 +781,7 @@ export default function AISecretary() {
                         <div key={entry.id} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
                           <div className="flex items-center gap-3">
                             <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{entry.start_time} - {entry.end_time}</span>
+                            <span className="text-sm">{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</span>
                             {entry.location_name && (
                               <Badge variant="secondary" className="text-xs">
                                 <MapPin className="w-3 h-3 mr-1" />
@@ -425,13 +789,22 @@ export default function AISecretary() {
                               </Badge>
                             )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => entry.id && handleDeleteScheduleEntry(entry.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEditModal(entry)}
+                            >
+                              <Pencil className="w-4 h-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => entry.id && handleAskDeleteConfirmation(entry.id)}
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -497,21 +870,215 @@ export default function AISecretary() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Schedule Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Horário</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Dia da Semana</Label>
+              <Select value={String(editScheduleDay)} onValueChange={(v) => setEditScheduleDay(parseInt(v))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6, 0].map(day => (
+                    <SelectItem key={day} value={String(day)}>{DAY_NAMES_FULL[day]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Início</Label>
+                <Input
+                  type="time"
+                  value={editScheduleStart}
+                  onChange={(e) => setEditScheduleStart(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Fim</Label>
+                <Input
+                  type="time"
+                  value={editScheduleEnd}
+                  onChange={(e) => setEditScheduleEnd(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)}>Cancelar</Button>
+            <Button onClick={handleEditScheduleEntry}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground py-4">
+            Tem certeza que deseja excluir este horário? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Excluir</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Professional Modal */}
+      <Dialog open={showProfessionalModal} onOpenChange={setShowProfessionalModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingProfessional ? 'Editar Profissional' : 'Adicionar Profissional'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Título</Label>
+              <Select value={profTitle} onValueChange={setProfTitle}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dr.">Dr.</SelectItem>
+                  <SelectItem value="Dra.">Dra.</SelectItem>
+                  <SelectItem value="Prof.">Prof.</SelectItem>
+                  <SelectItem value="">Sem título</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Nome</Label>
+              <Input
+                value={profName}
+                onChange={(e) => setProfName(e.target.value)}
+                placeholder="Nome do profissional"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Especialidade</Label>
+              <Input
+                value={profSpecialty}
+                onChange={(e) => setProfSpecialty(e.target.value)}
+                placeholder="Ex: Ortodontia, Implantes..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProfessionalModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveProfessional}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Custom Message Modal */}
+      <Dialog open={showCustomMessageModal} onOpenChange={setShowCustomMessageModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingCustomMessage ? 'Editar Mensagem' : 'Nova Mensagem'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Título</Label>
+              <Input
+                value={newMessageTitle}
+                onChange={(e) => setNewMessageTitle(e.target.value)}
+                placeholder="Ex: Confirmação de consulta"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Mensagem</Label>
+              <textarea
+                className="w-full min-h-[100px] p-3 border rounded-md text-sm"
+                value={newMessageContent}
+                onChange={(e) => setNewMessageContent(e.target.value)}
+                placeholder="Digite a mensagem..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Use {'{nome}'}, {'{data}'}, {'{hora}'}, {'{profissional}'} para variáveis
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomMessageModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveCustomMessage}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blocked Number Modal */}
+      <Dialog open={showBlockedNumberModal} onOpenChange={setShowBlockedNumberModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bloquear Número</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Número de Telefone</Label>
+              <Input
+                value={newBlockedNumber}
+                onChange={(e) => setNewBlockedNumber(e.target.value)}
+                placeholder="Ex: 5511999999999"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Digite o número com código do país (sem + ou espaços)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBlockedNumberModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveBlockedNumber}>Bloquear</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Keyword Modal */}
+      <Dialog open={showKeywordModal} onOpenChange={setShowKeywordModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingKeywordIndex !== null ? 'Editar Palavra-chave' : 'Nova Palavra-chave'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Palavra-chave</Label>
+              <Input
+                value={newKeyword}
+                onChange={(e) => setNewKeyword(e.target.value)}
+                placeholder="Ex: atendente, humano..."
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Quando o paciente usar esta palavra, será transferido para humano
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowKeywordModal(false)}>Cancelar</Button>
+            <Button onClick={handleSaveKeyword}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Statistics */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-violet-100 rounded-lg">
-              <BarChart3 className="w-4 h-4 text-violet-600" />
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <BarChart3 className="w-4 h-4 text-primary" />
             </div>
             <CardTitle className="text-base">Relatórios (Este Mês)</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 bg-violet-50 border border-violet-100 rounded-xl text-center">
-              <p className="text-3xl font-bold text-violet-700">{stats.total_appointments_created}</p>
-              <p className="text-xs text-violet-600 mt-1">Agendamentos</p>
+            <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl text-center">
+              <p className="text-3xl font-bold text-primary">{stats.total_appointments_created}</p>
+              <p className="text-xs text-primary/80 mt-1">Agendamentos</p>
             </div>
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-center">
               <p className="text-3xl font-bold text-blue-700">{stats.total_conversations}</p>
@@ -536,14 +1103,14 @@ export default function AISecretary() {
                 className={cn(
                   "p-4 rounded-xl border text-center transition-colors",
                   settings.tone === 'casual'
-                    ? "bg-violet-50 border-violet-300"
+                    ? "bg-primary/5 border-primary/30"
                     : "bg-background hover:bg-muted/50"
                 )}
               >
                 <span className="text-2xl block mb-1">😊</span>
                 <span className={cn(
                   "font-medium",
-                  settings.tone === 'casual' ? "text-violet-700" : "text-foreground"
+                  settings.tone === 'casual' ? "text-primary" : "text-foreground"
                 )}>Casual</span>
               </button>
               <button
@@ -551,20 +1118,112 @@ export default function AISecretary() {
                 className={cn(
                   "p-4 rounded-xl border text-center transition-colors",
                   settings.tone === 'formal'
-                    ? "bg-violet-50 border-violet-300"
+                    ? "bg-primary/5 border-primary/30"
                     : "bg-background hover:bg-muted/50"
                 )}
               >
                 <span className="text-2xl block mb-1">👔</span>
                 <span className={cn(
                   "font-medium",
-                  settings.tone === 'formal' ? "text-violet-700" : "text-foreground"
+                  settings.tone === 'formal' ? "text-primary" : "text-foreground"
                 )}>Formal</span>
               </button>
             </div>
           </div>
         </CollapsibleSection>
       )}
+
+      {/* Professionals */}
+      <CollapsibleSection title="Profissionais" icon={User}>
+        {professionals.length === 0 ? (
+          <div className="text-center py-6">
+            <User className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground mb-4">Nenhum profissional cadastrado</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {professionals.map(prof => (
+              <div key={prof.id} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
+                <div>
+                  <p className="font-medium text-sm">{prof.title} {prof.name}</p>
+                  {prof.specialty && <p className="text-xs text-muted-foreground">{prof.specialty}</p>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenProfessionalModal(prof)}>
+                    <Pencil className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteProfessional(prof)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button variant="outline" className="w-full mt-4" onClick={() => handleOpenProfessionalModal()}>
+          <Plus className="w-4 h-4 mr-2" />
+          Adicionar Profissional
+        </Button>
+      </CollapsibleSection>
+
+      {/* Custom Messages */}
+      <CollapsibleSection title="Mensagens Customizadas" icon={MessageCircle}>
+        {customMessages.length === 0 ? (
+          <div className="text-center py-6">
+            <MessageCircle className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground mb-4">Nenhuma mensagem customizada</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {customMessages.map(msg => (
+              <div key={msg.id} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
+                <div className="flex-1 min-w-0 mr-2">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{msg.title}</p>
+                    {msg.is_predefined && (
+                      <Badge variant="secondary" className="text-xs">Padrão</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{msg.message}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Switch
+                    checked={msg.is_active}
+                    onCheckedChange={() => handleToggleCustomMessageActive(msg)}
+                  />
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenCustomMessageModal(msg)}>
+                    <Pencil className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteCustomMessage(msg)}>
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 mt-4">
+          <Button variant="outline" className="flex-1" onClick={() => handleOpenCustomMessageModal()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Criar Mensagem
+          </Button>
+          {availablePredefinedTypes.length > 0 && (
+            <Select onValueChange={(key) => {
+              const type = PREDEFINED_MESSAGE_TYPES.find(t => t.key === key);
+              if (type) handleOpenCustomMessageModal(undefined, type);
+            }}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Adicionar modelo" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePredefinedTypes.map(type => (
+                  <SelectItem key={type.key} value={type.key}>{type.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </CollapsibleSection>
 
       {/* Scheduling Rules */}
       {settings && (
@@ -574,8 +1233,11 @@ export default function AISecretary() {
               <Label className="text-sm font-medium">Antecedência Mínima (horas)</Label>
               <Input
                 type="number"
-                value={settings.min_advance_hours}
-                onChange={(e) => updateSetting('min_advance_hours', parseInt(e.target.value) || 0)}
+                value={localMinAdvanceHours}
+                onChange={(e) => {
+                  setLocalMinAdvanceHours(e.target.value);
+                  setRulesChanged(true);
+                }}
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">Tempo mínimo antes de permitir agendamento</p>
@@ -584,8 +1246,11 @@ export default function AISecretary() {
               <Label className="text-sm font-medium">Intervalo entre Consultas (minutos)</Label>
               <Input
                 type="number"
-                value={settings.interval_minutes}
-                onChange={(e) => updateSetting('interval_minutes', parseInt(e.target.value) || 0)}
+                value={localIntervalMinutes}
+                onChange={(e) => {
+                  setLocalIntervalMinutes(e.target.value);
+                  setRulesChanged(true);
+                }}
                 className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">Intervalo padrão entre consultas</p>
@@ -600,11 +1265,17 @@ export default function AISecretary() {
               />
               <p className="text-xs text-muted-foreground mt-1">Após esse limite, transfere para humano</p>
             </div>
+            {rulesChanged && (
+              <Button onClick={handleSaveSchedulingRules} className="w-full">
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Regras
+              </Button>
+            )}
           </div>
         </CollapsibleSection>
       )}
 
-      {/* Control & Limits */}
+      {/* Control & Limits - Human Keywords */}
       {settings && (
         <CollapsibleSection title="Controle e Limites" icon={Shield}>
           <div className="space-y-4">
@@ -612,16 +1283,62 @@ export default function AISecretary() {
               <Label className="text-sm font-medium mb-2 block">Palavras-chave para Humano</Label>
               <div className="flex flex-wrap gap-2">
                 {settings.human_keywords?.map((kw, idx) => (
-                  <Badge key={idx} variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                  <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="bg-amber-50 text-amber-700 border-amber-200 cursor-pointer hover:bg-amber-100"
+                    onClick={() => handleOpenKeywordModal(idx)}
+                  >
                     "{kw}"
+                    <button
+                      className="ml-1 hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteKeyword(idx);
+                      }}
+                    >
+                      ×
+                    </button>
                   </Badge>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">Quando o paciente usar essas palavras, transfere para atendente humano</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => handleOpenKeywordModal()}>
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Palavra-chave
+              </Button>
             </div>
           </div>
         </CollapsibleSection>
       )}
+
+      {/* Blocked Numbers */}
+      <CollapsibleSection title="Números Bloqueados" icon={Ban}>
+        {blockedNumbers.length === 0 ? (
+          <div className="text-center py-6">
+            <Ban className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground mb-4">Nenhum número bloqueado</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {blockedNumbers.map(item => (
+              <div key={item.id} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
+                <div>
+                  <p className="font-medium text-sm">{item.phone_number}</p>
+                  {item.reason && <p className="text-xs text-muted-foreground">{item.reason}</p>}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => handleRemoveBlockedNumber(item)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button variant="outline" className="w-full mt-4" onClick={() => setShowBlockedNumberModal(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Bloquear Número
+        </Button>
+      </CollapsibleSection>
 
       {/* Message Behavior */}
       {behavior && (
