@@ -364,11 +364,11 @@ export default function AISecretarySettingsScreen() {
     // Schedule Handlers
     const handleOpenScheduleModal = (entry?: ScheduleEntry) => {
         if (entry) {
-            // Edit mode
+            // Edit mode - format times to HH:MM
             setEditingScheduleId(entry.id || null);
             setNewScheduleDay(entry.day_of_week);
-            setNewScheduleStart(entry.start_time);
-            setNewScheduleEnd(entry.end_time);
+            setNewScheduleStart(formatTime(entry.start_time));
+            setNewScheduleEnd(formatTime(entry.end_time));
             setNewScheduleLocation(entry.location_id || null);
         } else {
             // Add mode
