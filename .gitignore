@@ -33,3 +33,10 @@ supabase/.temp/
 
 # Evolution API local installation
 evolution-api-local/
+
+# Temporary SQL scripts and configs
+*.sql
+!supabase/**/*.sql
+docker-compose.tmp
+n8n-workflows/
+docs/
