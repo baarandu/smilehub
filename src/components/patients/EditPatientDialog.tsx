@@ -40,27 +40,7 @@ export function EditPatientDialog({ patient, open, onClose, onSuccess }: EditPat
     try {
       await updatePatient.mutateAsync({
         id: patient.id,
-        data: {
-          name: data.name,
-          phone: data.phone,
-          email: data.email || null,
-          birth_date: data.birthDate || null,
-          cpf: data.cpf || null,
-          rg: data.rg || null,
-          address: data.address || null,
-          city: data.city || null,
-          state: data.state || null,
-          zip_code: data.zipCode || null,
-          occupation: data.occupation || null,
-          emergency_contact: data.emergencyContact || null,
-          emergency_phone: data.emergencyPhone || null,
-          health_insurance: data.healthInsurance || null,
-          health_insurance_number: data.healthInsuranceNumber || null,
-          allergies: data.allergies || null,
-          medications: data.medications || null,
-          medical_history: data.medicalHistory || null,
-          notes: data.notes || null,
-        },
+        formData: data,
       });
       toast.success('Paciente atualizado com sucesso!');
       onClose();
