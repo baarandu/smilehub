@@ -132,7 +132,6 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
-            console.error('Error changing password:', error);
             toast.error(error.message || 'Erro ao alterar senha');
         } finally {
             setLoadingPassword(false);

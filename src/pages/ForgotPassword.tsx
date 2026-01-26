@@ -30,7 +30,6 @@ export default function ForgotPassword() {
             setSent(true);
             toast.success('Email enviado com sucesso!');
         } catch (error: any) {
-            console.error('Reset password error:', error);
             toast.error(error.message || 'Erro ao enviar email');
         } finally {
             setLoading(false);
