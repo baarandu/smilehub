@@ -34,7 +34,7 @@ export function WhatsAppSettings() {
 
   // Test message
   const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('Olá! Esta é uma mensagem de teste do SmileHub.');
+  const [testMessage, setTestMessage] = useState('Olá! Esta é uma mensagem de teste do OrganizaOdonto.');
   const [isSending, setIsSending] = useState(false);
 
   const checkStatus = useCallback(async () => {
@@ -234,7 +234,10 @@ export function WhatsAppSettings() {
         {status === 'error' && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800">
-              A Evolution API não está acessível. Verifique se os containers Docker estão rodando.
+              A Evolution API não está acessível. Verifique se o servidor está rodando.
+            </p>
+            <p className="text-xs text-red-600 mt-1">
+              Execute: <code className="bg-red-100 px-1 rounded">cd evolution-api-local && npm run dev:server</code>
             </p>
             <Button variant="outline" size="sm" className="mt-2" onClick={checkStatus}>
               <RefreshCw className="w-4 h-4 mr-2" />

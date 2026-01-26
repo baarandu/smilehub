@@ -30,3 +30,6 @@ dist-ssr
 mobile/.env
 mobile/.env.local
 supabase/.temp/
+
+# Evolution API local installation
+evolution-api-local/

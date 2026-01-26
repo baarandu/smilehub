@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   evolution:
-    image: atendai/evolution-api:latest
+    image: atendai/evolution-api:v2.1.1
     container_name: evolution
     restart: always
     ports:
@@ -11,19 +9,19 @@ services:
       - SERVER_URL=http://localhost:8080
       - AUTHENTICATION_API_KEY=minhaChaveSecreta123
       - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:postgres@postgres:5432/evolution
-      - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://redis:6379
-      - LOG_LEVEL=WARN
+      - DATABASE_ENABLED=false
+      - DATABASE_PROVIDER=sqlite
+      - CACHE_REDIS_ENABLED=false
+      - LOG_LEVEL=INFO
+      - QRCODE_LIMIT=10
+      - CONFIG_SESSION_PHONE_CLIENT=SmileHub
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - evolution_instances:/evolution/instances
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - evolution
+      - evolution_store:/evolution/store
 
   postgres:
     image: postgres:15-alpine
