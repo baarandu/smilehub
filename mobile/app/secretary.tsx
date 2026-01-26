@@ -4,7 +4,7 @@ import { useNavigation } from 'expo-router';
 import {
     ArrowLeft, Bot, MessageCircle, Clock, Settings, Zap, CheckCircle2, AlertCircle,
     Calendar, Shield, MessageSquare, BarChart3, ChevronRight, X, Plus, Trash2, MapPin,
-    Mic, CreditCard, Bell
+    Mic, CreditCard, Bell, Pencil
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useClinic } from '../src/contexts/ClinicContext';
@@ -21,6 +21,7 @@ import {
     AISecretaryStats,
     getScheduleEntries,
     addScheduleEntry,
+    updateScheduleEntry,
     deleteScheduleEntry,
     createDefaultSchedule,
     ScheduleEntry,
@@ -41,6 +42,8 @@ import {
 } from '../src/components/secretary';
 import { locationsService, Location } from '../src/services/locations';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 
@@ -100,6 +103,7 @@ export default function AISecretarySettingsScreen() {
     const [newScheduleEnd, setNewScheduleEnd] = useState('18:00');
     const [newScheduleLocation, setNewScheduleLocation] = useState<string | null>(null);
     const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
+    const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
 
     // UI State
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -351,26 +355,97 @@ export default function AISecretarySettingsScreen() {
     };
 
     // Schedule Handlers
-    const handleAddScheduleEntry = async () => {
-        if (!clinicId) return;
-        const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd, newScheduleLocation);
-        if (result) {
-            setScheduleEntries(prev => [...prev, result]);
-            setShowScheduleModal(false);
+    const handleOpenScheduleModal = (entry?: ScheduleEntry) => {
+        if (entry) {
+            // Edit mode
+            setEditingScheduleId(entry.id || null);
+            setNewScheduleDay(entry.day_of_week);
+            setNewScheduleStart(entry.start_time);
+            setNewScheduleEnd(entry.end_time);
+            setNewScheduleLocation(entry.location_id || null);
+        } else {
+            // Add mode
+            setEditingScheduleId(null);
+            setNewScheduleDay(1);
             setNewScheduleStart('08:00');
             setNewScheduleEnd('18:00');
             setNewScheduleLocation(null);
+        }
+        setShowScheduleModal(true);
+    };
+
+    const handleSaveScheduleEntry = async () => {
+        if (!clinicId) return;
+
+        if (editingScheduleId) {
+            // Update existing
+            const success = await updateScheduleEntry(editingScheduleId, {
+                start_time: newScheduleStart,
+                end_time: newScheduleEnd,
+                location_id: newScheduleLocation,
+            });
+            if (success) {
+                setScheduleEntries(prev => prev.map(e =>
+                    e.id === editingScheduleId
+                        ? { ...e, start_time: newScheduleStart, end_time: newScheduleEnd, location_id: newScheduleLocation }
+                        : e
+                ));
+                setShowScheduleModal(false);
+                setEditingScheduleId(null);
+            } else {
+                Alert.alert('Erro', 'Não foi possível atualizar o horário.');
+            }
         } else {
-            Alert.alert('Erro', 'Não foi possível adicionar o horário.');
+            // Add new
+            const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd, newScheduleLocation);
+            if (result) {
+                setScheduleEntries(prev => [...prev, result]);
+                setShowScheduleModal(false);
+            } else {
+                Alert.alert('Erro', 'Não foi possível adicionar o horário.');
+            }
         }
     };
 
     const handleDeleteScheduleEntry = async (entryId: string) => {
-        const success = await deleteScheduleEntry(entryId);
-        if (success) {
-            setScheduleEntries(prev => prev.filter(e => e.id !== entryId));
-        }
+        Alert.alert(
+            'Excluir Horário',
+            'Tem certeza que deseja excluir este horário?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const success = await deleteScheduleEntry(entryId);
+                        if (success) {
+                            setScheduleEntries(prev => prev.filter(e => e.id !== entryId));
+                        }
+                    }
+                }
+            ]
+        );
     };
+
+    // Render swipe actions for schedule entry
+    const renderRightActions = (entry: ScheduleEntry) => (
+        <View className="flex-row">
+            <TouchableOpacity
+                onPress={() => handleOpenScheduleModal(entry)}
+                className="bg-blue-500 justify-center items-center px-4 rounded-l-lg"
+            >
+                <Pencil size={18} color="#fff" />
+                <Text className="text-white text-[10px] mt-1">Editar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                onPress={() => entry.id && handleDeleteScheduleEntry(entry.id)}
+                className="bg-red-500 justify-center items-center px-4 rounded-r-lg"
+            >
+                <Trash2 size={18} color="#fff" />
+                <Text className="text-white text-[10px] mt-1">Excluir</Text>
+            </TouchableOpacity>
+        </View>
+    );
 
     const handleCreateDefaultSchedule = async () => {
         if (!clinicId) return;
@@ -409,6 +484,7 @@ export default function AISecretarySettingsScreen() {
     }
 
     return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaView className="flex-1 bg-gray-50" edges={['top']}>
             {/* Header */}
             <View className="flex-row items-center p-4 bg-white border-b border-gray-100 shadow-sm z-10">
@@ -504,21 +580,29 @@ export default function AISecretarySettingsScreen() {
                                             <Text className="text-xs text-gray-400 italic">Sem atendimento</Text>
                                         ) : (
                                             entries.map(entry => (
-                                                <View key={entry.id} className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2">
-                                                    <View className="flex-row items-center gap-2">
-                                                        <Clock size={14} color="#6B7280" />
-                                                        <Text className="text-sm text-gray-800">{entry.start_time} - {entry.end_time}</Text>
-                                                        {entry.location_name && (
-                                                            <View className="flex-row items-center bg-blue-50 px-2 py-0.5 rounded">
-                                                                <MapPin size={10} color="#3B82F6" />
-                                                                <Text className="text-[10px] text-blue-600 ml-1">{entry.location_name}</Text>
-                                                            </View>
-                                                        )}
-                                                    </View>
-                                                    <TouchableOpacity onPress={() => entry.id && handleDeleteScheduleEntry(entry.id)}>
-                                                        <Trash2 size={16} color="#EF4444" />
+                                                <Swipeable
+                                                    key={entry.id}
+                                                    renderRightActions={() => renderRightActions(entry)}
+                                                    overshootRight={false}
+                                                >
+                                                    <TouchableOpacity
+                                                        onPress={() => handleOpenScheduleModal(entry)}
+                                                        className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2"
+                                                        activeOpacity={0.7}
+                                                    >
+                                                        <View className="flex-row items-center gap-2 flex-1">
+                                                            <Clock size={14} color="#6B7280" />
+                                                            <Text className="text-sm text-gray-800">{entry.start_time} - {entry.end_time}</Text>
+                                                            {entry.location_name && (
+                                                                <View className="flex-row items-center bg-blue-50 px-2 py-0.5 rounded">
+                                                                    <MapPin size={10} color="#3B82F6" />
+                                                                    <Text className="text-[10px] text-blue-600 ml-1">{entry.location_name}</Text>
+                                                                </View>
+                                                            )}
+                                                        </View>
+                                                        <ChevronRight size={16} color="#9CA3AF" />
                                                     </TouchableOpacity>
-                                                </View>
+                                                </Swipeable>
                                             ))
                                         )}
                                     </View>
@@ -527,7 +611,7 @@ export default function AISecretarySettingsScreen() {
                         </View>
                     )}
                     <TouchableOpacity
-                        onPress={() => setShowScheduleModal(true)}
+                        onPress={() => handleOpenScheduleModal()}
                         className="flex-row items-center justify-center gap-2 bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg mt-2"
                     >
                         <Plus size={16} color="#b94a48" />
@@ -766,29 +850,45 @@ export default function AISecretarySettingsScreen() {
                     <View className="flex-1 bg-black/50 justify-end">
                         <View className="bg-white rounded-t-3xl p-6 pb-10">
                         <View className="flex-row items-center justify-between mb-4">
-                            <Text className="text-lg font-bold text-gray-900">Adicionar Horário</Text>
-                            <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
+                            <Text className="text-lg font-bold text-gray-900">
+                                {editingScheduleId ? 'Editar Horário' : 'Adicionar Horário'}
+                            </Text>
+                            <TouchableOpacity onPress={() => { setShowScheduleModal(false); setEditingScheduleId(null); }}>
                                 <X size={24} color="#6B7280" />
                             </TouchableOpacity>
                         </View>
 
-                        {/* Day Selector */}
-                        <Text className="text-xs font-medium text-gray-600 mb-2">Dia da Semana</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                            <View className="flex-row gap-2">
-                                {[1, 2, 3, 4, 5, 6, 0].map(day => (
-                                    <TouchableOpacity
-                                        key={day}
-                                        onPress={() => setNewScheduleDay(day)}
-                                        className={`px-4 py-2 rounded-lg border ${newScheduleDay === day ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
-                                    >
-                                        <Text className={`text-sm font-medium ${newScheduleDay === day ? 'text-[#8b3634]' : 'text-gray-600'}`}>
-                                            {DAY_NAMES[day]}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                        {/* Day Selector - only show when adding new */}
+                        {!editingScheduleId && (
+                            <>
+                                <Text className="text-xs font-medium text-gray-600 mb-2">Dia da Semana</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+                                    <View className="flex-row gap-2">
+                                        {[1, 2, 3, 4, 5, 6, 0].map(day => (
+                                            <TouchableOpacity
+                                                key={day}
+                                                onPress={() => setNewScheduleDay(day)}
+                                                className={`px-4 py-2 rounded-lg border ${newScheduleDay === day ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
+                                            >
+                                                <Text className={`text-sm font-medium ${newScheduleDay === day ? 'text-[#8b3634]' : 'text-gray-600'}`}>
+                                                    {DAY_NAMES[day]}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </ScrollView>
+                            </>
+                        )}
+
+                        {/* Show current day when editing */}
+                        {editingScheduleId && (
+                            <View className="mb-4">
+                                <Text className="text-xs font-medium text-gray-600 mb-2">Dia da Semana</Text>
+                                <View className="bg-gray-100 px-4 py-2 rounded-lg">
+                                    <Text className="text-sm font-medium text-gray-700">{DAY_NAMES_FULL[newScheduleDay]}</Text>
+                                </View>
                             </View>
-                        </ScrollView>
+                        )}
 
                         {/* Time Inputs */}
                         <View className="flex-row gap-3 mb-4">
@@ -885,13 +985,16 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         )}
 
-                            <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-[#a03f3d] mt-2 p-4 rounded-xl">
-                                <Text className="text-white font-semibold text-center">Adicionar</Text>
+                            <TouchableOpacity onPress={handleSaveScheduleEntry} className="bg-[#a03f3d] mt-2 p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">
+                                    {editingScheduleId ? 'Salvar' : 'Adicionar'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
+        </GestureHandlerRootView>
     );
 }
