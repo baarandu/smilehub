@@ -40,6 +40,7 @@ import {
     PaymentSettingsSection,
 } from '../src/components/secretary';
 import { locationsService, Location } from '../src/services/locations';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 
@@ -98,6 +99,7 @@ export default function AISecretarySettingsScreen() {
     const [newScheduleStart, setNewScheduleStart] = useState('08:00');
     const [newScheduleEnd, setNewScheduleEnd] = useState('18:00');
     const [newScheduleLocation, setNewScheduleLocation] = useState<string | null>(null);
+    const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
 
     // UI State
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -792,23 +794,66 @@ export default function AISecretarySettingsScreen() {
                         <View className="flex-row gap-3 mb-4">
                             <View className="flex-1">
                                 <Text className="text-xs font-medium text-gray-600 mb-2">Início</Text>
-                                <TextInput
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-800"
-                                    value={newScheduleStart}
-                                    onChangeText={setNewScheduleStart}
-                                    placeholder="08:00"
-                                />
+                                <TouchableOpacity
+                                    onPress={() => setShowTimePicker('start')}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
+                                >
+                                    <Text className="text-sm text-gray-800">{newScheduleStart}</Text>
+                                    <Clock size={16} color="#6B7280" />
+                                </TouchableOpacity>
                             </View>
                             <View className="flex-1">
                                 <Text className="text-xs font-medium text-gray-600 mb-2">Fim</Text>
-                                <TextInput
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-800"
-                                    value={newScheduleEnd}
-                                    onChangeText={setNewScheduleEnd}
-                                    placeholder="18:00"
-                                />
+                                <TouchableOpacity
+                                    onPress={() => setShowTimePicker('end')}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
+                                >
+                                    <Text className="text-sm text-gray-800">{newScheduleEnd}</Text>
+                                    <Clock size={16} color="#6B7280" />
+                                </TouchableOpacity>
                             </View>
                         </View>
+
+                        {/* Time Picker */}
+                        {showTimePicker && (
+                            <View className="mb-4 items-center">
+                                <DateTimePicker
+                                    value={(() => {
+                                        const timeStr = showTimePicker === 'start' ? newScheduleStart : newScheduleEnd;
+                                        const [hours, minutes] = timeStr.split(':').map(Number);
+                                        const date = new Date();
+                                        date.setHours(hours, minutes, 0, 0);
+                                        return date;
+                                    })()}
+                                    mode="time"
+                                    is24Hour={true}
+                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                    onChange={(event, selectedDate) => {
+                                        if (Platform.OS === 'android') {
+                                            setShowTimePicker(null);
+                                        }
+                                        if (selectedDate) {
+                                            const hours = selectedDate.getHours().toString().padStart(2, '0');
+                                            const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+                                            const timeStr = `${hours}:${minutes}`;
+                                            if (showTimePicker === 'start') {
+                                                setNewScheduleStart(timeStr);
+                                            } else {
+                                                setNewScheduleEnd(timeStr);
+                                            }
+                                        }
+                                    }}
+                                />
+                                {Platform.OS === 'ios' && (
+                                    <TouchableOpacity
+                                        onPress={() => setShowTimePicker(null)}
+                                        className="bg-[#a03f3d] mt-2 p-2 rounded-lg"
+                                    >
+                                        <Text className="text-white font-medium text-center text-sm">Confirmar</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
 
                         {/* Location Selector */}
                         {locations.length > 0 && (
