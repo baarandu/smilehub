@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // Types
 export interface AISecretarySettings {
@@ -245,7 +245,25 @@ const DEFAULT_SETTINGS: Partial<AISecretarySettings> = {
     accepted_insurance: [],
 };
 
-// Get settings for current clinic - returns null if table doesn't exist
+// Schedule Entry Types
+export interface ScheduleEntry {
+    id?: string;
+    clinic_id: string;
+    day_of_week: number;
+    location_id?: string | null;
+    location_name?: string;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+// Day names in Portuguese
+export const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+export const DAY_NAMES_FULL = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+// Get settings for current clinic - returns null if table doesn't exist or no data
 export async function getSecretarySettings(clinicId: string): Promise<AISecretarySettings | null> {
     try {
         const { data, error } = await supabase
@@ -276,11 +294,9 @@ export async function saveSecretarySettings(
     settings: Partial<AISecretarySettings>
 ): Promise<AISecretarySettings | null> {
     try {
-        // First check if settings exist
         const existing = await getSecretarySettings(clinicId);
 
         if (existing) {
-            // Update existing
             const { data, error } = await (supabase
                 .from('ai_secretary_settings') as any)
                 .update(settings)
@@ -291,7 +307,6 @@ export async function saveSecretarySettings(
             if (error) throw error;
             return data as AISecretarySettings;
         } else {
-            // Insert new with defaults
             const { data, error } = await (supabase
                 .from('ai_secretary_settings') as any)
                 .insert({
@@ -318,11 +333,9 @@ export async function updateSecretarySetting(
     value: any
 ): Promise<boolean> {
     try {
-        // Check if record exists, if not create it first
         const existing = await getSecretarySettings(clinicId);
 
         if (!existing) {
-            // Create with default values plus this field
             await saveSecretarySettings(clinicId, { [field]: value } as Partial<AISecretarySettings>);
             return true;
         }
@@ -340,7 +353,7 @@ export async function updateSecretarySetting(
     }
 }
 
-// Blocked Numbers - returns empty array if table doesn't exist
+// Blocked Numbers
 export async function getBlockedNumbers(clinicId: string): Promise<BlockedNumber[]> {
     try {
         const { data, error } = await supabase
@@ -349,13 +362,10 @@ export async function getBlockedNumbers(clinicId: string): Promise<BlockedNumber
             .eq('clinic_id', clinicId)
             .order('blocked_at', { ascending: false });
 
-        if (error) {
-            console.warn('Error fetching blocked numbers:', error);
-            return [];
-        }
+        if (error) throw error;
         return (data || []) as BlockedNumber[];
     } catch (error) {
-        console.warn('Error fetching blocked numbers:', error);
+        console.error('Error fetching blocked numbers:', error);
         return [];
     }
 }
@@ -415,6 +425,7 @@ export async function getSecretaryStats(clinicId: string): Promise<AISecretarySt
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
 
+        // Make each call individually to handle table not existing
         let totalConversations = 0;
         let appointmentsCreated = 0;
         let transferred = 0;
@@ -463,33 +474,12 @@ export async function getSecretaryStats(clinicId: string): Promise<AISecretarySt
             transferred_conversations: transferred,
         };
     } catch (error) {
-        console.warn('Error fetching stats:', error);
+        console.error('Error fetching stats:', error);
         return defaultStats;
     }
 }
 
-// =====================================================
-// Schedule Entries (per-day/per-location)
-// =====================================================
-
-export interface ScheduleEntry {
-    id?: string;
-    clinic_id: string;
-    day_of_week: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-    location_id?: string | null;
-    location_name?: string; // Joined from locations table
-    start_time: string; // "HH:MM"
-    end_time: string;   // "HH:MM"
-    is_active: boolean;
-    created_at?: string;
-    updated_at?: string;
-}
-
-// Day names in Portuguese
-export const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-export const DAY_NAMES_FULL = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-
-// Get all schedule entries for a clinic - returns empty array if table doesn't exist
+// Schedule Entries
 export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntry[]> {
     try {
         const { data, error } = await supabase
@@ -502,23 +492,18 @@ export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntr
             .order('day_of_week', { ascending: true })
             .order('start_time', { ascending: true });
 
-        if (error) {
-            console.warn('Error fetching schedule:', error);
-            return [];
-        }
+        if (error) throw error;
 
-        // Map location name
         return (data || []).map((entry: any) => ({
             ...entry,
             location_name: entry.locations?.name || null,
         }));
     } catch (error) {
-        console.warn('Error fetching schedule:', error);
+        console.error('Error fetching schedule:', error);
         return [];
     }
 }
 
-// Add a new schedule entry
 export async function addScheduleEntry(
     clinicId: string,
     dayOfWeek: number,
@@ -526,6 +511,7 @@ export async function addScheduleEntry(
     endTime: string,
     locationId?: string | null
 ): Promise<ScheduleEntry | null> {
+    console.log('addScheduleEntry called:', { clinicId, dayOfWeek, startTime, endTime, locationId });
     try {
         const { data, error } = await (supabase
             .from('ai_secretary_schedule') as any)
@@ -540,6 +526,7 @@ export async function addScheduleEntry(
             .select()
             .single();
 
+        console.log('Supabase response:', { data, error });
         if (error) throw error;
         return data as ScheduleEntry;
     } catch (error) {
@@ -548,26 +535,6 @@ export async function addScheduleEntry(
     }
 }
 
-// Update a schedule entry
-export async function updateScheduleEntry(
-    id: string,
-    updates: Partial<Pick<ScheduleEntry, 'start_time' | 'end_time' | 'location_id' | 'is_active'>>
-): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('ai_secretary_schedule') as any)
-            .update(updates)
-            .eq('id', id);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error updating schedule entry:', error);
-        return false;
-    }
-}
-
-// Delete a schedule entry
 export async function deleteScheduleEntry(id: string): Promise<boolean> {
     try {
         const { error } = await supabase
@@ -583,11 +550,9 @@ export async function deleteScheduleEntry(id: string): Promise<boolean> {
     }
 }
 
-// Create default schedule (Mon-Fri, 8-18, all locations)
 export async function createDefaultSchedule(clinicId: string): Promise<boolean> {
     try {
         const entries = [];
-        // Monday (1) to Friday (5)
         for (let day = 1; day <= 5; day++) {
             entries.push({
                 clinic_id: clinicId,
@@ -611,200 +576,7 @@ export async function createDefaultSchedule(clinicId: string): Promise<boolean> 
     }
 }
 
-// =====================================================
-// Clinic Professionals (for Google Calendar integration)
-// =====================================================
-
-export interface ClinicProfessional {
-    id?: string;
-    clinic_id: string;
-    user_id?: string;
-    name: string;
-    title: string; // Dr., Dra., etc.
-    specialty: string;
-    profession: string; // Dentista, Médico, etc.
-    google_calendar_id?: string;
-    default_appointment_duration: number;
-    is_active: boolean;
-    accepts_new_patients: boolean;
-    created_at?: string;
-    updated_at?: string;
-}
-
-// Get all professionals for a clinic
-export async function getClinicProfessionals(clinicId: string): Promise<ClinicProfessional[]> {
-    try {
-        const { data, error } = await supabase
-            .from('clinic_professionals')
-            .select('*')
-            .eq('clinic_id', clinicId)
-            .order('name', { ascending: true });
-
-        if (error) throw error;
-        return (data || []) as ClinicProfessional[];
-    } catch (error) {
-        console.error('Error fetching professionals:', error);
-        return [];
-    }
-}
-
-// Add a new professional
-export async function addClinicProfessional(
-    clinicId: string,
-    professional: Omit<ClinicProfessional, 'id' | 'clinic_id' | 'created_at' | 'updated_at'>
-): Promise<ClinicProfessional | null> {
-    try {
-        const { data, error } = await (supabase
-            .from('clinic_professionals') as any)
-            .insert({
-                clinic_id: clinicId,
-                ...professional,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data as ClinicProfessional;
-    } catch (error) {
-        console.error('Error adding professional:', error);
-        return null;
-    }
-}
-
-// Update a professional
-export async function updateClinicProfessional(
-    id: string,
-    updates: Partial<Omit<ClinicProfessional, 'id' | 'clinic_id' | 'created_at' | 'updated_at'>>
-): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('clinic_professionals') as any)
-            .update(updates)
-            .eq('id', id);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error updating professional:', error);
-        return false;
-    }
-}
-
-// Delete a professional
-export async function deleteClinicProfessional(id: string): Promise<boolean> {
-    try {
-        const { error } = await supabase
-            .from('clinic_professionals')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error deleting professional:', error);
-        return false;
-    }
-}
-
-// =====================================================
-// n8n Integration helpers
-// =====================================================
-
-// Connect WhatsApp via Evolution API
-export async function connectWhatsApp(
-    clinicId: string,
-    evolutionInstanceName: string,
-    phoneNumber: string
-): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('ai_secretary_settings') as any)
-            .update({
-                evolution_instance_name: evolutionInstanceName,
-                whatsapp_phone_number: phoneNumber,
-                whatsapp_connected: true,
-            })
-            .eq('clinic_id', clinicId);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error connecting WhatsApp:', error);
-        return false;
-    }
-}
-
-// Disconnect WhatsApp
-export async function disconnectWhatsApp(clinicId: string): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('ai_secretary_settings') as any)
-            .update({
-                whatsapp_connected: false,
-            })
-            .eq('clinic_id', clinicId);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error disconnecting WhatsApp:', error);
-        return false;
-    }
-}
-
-// Update clinic contact info (for AI prompt)
-export async function updateClinicContactInfo(
-    clinicId: string,
-    contactInfo: {
-        clinic_phone?: string;
-        clinic_address?: string;
-        clinic_email?: string;
-        clinic_website?: string;
-        accepted_insurance?: string[];
-        payment_methods?: string[];
-    }
-): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('ai_secretary_settings') as any)
-            .update(contactInfo)
-            .eq('clinic_id', clinicId);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error updating clinic contact info:', error);
-        return false;
-    }
-}
-
-// Update notification settings (for human escalation)
-export async function updateNotificationSettings(
-    clinicId: string,
-    settings: {
-        notification_telegram_chat_id?: string;
-        notification_email?: string;
-    }
-): Promise<boolean> {
-    try {
-        const { error } = await (supabase
-            .from('ai_secretary_settings') as any)
-            .update(settings)
-            .eq('clinic_id', clinicId);
-
-        if (error) throw error;
-        return true;
-    } catch (error) {
-        console.error('Error updating notification settings:', error);
-        return false;
-    }
-}
-
-// =====================================================
-// Behavior Settings CRUD
-// =====================================================
-
-// Get behavior settings for a clinic - returns null if table doesn't exist
+// Behavior Settings CRUD - returns null if table doesn't exist
 export async function getBehaviorSettings(clinicId: string): Promise<AISecretaryBehavior | null> {
     try {
         const { data, error } = await supabase
@@ -824,22 +596,19 @@ export async function getBehaviorSettings(clinicId: string): Promise<AISecretary
 
         return data as AISecretaryBehavior;
     } catch (error) {
-        console.error('Error in getBehaviorSettings:', error);
+        console.warn('Error in getBehaviorSettings:', error);
         return null;
     }
 }
 
-// Create or update behavior settings
 export async function saveBehaviorSettings(
     clinicId: string,
     settings: Partial<AISecretaryBehavior>
 ): Promise<AISecretaryBehavior | null> {
     try {
-        // First check if settings exist
         const existing = await getBehaviorSettings(clinicId);
 
         if (existing) {
-            // Update existing
             const { data, error } = await (supabase
                 .from('ai_secretary_behavior') as any)
                 .update(settings)
@@ -850,7 +619,6 @@ export async function saveBehaviorSettings(
             if (error) throw error;
             return data as AISecretaryBehavior;
         } else {
-            // Insert new with defaults
             const { data, error } = await (supabase
                 .from('ai_secretary_behavior') as any)
                 .insert({
@@ -870,18 +638,15 @@ export async function saveBehaviorSettings(
     }
 }
 
-// Update a single behavior setting field
 export async function updateBehaviorSetting(
     clinicId: string,
     field: keyof AISecretaryBehavior,
     value: any
 ): Promise<boolean> {
     try {
-        // Check if record exists, if not create it first
         const existing = await getBehaviorSettings(clinicId);
 
         if (!existing) {
-            // Create with default values plus this field
             await saveBehaviorSettings(clinicId, { [field]: value } as Partial<AISecretaryBehavior>);
             return true;
         }
@@ -899,13 +664,11 @@ export async function updateBehaviorSetting(
     }
 }
 
-// Update multiple behavior settings at once
 export async function updateBehaviorSettings(
     clinicId: string,
     updates: Partial<AISecretaryBehavior>
 ): Promise<boolean> {
     try {
-        // Check if record exists, if not create it first
         const existing = await getBehaviorSettings(clinicId);
 
         if (!existing) {
@@ -925,4 +688,3 @@ export async function updateBehaviorSettings(
         return false;
     }
 }
-

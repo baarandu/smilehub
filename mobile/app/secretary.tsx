@@ -76,7 +76,7 @@ const CollapsibleSection = ({ title, icon: Icon, children, defaultOpen = false }
 
 export default function AISecretarySettingsScreen() {
     const navigation = useNavigation();
-    const { clinicId } = useClinic();
+    const { clinicId, loading: clinicLoading } = useClinic();
 
     // Loading & Error
     const [isLoading, setIsLoading] = useState(true);
@@ -106,33 +106,60 @@ export default function AISecretarySettingsScreen() {
 
     // Load data on mount
     useEffect(() => {
+        if (clinicLoading) return;
+
         if (clinicId) {
             loadData();
+        } else {
+            // No clinicId, show defaults
+            setIsLoading(false);
+            setSettings({
+                clinic_id: '',
+                is_active: false,
+                whatsapp_connected: false,
+                tone: 'casual',
+                work_hours_start: '08:00',
+                work_hours_end: '18:00',
+                work_days: { seg: true, ter: true, qua: true, qui: true, sex: true, sab: false, dom: false },
+                min_advance_hours: 2,
+                interval_minutes: 30,
+                allowed_procedure_ids: [],
+                greeting_message: 'Olá! Sou a assistente virtual. Como posso ajudar?',
+                confirmation_message: 'Sua consulta foi agendada com sucesso! ✅',
+                reminder_message: 'Lembrete: Você tem uma consulta amanhã às {hora}.',
+                out_of_hours_message: 'Olá! Nosso atendimento é das {inicio} às {fim}. Retornaremos em breve!',
+                message_limit_per_conversation: 20,
+                human_keywords: ['atendente', 'humano', 'pessoa'],
+            });
+            setBehavior({
+                clinic_id: '',
+                ...DEFAULT_BEHAVIOR_SETTINGS,
+            } as AISecretaryBehavior);
         }
-    }, [clinicId]);
+    }, [clinicId, clinicLoading]);
 
     const loadData = async () => {
         if (!clinicId) return;
 
         setIsLoading(true);
         try {
-            // Load behavior settings separately to not block the main load if table doesn't exist
-            const loadBehaviorSafe = async () => {
+            // Safe loaders that return defaults on error
+            const safeLoad = async <T,>(fn: () => Promise<T>, defaultValue: T): Promise<T> => {
                 try {
-                    return await getBehaviorSettings(clinicId);
+                    return await fn();
                 } catch (e) {
-                    console.warn('Behavior settings table may not exist yet:', e);
-                    return null;
+                    console.warn('Safe load error:', e);
+                    return defaultValue;
                 }
             };
 
             const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData] = await Promise.all([
-                getSecretarySettings(clinicId),
-                getBlockedNumbers(clinicId),
-                getSecretaryStats(clinicId),
-                getScheduleEntries(clinicId),
-                locationsService.getAll(),
-                loadBehaviorSafe(),
+                safeLoad(() => getSecretarySettings(clinicId), null),
+                safeLoad(() => getBlockedNumbers(clinicId), []),
+                safeLoad(() => getSecretaryStats(clinicId), { total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 }),
+                safeLoad(() => getScheduleEntries(clinicId), []),
+                safeLoad(() => locationsService.getAll(), []),
+                safeLoad(() => getBehaviorSettings(clinicId), null),
             ]);
 
             if (settingsData) {
