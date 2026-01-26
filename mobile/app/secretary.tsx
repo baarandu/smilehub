@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from 'expo-router';
 import {
     ArrowLeft, Bot, MessageCircle, Clock, Settings, Zap, CheckCircle2, AlertCircle,
@@ -757,8 +757,12 @@ export default function AISecretarySettingsScreen() {
 
             {/* Add Schedule Modal */}
             <Modal visible={showScheduleModal} transparent animationType="slide">
-                <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl p-6 pb-10">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
                         <View className="flex-row items-center justify-between mb-4">
                             <Text className="text-lg font-bold text-gray-900">Adicionar Horário</Text>
                             <TouchableOpacity onPress={() => setShowScheduleModal(false)}>
@@ -836,11 +840,12 @@ export default function AISecretarySettingsScreen() {
                             </View>
                         )}
 
-                        <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-[#a03f3d] mt-2 p-4 rounded-xl">
-                            <Text className="text-white font-semibold text-center">Adicionar</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity onPress={handleAddScheduleEntry} className="bg-[#a03f3d] mt-2 p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Adicionar</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );
