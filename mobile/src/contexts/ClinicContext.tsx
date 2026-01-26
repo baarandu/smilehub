@@ -73,7 +73,8 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
                 setDisplayName(null);
             }
 
-            const { data: clinicUser } = await supabase
+            // Get user's clinic and role (prioritize admin role if user has multiple clinics)
+            const { data: clinicUsers } = await supabase
                 .from('clinic_users')
                 .select(`
           clinic_id,
@@ -81,9 +82,13 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
           clinics (name)
         `)
                 .eq('user_id', user.id)
-                .single();
+                .order('role', { ascending: true }); // 'admin' comes before 'dentist' alphabetically
 
-            const typedClinicUser = clinicUser as unknown as ClinicUserRow | null;
+            // Get the first clinic (preferring admin role)
+            const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
+            const typedClinicUser = clinicUsersList && clinicUsersList.length > 0
+                ? (clinicUsersList.find(cu => cu.role === 'admin') || clinicUsersList[0])
+                : null;
 
             if (typedClinicUser) {
                 setClinicId(typedClinicUser.clinic_id);
