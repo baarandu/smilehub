@@ -12,8 +12,20 @@ export interface AISecretarySettings {
     // Evolution API / n8n integration
     evolution_instance_name?: string;
 
-    // Behavior
-    tone: 'casual' | 'formal';
+    // Behavior - Structured fields that generate the prompt
+    tone: 'casual' | 'formal'; // deprecated
+    behavior_prompt: string; // Auto-generated or custom prompt
+
+    // Personality settings (used to generate behavior_prompt)
+    secretary_name: string;
+    personality_tone: 'friendly' | 'professional' | 'formal';
+    use_emojis: 'yes' | 'no' | 'moderate';
+    clinic_name: string;
+    clinic_specialty: string; // e.g., "Odontologia", "Ortodontia e Implantes"
+    procedures_list: string; // JSON string of procedures with prices
+    special_rules: string; // Custom rules/restrictions
+    additional_info: string; // Any extra context
+
     work_hours_start: string;
     work_hours_end: string;
     work_days: {
@@ -250,10 +262,164 @@ export const TTS_VOICES = {
 };
 
 // Default settings
+// Personality tone labels
+export const PERSONALITY_TONES = {
+    friendly: { label: 'Amigável', description: 'Descontraída e acolhedora' },
+    professional: { label: 'Profissional', description: 'Cordial e objetiva' },
+    formal: { label: 'Formal', description: 'Séria e respeitosa' },
+};
+
+export const EMOJI_OPTIONS = {
+    yes: { label: 'Sim', description: 'Usa emojis frequentemente' },
+    moderate: { label: 'Moderado', description: 'Usa emojis ocasionalmente' },
+    no: { label: 'Não', description: 'Não usa emojis' },
+};
+
+// Function to generate behavior prompt from structured fields
+export function generateBehaviorPrompt(settings: Partial<AISecretarySettings>): string {
+    const name = settings.secretary_name || 'assistente virtual';
+    const clinicName = settings.clinic_name || 'nossa clínica';
+    const specialty = settings.clinic_specialty || 'odontológica';
+
+    // Tone description
+    let toneDesc = '';
+    switch (settings.personality_tone) {
+        case 'friendly':
+            toneDesc = `Seja simpática, acolhedora e descontraída. Use linguagem informal e próxima, como se estivesse conversando com um amigo. Demonstre entusiasmo ao ajudar.`;
+            break;
+        case 'formal':
+            toneDesc = `Seja formal, respeitosa e cortês. Use linguagem culta e tratamento formal (senhor/senhora). Mantenha um tom sério e profissional em todas as interações.`;
+            break;
+        case 'professional':
+        default:
+            toneDesc = `Seja profissional, cordial e objetiva. Use linguagem clara e educada, mantendo equilíbrio entre proximidade e profissionalismo.`;
+            break;
+    }
+
+    // Emoji instruction
+    let emojiInst = '';
+    switch (settings.use_emojis) {
+        case 'yes':
+            emojiInst = `Use emojis com frequência para tornar a conversa mais expressiva e acolhedora (😊, ✅, 📅, 🦷, etc).`;
+            break;
+        case 'no':
+            emojiInst = `NÃO use emojis nas mensagens. Mantenha o texto limpo e profissional.`;
+            break;
+        case 'moderate':
+        default:
+            emojiInst = `Use emojis com moderação, apenas para confirmar ações importantes (✅) ou em saudações (😊).`;
+            break;
+    }
+
+    // Parse procedures
+    let proceduresSection = '';
+    if (settings.procedures_list) {
+        try {
+            const procedures = JSON.parse(settings.procedures_list);
+            if (procedures.length > 0) {
+                proceduresSection = `\n\nPROCEDIMENTOS E VALORES:\n${procedures.map((p: any) => `- ${p.name}: R$ ${p.price}`).join('\n')}`;
+            }
+        } catch (e) {
+            // If not JSON, use as plain text
+            if (settings.procedures_list.trim()) {
+                proceduresSection = `\n\nPROCEDIMENTOS E VALORES:\n${settings.procedures_list}`;
+            }
+        }
+    }
+
+    // Payment methods
+    let paymentSection = '';
+    if (settings.payment_methods && settings.payment_methods.length > 0) {
+        paymentSection = `\n\nFORMAS DE PAGAMENTO: ${settings.payment_methods.join(', ')}`;
+    }
+
+    // Insurance
+    let insuranceSection = '';
+    if (settings.accepted_insurance && settings.accepted_insurance.length > 0) {
+        insuranceSection = `\n\nCONVÊNIOS ACEITOS: ${settings.accepted_insurance.join(', ')}`;
+    }
+
+    // Special rules
+    let rulesSection = '';
+    if (settings.special_rules && settings.special_rules.trim()) {
+        rulesSection = `\n\nREGRAS ESPECIAIS:\n${settings.special_rules}`;
+    }
+
+    // Additional info
+    let additionalSection = '';
+    if (settings.additional_info && settings.additional_info.trim()) {
+        additionalSection = `\n\nINFORMAÇÕES ADICIONAIS:\n${settings.additional_info}`;
+    }
+
+    // Contact info
+    let contactSection = '';
+    const contacts = [];
+    if (settings.clinic_phone) contacts.push(`Telefone: ${settings.clinic_phone}`);
+    if (settings.clinic_address) contacts.push(`Endereço: ${settings.clinic_address}`);
+    if (settings.clinic_email) contacts.push(`Email: ${settings.clinic_email}`);
+    if (settings.clinic_website) contacts.push(`Site: ${settings.clinic_website}`);
+    if (contacts.length > 0) {
+        contactSection = `\n\nCONTATO DA CLÍNICA:\n${contacts.join('\n')}`;
+    }
+
+    return `Você é ${name}, secretária virtual da ${clinicName}, uma clínica ${specialty}.
+
+PERSONALIDADE E TOM:
+${toneDesc}
+${emojiInst}
+
+SUAS FUNÇÕES:
+- Agendar consultas verificando disponibilidade na agenda
+- Responder dúvidas sobre procedimentos e valores
+- Confirmar e remarcar consultas existentes
+- Fornecer informações sobre a clínica
+- Enviar lembretes de consultas
+
+DIRETRIZES IMPORTANTES:
+- Sempre confirme nome, data e horário antes de finalizar um agendamento
+- Se não souber responder algo, ofereça transferir para um atendente humano
+- NUNCA invente informações sobre preços ou procedimentos não listados
+- Seja breve e objetiva nas respostas
+- Ao agendar, sempre pergunte se é a primeira consulta do paciente${proceduresSection}${paymentSection}${insuranceSection}${contactSection}${rulesSection}${additionalSection}`;
+}
+
+// Default behavior prompt for AI Secretary
+export const DEFAULT_BEHAVIOR_PROMPT = `Você é uma secretária virtual simpática e profissional de uma clínica odontológica.
+
+PERSONALIDADE:
+- Seja acolhedora, educada e prestativa
+- Use linguagem clara e acessível
+- Demonstre empatia com as necessidades do paciente
+- Mantenha um tom amigável mas profissional
+
+FUNÇÕES PRINCIPAIS:
+- Agendar consultas verificando a disponibilidade na agenda
+- Responder dúvidas sobre procedimentos e valores
+- Confirmar e remarcar consultas
+- Enviar lembretes de consultas
+
+DIRETRIZES:
+- Sempre confirme os dados antes de finalizar um agendamento
+- Se não souber responder algo, ofereça transferir para um atendente humano
+- Não invente informações sobre preços ou procedimentos
+- Seja breve e objetiva nas respostas
+- Use emojis com moderação para tornar a conversa mais leve`;
+
 const DEFAULT_SETTINGS: Partial<AISecretarySettings> = {
     is_active: false,
     whatsapp_connected: false,
     tone: 'casual',
+    behavior_prompt: DEFAULT_BEHAVIOR_PROMPT,
+    // Personality settings
+    secretary_name: 'Sofia',
+    personality_tone: 'friendly',
+    use_emojis: 'moderate',
+    clinic_name: '',
+    clinic_specialty: 'odontológica',
+    procedures_list: '',
+    special_rules: '',
+    additional_info: '',
+    // Schedule
     work_hours_start: '08:00',
     work_hours_end: '18:00',
     work_days: { seg: true, ter: true, qua: true, qui: true, sex: true, sab: false, dom: false },
@@ -514,6 +680,10 @@ export interface ScheduleEntry {
     day_of_week: number; // 0 = Sunday, 1 = Monday, ... 6 = Saturday
     location_id?: string | null;
     location_name?: string; // Joined from locations table
+    professional_id?: string | null; // Single professional (legacy)
+    professional_ids?: string[] | null; // Multiple professionals (new)
+    professional_name?: string; // Joined from clinic_professionals table (legacy)
+    professional_names?: string[]; // Names of all professionals
     start_time: string; // "HH:MM"
     end_time: string;   // "HH:MM"
     is_active: boolean;
@@ -528,6 +698,7 @@ export const DAY_NAMES_FULL = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta
 // Get all schedule entries for a clinic - returns empty array if table doesn't exist
 export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntry[]> {
     try {
+        // Fetch schedule entries with location join
         const { data, error } = await supabase
             .from('ai_secretary_schedule')
             .select(`
@@ -543,11 +714,53 @@ export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntr
             return [];
         }
 
-        // Map location name
-        return (data || []).map((entry: any) => ({
-            ...entry,
-            location_name: entry.locations?.name || null,
-        }));
+        // Fetch all professionals for the clinic to map names
+        const { data: professionalsData } = await supabase
+            .from('clinic_professionals')
+            .select('id, name, title')
+            .eq('clinic_id', clinicId);
+
+        const professionalsMap = new Map<string, { name: string; title: string }>();
+        (professionalsData || []).forEach((p: any) => {
+            professionalsMap.set(p.id, { name: p.name, title: p.title || '' });
+        });
+
+        // Map location and professional names
+        return (data || []).map((entry: any) => {
+            // Parse professional_ids if it's a JSON string
+            let professionalIds: string[] = [];
+            if (entry.professional_ids) {
+                if (typeof entry.professional_ids === 'string') {
+                    try {
+                        professionalIds = JSON.parse(entry.professional_ids);
+                    } catch {
+                        professionalIds = [];
+                    }
+                } else if (Array.isArray(entry.professional_ids)) {
+                    professionalIds = entry.professional_ids;
+                }
+            } else if (entry.professional_id) {
+                // Fallback to single professional_id (legacy)
+                professionalIds = [entry.professional_id];
+            }
+
+            // Get professional names
+            const professionalNames = professionalIds
+                .map(id => {
+                    const prof = professionalsMap.get(id);
+                    return prof ? `${prof.title} ${prof.name}`.trim() : null;
+                })
+                .filter(Boolean) as string[];
+
+            return {
+                ...entry,
+                location_name: entry.locations?.name || null,
+                professional_ids: professionalIds.length > 0 ? professionalIds : null,
+                professional_names: professionalNames.length > 0 ? professionalNames : undefined,
+                // Legacy field for backward compatibility
+                professional_name: professionalNames.length > 0 ? professionalNames.join(', ') : null,
+            };
+        });
     } catch (error) {
         console.warn('Error fetching schedule:', error);
         return [];
@@ -560,19 +773,40 @@ export async function addScheduleEntry(
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    locationId?: string | null
+    locationId?: string | null,
+    professionalIds?: string[] | null
 ): Promise<ScheduleEntry | null> {
     try {
+        // Base insert data
+        const baseData: any = {
+            clinic_id: clinicId,
+            day_of_week: dayOfWeek,
+            location_id: locationId || null,
+            start_time: startTime,
+            end_time: endTime,
+            is_active: true,
+        };
+
+        // Try with professional_ids first if provided
+        if (professionalIds && professionalIds.length > 0) {
+            const { data, error } = await (supabase
+                .from('ai_secretary_schedule') as any)
+                .insert({ ...baseData, professional_ids: JSON.stringify(professionalIds) })
+                .select()
+                .single();
+
+            if (!error) {
+                return data as ScheduleEntry;
+            }
+
+            // If error mentions professional_ids column, retry without it
+            console.warn('Could not save with professional_ids, retrying without:', error.message);
+        }
+
+        // Insert without professional_ids
         const { data, error } = await (supabase
             .from('ai_secretary_schedule') as any)
-            .insert({
-                clinic_id: clinicId,
-                day_of_week: dayOfWeek,
-                location_id: locationId || null,
-                start_time: startTime,
-                end_time: endTime,
-                is_active: true,
-            })
+            .insert(baseData)
             .select()
             .single();
 
@@ -587,12 +821,39 @@ export async function addScheduleEntry(
 // Update a schedule entry
 export async function updateScheduleEntry(
     id: string,
-    updates: Partial<Pick<ScheduleEntry, 'start_time' | 'end_time' | 'location_id' | 'is_active'>>
+    updates: Partial<Pick<ScheduleEntry, 'start_time' | 'end_time' | 'location_id' | 'professional_ids' | 'is_active'>>
 ): Promise<boolean> {
     try {
+        // Base updates without professional_ids
+        const baseUpdates: any = {};
+        if (updates.start_time !== undefined) baseUpdates.start_time = updates.start_time;
+        if (updates.end_time !== undefined) baseUpdates.end_time = updates.end_time;
+        if (updates.location_id !== undefined) baseUpdates.location_id = updates.location_id;
+        if (updates.is_active !== undefined) baseUpdates.is_active = updates.is_active;
+
+        // Try with professional_ids first if provided
+        if (updates.professional_ids !== undefined) {
+            const professionalIdsJson = updates.professional_ids && updates.professional_ids.length > 0
+                ? JSON.stringify(updates.professional_ids)
+                : null;
+
+            const { error } = await (supabase
+                .from('ai_secretary_schedule') as any)
+                .update({ ...baseUpdates, professional_ids: professionalIdsJson })
+                .eq('id', id);
+
+            if (!error) {
+                return true;
+            }
+
+            // If error, retry without professional_ids
+            console.warn('Could not update with professional_ids, retrying without:', error.message);
+        }
+
+        // Update without professional_ids
         const { error } = await (supabase
             .from('ai_secretary_schedule') as any)
-            .update(updates)
+            .update(baseUpdates)
             .eq('id', id);
 
         if (error) throw error;

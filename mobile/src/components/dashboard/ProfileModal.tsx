@@ -1,13 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
 import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { subscriptionService } from '../../services/subscription';
 
 interface ProfileModalProps {
     visible: boolean;
     onClose: () => void;
     displayName: string;
     clinicName: string;
+    clinicId?: string;
     isAdmin: boolean;
     isSuperAdmin?: boolean;
     userEmail?: string;
@@ -17,17 +19,21 @@ interface ProfileModalProps {
     onOpenTeam: () => void;
 }
 
-// Emails with early access to AI Secretary (beta testers)
+// Emails with early access to AI Secretary (beta testers - fallback)
 const AI_SECRETARY_ALLOWED_EMAILS = [
     'vitor_cb@hotmail.com',
     'sorria@barbaraqueiroz.com.br',
 ];
+
+// Plan slugs that have access to AI Secretary
+const AI_SECRETARY_ALLOWED_PLANS = ['enterprise'];
 
 export function ProfileModal({
     visible,
     onClose,
     displayName,
     clinicName,
+    clinicId,
     isAdmin,
     isSuperAdmin = false,
     userEmail = '',
@@ -38,9 +44,23 @@ export function ProfileModal({
 }: ProfileModalProps) {
     const router = useRouter();
     const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
+    const [planSlug, setPlanSlug] = useState<string | null>(null);
 
-    // Check if user has access to AI Secretary
-    const hasAISecretaryAccess = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
+    // Fetch subscription plan when modal opens
+    useEffect(() => {
+        if (visible && clinicId) {
+            subscriptionService.getCurrentSubscription(clinicId).then(({ plan }) => {
+                setPlanSlug(plan?.slug || null);
+            }).catch(console.error);
+        }
+    }, [visible, clinicId]);
+
+    // Check if user has access to AI Secretary:
+    // 1. Has enterprise plan, OR
+    // 2. Is in the beta testers email list (fallback)
+    const hasEnterprisePlan = planSlug && AI_SECRETARY_ALLOWED_PLANS.includes(planSlug.toLowerCase());
+    const isInBetaList = AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
+    const hasAISecretaryAccess = hasEnterprisePlan || isInBetaList;
 
     // Secretaries (assistant) cannot access financial features including Income Tax
     const canAccessFinancials = userRole !== 'assistant';

@@ -61,7 +61,7 @@ export default function Dashboard() {
     const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     const { session, signOut } = useAuth();
-    const { role: clinicRole } = useClinic();
+    const { role: clinicRole, clinicId } = useClinic();
 
     useEffect(() => {
         if (session?.user) loadProfile();
@@ -388,6 +388,7 @@ export default function Dashboard() {
                 onClose={() => setShowProfileModal(false)}
                 displayName={displayName}
                 clinicName={clinicName}
+                clinicId={clinicId || undefined}
                 isAdmin={isAdmin}
                 isSuperAdmin={isSuperAdmin}
                 userEmail={session?.user?.email || ''}

@@ -66,6 +66,31 @@ export interface BlockedNumber {
     blocked_at?: string;
 }
 
+// Custom Messages
+export interface CustomMessage {
+    id?: string;
+    clinic_id: string;
+    message_key: string;
+    title: string;
+    message: string;
+    is_active: boolean;
+    is_predefined: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+// Predefined message situations
+export const PREDEFINED_MESSAGE_TYPES = [
+    { key: 'cancellation', title: 'Cancelamento', description: 'Quando paciente cancela consulta', defaultMessage: 'Lamentamos que você precise cancelar. Deseja remarcar para outro dia?' },
+    { key: 'reschedule', title: 'Reagendamento', description: 'Quando consulta é reagendada', defaultMessage: 'Sua consulta foi reagendada para {data} às {hora}. Confirmado!' },
+    { key: 'no_show', title: 'Falta/No-show', description: 'Quando paciente não comparece', defaultMessage: 'Notamos sua ausência na consulta de hoje. Está tudo bem? Podemos remarcar.' },
+    { key: 'birthday', title: 'Aniversário', description: 'Mensagem de aniversário', defaultMessage: 'Feliz aniversário! 🎂 A equipe da clínica deseja um dia especial!' },
+    { key: 'followup', title: 'Retorno/Follow-up', description: 'Lembrete de retorno', defaultMessage: 'Olá! Está na hora do seu retorno. Que tal agendar?' },
+    { key: 'welcome', title: 'Boas-vindas', description: 'Primeiro contato do paciente', defaultMessage: 'Seja bem-vindo(a)! Estamos felizes em tê-lo(a) como paciente.' },
+    { key: 'payment_pending', title: 'Pagamento Pendente', description: 'Lembrete de pagamento', defaultMessage: 'Olá! Identificamos um pagamento pendente. Podemos ajudar?' },
+    { key: 'post_procedure', title: 'Pós-procedimento', description: 'Cuidados após procedimento', defaultMessage: 'Como está se sentindo após o procedimento? Lembre-se dos cuidados recomendados.' },
+] as const;
+
 export interface AISecretaryStats {
     total_conversations: number;
     total_appointments_created: number;
@@ -224,6 +249,148 @@ export const TTS_VOICES = {
     ],
 };
 
+// Personality tone labels
+export const PERSONALITY_TONES = {
+    friendly: { label: 'Amigável', description: 'Descontraída e acolhedora' },
+    professional: { label: 'Profissional', description: 'Cordial e objetiva' },
+    formal: { label: 'Formal', description: 'Séria e respeitosa' },
+};
+
+export const EMOJI_OPTIONS = {
+    yes: { label: 'Sim', description: 'Usa emojis frequentemente' },
+    moderate: { label: 'Moderado', description: 'Usa emojis ocasionalmente' },
+    no: { label: 'Não', description: 'Não usa emojis' },
+};
+
+// Function to generate behavior prompt from structured fields
+export function generateBehaviorPrompt(settings: Partial<AISecretarySettings>): string {
+    const name = settings.secretary_name || 'assistente virtual';
+    const clinicName = settings.clinic_name || 'nossa clínica';
+    const specialty = settings.clinic_specialty || 'odontológica';
+
+    // Tone description
+    let toneDesc = '';
+    switch (settings.personality_tone) {
+        case 'friendly':
+            toneDesc = `Seja simpática, acolhedora e descontraída. Use linguagem informal e próxima, como se estivesse conversando com um amigo. Demonstre entusiasmo ao ajudar.`;
+            break;
+        case 'formal':
+            toneDesc = `Seja formal, respeitosa e cortês. Use linguagem culta e tratamento formal (senhor/senhora). Mantenha um tom sério e profissional em todas as interações.`;
+            break;
+        case 'professional':
+        default:
+            toneDesc = `Seja profissional, cordial e objetiva. Use linguagem clara e educada, mantendo equilíbrio entre proximidade e profissionalismo.`;
+            break;
+    }
+
+    // Emoji instruction
+    let emojiInst = '';
+    switch (settings.use_emojis) {
+        case 'yes':
+            emojiInst = `Use emojis com frequência para tornar a conversa mais expressiva e acolhedora (😊, ✅, 📅, 🦷, etc).`;
+            break;
+        case 'no':
+            emojiInst = `NÃO use emojis nas mensagens. Mantenha o texto limpo e profissional.`;
+            break;
+        case 'moderate':
+        default:
+            emojiInst = `Use emojis com moderação, apenas para confirmar ações importantes (✅) ou em saudações (😊).`;
+            break;
+    }
+
+    // Parse procedures
+    let proceduresSection = '';
+    if (settings.procedures_list) {
+        try {
+            const procedures = JSON.parse(settings.procedures_list);
+            if (procedures.length > 0) {
+                proceduresSection = `\n\nPROCEDIMENTOS E VALORES:\n${procedures.map((p: any) => `- ${p.name}: R$ ${p.price}`).join('\n')}`;
+            }
+        } catch {
+            if (settings.procedures_list.trim()) {
+                proceduresSection = `\n\nPROCEDIMENTOS E VALORES:\n${settings.procedures_list}`;
+            }
+        }
+    }
+
+    // Payment methods
+    let paymentSection = '';
+    if (settings.payment_methods && settings.payment_methods.length > 0) {
+        paymentSection = `\n\nFORMAS DE PAGAMENTO: ${settings.payment_methods.join(', ')}`;
+    }
+
+    // Insurance
+    let insuranceSection = '';
+    if (settings.accepted_insurance && settings.accepted_insurance.length > 0) {
+        insuranceSection = `\n\nCONVÊNIOS ACEITOS: ${settings.accepted_insurance.join(', ')}`;
+    }
+
+    // Special rules
+    let rulesSection = '';
+    if (settings.special_rules && settings.special_rules.trim()) {
+        rulesSection = `\n\nREGRAS ESPECIAIS:\n${settings.special_rules}`;
+    }
+
+    // Additional info
+    let additionalSection = '';
+    if (settings.additional_info && settings.additional_info.trim()) {
+        additionalSection = `\n\nINFORMAÇÕES ADICIONAIS:\n${settings.additional_info}`;
+    }
+
+    // Contact info
+    let contactSection = '';
+    const contacts = [];
+    if (settings.clinic_phone) contacts.push(`Telefone: ${settings.clinic_phone}`);
+    if (settings.clinic_address) contacts.push(`Endereço: ${settings.clinic_address}`);
+    if (settings.clinic_email) contacts.push(`Email: ${settings.clinic_email}`);
+    if (settings.clinic_website) contacts.push(`Site: ${settings.clinic_website}`);
+    if (contacts.length > 0) {
+        contactSection = `\n\nCONTATO DA CLÍNICA:\n${contacts.join('\n')}`;
+    }
+
+    return `Você é ${name}, secretária virtual da ${clinicName}, uma clínica ${specialty}.
+
+PERSONALIDADE E TOM:
+${toneDesc}
+${emojiInst}
+
+SUAS FUNÇÕES:
+- Agendar consultas verificando disponibilidade na agenda
+- Responder dúvidas sobre procedimentos e valores
+- Confirmar e remarcar consultas existentes
+- Fornecer informações sobre a clínica
+- Enviar lembretes de consultas
+
+DIRETRIZES IMPORTANTES:
+- Sempre confirme nome, data e horário antes de finalizar um agendamento
+- Se não souber responder algo, ofereça transferir para um atendente humano
+- NUNCA invente informações sobre preços ou procedimentos não listados
+- Seja breve e objetiva nas respostas
+- Ao agendar, sempre pergunte se é a primeira consulta do paciente${proceduresSection}${paymentSection}${insuranceSection}${contactSection}${rulesSection}${additionalSection}`;
+}
+
+// Default behavior prompt for AI Secretary
+export const DEFAULT_BEHAVIOR_PROMPT = `Você é uma secretária virtual simpática e profissional de uma clínica odontológica.
+
+PERSONALIDADE:
+- Seja acolhedora, educada e prestativa
+- Use linguagem clara e acessível
+- Demonstre empatia com as necessidades do paciente
+- Mantenha um tom amigável mas profissional
+
+FUNÇÕES PRINCIPAIS:
+- Agendar consultas verificando a disponibilidade na agenda
+- Responder dúvidas sobre procedimentos e valores
+- Confirmar e remarcar consultas
+- Enviar lembretes de consultas
+
+DIRETRIZES:
+- Sempre confirme os dados antes de finalizar um agendamento
+- Se não souber responder algo, ofereça transferir para um atendente humano
+- Não invente informações sobre preços ou procedimentos
+- Seja breve e objetiva nas respostas
+- Use emojis com moderação para tornar a conversa mais leve`;
+
 // Default settings
 const DEFAULT_SETTINGS: Partial<AISecretarySettings> = {
     is_active: false,
@@ -252,6 +419,10 @@ export interface ScheduleEntry {
     day_of_week: number;
     location_id?: string | null;
     location_name?: string;
+    professional_id?: string | null;
+    professional_ids?: string[] | null;
+    professional_name?: string;
+    professional_names?: string[];
     start_time: string;
     end_time: string;
     is_active: boolean;
@@ -509,9 +680,9 @@ export async function addScheduleEntry(
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    locationId?: string | null
+    locationId?: string | null,
+    professionalIds?: string[] | null
 ): Promise<ScheduleEntry | null> {
-    console.log('addScheduleEntry called:', { clinicId, dayOfWeek, startTime, endTime, locationId });
     try {
         const { data, error } = await (supabase
             .from('ai_secretary_schedule') as any)
@@ -519,6 +690,7 @@ export async function addScheduleEntry(
                 clinic_id: clinicId,
                 day_of_week: dayOfWeek,
                 location_id: locationId || null,
+                professional_ids: professionalIds || null,
                 start_time: startTime,
                 end_time: endTime,
                 is_active: true,
@@ -526,11 +698,36 @@ export async function addScheduleEntry(
             .select()
             .single();
 
-        console.log('Supabase response:', { data, error });
         if (error) throw error;
         return data as ScheduleEntry;
     } catch (error) {
         console.error('Error adding schedule entry:', error);
+        return null;
+    }
+}
+
+export async function updateScheduleEntry(
+    id: string,
+    updates: {
+        day_of_week?: number;
+        start_time?: string;
+        end_time?: string;
+        location_id?: string | null;
+        professional_ids?: string[] | null;
+    }
+): Promise<ScheduleEntry | null> {
+    try {
+        const { data, error } = await (supabase
+            .from('ai_secretary_schedule') as any)
+            .update(updates)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as ScheduleEntry;
+    } catch (error) {
+        console.error('Error updating schedule entry:', error);
         return null;
     }
 }
@@ -685,6 +882,215 @@ export async function updateBehaviorSettings(
         return true;
     } catch (error) {
         console.error('Error updating behavior settings:', error);
+        return false;
+    }
+}
+
+// =====================================================
+// Clinic Professionals
+// =====================================================
+
+export interface ClinicProfessional {
+    id?: string;
+    clinic_id: string;
+    user_id?: string;
+    name: string;
+    title: string;
+    specialty: string;
+    profession: string;
+    google_calendar_id?: string;
+    default_appointment_duration: number;
+    is_active: boolean;
+    accepts_new_patients: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export async function getClinicProfessionals(clinicId: string): Promise<ClinicProfessional[]> {
+    try {
+        const { data, error } = await supabase
+            .from('clinic_professionals')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+        return (data || []) as ClinicProfessional[];
+    } catch (error) {
+        console.error('Error fetching professionals:', error);
+        return [];
+    }
+}
+
+export async function addClinicProfessional(
+    clinicId: string,
+    professional: Omit<ClinicProfessional, 'id' | 'clinic_id' | 'created_at' | 'updated_at'>
+): Promise<ClinicProfessional | null> {
+    try {
+        const { data, error } = await (supabase
+            .from('clinic_professionals') as any)
+            .insert({
+                clinic_id: clinicId,
+                ...professional,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as ClinicProfessional;
+    } catch (error) {
+        console.error('Error adding professional:', error);
+        return null;
+    }
+}
+
+export async function updateClinicProfessional(
+    id: string,
+    updates: Partial<Omit<ClinicProfessional, 'id' | 'clinic_id' | 'created_at' | 'updated_at'>>
+): Promise<boolean> {
+    try {
+        const { error } = await (supabase
+            .from('clinic_professionals') as any)
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error updating professional:', error);
+        return false;
+    }
+}
+
+export async function deleteClinicProfessional(id: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('clinic_professionals')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error deleting professional:', error);
+        return false;
+    }
+}
+
+// =====================================================
+// Custom Messages CRUD
+// =====================================================
+
+export async function getCustomMessages(clinicId: string): Promise<CustomMessage[]> {
+    try {
+        const { data, error } = await supabase
+            .from('ai_secretary_custom_messages')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('is_predefined', { ascending: false })
+            .order('title', { ascending: true });
+
+        if (error) {
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                return [];
+            }
+            console.warn('Error fetching custom messages:', error);
+            return [];
+        }
+
+        return (data || []) as CustomMessage[];
+    } catch (error) {
+        console.warn('Error in getCustomMessages:', error);
+        return [];
+    }
+}
+
+export async function addCustomMessage(
+    clinicId: string,
+    messageKey: string,
+    title: string,
+    message: string,
+    isPredefined: boolean = false
+): Promise<CustomMessage | null> {
+    try {
+        const { data, error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .insert({
+                clinic_id: clinicId,
+                message_key: messageKey,
+                title: title,
+                message: message,
+                is_active: true,
+                is_predefined: isPredefined,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data as CustomMessage;
+    } catch (error) {
+        console.error('Error adding custom message:', error);
+        return null;
+    }
+}
+
+export async function updateCustomMessage(
+    id: string,
+    updates: Partial<Pick<CustomMessage, 'title' | 'message' | 'is_active'>>
+): Promise<boolean> {
+    try {
+        const { error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error updating custom message:', error);
+        return false;
+    }
+}
+
+export async function deleteCustomMessage(id: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('ai_secretary_custom_messages')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error deleting custom message:', error);
+        return false;
+    }
+}
+
+export async function initializePredefinedMessages(clinicId: string): Promise<boolean> {
+    try {
+        const existing = await getCustomMessages(clinicId);
+        if (existing.length > 0) {
+            return true;
+        }
+
+        const messages = PREDEFINED_MESSAGE_TYPES.map(type => ({
+            clinic_id: clinicId,
+            message_key: type.key,
+            title: type.title,
+            message: type.defaultMessage,
+            is_active: false,
+            is_predefined: true,
+        }));
+
+        const { error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .insert(messages);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error initializing predefined messages:', error);
         return false;
     }
 }

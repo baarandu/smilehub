@@ -4,7 +4,7 @@ import { useNavigation } from 'expo-router';
 import {
     ArrowLeft, Bot, MessageCircle, Clock, Settings, Zap, CheckCircle2, AlertCircle,
     Calendar, Shield, MessageSquare, BarChart3, ChevronRight, X, Plus, Trash2, MapPin,
-    Mic, CreditCard, Bell, Pencil
+    Mic, CreditCard, Bell, Pencil, User
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useClinic } from '../src/contexts/ClinicContext';
@@ -30,6 +30,10 @@ import {
     // Behavior settings
     AISecretaryBehavior,
     DEFAULT_BEHAVIOR_SETTINGS,
+    DEFAULT_BEHAVIOR_PROMPT,
+    PERSONALITY_TONES,
+    EMOJI_OPTIONS,
+    generateBehaviorPrompt,
     getBehaviorSettings,
     updateBehaviorSetting,
     updateBehaviorSettings,
@@ -41,6 +45,12 @@ import {
     updateCustomMessage,
     deleteCustomMessage,
     initializePredefinedMessages,
+    // Professionals
+    ClinicProfessional,
+    getClinicProfessionals,
+    addClinicProfessional,
+    updateClinicProfessional,
+    deleteClinicProfessional,
 } from '../src/services/secretary';
 import {
     MessageBehaviorSection,
@@ -117,8 +127,23 @@ export default function AISecretarySettingsScreen() {
     const [newScheduleStart, setNewScheduleStart] = useState('08:00');
     const [newScheduleEnd, setNewScheduleEnd] = useState('18:00');
     const [newScheduleLocation, setNewScheduleLocation] = useState<string | null>(null);
+    const [newScheduleProfessionals, setNewScheduleProfessionals] = useState<string[]>([]);
     const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
     const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+
+    // Professionals
+    const [professionals, setProfessionals] = useState<ClinicProfessional[]>([]);
+    const [showProfessionalModal, setShowProfessionalModal] = useState(false);
+    const [editingProfessional, setEditingProfessional] = useState<ClinicProfessional | null>(null);
+    const [profName, setProfName] = useState('');
+    const [profTitle, setProfTitle] = useState('Dr.');
+    const [profSpecialty, setProfSpecialty] = useState('');
+
+    // Locations
+    const [showLocationModal, setShowLocationModal] = useState(false);
+    const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+    const [locationName, setLocationName] = useState('');
+    const [locationAddress, setLocationAddress] = useState('');
 
     // Scheduling Rules (local state with save button)
     const [localMinAdvanceHours, setLocalMinAdvanceHours] = useState('2');
@@ -138,6 +163,28 @@ export default function AISecretarySettingsScreen() {
     const [showKeywordModal, setShowKeywordModal] = useState(false);
     const [editingKeywordIndex, setEditingKeywordIndex] = useState<number | null>(null);
     const [newKeyword, setNewKeyword] = useState('');
+
+    // Blocked Numbers Modal
+    const [showBlockedNumberModal, setShowBlockedNumberModal] = useState(false);
+    const [newBlockedNumber, setNewBlockedNumber] = useState('');
+
+    // Behavior Prompt
+    const [showBehaviorPromptModal, setShowBehaviorPromptModal] = useState(false);
+    const [tempBehaviorPrompt, setTempBehaviorPrompt] = useState('');
+
+    // Procedures list modal
+    const [showProceduresModal, setShowProceduresModal] = useState(false);
+    const [procedures, setProcedures] = useState<{name: string; price: string}[]>([]);
+    const [newProcedureName, setNewProcedureName] = useState('');
+    const [newProcedurePrice, setNewProcedurePrice] = useState('');
+
+    // Special rules modal
+    const [showRulesModal, setShowRulesModal] = useState(false);
+    const [tempRules, setTempRules] = useState('');
+
+    // Additional info modal
+    const [showAdditionalInfoModal, setShowAdditionalInfoModal] = useState(false);
+    const [tempAdditionalInfo, setTempAdditionalInfo] = useState('');
 
     // UI State
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
@@ -164,6 +211,7 @@ export default function AISecretarySettingsScreen() {
                 min_advance_hours: 2,
                 interval_minutes: 30,
                 allowed_procedure_ids: [],
+                behavior_prompt: DEFAULT_BEHAVIOR_PROMPT,
                 greeting_message: 'Olá! Sou a assistente virtual. Como posso ajudar?',
                 confirmation_message: 'Sua consulta foi agendada com sucesso! ✅',
                 reminder_message: 'Lembrete: Você tem uma consulta amanhã às {hora}.',
@@ -193,7 +241,7 @@ export default function AISecretarySettingsScreen() {
                 }
             };
 
-            const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData, customMessagesData] = await Promise.all([
+            const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData, customMessagesData, professionalsData] = await Promise.all([
                 safeLoad(() => getSecretarySettings(clinicId), null),
                 safeLoad(() => getBlockedNumbers(clinicId), []),
                 safeLoad(() => getSecretaryStats(clinicId), { total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 }),
@@ -201,6 +249,7 @@ export default function AISecretarySettingsScreen() {
                 safeLoad(() => locationsService.getAll(), []),
                 safeLoad(() => getBehaviorSettings(clinicId), null),
                 safeLoad(() => getCustomMessages(clinicId), []),
+                safeLoad(() => getClinicProfessionals(clinicId), []),
             ]);
 
             if (settingsData) {
@@ -223,6 +272,7 @@ export default function AISecretarySettingsScreen() {
                     min_advance_hours: 2,
                     interval_minutes: 30,
                     allowed_procedure_ids: [],
+                    behavior_prompt: DEFAULT_BEHAVIOR_PROMPT,
                     greeting_message: 'Olá! Sou a assistente virtual. Como posso ajudar?',
                     confirmation_message: 'Sua consulta foi agendada com sucesso! ✅',
                     reminder_message: 'Lembrete: Você tem uma consulta amanhã às {hora}.',
@@ -237,6 +287,7 @@ export default function AISecretarySettingsScreen() {
             setScheduleEntries(scheduleData);
             setLocations(locationsData);
             setCustomMessages(customMessagesData);
+            setProfessionals(professionalsData);
 
             // Set behavior settings or use defaults
             if (behaviorData) {
@@ -272,7 +323,103 @@ export default function AISecretarySettingsScreen() {
     };
 
     const toggleActive = (value: boolean) => updateSetting('is_active', value);
-    const updateTone = (tone: 'casual' | 'formal') => updateSetting('tone', tone);
+
+    // Behavior Prompt handlers
+    const handleOpenBehaviorPromptModal = () => {
+        setTempBehaviorPrompt(settings?.behavior_prompt || generateBehaviorPrompt(settings || {}));
+        setShowBehaviorPromptModal(true);
+    };
+
+    const handleSaveBehaviorPrompt = async () => {
+        if (!tempBehaviorPrompt.trim()) {
+            Alert.alert('Erro', 'O prompt não pode estar vazio.');
+            return;
+        }
+        const success = await updateSetting('behavior_prompt', tempBehaviorPrompt);
+        if (success) {
+            setShowBehaviorPromptModal(false);
+        }
+    };
+
+    const handleRestoreDefaultPrompt = () => {
+        Alert.alert(
+            'Regenerar Prompt',
+            'Deseja regenerar o prompt baseado nas configurações atuais?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Regenerar',
+                    onPress: () => setTempBehaviorPrompt(generateBehaviorPrompt(settings || {}))
+                }
+            ]
+        );
+    };
+
+    // Update personality field and regenerate prompt
+    const updatePersonalityField = async <K extends keyof AISecretarySettings>(field: K, value: AISecretarySettings[K]) => {
+        if (!settings) return;
+
+        // Update the field
+        const success = await updateSetting(field, value);
+        if (success) {
+            // Regenerate and save the prompt with updated settings
+            const updatedSettings = { ...settings, [field]: value };
+            const newPrompt = generateBehaviorPrompt(updatedSettings);
+            await updateSetting('behavior_prompt', newPrompt);
+        }
+    };
+
+    // Procedures handlers
+    const handleOpenProceduresModal = () => {
+        try {
+            const parsed = settings?.procedures_list ? JSON.parse(settings.procedures_list) : [];
+            setProcedures(parsed);
+        } catch {
+            setProcedures([]);
+        }
+        setNewProcedureName('');
+        setNewProcedurePrice('');
+        setShowProceduresModal(true);
+    };
+
+    const handleAddProcedure = () => {
+        if (!newProcedureName.trim()) return;
+        setProcedures(prev => [...prev, { name: newProcedureName.trim(), price: newProcedurePrice.trim() || '0' }]);
+        setNewProcedureName('');
+        setNewProcedurePrice('');
+    };
+
+    const handleRemoveProcedure = (index: number) => {
+        setProcedures(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveProcedures = async () => {
+        const json = JSON.stringify(procedures);
+        await updatePersonalityField('procedures_list', json);
+        setShowProceduresModal(false);
+    };
+
+    // Rules handlers
+    const handleOpenRulesModal = () => {
+        setTempRules(settings?.special_rules || '');
+        setShowRulesModal(true);
+    };
+
+    const handleSaveRules = async () => {
+        await updatePersonalityField('special_rules', tempRules);
+        setShowRulesModal(false);
+    };
+
+    // Additional info handlers
+    const handleOpenAdditionalInfoModal = () => {
+        setTempAdditionalInfo(settings?.additional_info || '');
+        setShowAdditionalInfoModal(true);
+    };
+
+    const handleSaveAdditionalInfo = async () => {
+        await updatePersonalityField('additional_info', tempAdditionalInfo);
+        setShowAdditionalInfoModal(false);
+    };
 
     // Behavior update handlers
     const handleBehaviorUpdate = async (field: keyof AISecretaryBehavior, value: any) => {
@@ -387,21 +534,20 @@ export default function AISecretarySettingsScreen() {
     };
 
     const handleAddBlockedNumber = () => {
-        if (typeof Alert.prompt === 'function') {
-            Alert.prompt(
-                'Bloquear Número',
-                'Digite o número com DDD:',
-                async (number) => {
-                    if (number && clinicId) {
-                        const result = await addBlockedNumber(clinicId, number);
-                        if (result) {
-                            setBlockedNumbers(prev => [result, ...prev]);
-                        }
-                    }
-                }
-            );
-        } else {
-            Alert.alert('Bloquear Número', 'Funcionalidade disponível apenas no iOS.');
+        setNewBlockedNumber('');
+        setShowBlockedNumberModal(true);
+    };
+
+    const handleSaveBlockedNumber = async () => {
+        if (!clinicId || !newBlockedNumber.trim()) {
+            Alert.alert('Erro', 'Digite um número válido.');
+            return;
+        }
+        const result = await addBlockedNumber(clinicId, newBlockedNumber.trim());
+        if (result) {
+            setBlockedNumbers(prev => [result, ...prev]);
+            setShowBlockedNumberModal(false);
+            setNewBlockedNumber('');
         }
     };
 
@@ -592,6 +738,8 @@ export default function AISecretarySettingsScreen() {
             setNewScheduleStart(formatTime(entry.start_time));
             setNewScheduleEnd(formatTime(entry.end_time));
             setNewScheduleLocation(entry.location_id || null);
+            // Use professional_ids array, or fallback to single professional_id for legacy data
+            setNewScheduleProfessionals(entry.professional_ids || (entry.professional_id ? [entry.professional_id] : []));
         } else {
             // Add mode
             setEditingScheduleId(null);
@@ -599,6 +747,7 @@ export default function AISecretarySettingsScreen() {
             setNewScheduleStart('08:00');
             setNewScheduleEnd('18:00');
             setNewScheduleLocation(null);
+            setNewScheduleProfessionals([]);
         }
         setShowScheduleModal(true);
     };
@@ -606,17 +755,37 @@ export default function AISecretarySettingsScreen() {
     const handleSaveScheduleEntry = async () => {
         if (!clinicId) return;
 
+        // Get professional names for the selected professionals
+        const getProfessionalNames = (ids: string[]) => {
+            return ids
+                .map(id => {
+                    const prof = professionals.find(p => p.id === id);
+                    return prof ? `${prof.title || ''} ${prof.name}`.trim() : null;
+                })
+                .filter(Boolean) as string[];
+        };
+
         if (editingScheduleId) {
             // Update existing
             const success = await updateScheduleEntry(editingScheduleId, {
                 start_time: newScheduleStart,
                 end_time: newScheduleEnd,
                 location_id: newScheduleLocation,
+                professional_ids: newScheduleProfessionals.length > 0 ? newScheduleProfessionals : null,
             });
             if (success) {
+                const profNames = getProfessionalNames(newScheduleProfessionals);
                 setScheduleEntries(prev => prev.map(e =>
                     e.id === editingScheduleId
-                        ? { ...e, start_time: newScheduleStart, end_time: newScheduleEnd, location_id: newScheduleLocation }
+                        ? {
+                            ...e,
+                            start_time: newScheduleStart,
+                            end_time: newScheduleEnd,
+                            location_id: newScheduleLocation,
+                            professional_ids: newScheduleProfessionals.length > 0 ? newScheduleProfessionals : null,
+                            professional_names: profNames.length > 0 ? profNames : undefined,
+                            professional_name: profNames.length > 0 ? profNames.join(', ') : undefined
+                        }
                         : e
                 ));
                 setShowScheduleModal(false);
@@ -626,8 +795,12 @@ export default function AISecretarySettingsScreen() {
             }
         } else {
             // Add new
-            const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd, newScheduleLocation);
+            const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd, newScheduleLocation, newScheduleProfessionals.length > 0 ? newScheduleProfessionals : null);
             if (result) {
+                const profNames = getProfessionalNames(newScheduleProfessionals);
+                result.professional_ids = newScheduleProfessionals.length > 0 ? newScheduleProfessionals : null;
+                result.professional_names = profNames.length > 0 ? profNames : undefined;
+                result.professional_name = profNames.length > 0 ? profNames.join(', ') : undefined;
                 setScheduleEntries(prev => [...prev, result]);
                 setShowScheduleModal(false);
             } else {
@@ -684,6 +857,160 @@ export default function AISecretarySettingsScreen() {
         if (success) {
             loadData();
         }
+    };
+
+    // Professional Handlers
+    const handleOpenProfessionalModal = (prof?: ClinicProfessional) => {
+        if (prof) {
+            setEditingProfessional(prof);
+            setProfName(prof.name);
+            setProfTitle(prof.title || 'Dr.');
+            setProfSpecialty(prof.specialty || '');
+        } else {
+            setEditingProfessional(null);
+            setProfName('');
+            setProfTitle('Dr.');
+            setProfSpecialty('');
+        }
+        setShowProfessionalModal(true);
+    };
+
+    const handleSaveProfessional = async () => {
+        if (!clinicId || !profName.trim()) {
+            Alert.alert('Erro', 'Digite o nome do profissional.');
+            return;
+        }
+
+        if (editingProfessional?.id) {
+            // Update existing
+            const success = await updateClinicProfessional(editingProfessional.id, {
+                name: profName.trim(),
+                title: profTitle,
+                specialty: profSpecialty,
+            });
+            if (success) {
+                setProfessionals(prev => prev.map(p =>
+                    p.id === editingProfessional.id
+                        ? { ...p, name: profName.trim(), title: profTitle, specialty: profSpecialty }
+                        : p
+                ));
+                setShowProfessionalModal(false);
+                setEditingProfessional(null);
+            } else {
+                Alert.alert('Erro', 'Não foi possível atualizar. Verifique se a tabela clinic_professionals existe.');
+            }
+        } else {
+            // Add new
+            const result = await addClinicProfessional(clinicId, {
+                name: profName.trim(),
+                title: profTitle,
+                specialty: profSpecialty,
+                profession: 'Dentista',
+                default_appointment_duration: 30,
+                is_active: true,
+                accepts_new_patients: true,
+            });
+            if (result) {
+                setProfessionals(prev => [...prev, result]);
+                setShowProfessionalModal(false);
+            } else {
+                Alert.alert('Erro', 'Não foi possível adicionar. Verifique se a tabela clinic_professionals existe.');
+            }
+        }
+    };
+
+    const handleDeleteProfessional = (prof: ClinicProfessional) => {
+        if (!prof.id) return;
+
+        Alert.alert(
+            'Excluir Profissional',
+            `Deseja excluir ${prof.title} ${prof.name}?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const success = await deleteClinicProfessional(prof.id!);
+                        if (success) {
+                            setProfessionals(prev => prev.filter(p => p.id !== prof.id));
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    // Location Handlers
+    const handleOpenLocationModal = (location?: Location) => {
+        if (location) {
+            setEditingLocation(location);
+            setLocationName(location.name);
+            setLocationAddress(location.address || '');
+        } else {
+            setEditingLocation(null);
+            setLocationName('');
+            setLocationAddress('');
+        }
+        setShowLocationModal(true);
+    };
+
+    const handleSaveLocation = async () => {
+        if (!locationName.trim()) {
+            Alert.alert('Erro', 'Digite o nome do local.');
+            return;
+        }
+
+        try {
+            if (editingLocation?.id) {
+                // Update existing
+                const updated = await locationsService.update(editingLocation.id, {
+                    name: locationName.trim(),
+                    address: locationAddress.trim() || null,
+                });
+                setLocations(prev => prev.map(l =>
+                    l.id === editingLocation.id ? updated : l
+                ));
+                setShowLocationModal(false);
+                setEditingLocation(null);
+            } else {
+                // Add new
+                const result = await locationsService.create({
+                    name: locationName.trim(),
+                    address: locationAddress.trim() || null,
+                });
+                setLocations(prev => [...prev, result]);
+                setShowLocationModal(false);
+            }
+        } catch (error) {
+            console.error('Error saving location:', error);
+            Alert.alert('Erro', 'Não foi possível salvar o local.');
+        }
+    };
+
+    const handleDeleteLocation = (location: Location) => {
+        if (!location.id) return;
+
+        Alert.alert(
+            'Excluir Local',
+            `Deseja excluir "${location.name}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await locationsService.delete(location.id);
+                            setLocations(prev => prev.filter(l => l.id !== location.id));
+                        } catch (error) {
+                            console.error('Error deleting location:', error);
+                            Alert.alert('Erro', 'Não foi possível excluir o local.');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     // Group schedule entries by day
@@ -820,20 +1147,51 @@ export default function AISecretarySettingsScreen() {
                                                 >
                                                     <TouchableOpacity
                                                         onPress={() => handleOpenScheduleModal(entry)}
-                                                        className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2"
+                                                        className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2"
                                                         activeOpacity={0.7}
                                                     >
-                                                        <View className="flex-row items-center gap-2 flex-1">
-                                                            <Clock size={14} color="#6B7280" />
-                                                            <Text className="text-sm text-gray-800">{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</Text>
-                                                            {entry.location_name && (
-                                                                <View className="flex-row items-center bg-blue-50 px-2 py-0.5 rounded">
-                                                                    <MapPin size={10} color="#3B82F6" />
-                                                                    <Text className="text-[10px] text-blue-600 ml-1">{entry.location_name}</Text>
+                                                        <View className="flex-row items-center justify-between">
+                                                            {/* Time */}
+                                                            <View className="flex-row items-center gap-2">
+                                                                <View className="w-8 h-8 bg-white rounded-full items-center justify-center border border-gray-200">
+                                                                    <Clock size={14} color="#6B7280" />
                                                                 </View>
-                                                            )}
+                                                                <Text className="text-sm font-semibold text-gray-800">{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</Text>
+                                                            </View>
+                                                            <ChevronRight size={16} color="#9CA3AF" />
                                                         </View>
-                                                        <ChevronRight size={16} color="#9CA3AF" />
+
+                                                        {/* Location and Professionals */}
+                                                        {(entry.location_name || (entry.professional_names && entry.professional_names.length > 0) || entry.professional_name) && (
+                                                            <View className="mt-2 pt-2 border-t border-gray-100">
+                                                                {/* Location */}
+                                                                {entry.location_name && (
+                                                                    <View className="flex-row items-center gap-2 mb-1">
+                                                                        <MapPin size={12} color="#3B82F6" />
+                                                                        <Text className="text-xs text-blue-600">{entry.location_name}</Text>
+                                                                    </View>
+                                                                )}
+
+                                                                {/* Professionals */}
+                                                                {(entry.professional_names && entry.professional_names.length > 0) ? (
+                                                                    <View className="flex-row items-center gap-2 flex-wrap">
+                                                                        <User size={12} color="#7C3AED" />
+                                                                        {entry.professional_names.map((name, idx) => (
+                                                                            <View key={idx} className="bg-purple-50 px-2 py-0.5 rounded">
+                                                                                <Text className="text-[10px] text-purple-700">{name}</Text>
+                                                                            </View>
+                                                                        ))}
+                                                                    </View>
+                                                                ) : entry.professional_name ? (
+                                                                    <View className="flex-row items-center gap-2">
+                                                                        <User size={12} color="#7C3AED" />
+                                                                        <View className="bg-purple-50 px-2 py-0.5 rounded">
+                                                                            <Text className="text-[10px] text-purple-700">{entry.professional_name}</Text>
+                                                                        </View>
+                                                                    </View>
+                                                                ) : null}
+                                                            </View>
+                                                        )}
                                                     </TouchableOpacity>
                                                 </Swipeable>
                                             ))
@@ -849,6 +1207,137 @@ export default function AISecretarySettingsScreen() {
                     >
                         <Plus size={16} color="#b94a48" />
                         <Text className="text-[#8b3634] font-medium text-sm">Adicionar Horário</Text>
+                    </TouchableOpacity>
+                </CollapsibleSection>
+
+                {/* Team / Professionals */}
+                <CollapsibleSection title="Equipe" icon={Settings}>
+                    <Text className="text-[10px] text-gray-500 mb-3">
+                        Cadastre os profissionais da clínica para vincular aos horários de atendimento
+                    </Text>
+
+                    {professionals.length === 0 ? (
+                        <View className="items-center py-4">
+                            <Text className="text-gray-500 text-sm mb-3">Nenhum profissional cadastrado</Text>
+                        </View>
+                    ) : (
+                        <View className="mb-3">
+                            {professionals.map((prof) => (
+                                <Swipeable
+                                    key={prof.id}
+                                    renderRightActions={() => (
+                                        <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                            <TouchableOpacity
+                                                onPress={() => handleOpenProfessionalModal(prof)}
+                                                className="bg-blue-500 justify-center items-center px-4"
+                                                style={{ borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}
+                                            >
+                                                <Pencil size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleDeleteProfessional(prof)}
+                                                className="bg-red-500 justify-center items-center px-4"
+                                                style={{ borderTopRightRadius: 8, borderBottomRightRadius: 8 }}
+                                            >
+                                                <Trash2 size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                    overshootRight={false}
+                                >
+                                    <TouchableOpacity
+                                        onPress={() => handleOpenProfessionalModal(prof)}
+                                        className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2"
+                                    >
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-800">{prof.title} {prof.name}</Text>
+                                            {prof.specialty && (
+                                                <Text className="text-[11px] text-gray-500">{prof.specialty}</Text>
+                                            )}
+                                        </View>
+                                        <View className={`px-2 py-1 rounded ${prof.is_active ? 'bg-green-100' : 'bg-gray-200'}`}>
+                                            <Text className={`text-[10px] ${prof.is_active ? 'text-green-700' : 'text-gray-500'}`}>
+                                                {prof.is_active ? 'Ativo' : 'Inativo'}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </Swipeable>
+                            ))}
+                        </View>
+                    )}
+
+                    <TouchableOpacity
+                        onPress={() => handleOpenProfessionalModal()}
+                        className="flex-row items-center justify-center gap-2 bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg"
+                    >
+                        <Plus size={16} color="#b94a48" />
+                        <Text className="text-[#8b3634] font-medium text-sm">Adicionar Profissional</Text>
+                    </TouchableOpacity>
+                </CollapsibleSection>
+
+                {/* Locations */}
+                <CollapsibleSection title="Locais de Atendimento" icon={MapPin}>
+                    <Text className="text-[10px] text-gray-500 mb-3">
+                        Cadastre os locais de atendimento para vincular aos horários
+                    </Text>
+
+                    {locations.length === 0 ? (
+                        <View className="items-center py-4">
+                            <Text className="text-gray-500 text-sm mb-3">Nenhum local cadastrado</Text>
+                        </View>
+                    ) : (
+                        <View className="mb-3">
+                            {locations.map((location) => (
+                                <Swipeable
+                                    key={location.id}
+                                    renderRightActions={() => (
+                                        <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                            <TouchableOpacity
+                                                onPress={() => handleOpenLocationModal(location)}
+                                                className="bg-blue-500 justify-center items-center px-4"
+                                                style={{ borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}
+                                            >
+                                                <Pencil size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => handleDeleteLocation(location)}
+                                                className="bg-red-500 justify-center items-center px-4"
+                                                style={{ borderTopRightRadius: 8, borderBottomRightRadius: 8 }}
+                                            >
+                                                <Trash2 size={16} color="#fff" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                    overshootRight={false}
+                                >
+                                    <TouchableOpacity
+                                        onPress={() => handleOpenLocationModal(location)}
+                                        className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2"
+                                    >
+                                        <View className="flex-row items-center gap-2 flex-1">
+                                            <View className="w-8 h-8 bg-blue-50 rounded-full items-center justify-center">
+                                                <MapPin size={14} color="#3B82F6" />
+                                            </View>
+                                            <View className="flex-1">
+                                                <Text className="text-sm font-medium text-gray-800">{location.name}</Text>
+                                                {location.address && (
+                                                    <Text className="text-[11px] text-gray-500" numberOfLines={1}>{location.address}</Text>
+                                                )}
+                                            </View>
+                                        </View>
+                                        <ChevronRight size={16} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                </Swipeable>
+                            ))}
+                        </View>
+                    )}
+
+                    <TouchableOpacity
+                        onPress={() => handleOpenLocationModal()}
+                        className="flex-row items-center justify-center gap-2 bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg"
+                    >
+                        <Plus size={16} color="#b94a48" />
+                        <Text className="text-[#8b3634] font-medium text-sm">Adicionar Local</Text>
                     </TouchableOpacity>
                 </CollapsibleSection>
 
@@ -1114,23 +1603,124 @@ export default function AISecretarySettingsScreen() {
                 </CollapsibleSection>
 
                 {/* Behavior */}
-                <SettingsSection title="Comportamento" icon={Settings}>
-                    <Text className="text-xs font-medium text-gray-600 mb-3">Tom de Voz</Text>
-                    <View className="flex-row gap-3">
-                        <TouchableOpacity
-                            onPress={() => updateTone('casual')}
-                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'casual' ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
-                        >
-                            <Text className={`text-sm font-medium text-center ${settings.tone === 'casual' ? 'text-[#8b3634]' : 'text-gray-600'}`}>Casual 😊</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => updateTone('formal')}
-                            className={`flex-1 p-3 rounded-xl border ${settings.tone === 'formal' ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
-                        >
-                            <Text className={`text-sm font-medium text-center ${settings.tone === 'formal' ? 'text-[#8b3634]' : 'text-gray-600'}`}>Formal 👔</Text>
-                        </TouchableOpacity>
+                <CollapsibleSection title="Personalidade da IA" icon={Bot}>
+                    {/* Secretary Name */}
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Nome da Secretária</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                            value={settings.secretary_name || 'Sofia'}
+                            onChangeText={(v) => updatePersonalityField('secretary_name', v)}
+                            placeholder="Ex: Sofia, Ana, Maria..."
+                        />
                     </View>
-                </SettingsSection>
+
+                    {/* Clinic Name */}
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Nome da Clínica</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                            value={settings.clinic_name || ''}
+                            onChangeText={(v) => updatePersonalityField('clinic_name', v)}
+                            placeholder="Ex: Odonto Smile, Clínica Sorriso..."
+                        />
+                    </View>
+
+                    {/* Specialty */}
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Especialidade</Text>
+                        <TextInput
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800"
+                            value={settings.clinic_specialty || 'odontológica'}
+                            onChangeText={(v) => updatePersonalityField('clinic_specialty', v)}
+                            placeholder="Ex: odontológica, ortodontia e implantes..."
+                        />
+                    </View>
+
+                    {/* Personality Tone */}
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Tom de Voz</Text>
+                        <View className="flex-row gap-2">
+                            {(Object.entries(PERSONALITY_TONES) as [string, {label: string; description: string}][]).map(([key, val]) => (
+                                <TouchableOpacity
+                                    key={key}
+                                    onPress={() => updatePersonalityField('personality_tone', key as any)}
+                                    className={`flex-1 p-2.5 rounded-lg border ${settings.personality_tone === key ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
+                                >
+                                    <Text className={`text-xs font-medium text-center ${settings.personality_tone === key ? 'text-[#8b3634]' : 'text-gray-600'}`}>{val.label}</Text>
+                                    <Text className={`text-[9px] text-center mt-0.5 ${settings.personality_tone === key ? 'text-[#a03f3d]' : 'text-gray-400'}`}>{val.description}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Emoji Usage */}
+                    <View className="mb-4">
+                        <Text className="text-xs font-medium text-gray-600 mb-2">Uso de Emojis</Text>
+                        <View className="flex-row gap-2">
+                            {(Object.entries(EMOJI_OPTIONS) as [string, {label: string; description: string}][]).map(([key, val]) => (
+                                <TouchableOpacity
+                                    key={key}
+                                    onPress={() => updatePersonalityField('use_emojis', key as any)}
+                                    className={`flex-1 p-2.5 rounded-lg border ${settings.use_emojis === key ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-white border-gray-200'}`}
+                                >
+                                    <Text className={`text-xs font-medium text-center ${settings.use_emojis === key ? 'text-[#8b3634]' : 'text-gray-600'}`}>{val.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Procedures */}
+                    <TouchableOpacity
+                        onPress={handleOpenProceduresModal}
+                        className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3"
+                    >
+                        <View className="flex-1">
+                            <Text className="text-xs font-medium text-gray-700">Procedimentos e Valores</Text>
+                            <Text className="text-[10px] text-gray-500 mt-0.5">
+                                {settings.procedures_list ? `${JSON.parse(settings.procedures_list || '[]').length} procedimento(s)` : 'Nenhum cadastrado'}
+                            </Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+
+                    {/* Special Rules */}
+                    <TouchableOpacity
+                        onPress={handleOpenRulesModal}
+                        className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3"
+                    >
+                        <View className="flex-1">
+                            <Text className="text-xs font-medium text-gray-700">Regras Especiais</Text>
+                            <Text className="text-[10px] text-gray-500 mt-0.5" numberOfLines={1}>
+                                {settings.special_rules || 'Nenhuma regra definida'}
+                            </Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+
+                    {/* Additional Info */}
+                    <TouchableOpacity
+                        onPress={handleOpenAdditionalInfoModal}
+                        className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-4"
+                    >
+                        <View className="flex-1">
+                            <Text className="text-xs font-medium text-gray-700">Informações Adicionais</Text>
+                            <Text className="text-[10px] text-gray-500 mt-0.5" numberOfLines={1}>
+                                {settings.additional_info || 'Contexto extra para a IA'}
+                            </Text>
+                        </View>
+                        <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+
+                    {/* View Generated Prompt */}
+                    <TouchableOpacity
+                        onPress={handleOpenBehaviorPromptModal}
+                        className="flex-row items-center justify-center gap-2 p-2 border border-dashed border-gray-300 rounded-lg"
+                    >
+                        <Settings size={14} color="#6B7280" />
+                        <Text className="text-[11px] text-gray-500">Ver/Editar Prompt Gerado</Text>
+                    </TouchableOpacity>
+                </CollapsibleSection>
 
                 {/* Message Behavior Settings */}
                 {behavior && (
@@ -1279,6 +1869,299 @@ export default function AISecretarySettingsScreen() {
                 </View>
             </Modal>
 
+            {/* Behavior Prompt Modal */}
+            <Modal visible={showBehaviorPromptModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10 max-h-[85%]">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Prompt Gerado</Text>
+                                <TouchableOpacity onPress={() => setShowBehaviorPromptModal(false)}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View className="bg-blue-50 p-3 rounded-lg mb-3">
+                                <Text className="text-[10px] text-blue-700">
+                                    Este prompt é gerado automaticamente com base nas configurações acima. Você pode editá-lo manualmente se precisar de ajustes finos.
+                                </Text>
+                            </View>
+
+                            <ScrollView className="max-h-[280px] mb-4">
+                                <TextInput
+                                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[250px]"
+                                    value={tempBehaviorPrompt}
+                                    onChangeText={setTempBehaviorPrompt}
+                                    multiline
+                                    textAlignVertical="top"
+                                    placeholder="Descreva como a IA deve se comportar..."
+                                />
+                            </ScrollView>
+
+                            <TouchableOpacity
+                                onPress={handleRestoreDefaultPrompt}
+                                className="flex-row items-center justify-center mb-3"
+                            >
+                                <Text className="text-xs text-gray-500">🔄 Regenerar baseado nas configurações</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={handleSaveBehaviorPrompt} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Salvar Prompt</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Procedures Modal */}
+            <Modal visible={showProceduresModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10 max-h-[80%]">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Procedimentos e Valores</Text>
+                                <TouchableOpacity onPress={() => setShowProceduresModal(false)}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-[10px] text-gray-500 mb-3">
+                                A IA usará essas informações para responder sobre valores de procedimentos.
+                            </Text>
+
+                            {/* Add new procedure */}
+                            <View className="flex-row gap-2 mb-4">
+                                <TextInput
+                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                    value={newProcedureName}
+                                    onChangeText={setNewProcedureName}
+                                    placeholder="Procedimento"
+                                />
+                                <TextInput
+                                    className="w-24 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                                    value={newProcedurePrice}
+                                    onChangeText={setNewProcedurePrice}
+                                    placeholder="Valor"
+                                    keyboardType="numeric"
+                                />
+                                <TouchableOpacity
+                                    onPress={handleAddProcedure}
+                                    className="bg-[#a03f3d] px-3 rounded-lg justify-center"
+                                >
+                                    <Plus size={20} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* List of procedures */}
+                            <ScrollView className="max-h-[250px] mb-4">
+                                {procedures.length === 0 ? (
+                                    <Text className="text-xs text-gray-400 text-center py-4">Nenhum procedimento cadastrado</Text>
+                                ) : (
+                                    procedures.map((proc, index) => (
+                                        <View key={index} className="flex-row items-center justify-between bg-gray-50 p-3 rounded-lg mb-2">
+                                            <View className="flex-1">
+                                                <Text className="text-sm text-gray-800">{proc.name}</Text>
+                                                <Text className="text-xs text-green-600 font-medium">R$ {proc.price}</Text>
+                                            </View>
+                                            <TouchableOpacity onPress={() => handleRemoveProcedure(index)}>
+                                                <Trash2 size={16} color="#EF4444" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))
+                                )}
+                            </ScrollView>
+
+                            <TouchableOpacity onPress={handleSaveProcedures} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Salvar Procedimentos</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Special Rules Modal */}
+            <Modal visible={showRulesModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Regras Especiais</Text>
+                                <TouchableOpacity onPress={() => setShowRulesModal(false)}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-[10px] text-gray-500 mb-3">
+                                Defina regras ou restrições que a IA deve seguir. Uma por linha.
+                            </Text>
+
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[150px] mb-4"
+                                value={tempRules}
+                                onChangeText={setTempRules}
+                                multiline
+                                textAlignVertical="top"
+                                placeholder={"Ex:\n- Não agendar mais de 2 implantes por dia\n- Clareamento só às terças e quintas\n- Consulta mínima de 30 minutos"}
+                            />
+
+                            <TouchableOpacity onPress={handleSaveRules} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Salvar Regras</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Additional Info Modal */}
+            <Modal visible={showAdditionalInfoModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Informações Adicionais</Text>
+                                <TouchableOpacity onPress={() => setShowAdditionalInfoModal(false)}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-[10px] text-gray-500 mb-3">
+                                Qualquer informação extra que ajude a IA a atender melhor.
+                            </Text>
+
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[150px] mb-4"
+                                value={tempAdditionalInfo}
+                                onChangeText={setTempAdditionalInfo}
+                                multiline
+                                textAlignVertical="top"
+                                placeholder={"Ex:\n- Estacionamento gratuito no local\n- Aceitamos Unimed e Bradesco Saúde\n- Dr. João é especialista em implantes"}
+                            />
+
+                            <TouchableOpacity onPress={handleSaveAdditionalInfo} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Salvar Informações</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Professional Modal */}
+            <Modal visible={showProfessionalModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">
+                                    {editingProfessional ? 'Editar Profissional' : 'Novo Profissional'}
+                                </Text>
+                                <TouchableOpacity onPress={() => { setShowProfessionalModal(false); setEditingProfessional(null); }}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Title selector */}
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Título</Text>
+                            <View className="flex-row gap-2 mb-4">
+                                {['Dr.', 'Dra.', 'Prof.', 'Profa.'].map(title => (
+                                    <TouchableOpacity
+                                        key={title}
+                                        onPress={() => setProfTitle(title)}
+                                        className={`px-4 py-2 rounded-lg border ${profTitle === title ? 'bg-[#fef2f2] border-[#fca5a5]' : 'bg-gray-50 border-gray-200'}`}
+                                    >
+                                        <Text className={`text-sm font-medium ${profTitle === title ? 'text-[#8b3634]' : 'text-gray-600'}`}>{title}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* Name */}
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Nome</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 mb-4"
+                                value={profName}
+                                onChangeText={setProfName}
+                                placeholder="Ex: João Silva"
+                            />
+
+                            {/* Specialty */}
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Especialidade</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 mb-4"
+                                value={profSpecialty}
+                                onChangeText={setProfSpecialty}
+                                placeholder="Ex: Ortodontia, Implantodontia..."
+                            />
+
+                            <TouchableOpacity onPress={handleSaveProfessional} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">
+                                    {editingProfessional ? 'Salvar' : 'Adicionar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Location Modal */}
+            <Modal visible={showLocationModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">
+                                    {editingLocation ? 'Editar Local' : 'Novo Local'}
+                                </Text>
+                                <TouchableOpacity onPress={() => { setShowLocationModal(false); setEditingLocation(null); }}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Name */}
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Nome do Local</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 mb-4"
+                                value={locationName}
+                                onChangeText={setLocationName}
+                                placeholder="Ex: Clínica Centro, Consultório Bairro X..."
+                            />
+
+                            {/* Address */}
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Endereço (opcional)</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 mb-4"
+                                value={locationAddress}
+                                onChangeText={setLocationAddress}
+                                placeholder="Ex: Rua das Flores, 123 - Centro"
+                                multiline
+                            />
+
+                            <TouchableOpacity onPress={handleSaveLocation} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">
+                                    {editingLocation ? 'Salvar' : 'Adicionar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
             {/* Human Keyword Modal */}
             <Modal visible={showKeywordModal} transparent animationType="slide">
                 <KeyboardAvoidingView
@@ -1313,6 +2196,42 @@ export default function AISecretarySettingsScreen() {
                                 <Text className="text-white font-semibold text-center">
                                     {editingKeywordIndex !== null ? 'Salvar' : 'Adicionar'}
                                 </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Blocked Number Modal */}
+            <Modal visible={showBlockedNumberModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">Bloquear Número</Text>
+                                <TouchableOpacity onPress={() => { setShowBlockedNumberModal(false); setNewBlockedNumber(''); }}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Número com DDD</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 mb-2"
+                                value={newBlockedNumber}
+                                onChangeText={setNewBlockedNumber}
+                                placeholder="Ex: 11999999999"
+                                keyboardType="phone-pad"
+                                autoCorrect={false}
+                            />
+                            <Text className="text-[10px] text-gray-400 mb-4">
+                                A secretária IA ignorará mensagens deste número
+                            </Text>
+
+                            <TouchableOpacity onPress={handleSaveBlockedNumber} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Bloquear</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1508,6 +2427,55 @@ export default function AISecretarySettingsScreen() {
                                         ))}
                                     </View>
                                 </ScrollView>
+                            </View>
+                        )}
+
+                        {/* Professional Selector (Multi-select) */}
+                        {professionals.length > 0 && (
+                            <View className="mb-4">
+                                <Text className="text-xs font-medium text-gray-600 mb-1">Profissionais (selecione um ou mais)</Text>
+                                <Text className="text-[10px] text-gray-400 mb-2">Toque para selecionar/desselecionar</Text>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                    <View className="flex-row gap-2">
+                                        <TouchableOpacity
+                                            onPress={() => setNewScheduleProfessionals([])}
+                                            className={`px-3 py-2 rounded-lg border ${newScheduleProfessionals.length === 0 ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-200'}`}
+                                        >
+                                            <Text className={`text-xs font-medium ${newScheduleProfessionals.length === 0 ? 'text-purple-700' : 'text-gray-600'}`}>
+                                                Todos
+                                            </Text>
+                                        </TouchableOpacity>
+                                        {professionals.map(prof => {
+                                            const isSelected = prof.id ? newScheduleProfessionals.includes(prof.id) : false;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={prof.id}
+                                                    onPress={() => {
+                                                        if (!prof.id) return;
+                                                        if (isSelected) {
+                                                            setNewScheduleProfessionals(prev => prev.filter(id => id !== prof.id));
+                                                        } else {
+                                                            setNewScheduleProfessionals(prev => [...prev, prof.id!]);
+                                                        }
+                                                    }}
+                                                    className={`px-3 py-2 rounded-lg border ${isSelected ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-200'}`}
+                                                >
+                                                    <View className="flex-row items-center gap-1">
+                                                        {isSelected && <CheckCircle2 size={12} color="#7C3AED" />}
+                                                        <Text className={`text-xs font-medium ${isSelected ? 'text-purple-700' : 'text-gray-600'}`}>
+                                                            {prof.title} {prof.name}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </View>
+                                </ScrollView>
+                                {newScheduleProfessionals.length > 1 && (
+                                    <Text className="text-[10px] text-purple-600 mt-2">
+                                        {newScheduleProfessionals.length} profissionais selecionados
+                                    </Text>
+                                )}
                             </View>
                         )}
 
