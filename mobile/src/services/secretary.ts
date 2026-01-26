@@ -276,22 +276,20 @@ export async function saveSecretarySettings(
     settings: Partial<AISecretarySettings>
 ): Promise<AISecretarySettings | null> {
     try {
-        // First check if settings exist
-        const existing = await getSecretarySettings(clinicId);
+        // Try to update first
+        const { data: updateData, error: updateError } = await (supabase
+            .from('ai_secretary_settings') as any)
+            .update(settings)
+            .eq('clinic_id', clinicId)
+            .select()
+            .single();
 
-        if (existing) {
-            // Update existing
-            const { data, error } = await (supabase
-                .from('ai_secretary_settings') as any)
-                .update(settings)
-                .eq('clinic_id', clinicId)
-                .select()
-                .single();
+        if (!updateError && updateData) {
+            return updateData as AISecretarySettings;
+        }
 
-            if (error) throw error;
-            return data as AISecretarySettings;
-        } else {
-            // Insert new with defaults
+        // If no rows updated (PGRST116), insert new record
+        if (updateError?.code === 'PGRST116') {
             const { data, error } = await (supabase
                 .from('ai_secretary_settings') as any)
                 .insert({
@@ -305,6 +303,8 @@ export async function saveSecretarySettings(
             if (error) throw error;
             return data as AISecretarySettings;
         }
+
+        throw updateError;
     } catch (error) {
         console.error('Error saving secretary settings:', error);
         return null;
@@ -318,22 +318,33 @@ export async function updateSecretarySetting(
     value: any
 ): Promise<boolean> {
     try {
-        // Check if record exists, if not create it first
-        const existing = await getSecretarySettings(clinicId);
+        // Try to update first
+        const { data, error: updateError } = await (supabase
+            .from('ai_secretary_settings') as any)
+            .update({ [field]: value })
+            .eq('clinic_id', clinicId)
+            .select()
+            .single();
 
-        if (!existing) {
-            // Create with default values plus this field
-            await saveSecretarySettings(clinicId, { [field]: value } as Partial<AISecretarySettings>);
+        if (!updateError && data) {
             return true;
         }
 
-        const { error } = await (supabase
-            .from('ai_secretary_settings') as any)
-            .update({ [field]: value })
-            .eq('clinic_id', clinicId);
+        // If no rows exist, create with defaults plus this field
+        if (updateError?.code === 'PGRST116') {
+            const { error } = await (supabase
+                .from('ai_secretary_settings') as any)
+                .insert({
+                    clinic_id: clinicId,
+                    ...DEFAULT_SETTINGS,
+                    [field]: value,
+                });
 
-        if (error) throw error;
-        return true;
+            if (error) throw error;
+            return true;
+        }
+
+        throw updateError;
     } catch (error) {
         console.error(`Error updating ${field}:`, error);
         return false;
