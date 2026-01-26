@@ -469,6 +469,8 @@ export default function AISecretarySettingsScreen() {
         const day = entry.day_of_week;
         if (!acc[day]) acc[day] = [];
         acc[day].push(entry);
+        // Sort by start_time (earliest first)
+        acc[day].sort((a, b) => a.start_time.localeCompare(b.start_time));
         return acc;
     }, {} as Record<number, ScheduleEntry[]>);
 
