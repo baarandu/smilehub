@@ -436,17 +436,19 @@ export default function AISecretarySettingsScreen() {
 
     // Render swipe actions for schedule entry
     const renderRightActions = (entry: ScheduleEntry) => (
-        <View className="flex-row">
+        <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
             <TouchableOpacity
                 onPress={() => handleOpenScheduleModal(entry)}
-                className="bg-blue-500 justify-center items-center px-4 rounded-l-lg"
+                className="bg-blue-500 justify-center items-center px-5"
+                style={{ borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}
             >
                 <Pencil size={18} color="#fff" />
                 <Text className="text-white text-[10px] mt-1">Editar</Text>
             </TouchableOpacity>
             <TouchableOpacity
                 onPress={() => entry.id && handleDeleteScheduleEntry(entry.id)}
-                className="bg-red-500 justify-center items-center px-4 rounded-r-lg"
+                className="bg-red-500 justify-center items-center px-5"
+                style={{ borderTopRightRadius: 8, borderBottomRightRadius: 8 }}
             >
                 <Trash2 size={18} color="#fff" />
                 <Text className="text-white text-[10px] mt-1">Excluir</Text>
