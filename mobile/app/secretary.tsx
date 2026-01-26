@@ -47,6 +47,13 @@ import Animated from 'react-native-reanimated';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
 
+// Format time to HH:MM (remove seconds if present)
+const formatTime = (time: string): string => {
+    if (!time) return '';
+    const parts = time.split(':');
+    return `${parts[0]}:${parts[1]}`;
+};
+
 // Settings Section Component
 const SettingsSection = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => (
     <View className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm mb-4">
@@ -592,7 +599,7 @@ export default function AISecretarySettingsScreen() {
                                                     >
                                                         <View className="flex-row items-center gap-2 flex-1">
                                                             <Clock size={14} color="#6B7280" />
-                                                            <Text className="text-sm text-gray-800">{entry.start_time} - {entry.end_time}</Text>
+                                                            <Text className="text-sm text-gray-800">{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</Text>
                                                             {entry.location_name && (
                                                                 <View className="flex-row items-center bg-blue-50 px-2 py-0.5 rounded">
                                                                     <MapPin size={10} color="#3B82F6" />
