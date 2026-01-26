@@ -14,6 +14,7 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.4.4",
+    "@react-native-community/slider": "5.0.1",
     "@stripe/stripe-react-native": "^0.57.2",
     "@supabase/supabase-js": "^2.87.1",
     "base64-arraybuffer": "^1.0.2",

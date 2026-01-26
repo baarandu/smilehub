@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, ScrollView, Switch, Alert, TextInput, Mod
 import { useNavigation } from 'expo-router';
 import {
     ArrowLeft, Bot, MessageCircle, Clock, Settings, Zap, CheckCircle2, AlertCircle,
-    Calendar, Shield, MessageSquare, BarChart3, ChevronRight, X, Plus, Trash2, MapPin
+    Calendar, Shield, MessageSquare, BarChart3, ChevronRight, X, Plus, Trash2, MapPin,
+    Mic, CreditCard, Bell
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useClinic } from '../src/contexts/ClinicContext';
@@ -25,7 +26,19 @@ import {
     ScheduleEntry,
     DAY_NAMES,
     DAY_NAMES_FULL,
+    // Behavior settings
+    AISecretaryBehavior,
+    DEFAULT_BEHAVIOR_SETTINGS,
+    getBehaviorSettings,
+    updateBehaviorSetting,
+    updateBehaviorSettings,
 } from '../src/services/secretary';
+import {
+    MessageBehaviorSection,
+    AudioSettingsSection,
+    ReminderSettingsSection,
+    PaymentSettingsSection,
+} from '../src/components/secretary';
 import { locationsService, Location } from '../src/services/locations';
 
 type ConnectionStatus = 'connected' | 'disconnected' | 'connecting';
@@ -74,6 +87,9 @@ export default function AISecretarySettingsScreen() {
     const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
     const [stats, setStats] = useState<AISecretaryStats>({ total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 });
 
+    // Behavior Settings
+    const [behavior, setBehavior] = useState<AISecretaryBehavior | null>(null);
+
     // Schedule
     const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
     const [locations, setLocations] = useState<Location[]>([]);
@@ -100,12 +116,23 @@ export default function AISecretarySettingsScreen() {
 
         setIsLoading(true);
         try {
-            const [settingsData, blockedData, statsData, scheduleData, locationsData] = await Promise.all([
+            // Load behavior settings separately to not block the main load if table doesn't exist
+            const loadBehaviorSafe = async () => {
+                try {
+                    return await getBehaviorSettings(clinicId);
+                } catch (e) {
+                    console.warn('Behavior settings table may not exist yet:', e);
+                    return null;
+                }
+            };
+
+            const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData] = await Promise.all([
                 getSecretarySettings(clinicId),
                 getBlockedNumbers(clinicId),
                 getSecretaryStats(clinicId),
                 getScheduleEntries(clinicId),
                 locationsService.getAll(),
+                loadBehaviorSafe(),
             ]);
 
             if (settingsData) {
@@ -137,6 +164,16 @@ export default function AISecretarySettingsScreen() {
             setStats(statsData);
             setScheduleEntries(scheduleData);
             setLocations(locationsData);
+
+            // Set behavior settings or use defaults
+            if (behaviorData) {
+                setBehavior(behaviorData);
+            } else {
+                setBehavior({
+                    clinic_id: clinicId,
+                    ...DEFAULT_BEHAVIOR_SETTINGS,
+                } as AISecretaryBehavior);
+            }
         } catch (error) {
             console.error('Error loading data:', error);
             Alert.alert('Erro', 'Não foi possível carregar as configurações.');
@@ -162,6 +199,48 @@ export default function AISecretarySettingsScreen() {
 
     const toggleActive = (value: boolean) => updateSetting('is_active', value);
     const updateTone = (tone: 'casual' | 'formal') => updateSetting('tone', tone);
+
+    // Behavior update handlers
+    const handleBehaviorUpdate = async (field: keyof AISecretaryBehavior, value: any) => {
+        if (!clinicId || !behavior) return;
+
+        // Optimistic update
+        setBehavior(prev => prev ? { ...prev, [field]: value } : null);
+
+        try {
+            const success = await updateBehaviorSetting(clinicId, field, value);
+            if (!success) {
+                // Revert on failure
+                setBehavior(behavior);
+                Alert.alert('Erro', 'Não foi possível salvar. Execute o SQL de comportamento no Supabase.');
+            }
+        } catch (e) {
+            console.error('Error updating behavior:', e);
+            setBehavior(behavior);
+            Alert.alert('Erro', 'Tabela de comportamento não encontrada. Execute o SQL no Supabase.');
+        }
+    };
+
+    const handleBehaviorUpdateMultiple = async (updates: Partial<AISecretaryBehavior>) => {
+        if (!clinicId || !behavior) return;
+
+        // Optimistic update
+        const previousBehavior = behavior;
+        setBehavior(prev => prev ? { ...prev, ...updates } : null);
+
+        try {
+            const success = await updateBehaviorSettings(clinicId, updates);
+            if (!success) {
+                // Revert on failure
+                setBehavior(previousBehavior);
+                Alert.alert('Erro', 'Não foi possível salvar. Execute o SQL de comportamento no Supabase.');
+            }
+        } catch (e) {
+            console.error('Error updating behavior:', e);
+            setBehavior(previousBehavior);
+            Alert.alert('Erro', 'Tabela de comportamento não encontrada. Execute o SQL no Supabase.');
+        }
+    };
 
     const toggleWorkDay = (day: keyof NonNullable<AISecretarySettings['work_days']>) => {
         if (!settings?.work_days) return;
@@ -558,6 +637,50 @@ export default function AISecretarySettingsScreen() {
                         </TouchableOpacity>
                     </View>
                 </SettingsSection>
+
+                {/* Message Behavior Settings */}
+                {behavior && (
+                    <CollapsibleSection title="Comportamento de Mensagens" icon={MessageCircle}>
+                        <MessageBehaviorSection
+                            behavior={behavior}
+                            onUpdate={handleBehaviorUpdate}
+                            onUpdateMultiple={handleBehaviorUpdateMultiple}
+                        />
+                    </CollapsibleSection>
+                )}
+
+                {/* Audio Settings */}
+                {behavior && (
+                    <CollapsibleSection title="Áudio e Voz" icon={Mic}>
+                        <AudioSettingsSection
+                            behavior={behavior}
+                            onUpdate={handleBehaviorUpdate}
+                            onUpdateMultiple={handleBehaviorUpdateMultiple}
+                        />
+                    </CollapsibleSection>
+                )}
+
+                {/* Reminder Settings */}
+                {behavior && (
+                    <CollapsibleSection title="Lembretes e Alertas" icon={Bell}>
+                        <ReminderSettingsSection
+                            behavior={behavior}
+                            onUpdate={handleBehaviorUpdate}
+                            onUpdateMultiple={handleBehaviorUpdateMultiple}
+                        />
+                    </CollapsibleSection>
+                )}
+
+                {/* Payment Settings */}
+                {behavior && (
+                    <CollapsibleSection title="Pagamentos" icon={CreditCard}>
+                        <PaymentSettingsSection
+                            behavior={behavior}
+                            onUpdate={handleBehaviorUpdate}
+                            onUpdateMultiple={handleBehaviorUpdateMultiple}
+                        />
+                    </CollapsibleSection>
+                )}
 
                 {/* Help Card */}
                 <View className="bg-blue-50 p-4 rounded-2xl border border-blue-100 mb-8">
