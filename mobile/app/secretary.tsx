@@ -112,6 +112,11 @@ export default function AISecretarySettingsScreen() {
     const [showTimePicker, setShowTimePicker] = useState<'start' | 'end' | null>(null);
     const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
 
+    // Scheduling Rules (local state with save button)
+    const [localMinAdvanceHours, setLocalMinAdvanceHours] = useState('2');
+    const [localIntervalMinutes, setLocalIntervalMinutes] = useState('30');
+    const [rulesChanged, setRulesChanged] = useState(false);
+
     // UI State
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
     const [showMessageModal, setShowMessageModal] = useState<'greeting' | 'confirmation' | 'reminder' | null>(null);
@@ -178,6 +183,10 @@ export default function AISecretarySettingsScreen() {
             if (settingsData) {
                 setSettings(settingsData);
                 setConnectionStatus(settingsData.whatsapp_connected ? 'connected' : 'disconnected');
+                // Sync scheduling rules local state
+                setLocalMinAdvanceHours(String(settingsData.min_advance_hours || 2));
+                setLocalIntervalMinutes(String(settingsData.interval_minutes || 30));
+                setRulesChanged(false);
             } else {
                 // No settings yet, use defaults
                 setSettings({
@@ -286,6 +295,24 @@ export default function AISecretarySettingsScreen() {
         if (!settings?.work_days) return;
         const updated = { ...settings.work_days, [day]: !settings.work_days[day] };
         updateSetting('work_days', updated);
+    };
+
+    // Save scheduling rules
+    const handleSaveSchedulingRules = async () => {
+        if (!clinicId) return;
+
+        const minHours = parseInt(localMinAdvanceHours) || 2;
+        const interval = parseInt(localIntervalMinutes) || 30;
+
+        const success1 = await updateSetting('min_advance_hours', minHours);
+        const success2 = await updateSetting('interval_minutes', interval);
+
+        if (success1 && success2) {
+            setRulesChanged(false);
+            Alert.alert('Sucesso', 'Regras de agendamento salvas!');
+        } else {
+            Alert.alert('Erro', 'Não foi possível salvar as regras.');
+        }
     };
 
     const handleLinkWhatsApp = () => {
@@ -636,22 +663,37 @@ export default function AISecretarySettingsScreen() {
                         <Text className="text-xs font-medium text-gray-600 mb-2">Antecedência Mínima (horas)</Text>
                         <TextInput
                             className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
-                            value={String(settings.min_advance_hours)}
-                            onChangeText={(v) => updateSetting('min_advance_hours', parseInt(v) || 0)}
+                            value={localMinAdvanceHours}
+                            onChangeText={(v) => {
+                                setLocalMinAdvanceHours(v);
+                                setRulesChanged(true);
+                            }}
                             keyboardType="numeric"
                             placeholder="2"
                         />
                     </View>
-                    <View>
+                    <View className="mb-4">
                         <Text className="text-xs font-medium text-gray-600 mb-2">Intervalo entre Consultas (minutos)</Text>
                         <TextInput
                             className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800"
-                            value={String(settings.interval_minutes)}
-                            onChangeText={(v) => updateSetting('interval_minutes', parseInt(v) || 0)}
+                            value={localIntervalMinutes}
+                            onChangeText={(v) => {
+                                setLocalIntervalMinutes(v);
+                                setRulesChanged(true);
+                            }}
                             keyboardType="numeric"
                             placeholder="30"
                         />
                     </View>
+                    <TouchableOpacity
+                        onPress={handleSaveSchedulingRules}
+                        disabled={!rulesChanged}
+                        className={`p-3 rounded-lg ${rulesChanged ? 'bg-[#a03f3d]' : 'bg-gray-300'}`}
+                    >
+                        <Text className={`font-medium text-center ${rulesChanged ? 'text-white' : 'text-gray-500'}`}>
+                            {rulesChanged ? 'Salvar Regras' : 'Nenhuma alteração'}
+                        </Text>
+                    </TouchableOpacity>
                 </CollapsibleSection>
 
                 {/* Custom Messages */}
