@@ -33,6 +33,14 @@ import {
     getBehaviorSettings,
     updateBehaviorSetting,
     updateBehaviorSettings,
+    // Custom messages
+    CustomMessage,
+    PREDEFINED_MESSAGE_TYPES,
+    getCustomMessages,
+    addCustomMessage,
+    updateCustomMessage,
+    deleteCustomMessage,
+    initializePredefinedMessages,
 } from '../src/services/secretary';
 import {
     MessageBehaviorSection,
@@ -117,6 +125,20 @@ export default function AISecretarySettingsScreen() {
     const [localIntervalMinutes, setLocalIntervalMinutes] = useState('30');
     const [rulesChanged, setRulesChanged] = useState(false);
 
+    // Custom Messages
+    const [customMessages, setCustomMessages] = useState<CustomMessage[]>([]);
+    const [showCustomMessageModal, setShowCustomMessageModal] = useState(false);
+    const [editingCustomMessage, setEditingCustomMessage] = useState<CustomMessage | null>(null);
+    const [newMessageTitle, setNewMessageTitle] = useState('');
+    const [newMessageContent, setNewMessageContent] = useState('');
+    const [newMessageKey, setNewMessageKey] = useState('');
+    const [showPredefinedPicker, setShowPredefinedPicker] = useState(false);
+
+    // Human Keywords
+    const [showKeywordModal, setShowKeywordModal] = useState(false);
+    const [editingKeywordIndex, setEditingKeywordIndex] = useState<number | null>(null);
+    const [newKeyword, setNewKeyword] = useState('');
+
     // UI State
     const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
     const [showMessageModal, setShowMessageModal] = useState<'greeting' | 'confirmation' | 'reminder' | null>(null);
@@ -171,13 +193,14 @@ export default function AISecretarySettingsScreen() {
                 }
             };
 
-            const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData] = await Promise.all([
+            const [settingsData, blockedData, statsData, scheduleData, locationsData, behaviorData, customMessagesData] = await Promise.all([
                 safeLoad(() => getSecretarySettings(clinicId), null),
                 safeLoad(() => getBlockedNumbers(clinicId), []),
                 safeLoad(() => getSecretaryStats(clinicId), { total_conversations: 0, total_appointments_created: 0, transferred_conversations: 0 }),
                 safeLoad(() => getScheduleEntries(clinicId), []),
                 safeLoad(() => locationsService.getAll(), []),
                 safeLoad(() => getBehaviorSettings(clinicId), null),
+                safeLoad(() => getCustomMessages(clinicId), []),
             ]);
 
             if (settingsData) {
@@ -213,6 +236,7 @@ export default function AISecretarySettingsScreen() {
             setStats(statsData);
             setScheduleEntries(scheduleData);
             setLocations(locationsData);
+            setCustomMessages(customMessagesData);
 
             // Set behavior settings or use defaults
             if (behaviorData) {
@@ -232,8 +256,8 @@ export default function AISecretarySettingsScreen() {
     };
 
     // Update a single setting
-    const updateSetting = async <K extends keyof AISecretarySettings>(field: K, value: AISecretarySettings[K]) => {
-        if (!clinicId || !settings) return;
+    const updateSetting = async <K extends keyof AISecretarySettings>(field: K, value: AISecretarySettings[K]): Promise<boolean> => {
+        if (!clinicId || !settings) return false;
 
         // Optimistic update
         setSettings(prev => prev ? { ...prev, [field]: value } : null);
@@ -244,6 +268,7 @@ export default function AISecretarySettingsScreen() {
             loadData();
             Alert.alert('Erro', 'Não foi possível salvar a configuração.');
         }
+        return success;
     };
 
     const toggleActive = (value: boolean) => updateSetting('is_active', value);
@@ -387,6 +412,176 @@ export default function AISecretarySettingsScreen() {
             setBlockedNumbers(prev => prev.filter(n => n.id !== item.id));
         }
     };
+
+    // Custom Message Handlers
+    const handleOpenCustomMessageModal = (message?: CustomMessage, predefinedType?: typeof PREDEFINED_MESSAGE_TYPES[number]) => {
+        if (message) {
+            // Edit existing
+            setEditingCustomMessage(message);
+            setNewMessageTitle(message.title);
+            setNewMessageContent(message.message);
+            setNewMessageKey(message.message_key);
+        } else if (predefinedType) {
+            // Add from predefined
+            setEditingCustomMessage(null);
+            setNewMessageTitle(predefinedType.title);
+            setNewMessageContent(predefinedType.defaultMessage);
+            setNewMessageKey(predefinedType.key);
+        } else {
+            // Add custom
+            setEditingCustomMessage(null);
+            setNewMessageTitle('');
+            setNewMessageContent('');
+            setNewMessageKey('custom_' + Date.now());
+        }
+        setShowPredefinedPicker(false);
+        setShowCustomMessageModal(true);
+    };
+
+    const handleSaveCustomMessage = async () => {
+        if (!clinicId || !newMessageTitle.trim() || !newMessageContent.trim()) {
+            Alert.alert('Erro', 'Preencha o título e a mensagem.');
+            return;
+        }
+
+        if (editingCustomMessage?.id) {
+            // Update existing
+            const success = await updateCustomMessage(editingCustomMessage.id, {
+                title: newMessageTitle,
+                message: newMessageContent,
+            });
+            if (success) {
+                setCustomMessages(prev => prev.map(m =>
+                    m.id === editingCustomMessage.id
+                        ? { ...m, title: newMessageTitle, message: newMessageContent }
+                        : m
+                ));
+                setShowCustomMessageModal(false);
+                setEditingCustomMessage(null);
+            } else {
+                Alert.alert('Erro', 'Não foi possível salvar. Verifique se a tabela existe no Supabase.');
+            }
+        } else {
+            // Add new
+            console.log('Saving new message:', { clinicId, newMessageKey, newMessageTitle, newMessageContent });
+            const result = await addCustomMessage(
+                clinicId,
+                newMessageKey,
+                newMessageTitle,
+                newMessageContent,
+                false
+            );
+            console.log('Save result:', result);
+            if (result) {
+                setCustomMessages(prev => [...prev, result]);
+                setShowCustomMessageModal(false);
+                Alert.alert('Sucesso', 'Mensagem adicionada!');
+            } else {
+                Alert.alert('Erro', 'Não foi possível adicionar. Verifique:\n\n1. Se a tabela ai_secretary_custom_messages existe\n2. Se as políticas RLS estão corretas\n\nVeja o console para mais detalhes.');
+            }
+        }
+    };
+
+    const handleDeleteCustomMessage = async (message: CustomMessage) => {
+        if (!message.id) return;
+
+        Alert.alert(
+            'Excluir Mensagem',
+            `Deseja excluir "${message.title}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const success = await deleteCustomMessage(message.id!);
+                        if (success) {
+                            setCustomMessages(prev => prev.filter(m => m.id !== message.id));
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleToggleCustomMessageActive = async (message: CustomMessage) => {
+        if (!message.id) return;
+
+        const success = await updateCustomMessage(message.id, { is_active: !message.is_active });
+        if (success) {
+            setCustomMessages(prev => prev.map(m =>
+                m.id === message.id ? { ...m, is_active: !m.is_active } : m
+            ));
+        }
+    };
+
+    // Human Keywords Handlers
+    const handleOpenKeywordModal = (index?: number) => {
+        if (index !== undefined && settings?.human_keywords) {
+            setEditingKeywordIndex(index);
+            setNewKeyword(settings.human_keywords[index]);
+        } else {
+            setEditingKeywordIndex(null);
+            setNewKeyword('');
+        }
+        setShowKeywordModal(true);
+    };
+
+    const handleSaveKeyword = async () => {
+        if (!settings || !newKeyword.trim()) {
+            Alert.alert('Erro', 'Digite uma palavra-chave.');
+            return;
+        }
+
+        const currentKeywords = settings.human_keywords || [];
+        let updatedKeywords: string[];
+
+        if (editingKeywordIndex !== null) {
+            // Edit existing
+            updatedKeywords = [...currentKeywords];
+            updatedKeywords[editingKeywordIndex] = newKeyword.trim().toLowerCase();
+        } else {
+            // Add new
+            if (currentKeywords.includes(newKeyword.trim().toLowerCase())) {
+                Alert.alert('Erro', 'Esta palavra-chave já existe.');
+                return;
+            }
+            updatedKeywords = [...currentKeywords, newKeyword.trim().toLowerCase()];
+        }
+
+        const success = await updateSetting('human_keywords', updatedKeywords);
+        if (success) {
+            setShowKeywordModal(false);
+            setEditingKeywordIndex(null);
+            setNewKeyword('');
+        }
+    };
+
+    const handleDeleteKeyword = (index: number) => {
+        if (!settings?.human_keywords) return;
+
+        const keyword = settings.human_keywords[index];
+        Alert.alert(
+            'Excluir Palavra-chave',
+            `Excluir "${keyword}"?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Excluir',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const updatedKeywords = settings.human_keywords!.filter((_, i) => i !== index);
+                        await updateSetting('human_keywords', updatedKeywords);
+                    }
+                }
+            ]
+        );
+    };
+
+    // Get predefined types not yet added
+    const availablePredefinedTypes = PREDEFINED_MESSAGE_TYPES.filter(
+        type => !customMessages.some(m => m.message_key === type.key)
+    );
 
     // Schedule Handlers
     const handleOpenScheduleModal = (entry?: ScheduleEntry) => {
@@ -698,27 +893,142 @@ export default function AISecretarySettingsScreen() {
 
                 {/* Custom Messages */}
                 <CollapsibleSection title="Mensagens Personalizadas" icon={MessageSquare}>
-                    <TouchableOpacity onPress={() => openMessageModal('greeting')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3">
-                        <View className="flex-1 mr-3">
-                            <Text className="text-xs font-medium text-gray-700">Saudação Inicial</Text>
-                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.greeting_message}</Text>
-                        </View>
-                        <ChevronRight size={16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => openMessageModal('confirmation')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-3">
-                        <View className="flex-1 mr-3">
-                            <Text className="text-xs font-medium text-gray-700">Confirmação de Agendamento</Text>
-                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.confirmation_message}</Text>
-                        </View>
-                        <ChevronRight size={16} color="#9CA3AF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => openMessageModal('reminder')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <View className="flex-1 mr-3">
-                            <Text className="text-xs font-medium text-gray-700">Lembrete 24h Antes</Text>
-                            <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.reminder_message}</Text>
-                        </View>
-                        <ChevronRight size={16} color="#9CA3AF" />
-                    </TouchableOpacity>
+                    {/* Main messages (from settings) */}
+                    <Text className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Principais</Text>
+
+                    <Swipeable
+                        renderRightActions={() => (
+                            <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                <TouchableOpacity
+                                    onPress={() => openMessageModal('greeting')}
+                                    className="bg-blue-500 justify-center items-center px-5 rounded-lg"
+                                >
+                                    <Pencil size={16} color="#fff" />
+                                    <Text className="text-white text-[10px] mt-1">Editar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        overshootRight={false}
+                    >
+                        <TouchableOpacity onPress={() => openMessageModal('greeting')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-2">
+                            <View className="flex-1 mr-3">
+                                <Text className="text-xs font-medium text-gray-700">Saudação Inicial</Text>
+                                <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.greeting_message}</Text>
+                            </View>
+                            <ChevronRight size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </Swipeable>
+
+                    <Swipeable
+                        renderRightActions={() => (
+                            <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                <TouchableOpacity
+                                    onPress={() => openMessageModal('confirmation')}
+                                    className="bg-blue-500 justify-center items-center px-5 rounded-lg"
+                                >
+                                    <Pencil size={16} color="#fff" />
+                                    <Text className="text-white text-[10px] mt-1">Editar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        overshootRight={false}
+                    >
+                        <TouchableOpacity onPress={() => openMessageModal('confirmation')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-2">
+                            <View className="flex-1 mr-3">
+                                <Text className="text-xs font-medium text-gray-700">Confirmação de Agendamento</Text>
+                                <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.confirmation_message}</Text>
+                            </View>
+                            <ChevronRight size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </Swipeable>
+
+                    <Swipeable
+                        renderRightActions={() => (
+                            <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                <TouchableOpacity
+                                    onPress={() => openMessageModal('reminder')}
+                                    className="bg-blue-500 justify-center items-center px-5 rounded-lg"
+                                >
+                                    <Pencil size={16} color="#fff" />
+                                    <Text className="text-white text-[10px] mt-1">Editar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        overshootRight={false}
+                    >
+                        <TouchableOpacity onPress={() => openMessageModal('reminder')} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 mb-4">
+                            <View className="flex-1 mr-3">
+                                <Text className="text-xs font-medium text-gray-700">Lembrete 24h Antes</Text>
+                                <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{settings.reminder_message}</Text>
+                            </View>
+                            <ChevronRight size={16} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </Swipeable>
+
+                    {/* Custom messages */}
+                    <View className="flex-row items-center justify-between mb-2">
+                        <Text className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Outras Situações</Text>
+                        <TouchableOpacity
+                            onPress={() => setShowPredefinedPicker(true)}
+                            className="bg-[#fef2f2] border border-[#fca5a5] p-1.5 rounded-lg"
+                        >
+                            <Plus size={14} color="#b94a48" />
+                        </TouchableOpacity>
+                    </View>
+
+                    {customMessages.length === 0 ? (
+                        <Text className="text-xs text-gray-400 italic py-2">Nenhuma mensagem adicional configurada</Text>
+                    ) : (
+                        customMessages.map((msg) => (
+                            <Swipeable
+                                key={msg.id}
+                                renderRightActions={() => (
+                                    <View className="flex-row ml-2" style={{ marginBottom: 8 }}>
+                                        <TouchableOpacity
+                                            onPress={() => handleOpenCustomMessageModal(msg)}
+                                            className="bg-blue-500 justify-center items-center px-4"
+                                            style={{ borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}
+                                        >
+                                            <Pencil size={16} color="#fff" />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => handleDeleteCustomMessage(msg)}
+                                            className="bg-red-500 justify-center items-center px-4"
+                                            style={{ borderTopRightRadius: 8, borderBottomRightRadius: 8 }}
+                                        >
+                                            <Trash2 size={16} color="#fff" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                                overshootRight={false}
+                            >
+                                <TouchableOpacity
+                                    onPress={() => handleOpenCustomMessageModal(msg)}
+                                    className={`flex-row items-center justify-between p-3 rounded-lg border mb-2 ${msg.is_active ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100'}`}
+                                >
+                                    <View className="flex-1 mr-3">
+                                        <View className="flex-row items-center gap-2">
+                                            <Text className="text-xs font-medium text-gray-700">{msg.title}</Text>
+                                            {msg.is_active && (
+                                                <View className="bg-green-100 px-1.5 py-0.5 rounded">
+                                                    <Text className="text-[9px] text-green-700">Ativo</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <Text className="text-[11px] text-gray-500 mt-1" numberOfLines={1}>{msg.message}</Text>
+                                    </View>
+                                    <Switch
+                                        trackColor={{ false: "#D1D5DB", true: "#D1D5DB" }}
+                                        thumbColor={msg.is_active ? "#16A34A" : "#9CA3AF"}
+                                        ios_backgroundColor="#D1D5DB"
+                                        onValueChange={() => handleToggleCustomMessageActive(msg)}
+                                        value={msg.is_active}
+                                        style={{ transform: [{ scale: 0.7 }] }}
+                                    />
+                                </TouchableOpacity>
+                            </Swipeable>
+                        ))
+                    )}
                 </CollapsibleSection>
 
                 {/* Limits & Controls */}
@@ -734,14 +1044,32 @@ export default function AISecretarySettingsScreen() {
                         />
                     </View>
                     <View className="mb-4">
-                        <Text className="text-xs font-medium text-gray-600 mb-2">Palavras-chave para Humano</Text>
-                        <View className="flex-row flex-wrap gap-2">
-                            {settings.human_keywords?.map((kw, idx) => (
-                                <View key={idx} className="bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
-                                    <Text className="text-xs text-amber-700">"{kw}"</Text>
-                                </View>
-                            ))}
+                        <View className="flex-row items-center justify-between mb-2">
+                            <Text className="text-xs font-medium text-gray-600">Palavras-chave para Humano</Text>
+                            <TouchableOpacity onPress={() => handleOpenKeywordModal()} className="bg-amber-100 p-1 rounded">
+                                <Plus size={14} color="#D97706" />
+                            </TouchableOpacity>
                         </View>
+                        <Text className="text-[10px] text-gray-400 mb-2">Paciente será transferido para humano ao digitar essas palavras</Text>
+                        {(!settings.human_keywords || settings.human_keywords.length === 0) ? (
+                            <Text className="text-xs text-gray-400 italic">Nenhuma palavra-chave configurada</Text>
+                        ) : (
+                            <View className="flex-row flex-wrap gap-2">
+                                {settings.human_keywords.map((kw, idx) => (
+                                    <TouchableOpacity
+                                        key={idx}
+                                        onPress={() => handleOpenKeywordModal(idx)}
+                                        onLongPress={() => handleDeleteKeyword(idx)}
+                                        className="bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-full flex-row items-center gap-1"
+                                    >
+                                        <Text className="text-xs text-amber-700">"{kw}"</Text>
+                                        <TouchableOpacity onPress={() => handleDeleteKeyword(idx)} hitSlop={{ top: 10, bottom: 10, left: 5, right: 10 }}>
+                                            <X size={12} color="#D97706" />
+                                        </TouchableOpacity>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
                     </View>
                     <View>
                         <View className="flex-row items-center justify-between mb-2">
@@ -865,33 +1193,178 @@ export default function AISecretarySettingsScreen() {
 
             {/* Message Edit Modal */}
             <Modal visible={showMessageModal !== null} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">
+                                    {showMessageModal === 'greeting' ? 'Saudação Inicial' :
+                                        showMessageModal === 'confirmation' ? 'Confirmação' : 'Lembrete'}
+                                </Text>
+                                <TouchableOpacity onPress={() => setShowMessageModal(null)}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[120px]"
+                                value={tempMessage}
+                                onChangeText={setTempMessage}
+                                multiline
+                                textAlignVertical="top"
+                                placeholder="Digite a mensagem..."
+                            />
+                            {showMessageModal === 'reminder' && (
+                                <Text className="text-[10px] text-gray-400 mt-2">Use {'{hora}'} para inserir o horário da consulta.</Text>
+                            )}
+                            <TouchableOpacity onPress={saveMessage} className="bg-[#a03f3d] mt-4 p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">Salvar Mensagem</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Predefined Message Type Picker Modal */}
+            <Modal visible={showPredefinedPicker} transparent animationType="slide">
                 <View className="flex-1 bg-black/50 justify-end">
-                    <View className="bg-white rounded-t-3xl p-6 pb-10">
+                    <View className="bg-white rounded-t-3xl p-6 pb-10 max-h-[70%]">
                         <View className="flex-row items-center justify-between mb-4">
-                            <Text className="text-lg font-bold text-gray-900">
-                                {showMessageModal === 'greeting' ? 'Saudação Inicial' :
-                                    showMessageModal === 'confirmation' ? 'Confirmação' : 'Lembrete'}
-                            </Text>
-                            <TouchableOpacity onPress={() => setShowMessageModal(null)}>
+                            <Text className="text-lg font-bold text-gray-900">Adicionar Mensagem</Text>
+                            <TouchableOpacity onPress={() => setShowPredefinedPicker(false)}>
                                 <X size={24} color="#6B7280" />
                             </TouchableOpacity>
                         </View>
-                        <TextInput
-                            className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[120px]"
-                            value={tempMessage}
-                            onChangeText={setTempMessage}
-                            multiline
-                            textAlignVertical="top"
-                            placeholder="Digite a mensagem..."
-                        />
-                        {showMessageModal === 'reminder' && (
-                            <Text className="text-[10px] text-gray-400 mt-2">Use {'{hora}'} para inserir o horário da consulta.</Text>
-                        )}
-                        <TouchableOpacity onPress={saveMessage} className="bg-[#a03f3d] mt-4 p-4 rounded-xl">
-                            <Text className="text-white font-semibold text-center">Salvar Mensagem</Text>
-                        </TouchableOpacity>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Predefined options */}
+                            {availablePredefinedTypes.length > 0 && (
+                                <>
+                                    <Text className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">Situações Pré-definidas</Text>
+                                    {availablePredefinedTypes.map((type) => (
+                                        <TouchableOpacity
+                                            key={type.key}
+                                            onPress={() => handleOpenCustomMessageModal(undefined, type)}
+                                            className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100 mb-2"
+                                        >
+                                            <View className="flex-1">
+                                                <Text className="text-sm font-medium text-gray-800">{type.title}</Text>
+                                                <Text className="text-[11px] text-gray-500 mt-0.5">{type.description}</Text>
+                                            </View>
+                                            <ChevronRight size={16} color="#9CA3AF" />
+                                        </TouchableOpacity>
+                                    ))}
+                                </>
+                            )}
+
+                            {/* Custom option */}
+                            <Text className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2 mt-4">Personalizada</Text>
+                            <TouchableOpacity
+                                onPress={() => handleOpenCustomMessageModal()}
+                                className="flex-row items-center p-3 bg-[#fef2f2] rounded-lg border border-[#fca5a5]"
+                            >
+                                <View className="w-8 h-8 bg-[#fecaca] rounded-full items-center justify-center mr-3">
+                                    <Plus size={16} color="#b94a48" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-sm font-medium text-[#8b3634]">Criar Mensagem Personalizada</Text>
+                                    <Text className="text-[11px] text-[#a03f3d] mt-0.5">Defina título e mensagem livres</Text>
+                                </View>
+                                <ChevronRight size={16} color="#b94a48" />
+                            </TouchableOpacity>
+                        </ScrollView>
                     </View>
                 </View>
+            </Modal>
+
+            {/* Human Keyword Modal */}
+            <Modal visible={showKeywordModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">
+                                    {editingKeywordIndex !== null ? 'Editar Palavra-chave' : 'Nova Palavra-chave'}
+                                </Text>
+                                <TouchableOpacity onPress={() => { setShowKeywordModal(false); setEditingKeywordIndex(null); setNewKeyword(''); }}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Palavra ou frase</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 mb-2"
+                                value={newKeyword}
+                                onChangeText={setNewKeyword}
+                                placeholder="Ex: atendente, falar com humano..."
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                            <Text className="text-[10px] text-gray-400 mb-4">
+                                Quando o paciente digitar essa palavra, a conversa será transferida para atendimento humano
+                            </Text>
+
+                            <TouchableOpacity onPress={handleSaveKeyword} className="bg-[#a03f3d] p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">
+                                    {editingKeywordIndex !== null ? 'Salvar' : 'Adicionar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Custom Message Edit Modal */}
+            <Modal visible={showCustomMessageModal} transparent animationType="slide">
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    className="flex-1"
+                >
+                    <View className="flex-1 bg-black/50 justify-end">
+                        <View className="bg-white rounded-t-3xl p-6 pb-10">
+                            <View className="flex-row items-center justify-between mb-4">
+                                <Text className="text-lg font-bold text-gray-900">
+                                    {editingCustomMessage ? 'Editar Mensagem' : 'Nova Mensagem'}
+                                </Text>
+                                <TouchableOpacity onPress={() => { setShowCustomMessageModal(false); setEditingCustomMessage(null); }}>
+                                    <X size={24} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Título / Situação</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 mb-4"
+                                value={newMessageTitle}
+                                onChangeText={setNewMessageTitle}
+                                placeholder="Ex: Pós-consulta, Aniversário..."
+                            />
+
+                            <Text className="text-xs font-medium text-gray-600 mb-2">Mensagem</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 min-h-[120px]"
+                                value={newMessageContent}
+                                onChangeText={setNewMessageContent}
+                                multiline
+                                textAlignVertical="top"
+                                placeholder="Digite a mensagem..."
+                            />
+                            <Text className="text-[10px] text-gray-400 mt-2">
+                                Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{hora}'}, {'{profissional}'}
+                            </Text>
+
+                            <TouchableOpacity onPress={handleSaveCustomMessage} className="bg-[#a03f3d] mt-4 p-4 rounded-xl">
+                                <Text className="text-white font-semibold text-center">
+                                    {editingCustomMessage ? 'Salvar' : 'Adicionar'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Add Schedule Modal */}

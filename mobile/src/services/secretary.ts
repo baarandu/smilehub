@@ -66,6 +66,31 @@ export interface BlockedNumber {
     blocked_at?: string;
 }
 
+// Custom Messages
+export interface CustomMessage {
+    id?: string;
+    clinic_id: string;
+    message_key: string; // 'cancellation', 'reschedule', 'birthday', etc. or custom key
+    title: string;
+    message: string;
+    is_active: boolean;
+    is_predefined: boolean; // true for system templates, false for user-created
+    created_at?: string;
+    updated_at?: string;
+}
+
+// Predefined message situations
+export const PREDEFINED_MESSAGE_TYPES = [
+    { key: 'cancellation', title: 'Cancelamento', description: 'Quando paciente cancela consulta', defaultMessage: 'Lamentamos que você precise cancelar. Deseja remarcar para outro dia?' },
+    { key: 'reschedule', title: 'Reagendamento', description: 'Quando consulta é reagendada', defaultMessage: 'Sua consulta foi reagendada para {data} às {hora}. Confirmado!' },
+    { key: 'no_show', title: 'Falta/No-show', description: 'Quando paciente não comparece', defaultMessage: 'Notamos sua ausência na consulta de hoje. Está tudo bem? Podemos remarcar.' },
+    { key: 'birthday', title: 'Aniversário', description: 'Mensagem de aniversário', defaultMessage: 'Feliz aniversário! 🎂 A equipe da clínica deseja um dia especial!' },
+    { key: 'followup', title: 'Retorno/Follow-up', description: 'Lembrete de retorno', defaultMessage: 'Olá! Está na hora do seu retorno. Que tal agendar?' },
+    { key: 'welcome', title: 'Boas-vindas', description: 'Primeiro contato do paciente', defaultMessage: 'Seja bem-vindo(a)! Estamos felizes em tê-lo(a) como paciente.' },
+    { key: 'payment_pending', title: 'Pagamento Pendente', description: 'Lembrete de pagamento', defaultMessage: 'Olá! Identificamos um pagamento pendente. Podemos ajudar?' },
+    { key: 'post_procedure', title: 'Pós-procedimento', description: 'Cuidados após procedimento', defaultMessage: 'Como está se sentindo após o procedimento? Lembre-se dos cuidados recomendados.' },
+] as const;
+
 export interface AISecretaryStats {
     total_conversations: number;
     total_appointments_created: number;
@@ -933,6 +958,137 @@ export async function updateBehaviorSettings(
         return true;
     } catch (error) {
         console.error('Error updating behavior settings:', error);
+        return false;
+    }
+}
+
+// =====================================================
+// Custom Messages CRUD
+// =====================================================
+
+// Get all custom messages for a clinic
+export async function getCustomMessages(clinicId: string): Promise<CustomMessage[]> {
+    try {
+        const { data, error } = await supabase
+            .from('ai_secretary_custom_messages')
+            .select('*')
+            .eq('clinic_id', clinicId)
+            .order('is_predefined', { ascending: false })
+            .order('title', { ascending: true });
+
+        if (error) {
+            // Table may not exist yet
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                return [];
+            }
+            console.warn('Error fetching custom messages:', error);
+            return [];
+        }
+
+        return (data || []) as CustomMessage[];
+    } catch (error) {
+        console.warn('Error in getCustomMessages:', error);
+        return [];
+    }
+}
+
+// Add a new custom message
+export async function addCustomMessage(
+    clinicId: string,
+    messageKey: string,
+    title: string,
+    message: string,
+    isPredefined: boolean = false
+): Promise<CustomMessage | null> {
+    try {
+        console.log('Adding custom message:', { clinicId, messageKey, title, message });
+        const { data, error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .insert({
+                clinic_id: clinicId,
+                message_key: messageKey,
+                title: title,
+                message: message,
+                is_active: true,
+                is_predefined: isPredefined,
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Supabase error adding custom message:', error);
+            throw error;
+        }
+        console.log('Custom message added:', data);
+        return data as CustomMessage;
+    } catch (error: any) {
+        console.error('Error adding custom message:', error?.message || error);
+        return null;
+    }
+}
+
+// Update a custom message
+export async function updateCustomMessage(
+    id: string,
+    updates: Partial<Pick<CustomMessage, 'title' | 'message' | 'is_active'>>
+): Promise<boolean> {
+    try {
+        const { error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error updating custom message:', error);
+        return false;
+    }
+}
+
+// Delete a custom message
+export async function deleteCustomMessage(id: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('ai_secretary_custom_messages')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error deleting custom message:', error);
+        return false;
+    }
+}
+
+// Initialize predefined messages for a clinic (call once when setting up)
+export async function initializePredefinedMessages(clinicId: string): Promise<boolean> {
+    try {
+        // Check if already initialized
+        const existing = await getCustomMessages(clinicId);
+        if (existing.length > 0) {
+            return true; // Already has messages
+        }
+
+        // Create predefined messages
+        const messages = PREDEFINED_MESSAGE_TYPES.map(type => ({
+            clinic_id: clinicId,
+            message_key: type.key,
+            title: type.title,
+            message: type.defaultMessage,
+            is_active: false, // Start disabled, user enables what they want
+            is_predefined: true,
+        }));
+
+        const { error } = await (supabase
+            .from('ai_secretary_custom_messages') as any)
+            .insert(messages);
+
+        if (error) throw error;
+        return true;
+    } catch (error) {
+        console.error('Error initializing predefined messages:', error);
         return false;
     }
 }
