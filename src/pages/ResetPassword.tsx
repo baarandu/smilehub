@@ -23,20 +23,13 @@ export default function ResetPassword() {
             const type = searchParams.get('type');
             const hash = window.location.hash;
 
-            console.log('Reset password params:', { tokenHash: tokenHash?.substring(0, 20) + '...', type, hash: hash?.substring(0, 50) });
-            console.log('Full URL:', window.location.href);
-
             if (tokenHash && type === 'recovery') {
-                console.log('Attempting verifyOtp with token_hash...');
                 const { data, error } = await supabase.auth.verifyOtp({
                     token_hash: tokenHash,
                     type: 'recovery',
                 });
 
-                console.log('verifyOtp result:', { data, error });
-
                 if (error) {
-                    console.error('Token verification error:', error);
                     toast.error(`Erro: ${error.message}`);
                     // Don't redirect immediately, let user see the error
                     setTimeout(() => navigate('/login'), 3000);
@@ -45,7 +38,6 @@ export default function ResetPassword() {
 
                 setVerifying(false);
             } else if (hash && hash.includes('access_token')) {
-                console.log('Using legacy hash-based token...');
                 await new Promise(resolve => setTimeout(resolve, 500));
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
@@ -55,7 +47,6 @@ export default function ResetPassword() {
                 }
                 setVerifying(false);
             } else {
-                console.log('No token found in URL');
                 toast.error('Link inválido - nenhum token encontrado');
                 setTimeout(() => navigate('/login'), 3000);
             }
@@ -100,7 +91,6 @@ export default function ResetPassword() {
                 navigate('/login');
             }, 3000);
         } catch (error: any) {
-            console.error('Reset password error:', error);
             toast.error(error.message || 'Erro ao alterar senha');
         } finally {
             setLoading(false);

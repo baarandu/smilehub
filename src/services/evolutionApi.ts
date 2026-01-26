@@ -3,8 +3,12 @@
  * Integração com WhatsApp via Evolution API
  */
 
-const EVOLUTION_API_URL = import.meta.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080';
-const EVOLUTION_API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY || 'minhaChaveSecreta123';
+const EVOLUTION_API_URL = import.meta.env.VITE_EVOLUTION_API_URL;
+const EVOLUTION_API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY;
+
+if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+  console.warn('Evolution API não configurada. Defina VITE_EVOLUTION_API_URL e VITE_EVOLUTION_API_KEY.');
+}
 
 interface EvolutionInstance {
   instance: {

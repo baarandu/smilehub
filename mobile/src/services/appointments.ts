@@ -78,8 +78,6 @@ export const appointmentsService = {
       user_id: userData.user.id
     };
 
-    console.log('Creating appointment with data:', appointmentWithContext);
-
     const { data, error } = await supabase
       .from('appointments')
       .insert(appointmentWithContext as any)

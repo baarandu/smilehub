@@ -221,7 +221,6 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            console.log('File selected:', file.name, file.type, file.size);
             setUploadFile(file);
             if (!uploadName) {
                 setUploadName(file.name.replace(/\.[^/.]+$/, ''));
@@ -303,7 +302,6 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Open upload dialog for a specific item
     const openUploadDialog = (item: FiscalChecklistItem) => {
-        console.log('Opening upload dialog for:', item.label);
         setSelectedItem(item);
         setUploadDialogOpen(true);
     };

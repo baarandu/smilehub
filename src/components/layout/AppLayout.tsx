@@ -21,6 +21,17 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
+import { subscriptionService } from '@/services/subscription';
+
+// Beta testers emails loaded from environment variable (comma-separated)
+// Example: VITE_AI_SECRETARY_BETA_EMAILS=email1@test.com,email2@test.com
+const AI_SECRETARY_ALLOWED_EMAILS = (import.meta.env.VITE_AI_SECRETARY_BETA_EMAILS || '')
+  .split(',')
+  .map((email: string) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+// Plan slugs that have access to AI Secretary
+const AI_SECRETARY_ALLOWED_PLANS = ['enterprise'];
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -43,7 +54,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-  const { role } = useClinic();
+  const [planSlug, setPlanSlug] = useState<string | null>(null);
+  const { role, clinicId } = useClinic();
 
   // Filter nav items based on role
   // Secretaries (assistant) cannot access Financeiro and Imposto de Renda
@@ -56,8 +68,22 @@ export function AppLayout({ children }: AppLayoutProps) {
     return navItems;
   }, [role]);
 
-  // AI Secretary only available for super admins
-  const hasAISecretaryAccess = isSuperAdmin;
+  // Check if user has access to AI Secretary:
+  // 1. Has enterprise plan, OR
+  // 2. Is in the beta testers email list (fallback), OR
+  // 3. Is super admin
+  const hasEnterprisePlan = planSlug && AI_SECRETARY_ALLOWED_PLANS.includes(planSlug.toLowerCase());
+  const isInBetaList = userEmail && AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
+  const hasAISecretaryAccess = hasEnterprisePlan || isInBetaList || isSuperAdmin;
+
+  // Fetch subscription plan when clinicId is available
+  useEffect(() => {
+    if (clinicId) {
+      subscriptionService.getCurrentSubscription(clinicId).then(({ plan }) => {
+        setPlanSlug(plan?.slug || null);
+      }).catch(console.error);
+    }
+  }, [clinicId]);
 
   useEffect(() => {
     const checkAdmin = async () => {

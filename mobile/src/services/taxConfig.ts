@@ -113,7 +113,6 @@ export const taxConfigService = {
     });
 
     if (error) {
-      console.log('RPC not available, using direct insert');
       await this.seedDefaultRatesDirectly(clinicId);
     }
   },
@@ -390,7 +389,6 @@ export const taxConfigService = {
     });
 
     if (error) {
-      console.log('RPC not available, using direct insert');
       await this.seedDefaultRatesDirectly(clinicId);
     }
   },

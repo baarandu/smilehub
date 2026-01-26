@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
     const checkSubscription = async (userId: string) => {
-        console.log('AUTH_CONTEXT: checkSubscription for user:', userId);
         try {
             // First check if user is super admin
             const { data: profile } = await supabase
@@ -54,7 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single() as { data: { is_super_admin: boolean } | null, error: any };
 
             if (profile?.is_super_admin) {
-                console.log('AUTH_CONTEXT: checkSubscription - User is SUPER ADMIN. Bypassing checks.');
                 setRole('owner'); // Super admin acts as owner
                 setHasActiveSubscription(true);
                 setIsTrialExpired(false);
@@ -70,20 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single();
 
             if (clinicUser) {
-                console.log('AUTH_CONTEXT: checkSubscription - clinicUser found:', clinicUser);
                 setRole((clinicUser as any).role);
                 const subStatus = await subscriptionService.getCurrentSubscription((clinicUser as any).clinic_id);
-                console.log('AUTH_CONTEXT: checkSubscription - subStatus:', subStatus);
                 // Consider active if active or trialing (and not expired)
                 const isActive = subStatus.isActive || subStatus.isTrialing;
-                console.log('AUTH_CONTEXT: checkSubscription - isActive:', isActive);
-                console.log('AUTH_CONTEXT: checkSubscription - isTrialExpired:', subStatus.isTrialExpired);
-                console.log('AUTH_CONTEXT: checkSubscription - trialDaysLeft:', subStatus.trialDaysLeft);
                 setHasActiveSubscription(isActive);
                 setIsTrialExpired(subStatus.isTrialExpired);
                 setTrialDaysLeft(subStatus.trialDaysLeft);
             } else {
-                console.log('AUTH_CONTEXT: checkSubscription - NO clinicUser found');
                 setRole(null);
                 setHasActiveSubscription(false);
                 setIsTrialExpired(false);
