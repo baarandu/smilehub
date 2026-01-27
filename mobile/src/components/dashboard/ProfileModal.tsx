@@ -118,24 +118,29 @@ export function ProfileModal({
 
                         {/* Menu Items */}
                         <View className="p-6 gap-2">
-                            {/* AI Secretary - Only for whitelisted emails (Beta) */}
+                            {/* AI Secretary - Only for whitelisted emails (Beta) or Enterprise plan */}
                             {hasAISecretaryAccess && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white border border-[#fecaca] rounded-2xl shadow-sm mb-2"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/secretary');
+                                    }}
+                                >
+                                    <View className="w-10 h-10 bg-[#fef2f2] rounded-full items-center justify-center">
+                                        <Bot size={22} color="#b94a48" />
+                                    </View>
+                                    <View>
+                                        <Text className="text-gray-900 font-bold">Secretária IA</Text>
+                                        <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {/* Admin Section - Only for Super Admins */}
+                            {isSuperAdmin && (
                                 <>
-                                    <TouchableOpacity
-                                        className="flex-row items-center gap-4 p-4 bg-white border border-[#fecaca] rounded-2xl shadow-sm mb-2"
-                                        onPress={() => {
-                                            onClose();
-                                            router.push('/secretary');
-                                        }}
-                                    >
-                                        <View className="w-10 h-10 bg-[#fef2f2] rounded-full items-center justify-center">
-                                            <Bot size={22} color="#b94a48" />
-                                        </View>
-                                        <View>
-                                            <Text className="text-gray-900 font-bold">Secretária IA</Text>
-                                            <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
-                                        </View>
-                                    </TouchableOpacity>
+                                    <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Administração</Text>
 
                                     <TouchableOpacity
                                         className="flex-row items-center gap-4 p-4 bg-white border border-purple-100 rounded-2xl shadow-sm mb-2"
@@ -152,13 +157,6 @@ export function ProfileModal({
                                             <Text className="text-gray-500 text-xs">Gerenciar Assinaturas</Text>
                                         </View>
                                     </TouchableOpacity>
-                                </>
-                            )}
-
-                            {/* Admin Section - Only for Super Admins */}
-                            {isSuperAdmin && (
-                                <>
-                                    <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Administração</Text>
 
                                     <TouchableOpacity
                                         className="flex-row items-center gap-4 p-4 bg-white border border-red-100 rounded-2xl shadow-sm mb-2"
