@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     X,
@@ -7,21 +7,16 @@ import {
     Trash2,
     Pencil,
     FileText,
-    Settings,
     ArrowLeft,
-    Image as ImageIcon,
-    Upload,
     FileDown,
     Search,
     ChevronRight,
     Save
 } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { documentTemplatesService } from '../src/services/documentTemplates';
 import { getPatients } from '../src/services/patients';
-import { supabase } from '../src/lib/supabase';
 import type { DocumentTemplate, Patient } from '../src/types/database';
 
 
@@ -30,7 +25,86 @@ interface DocumentsModalProps {
     onClose: () => void;
 }
 
-type ViewMode = 'list' | 'create' | 'edit' | 'generate' | 'settings';
+type ViewMode = 'list' | 'create' | 'edit' | 'generate';
+
+const DEFAULT_TEMPLATES = [
+    {
+        name: 'Termo de Consentimento',
+        content: `Eu, {{nome}}, portador(a) do CPF {{cpf}}, nascido(a) em {{data_nascimento}}, declaro que fui devidamente informado(a) sobre o procedimento odontológico a ser realizado, seus riscos, benefícios e alternativas de tratamento.
+
+Declaro ainda que tive a oportunidade de esclarecer todas as minhas dúvidas e que autorizo a realização do procedimento proposto.
+
+Estou ciente de que devo seguir todas as orientações pós-operatórias fornecidas pelo profissional.
+
+Data: {{data}}`
+    },
+    {
+        name: 'Atestado Odontológico',
+        content: `ATESTADO ODONTOLÓGICO
+
+Atesto para os devidos fins que o(a) paciente {{nome}}, portador(a) do CPF {{cpf}}, esteve sob meus cuidados profissionais na data de {{data}}, necessitando de afastamento de suas atividades por _____ dia(s) a partir desta data.
+
+CID: _________`
+    },
+    {
+        name: 'Declaração de Comparecimento',
+        content: `DECLARAÇÃO DE COMPARECIMENTO
+
+Declaro para os devidos fins que o(a) Sr(a). {{nome}}, portador(a) do CPF {{cpf}}, compareceu a esta clínica odontológica na data de {{data}}, no horário de _____ às _____, para atendimento odontológico.`
+    },
+    {
+        name: 'Receituário',
+        content: `RECEITUÁRIO
+
+Paciente: {{nome}}
+CPF: {{cpf}}
+Data: {{data}}
+
+Uso interno:
+
+1. _________________________________
+   Tomar _____ comprimido(s) de _____ em _____ horas por _____ dias.
+
+2. _________________________________
+   Tomar _____ comprimido(s) de _____ em _____ horas por _____ dias.
+
+Observações: _________________________________`
+    },
+    {
+        name: 'Encaminhamento',
+        content: `ENCAMINHAMENTO
+
+Encaminho o(a) paciente {{nome}}, CPF {{cpf}}, para avaliação e tratamento com especialista em:
+
+( ) Ortodontia
+( ) Endodontia
+( ) Periodontia
+( ) Cirurgia Bucomaxilofacial
+( ) Implantodontia
+( ) Prótese
+( ) Odontopediatria
+( ) Outro: _________________
+
+Motivo do encaminhamento:
+_________________________________
+_________________________________
+
+Data: {{data}}`
+    },
+    {
+        name: 'Autorização para Menor',
+        content: `AUTORIZAÇÃO PARA TRATAMENTO ODONTOLÓGICO DE MENOR
+
+Eu, _________________________________, portador(a) do CPF ___________________, na qualidade de responsável legal pelo(a) menor {{nome}}, nascido(a) em {{data_nascimento}}, portador(a) do CPF {{cpf}}, AUTORIZO a realização de tratamento odontológico, incluindo os procedimentos necessários para diagnóstico e tratamento.
+
+Declaro estar ciente dos procedimentos a serem realizados e que fui informado(a) sobre os riscos e benefícios do tratamento.
+
+Data: {{data}}
+
+_________________________________
+Assinatura do Responsável Legal`
+    }
+];
 
 export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const [view, setView] = useState<ViewMode>('list');
@@ -54,10 +128,6 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [previewContent, setPreviewContent] = useState('');
 
-    // Letterhead
-    const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
-    const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
-
     useEffect(() => {
         if (visible) {
             loadData();
@@ -67,73 +137,16 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [templatesData, patientsData, letterhead] = await Promise.all([
+            const [templatesData, patientsData] = await Promise.all([
                 documentTemplatesService.getAll(),
-                getPatients(),
-                documentTemplatesService.getLetterhead()
+                getPatients()
             ]);
             setTemplates(templatesData);
             setPatients(patientsData);
-            setLetterheadUrl(letterhead);
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleUploadLetterhead = async () => {
-        try {
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: false,
-                quality: 0.8,
-            });
-
-            if (result.canceled) return;
-
-            setUploadingLetterhead(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Não autenticado');
-
-            const uri = result.assets[0].uri;
-            const fileExt = uri.split('.').pop() || 'jpg';
-            const timestamp = Date.now();
-            const fileName = `letterhead_${user.id}_${timestamp}.${fileExt}`;
-
-            // Convert to blob
-            const response = await fetch(uri);
-            const blob = await response.blob();
-
-            const { error: uploadError } = await supabase.storage
-                .from('clinic-assets')
-                .upload(fileName, blob, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('clinic-assets')
-                .getPublicUrl(fileName);
-
-            const urlWithCacheBuster = `${publicUrl}?t=${timestamp}`;
-            await documentTemplatesService.saveLetterhead(urlWithCacheBuster);
-            setLetterheadUrl(urlWithCacheBuster);
-            Alert.alert('Sucesso', 'Papel timbrado atualizado!');
-        } catch (error) {
-            console.error('Error uploading letterhead:', error);
-            Alert.alert('Erro', 'Falha ao fazer upload');
-        } finally {
-            setUploadingLetterhead(false);
-        }
-    };
-
-    const handleRemoveLetterhead = async () => {
-        try {
-            await documentTemplatesService.removeLetterhead();
-            setLetterheadUrl(null);
-            Alert.alert('Sucesso', 'Papel timbrado removido');
-        } catch (error) {
-            Alert.alert('Erro', 'Falha ao remover');
         }
     };
 
@@ -222,14 +235,8 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
         }
     }, [selectedPatient, documentDate, selectedTemplate]);
 
-    const getPDFHTML = (letterhead?: string | null) => {
+    const getPDFHTML = () => {
         if (!selectedTemplate || !selectedPatient) return '';
-
-        const backgroundHtml = (letterhead || letterheadUrl)
-            ? `<div style="position: fixed; top: 0; left: 0; right: 0; margin-left: auto; margin-right: auto; width: 210mm; height: 297mm; z-index: -1;">
-                 <img src="${letterhead || letterheadUrl}" style="width: 100%; height: 100%; object-fit: fill; border: none; padding: 0; margin: 0; display: block;" />
-               </div>`
-            : '';
 
         return `
             <!DOCTYPE html>
@@ -238,35 +245,30 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                 <meta charset="UTF-8">
                 <title>${selectedTemplate.name}</title>
                 <style>
-                    @page { size: A4; margin: 0; }
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        width: 100%;
-                    }
+                    @page { size: A4; margin: 20mm; }
                     body {
                         font-family: Arial, sans-serif;
-                        min-height: 297mm;
-                        box-sizing: border-box;
-                        -webkit-print-color-adjust: exact;
-                        color-adjust: exact;
-                        background: transparent !important;
-                    }
-                    .document-wrapper {
-                        width: 210mm;
-                        padding: 60mm 20mm 30mm;
-                        box-sizing: border-box;
-                        margin: 0 auto;
-                    }
-                    h1 { text-align: center; margin-bottom: 25px; font-size: 18pt; font-weight: bold; text-transform: uppercase; }
-                    .content { 
-                        white-space: pre-wrap; 
-                        text-align: justify; 
-                        font-size: 12pt; 
-                        line-height: 1.6;
+                        padding: 40px;
                         color: #000;
                     }
-                    .signature { margin-top: 100px; text-align: center; }
+                    h1 {
+                        text-align: center;
+                        margin-bottom: 30px;
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                    }
+                    .content {
+                        white-space: pre-wrap;
+                        text-align: justify;
+                        text-justify: inter-word;
+                        font-size: 12pt;
+                        line-height: 1.8;
+                    }
+                    .signature {
+                        margin-top: 80px;
+                        text-align: center;
+                    }
                     .signature-line {
                         border-top: 1px solid #000;
                         width: 300px;
@@ -276,35 +278,14 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                 </style>
             </head>
             <body>
-                ${backgroundHtml}
-                <div class="document-wrapper">
-                    <h1>${selectedTemplate.name}</h1>
-                    <div class="content">${previewContent}</div>
-                    <div class="signature">
-                        <div class="signature-line">${selectedPatient.name}</div>
-                    </div>
+                <h1>${selectedTemplate.name}</h1>
+                <div class="content">${previewContent}</div>
+                <div class="signature">
+                    <div class="signature-line">${selectedPatient.name}</div>
                 </div>
             </body>
             </html>
         `;
-    };
-
-    // Helper to load image as base64 for PDF embedding
-    const loadImageAsBase64 = async (url: string | null): Promise<string | null> => {
-        if (!url) return null;
-        try {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        } catch (error) {
-            console.error('Error loading image as base64:', error);
-            return null;
-        }
     };
 
     const handleDownloadPDF = async () => {
@@ -315,8 +296,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
 
         try {
             setGenerating(true);
-            const base64Letterhead = await loadImageAsBase64(letterheadUrl);
-            const html = getPDFHTML(base64Letterhead);
+            const html = getPDFHTML();
             const { uri } = await Print.printToFileAsync({ html });
             await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
         } catch (error) {
@@ -335,8 +315,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
 
         try {
             setGenerating(true);
-            const base64Letterhead = await loadImageAsBase64(letterheadUrl);
-            const html = getPDFHTML(base64Letterhead);
+            const html = getPDFHTML();
             const { uri } = await Print.printToFileAsync({ html });
 
             await documentTemplatesService.saveAsExam(
@@ -364,8 +343,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
             list: 'Modelos de Documentos',
             create: 'Novo Modelo',
             edit: 'Editar Modelo',
-            generate: `Gerar: ${selectedTemplate?.name || ''}`,
-            settings: 'Papel Timbrado'
+            generate: `Gerar: ${selectedTemplate?.name || ''}`
         };
 
         return (
@@ -405,22 +383,13 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                         {/* List View */}
                         {view === 'list' && (
                             <View className="gap-4">
-                                <View className="flex-row gap-2">
-                                    <TouchableOpacity
-                                        onPress={() => setView('settings')}
-                                        className="flex-1 bg-white border border-gray-200 rounded-xl py-3 flex-row items-center justify-center gap-2"
-                                    >
-                                        <Settings size={18} color="#6B7280" />
-                                        <Text className="text-gray-600 font-medium">Timbrado</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        onPress={handleCreate}
-                                        className="flex-1 bg-[#b94a48] rounded-xl py-3 flex-row items-center justify-center gap-2"
-                                    >
-                                        <Plus size={18} color="#FFFFFF" />
-                                        <Text className="text-white font-medium">Novo Modelo</Text>
-                                    </TouchableOpacity>
-                                </View>
+                                <TouchableOpacity
+                                    onPress={handleCreate}
+                                    className="bg-[#b94a48] rounded-xl py-3 flex-row items-center justify-center gap-2"
+                                >
+                                    <Plus size={18} color="#FFFFFF" />
+                                    <Text className="text-white font-medium">Novo Modelo</Text>
+                                </TouchableOpacity>
 
                                 {/* Explainer */}
                                 <View className="bg-gray-100 p-3 rounded-xl mb-2">
@@ -437,13 +406,17 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     </Text>
                                 </View>
 
-                                {templates.length === 0 ? (
-                                    <View className="bg-white rounded-xl p-12 items-center">
-                                        <FileText size={48} color="#D1D5DB" />
-                                        <Text className="text-gray-400 mt-4">Nenhum modelo cadastrado</Text>
+                                {templates.length === 0 && (
+                                    <View className="bg-white rounded-xl p-4 items-center mb-3">
+                                        <FileText size={40} color="#D1D5DB" />
+                                        <Text className="text-gray-500 mt-2 text-center">Nenhum modelo cadastrado</Text>
+                                        <Text className="text-gray-400 text-sm text-center mt-1">Adicione modelos sugeridos abaixo ou crie o seu próprio</Text>
                                     </View>
-                                ) : (
-                                    <View className="gap-3">
+                                )}
+
+                                {templates.length > 0 && (
+                                    <View className="gap-3 mb-4">
+                                        <Text className="text-gray-500 text-sm font-medium">Seus modelos:</Text>
                                         {templates.map(template => (
                                             <View key={template.id} className="bg-white rounded-xl p-4 border border-gray-100">
                                                 <Text className="font-semibold text-gray-900">{template.name}</Text>
@@ -475,60 +448,36 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                         ))}
                                     </View>
                                 )}
-                            </View>
-                        )}
 
-                        {/* Settings View */}
-                        {view === 'settings' && (
-                            <View className="gap-4">
-                                <Text className="text-gray-500">
-                                    Faça upload de uma imagem que será o fundo de todos os documentos gerados.
-                                </Text>
-
-                                {letterheadUrl ? (
-                                    <View className="gap-4">
-                                        <View className="bg-white rounded-xl p-4 border border-gray-200">
-                                            <Image
-                                                source={letterheadUrl ? { uri: letterheadUrl } : undefined}
-                                                className="w-full h-40"
-                                                resizeMode="contain"
-                                            />
-                                        </View>
-                                        <View className="flex-row gap-2">
-                                            <TouchableOpacity
-                                                onPress={handleUploadLetterhead}
-                                                disabled={uploadingLetterhead}
-                                                className="flex-1 bg-gray-100 py-3 rounded-xl flex-row items-center justify-center gap-2"
-                                            >
-                                                <Upload size={18} color="#6B7280" />
-                                                <Text className="text-gray-600 font-medium">Alterar</Text>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                                onPress={handleRemoveLetterhead}
-                                                className="flex-1 bg-[#fef2f2] py-3 rounded-xl flex-row items-center justify-center gap-2"
-                                            >
-                                                <X size={18} color="#EF4444" />
-                                                <Text className="text-[#b94a48] font-medium">Remover</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        onPress={handleUploadLetterhead}
-                                        disabled={uploadingLetterhead}
-                                        className="bg-white border-2 border-dashed border-gray-200 rounded-xl p-12 items-center"
-                                    >
-                                        {uploadingLetterhead ? (
-                                            <ActivityIndicator size="large" color="#b94a48" />
-                                        ) : (
-                                            <>
-                                                <ImageIcon size={40} color="#9CA3AF" />
-                                                <Text className="text-gray-600 mt-2">Clique para fazer upload</Text>
-                                                <Text className="text-gray-400 text-sm">PNG, JPG (rec: 210x297mm)</Text>
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
+                                {/* Modelos pré-definidos - sempre visíveis */}
+                                <View className="gap-3">
+                                    <Text className="text-gray-500 text-sm font-medium">Modelos pré-definidos:</Text>
+                                    {DEFAULT_TEMPLATES.map((template, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            onPress={async () => {
+                                                try {
+                                                    await documentTemplatesService.create(template);
+                                                    loadData();
+                                                    Alert.alert('Sucesso', `"${template.name}" adicionado!`);
+                                                } catch (error) {
+                                                    Alert.alert('Erro', 'Falha ao adicionar modelo');
+                                                }
+                                            }}
+                                            className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex-row items-center justify-between"
+                                        >
+                                            <View className="flex-1">
+                                                <Text className="font-medium text-gray-700">{template.name}</Text>
+                                                <Text className="text-gray-400 text-xs mt-1" numberOfLines={1}>
+                                                    {template.content.substring(0, 50)}...
+                                                </Text>
+                                            </View>
+                                            <View className="bg-white p-2 rounded-lg ml-3 border border-gray-200">
+                                                <Plus size={16} color="#6B7280" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
                             </View>
                         )}
 

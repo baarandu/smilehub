@@ -70,7 +70,6 @@ export const documentTemplatesService = {
         };
 
         for (const [key, value] of Object.entries(replacements)) {
-            // Support {{key}} and {key} as well
             const regexDouble = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
             const regexSingle = new RegExp(`\\{${key}\\}`, 'gi');
             filled = filled.replace(regexDouble, value).replace(regexSingle, value);
@@ -79,46 +78,19 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async saveAsExam(patientId: string, patientName: string, name: string, content: string, letterheadUrl?: string | null): Promise<void> {
-
+    async saveAsExam(patientId: string, patientName: string, name: string, content: string): Promise<void> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
         // Dynamically import jsPDF
         const { default: jsPDF } = await import('jspdf');
 
-        const doc = new jsPDF();
+        const doc = new jsPDF({ format: 'a4' });
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 25;
-        let y = 60; // Safer top margin for tall logos
-
-        // Helper to add background
-        const addBackground = async () => {
-            if (letterheadUrl) {
-                try {
-                    const response = await fetch(letterheadUrl);
-                    const blob = await response.blob();
-                    const reader = new FileReader();
-                    const base64Data = await new Promise<string>((resolve) => {
-                        reader.onloadend = () => resolve(reader.result as string);
-                        reader.readAsDataURL(blob);
-                    });
-
-                    let format = 'PNG';
-                    if (blob.type.includes('jpeg') || blob.type.includes('jpg')) format = 'JPEG';
-                    if (blob.type.includes('webp')) format = 'WEBP';
-
-                    doc.addImage(base64Data, format, 0, 0, pageWidth, pageHeight);
-                } catch (error) {
-                    console.error('Error adding letterhead:', error);
-                }
-            }
-        };
-
-        // First page background
-        await addBackground();
+        let y = 40;
 
         // Title
         doc.setFontSize(18);
@@ -132,23 +104,19 @@ export const documentTemplatesService = {
         const lines: string[] = doc.splitTextToSize(content, pageWidth - (margin * 2));
 
         for (const line of lines) {
-            if (y > pageHeight - 40) { // Keep space for footer/signature
+            if (y > pageHeight - 50) {
                 doc.addPage();
-                await addBackground();
-                y = 50; // New page top margin
+                y = 40;
             }
             doc.text(line, margin, y, { align: 'justify', maxWidth: pageWidth - (margin * 2) });
-            y += 7; // Line height
+            y += 7;
         }
 
-        // Signature Section
-        // Check if this is a consent form (Termo de Consentimento)
+        // Signature
         const isConsentForm = name.toLowerCase().includes('termo') ||
-            name.toLowerCase().includes('consentimento') ||
-            name.toLowerCase().includes('consent');
+            name.toLowerCase().includes('consentimento');
 
-        // Get dentist name for non-consent documents
-        let dentistName: string = 'Responsável Técnico';
+        let dentistName = 'Responsável Técnico';
         if (!isConsentForm) {
             const { data: profile } = await supabase
                 .from('profiles')
@@ -162,11 +130,9 @@ export const documentTemplatesService = {
             }
         }
 
-        // Add signature section
-        y += 30;
+        y += 40;
         if (y > pageHeight - 60) {
             doc.addPage();
-            await addBackground();
             y = 60;
         }
 
@@ -175,41 +141,26 @@ export const documentTemplatesService = {
         doc.setFontSize(10);
 
         if (isConsentForm) {
-            // Only patient signature for consent forms
             doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
             y += 5;
             doc.text(patientName, pageWidth / 2, y, { align: 'center' });
         } else {
-            // Two signatures for other documents: patient (left) and dentist (right)
             const leftCenter = pageWidth / 4;
             const rightCenter = (pageWidth * 3) / 4;
 
-            // Patient signature line (left)
             doc.line(leftCenter - 35, y, leftCenter + 35, y);
-
-            // Dentist signature line (right)
             doc.line(rightCenter - 35, y, rightCenter + 35, y);
-
             y += 5;
-
-            // Patient name
             doc.text(patientName, leftCenter, y, { align: 'center' });
-
-            // Dentist name
             doc.text(dentistName, rightCenter, y, { align: 'center' });
         }
 
-        // Generate PDF blob with explicit options
+        // Generate PDF
         const pdfOutput = doc.output('arraybuffer');
         const pdfBlob = new Blob([pdfOutput], { type: 'application/pdf' });
 
-        if (pdfBlob.size < 100) {
-            throw new Error('PDF generation failed - blob too small');
-        }
-
         const fileName = `doc_${patientId}_${Date.now()}.pdf`;
 
-        // Upload to exams bucket
         const { error: uploadError } = await supabase.storage
             .from('exams')
             .upload(fileName, pdfBlob, {
@@ -223,7 +174,6 @@ export const documentTemplatesService = {
             .from('exams')
             .getPublicUrl(fileName);
 
-        // Get clinic_id
         const { data: clinicUser } = await supabase
             .from('clinic_users')
             .select('clinic_id')
@@ -232,7 +182,6 @@ export const documentTemplatesService = {
 
         if (!clinicUser) throw new Error('Clinic not found');
 
-        // Create exam record
         const { error: insertError } = await (supabase
             .from('exams') as any)
             .insert({

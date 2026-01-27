@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
-import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Settings, Upload, X, Image, Save } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface DocumentsModalProps {
@@ -17,14 +16,92 @@ interface DocumentsModalProps {
     onClose: () => void;
 }
 
-type View = 'list' | 'create' | 'edit' | 'generate' | 'settings';
+type View = 'list' | 'create' | 'edit' | 'generate';
+
+const DEFAULT_TEMPLATES = [
+    {
+        name: 'Termo de Consentimento',
+        content: `Eu, {{nome}}, portador(a) do CPF {{cpf}}, nascido(a) em {{data_nascimento}}, declaro que fui devidamente informado(a) sobre o procedimento odontológico a ser realizado, seus riscos, benefícios e alternativas de tratamento.
+
+Declaro ainda que tive a oportunidade de esclarecer todas as minhas dúvidas e que autorizo a realização do procedimento proposto.
+
+Estou ciente de que devo seguir todas as orientações pós-operatórias fornecidas pelo profissional.
+
+Data: {{data}}`
+    },
+    {
+        name: 'Atestado Odontológico',
+        content: `ATESTADO ODONTOLÓGICO
+
+Atesto para os devidos fins que o(a) paciente {{nome}}, portador(a) do CPF {{cpf}}, esteve sob meus cuidados profissionais na data de {{data}}, necessitando de afastamento de suas atividades por _____ dia(s) a partir desta data.
+
+CID: _________`
+    },
+    {
+        name: 'Declaração de Comparecimento',
+        content: `DECLARAÇÃO DE COMPARECIMENTO
+
+Declaro para os devidos fins que o(a) Sr(a). {{nome}}, portador(a) do CPF {{cpf}}, compareceu a esta clínica odontológica na data de {{data}}, no horário de _____ às _____, para atendimento odontológico.`
+    },
+    {
+        name: 'Receituário',
+        content: `RECEITUÁRIO
+
+Paciente: {{nome}}
+CPF: {{cpf}}
+Data: {{data}}
+
+Uso interno:
+
+1. _________________________________
+   Tomar _____ comprimido(s) de _____ em _____ horas por _____ dias.
+
+2. _________________________________
+   Tomar _____ comprimido(s) de _____ em _____ horas por _____ dias.
+
+Observações: _________________________________`
+    },
+    {
+        name: 'Encaminhamento',
+        content: `ENCAMINHAMENTO
+
+Encaminho o(a) paciente {{nome}}, CPF {{cpf}}, para avaliação e tratamento com especialista em:
+
+( ) Ortodontia
+( ) Endodontia
+( ) Periodontia
+( ) Cirurgia Bucomaxilofacial
+( ) Implantodontia
+( ) Prótese
+( ) Odontopediatria
+( ) Outro: _________________
+
+Motivo do encaminhamento:
+_________________________________
+_________________________________
+
+Data: {{data}}`
+    },
+    {
+        name: 'Autorização para Menor',
+        content: `AUTORIZAÇÃO PARA TRATAMENTO ODONTOLÓGICO DE MENOR
+
+Eu, _________________________________, portador(a) do CPF ___________________, na qualidade de responsável legal pelo(a) menor {{nome}}, nascido(a) em {{data_nascimento}}, portador(a) do CPF {{cpf}}, AUTORIZO a realização de tratamento odontológico, incluindo os procedimentos necessários para diagnóstico e tratamento.
+
+Declaro estar ciente dos procedimentos a serem realizados e que fui informado(a) sobre os riscos e benefícios do tratamento.
+
+Data: {{data}}
+
+_________________________________
+Assinatura do Responsável Legal`
+    }
+];
 
 export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const { toast } = useToast();
     const [view, setView] = useState<View>('list');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Templates
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
@@ -39,16 +116,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [selectedPatientId, setSelectedPatientId] = useState('');
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [previewContent, setPreviewContent] = useState('');
-
-    // Letterhead
-    const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
-    const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
+    const [isSavingExam, setIsSavingExam] = useState(false);
 
     useEffect(() => {
         if (open) {
             loadTemplates();
             loadPatients();
-            loadLetterhead();
         }
     }, [open]);
 
@@ -70,95 +143,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);
-        }
-    };
-
-    const loadLetterhead = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data } = await supabase
-                .from('clinic_settings')
-                .select('letterhead_url')
-                .eq('user_id', user.id)
-                .single();
-
-            if (data && (data as any).letterhead_url) {
-                setLetterheadUrl((data as any).letterhead_url);
-            }
-        } catch (error) {
-            // Settings might not exist yet
-        }
-    };
-
-    const handleUploadLetterhead = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast({ title: 'Apenas imagens são aceitas', variant: 'destructive' });
-            return;
-        }
-
-        try {
-            setUploadingLetterhead(true);
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Não autenticado');
-
-            const fileExt = file.name.split('.').pop();
-            const timestamp = Date.now();
-            const fileName = `letterhead_${user.id}_${timestamp}.${fileExt}`;
-
-            // Upload to storage
-            const { error: uploadError } = await supabase.storage
-                .from('clinic-assets')
-                .upload(fileName, file, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL with cache buster
-            const { data: { publicUrl } } = supabase.storage
-                .from('clinic-assets')
-                .getPublicUrl(fileName);
-
-            const urlWithCacheBuster = `${publicUrl}?t=${timestamp}`;
-
-            // Update clinic_settings
-            const { error: upsertError } = await supabase
-                .from('clinic_settings')
-                .upsert({
-                    user_id: user.id,
-                    letterhead_url: urlWithCacheBuster,
-                    updated_at: new Date().toISOString()
-                } as any, { onConflict: 'user_id' });
-
-            if (upsertError) throw upsertError;
-
-            setLetterheadUrl(urlWithCacheBuster);
-            toast({ title: 'Papel timbrado atualizado!' });
-        } catch (error) {
-            console.error('Error uploading letterhead:', error);
-            toast({ title: 'Erro ao fazer upload', variant: 'destructive' });
-        } finally {
-            setUploadingLetterhead(false);
-        }
-    };
-
-    const handleRemoveLetterhead = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            await (supabase
-                .from('clinic_settings') as any)
-                .update({ letterhead_url: null })
-                .eq('user_id', user.id);
-
-            setLetterheadUrl(null);
-            toast({ title: 'Papel timbrado removido' });
-        } catch (error) {
-            toast({ title: 'Erro ao remover', variant: 'destructive' });
         }
     };
 
@@ -218,6 +202,31 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         }
     };
 
+    const handleAddAllDefaults = async () => {
+        try {
+            setSaving(true);
+            for (const template of DEFAULT_TEMPLATES) {
+                await documentTemplatesService.create(template);
+            }
+            toast({ title: 'Modelos padrão adicionados!' });
+            loadTemplates();
+        } catch (error) {
+            toast({ title: 'Erro ao adicionar modelos', variant: 'destructive' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAddDefaultTemplate = async (template: { name: string; content: string }) => {
+        try {
+            await documentTemplatesService.create(template);
+            toast({ title: `"${template.name}" adicionado!` });
+            loadTemplates();
+        } catch (error) {
+            toast({ title: 'Erro ao adicionar modelo', variant: 'destructive' });
+        }
+    };
+
     const handleGenerate = (template: DocumentTemplate) => {
         setSelectedTemplate(template);
         setSelectedPatientId('');
@@ -255,13 +264,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const patient = patients.find(p => p.id === selectedPatientId);
 
-        // Create background html if letterhead is available
-        const backgroundHtml = letterheadUrl
-            ? `<div style="position: fixed; top: 0; left: 0; right: 0; margin-left: auto; margin-right: auto; width: 210mm; height: 297mm; z-index: -1;">
-                 <img src="${letterheadUrl}" style="width: 100%; height: 100%; object-fit: fill; border: none; padding: 0; margin: 0; display: block;" />
-               </div>`
-            : '';
-
         const html = `
             <!DOCTYPE html>
             <html>
@@ -269,68 +271,43 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 <meta charset="UTF-8">
                 <title>${selectedTemplate?.name}</title>
                 <style>
-                    @page {
-                        size: A4;
-                        margin: 0;
-                    }
-                    html, body {
-                        margin: 0;
-                        padding: 0;
-                        width: 100%;
-                    }
+                    @page { size: A4; margin: 20mm; }
                     body {
                         font-family: Arial, sans-serif;
-                        min-height: 297mm;
-                        box-sizing: border-box;
-                        background: transparent !important;
-                        -webkit-print-color-adjust: exact;
-                        color-adjust: exact;
-                        display: flex;
-                        justify-content: center;
-                        align-items: flex-start;
-                    }
-                    .document-wrapper {
-                        width: 210mm;
-                        padding: 60mm 20mm 30mm;
-                        box-sizing: border-box;
-                        margin: 0 auto;
-                    }
-                    .document-content {
-                        width: 100%;
-                    }
-                    h1 { text-align: center; margin-bottom: 25px; font-size: 18pt; font-weight: bold; text-transform: uppercase; }
-                    .content { 
-                        white-space: pre-wrap; 
-                        text-align: justify; 
-                        font-size: 12pt; 
-                        line-height: 1.6;
+                        padding: 40px;
                         color: #000;
                     }
-                    .signature { margin-top: 80px; text-align: center; }
-                    .signature-line { 
-                        border-top: 1px solid #000; 
-                        width: 300px; 
+                    h1 {
+                        text-align: center;
+                        margin-bottom: 30px;
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-transform: uppercase;
+                    }
+                    .content {
+                        white-space: pre-wrap;
+                        text-align: justify;
+                        text-justify: inter-word;
+                        font-size: 12pt;
+                        line-height: 1.8;
+                    }
+                    .signature {
+                        margin-top: 80px;
+                        text-align: center;
+                    }
+                    .signature-line {
+                        border-top: 1px solid #000;
+                        width: 300px;
                         margin: 0 auto 10px;
                         padding-top: 10px;
-                    }
-                    @media print {
-                        body {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
                     }
                 </style>
             </head>
             <body>
-                ${backgroundHtml}
-                <div class="document-wrapper">
-                    <div class="document-content">
-                        <h1>${selectedTemplate?.name}</h1>
-                        <div class="content">${previewContent}</div>
-                        <div class="signature">
-                            <div class="signature-line">${patient?.name}</div>
-                        </div>
-                    </div>
+                <h1>${selectedTemplate?.name}</h1>
+                <div class="content">${previewContent}</div>
+                <div class="signature">
+                    <div class="signature-line">${patient?.name}</div>
                 </div>
             </body>
             </html>
@@ -343,8 +320,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             printWindow.print();
         }
     };
-
-    const [isSavingExam, setIsSavingExam] = useState(false);
 
     const handleSaveToExams = async () => {
         if (!previewContent || !selectedPatientId || !selectedTemplate) {
@@ -359,8 +334,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 selectedPatientId,
                 patient?.name || 'Paciente',
                 selectedTemplate.name,
-                previewContent,
-                letterheadUrl
+                previewContent
             );
             toast({ title: 'Documento salvo nos exames do paciente!' });
         } catch (error) {
@@ -391,7 +365,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         {view === 'create' && 'Novo Modelo'}
                         {view === 'edit' && 'Editar Modelo'}
                         {view === 'generate' && `Gerar: ${selectedTemplate?.name}`}
-                        {view === 'settings' && 'Configurações'}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -402,16 +375,10 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                             <p className="text-sm text-muted-foreground">
                                 Crie modelos de documentos preenchidos automaticamente.
                             </p>
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setView('settings')}>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Papel Timbrado
-                                </Button>
-                                <Button onClick={handleCreate} size="sm">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    Novo Modelo
-                                </Button>
-                            </div>
+                            <Button onClick={handleCreate} size="sm">
+                                <Plus className="w-4 h-4 mr-2" />
+                                Novo Modelo
+                            </Button>
                         </div>
 
                         <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
@@ -425,123 +392,82 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                             <div className="flex justify-center py-8">
                                 <Loader2 className="w-6 h-6 animate-spin text-[#a03f3d]" />
                             </div>
-                        ) : templates.length === 0 ? (
-                            <div className="text-center py-12 bg-gray-50 rounded-lg">
-                                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">Nenhum modelo cadastrado</p>
-                                <Button onClick={handleCreate} className="mt-4" size="sm">
-                                    Criar primeiro modelo
-                                </Button>
-                            </div>
                         ) : (
-                            <div className="space-y-2">
-                                {templates.map(template => (
-                                    <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                                        <div className="flex-1">
-                                            <p className="font-medium">{template.name}</p>
-                                            <p className="text-sm text-gray-500 line-clamp-1">
-                                                {template.content.substring(0, 100)}...
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
+                            <div className="space-y-4">
+                                {templates.length === 0 && (
+                                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                                        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-500">Nenhum modelo cadastrado</p>
+                                        <p className="text-gray-400 text-sm mt-1">Adicione modelos sugeridos abaixo ou crie o seu próprio</p>
+                                    </div>
+                                )}
+
+                                {templates.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-sm text-gray-500 font-medium">Seus modelos:</p>
+                                        {templates.map(template => (
+                                            <div key={template.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                                                <div className="flex-1">
+                                                    <p className="font-medium">{template.name}</p>
+                                                    <p className="text-sm text-gray-500 line-clamp-1">
+                                                        {template.content.substring(0, 100)}...
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGenerate(template)}
+                                                    >
+                                                        <FileDown className="w-4 h-4 mr-1" />
+                                                        Gerar
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEdit(template)}
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDelete(template)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Modelos pré-definidos - sempre visíveis */}
+                                <div className="space-y-2 pt-2 border-t">
+                                    <p className="text-sm text-gray-500 font-medium">Modelos pré-definidos:</p>
+                                    {DEFAULT_TEMPLATES.map((template, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100"
+                                        >
+                                            <div className="flex-1">
+                                                <p className="font-medium text-sm text-gray-700">{template.name}</p>
+                                                <p className="text-xs text-gray-400 line-clamp-1">
+                                                    {template.content.substring(0, 60)}...
+                                                </p>
+                                            </div>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={() => handleGenerate(template)}
+                                                onClick={() => handleAddDefaultTemplate(template)}
                                             >
-                                                <FileDown className="w-4 h-4 mr-1" />
-                                                Gerar
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleEdit(template)}
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleDelete(template)}
-                                            >
-                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                                <Plus className="w-4 h-4" />
                                             </Button>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Settings View - Letterhead Upload */}
-                {view === 'settings' && (
-                    <div className="space-y-6">
-                        <div>
-                            <Label className="text-base font-semibold">Papel Timbrado</Label>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Faça upload de uma imagem que será incluída no topo de todos os documentos gerados.
-                            </p>
-                        </div>
-
-                        {letterheadUrl ? (
-                            <div className="space-y-4">
-                                <div className="border rounded-lg p-4 bg-gray-50">
-                                    <img
-                                        src={letterheadUrl}
-                                        alt="Papel Timbrado"
-                                        className="max-h-32 mx-auto object-contain"
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        className="flex-1"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        disabled={uploadingLetterhead}
-                                    >
-                                        <Upload className="w-4 h-4 mr-2" />
-                                        Alterar Imagem
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        onClick={handleRemoveLetterhead}
-                                    >
-                                        <X className="w-4 h-4 mr-2" />
-                                        Remover
-                                    </Button>
+                                    ))}
                                 </div>
                             </div>
-                        ) : (
-                            <div
-                                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                {uploadingLetterhead ? (
-                                    <Loader2 className="w-10 h-10 mx-auto text-[#a03f3d] animate-spin" />
-                                ) : (
-                                    <>
-                                        <Image className="w-10 h-10 mx-auto text-gray-400" />
-                                        <p className="mt-2 text-sm text-gray-600">Clique para fazer upload</p>
-                                        <p className="text-xs text-gray-400">PNG, JPG (recomendado: 800x150px)</p>
-                                    </>
-                                )}
-                            </div>
                         )}
-
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleUploadLetterhead}
-                            className="hidden"
-                        />
-
-                        <div className="flex justify-end">
-                            <Button variant="outline" onClick={goBack}>
-                                Voltar
-                            </Button>
-                        </div>
                     </div>
                 )}
 
@@ -610,12 +536,6 @@ Nesta data {{data}}, declaro que...`}
                             </div>
                         </div>
 
-                        {letterheadUrl && (
-                            <div className="border rounded-lg p-2 bg-gray-50">
-                                <img src={letterheadUrl} alt="Timbrado" className="max-h-16 mx-auto object-contain" />
-                            </div>
-                        )}
-
                         <div>
                             <Label>Prévia do Documento</Label>
                             <div className="border rounded-lg p-4 min-h-[200px] bg-white whitespace-pre-wrap text-sm">
@@ -648,4 +568,3 @@ Nesta data {{data}}, declaro que...`}
         </Dialog>
     );
 }
-

@@ -70,7 +70,6 @@ export const documentTemplatesService = {
         };
 
         for (const [key, value] of Object.entries(replacements)) {
-            // Support {{key}} and {key} as well
             const regexDouble = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
             const regexSingle = new RegExp(`\\{${key}\\}`, 'gi');
             filled = filled.replace(regexDouble, value).replace(regexSingle, value);
@@ -79,69 +78,14 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async getLetterhead(): Promise<string | null> {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return null;
-
-            const { data, error } = await supabase
-                .from('clinic_settings')
-                .select('letterhead_url')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            if (error) {
-                console.error('Error fetching letterhead:', error);
-                return null;
-            }
-
-            return (data as any)?.letterhead_url || null;
-        } catch (error) {
-            console.error('Error in getLetterhead:', error);
-            return null;
-        }
-    },
-
-    async saveLetterhead(url: string): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        const { error } = await supabase
-            .from('clinic_settings')
-            .upsert({
-                user_id: user.id,
-                letterhead_url: url,
-                updated_at: new Date().toISOString()
-            } as any, { onConflict: 'user_id' });
-
-        if (error) throw error;
-    },
-
-    async removeLetterhead(): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        await (supabase
-            .from('clinic_settings') as any)
-            .update({ letterhead_url: null })
-            .eq('user_id', user.id);
-    },
-
     async saveAsExam(patientId: string, name: string, fileUri: string): Promise<void> {
-        console.log('[saveAsExam] Starting mobile PDF upload...');
-        console.log('[saveAsExam] patientId:', patientId);
-        console.log('[saveAsExam] name:', name);
-        console.log('[saveAsExam] fileUri:', fileUri);
-
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        // Read file as base64 using static FileSystem import
+        // Read file as base64
         const base64Data = await FileSystem.readAsStringAsync(fileUri, {
             encoding: 'base64'
         } as any);
-
-        console.log('[saveAsExam] Base64 data length:', base64Data.length);
 
         if (!base64Data || base64Data.length < 100) {
             throw new Error('PDF file is empty or too small');
@@ -155,7 +99,6 @@ export const documentTemplatesService = {
         }
 
         const fileName = `doc_${patientId}_${Date.now()}.pdf`;
-        console.log('[saveAsExam] Uploading as:', fileName);
 
         const { error: uploadError } = await supabase.storage
             .from('exams')
@@ -164,12 +107,7 @@ export const documentTemplatesService = {
                 upsert: true
             });
 
-        if (uploadError) {
-            console.error('[saveAsExam] Upload error:', uploadError);
-            throw uploadError;
-        }
-
-        console.log('[saveAsExam] Upload successful');
+        if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
             .from('exams')
@@ -187,11 +125,6 @@ export const documentTemplatesService = {
                 type: 'document'
             } as any);
 
-        if (insertError) {
-            console.error('[saveAsExam] Insert error:', insertError);
-            throw insertError;
-        }
-
-        console.log('[saveAsExam] Document saved successfully');
+        if (insertError) throw insertError;
     }
 };
