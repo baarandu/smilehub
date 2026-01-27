@@ -44,7 +44,7 @@ export default function PatientDetail() {
         loadPatient, loadAnamneses, loadBudgets, loadProcedures, loadExams,
     } = usePatientData(id);
 
-    const { getAllPaymentItems, handleConfirmPayment, getLocationRate } = usePatientPayments(budgets, patient, loadBudgets);
+    const { getAllPaymentItems, handleConfirmPayment, handleConfirmPaymentMultiple, getLocationRate } = usePatientPayments(budgets, patient, loadBudgets);
     const { handleDeleteAnamnese, handleDeleteBudget, handleDeleteProcedure, handleDeleteExam } = usePatientHandlers({
         loadAnamneses, loadBudgets, loadProcedures, loadExams, exams
     });
@@ -59,6 +59,7 @@ export default function PatientDetail() {
     const [selectedBudget, setSelectedBudget] = useState<BudgetWithItems | null>(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedPaymentItem, setSelectedPaymentItem] = useState<{ budgetId: string; toothIndex: number; tooth: ToothEntry; budgetDate?: string } | null>(null);
+    const [selectedPaymentItems, setSelectedPaymentItems] = useState<{ budgetId: string; items: { index: number; tooth: ToothEntry }[]; budgetDate?: string } | null>(null);
     const [showBudgetViewModal, setShowBudgetViewModal] = useState(false);
     const [viewBudget, setViewBudget] = useState<BudgetWithItems | null>(null);
     const [showProcedureModal, setShowProcedureModal] = useState(false);
@@ -129,7 +130,8 @@ export default function PatientDetail() {
     const handleViewProcedure = (procedure: Procedure) => { setViewingProcedure(procedure); setShowProcedureViewModal(true); };
     const handleEditProcedure = (procedure: Procedure) => { setSelectedProcedure(procedure); setShowProcedureModal(true); };
     const handleEditExam = (exam: Exam) => { setSelectedExam(exam); setShowExamModal(true); };
-    const handlePaymentClick = (budgetId: string, toothIndex: number, tooth: ToothEntry, budgetDate?: string) => { setSelectedPaymentItem({ budgetId, toothIndex, tooth, budgetDate }); setShowPaymentModal(true); };
+    const handlePaymentClick = (budgetId: string, toothIndex: number, tooth: ToothEntry, budgetDate?: string) => { setSelectedPaymentItem({ budgetId, toothIndex, tooth, budgetDate }); setSelectedPaymentItems(null); setShowPaymentModal(true); };
+    const handlePaymentItems = (budgetId: string, items: { index: number; tooth: ToothEntry }[], budgetDate?: string) => { setSelectedPaymentItems({ budgetId, items, budgetDate }); setSelectedPaymentItem(null); setShowPaymentModal(true); };
 
     // Utility functions
     const getInitials = (name: string) => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -363,22 +365,46 @@ export default function PatientDetail() {
             <NewBudgetModal visible={showBudgetModal} patientId={patient.id} onClose={() => { setShowBudgetModal(false); setSelectedBudget(null); }} onSuccess={loadBudgets} budget={selectedBudget} />
             <PaymentMethodModal
                 visible={showPaymentModal}
-                onClose={() => { setShowPaymentModal(false); setSelectedPaymentItem(null); }}
+                onClose={() => { setShowPaymentModal(false); setSelectedPaymentItem(null); setSelectedPaymentItems(null); }}
                 onConfirm={async (method, transactions, brand, breakdown, payerData) => {
-                    if (selectedPaymentItem && !isPaying) {
-                        setIsPaying(true);
+                    if (isPaying) return;
+                    setIsPaying(true);
+                    if (selectedPaymentItem) {
                         await handleConfirmPayment(selectedPaymentItem, method, transactions, brand, breakdown, () => {
                             setShowPaymentModal(false);
                             setSelectedPaymentItem(null);
                         }, payerData);
-                        setIsPaying(false);
+                    } else if (selectedPaymentItems) {
+                        await handleConfirmPaymentMultiple(selectedPaymentItems, method, transactions, brand, breakdown, () => {
+                            setShowPaymentModal(false);
+                            setSelectedPaymentItems(null);
+                        }, payerData);
                     }
+                    setIsPaying(false);
                 }}
                 loading={isPaying}
-                itemName={selectedPaymentItem?.tooth.tooth.includes('Arcada') ? selectedPaymentItem?.tooth.tooth : `Dente ${selectedPaymentItem?.tooth.tooth}`}
-                value={selectedPaymentItem ? calculateToothTotal(selectedPaymentItem.tooth.values) : 0}
-                locationRate={selectedPaymentItem ? getLocationRate(selectedPaymentItem) : 0}
-                budgetDate={selectedPaymentItem?.budgetDate}
+                itemName={
+                    selectedPaymentItem
+                        ? (selectedPaymentItem.tooth.tooth.includes('Arcada') ? selectedPaymentItem.tooth.tooth : `Dente ${selectedPaymentItem.tooth.tooth}`)
+                        : selectedPaymentItems
+                            ? selectedPaymentItems.items.map(i => i.tooth.tooth.includes('Arcada') ? i.tooth.tooth : `Dente ${i.tooth.tooth}`).join(', ')
+                            : ''
+                }
+                value={
+                    selectedPaymentItem
+                        ? calculateToothTotal(selectedPaymentItem.tooth.values)
+                        : selectedPaymentItems
+                            ? selectedPaymentItems.items.reduce((sum, i) => sum + calculateToothTotal(i.tooth.values), 0)
+                            : 0
+                }
+                locationRate={
+                    selectedPaymentItem
+                        ? getLocationRate(selectedPaymentItem)
+                        : selectedPaymentItems && selectedPaymentItems.items.length > 0
+                            ? getLocationRate({ budgetId: selectedPaymentItems.budgetId, toothIndex: selectedPaymentItems.items[0].index, tooth: selectedPaymentItems.items[0].tooth })
+                            : 0
+                }
+                budgetDate={selectedPaymentItem?.budgetDate || selectedPaymentItems?.budgetDate}
                 patientName={patient?.name}
                 patientCpf={patient?.cpf || undefined}
                 pjSources={pjSources}
@@ -390,6 +416,16 @@ export default function PatientDetail() {
                 onUpdate={loadBudgets}
                 patientName={patient.name}
                 onNavigateToPayments={() => setActiveTab('payments')}
+                onPayItem={(budgetId, toothIndex, tooth, budgetDate) => {
+                    setShowBudgetViewModal(false);
+                    setViewBudget(null);
+                    handlePaymentClick(budgetId, toothIndex, tooth, budgetDate);
+                }}
+                onPayItems={(budgetId, items, budgetDate) => {
+                    setShowBudgetViewModal(false);
+                    setViewBudget(null);
+                    handlePaymentItems(budgetId, items, budgetDate);
+                }}
             />
             <NewProcedureModal visible={showProcedureModal} patientId={patient.id} onClose={() => { setShowProcedureModal(false); setSelectedProcedure(null); }} onSuccess={() => { loadProcedures(); loadExams(); }} procedure={selectedProcedure} />
             <ProcedureViewModal visible={showProcedureViewModal} procedure={viewingProcedure} onClose={() => { setShowProcedureViewModal(false); setViewingProcedure(null); }} onEdit={() => viewingProcedure && handleEditProcedure(viewingProcedure)} />

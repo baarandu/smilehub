@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, CheckCircle, Clock, CreditCard, Eye } from 'lucide-react-native';
+import { X, CheckCircle, Clock, CreditCard, Eye, Square, CheckSquare } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
 import { profileService } from '../../services/profile';
@@ -16,13 +16,17 @@ interface BudgetViewModalProps {
     onUpdate: () => void;
     patientName?: string;
     onNavigateToPayments?: () => void;
+    onPayItem?: (budgetId: string, toothIndex: number, tooth: ToothEntry, budgetDate: string) => void;
+    onPayItems?: (budgetId: string, items: { index: number; tooth: ToothEntry }[], budgetDate: string) => void;
 }
 
-export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientName, onNavigateToPayments }: BudgetViewModalProps) {
+export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientName, onNavigateToPayments, onPayItem, onPayItems }: BudgetViewModalProps) {
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
     const [budgetLocation, setBudgetLocation] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+    const [selectedApprovedItems, setSelectedApprovedItems] = useState<Set<number>>(new Set());
 
     // PDF Preview state
     const [showPdfPreview, setShowPdfPreview] = useState(false);
@@ -49,6 +53,8 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
         } else {
             setTeethList([]);
         }
+        setSelectedItems(new Set());
+        setSelectedApprovedItems(new Set());
     }, [budget]);
 
     const getDisplayName = (tooth: string) =>
@@ -107,6 +113,165 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
     const pendingItems = teethList.filter(t => t.status === 'pending');
     const approvedItems = teethList.filter(t => t.status === 'approved');
     const paidItems = teethList.filter(t => t.status === 'paid');
+
+    const toggleItemSelection = (originalIndex: number) => {
+        setSelectedItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(originalIndex)) {
+                newSet.delete(originalIndex);
+            } else {
+                newSet.add(originalIndex);
+            }
+            return newSet;
+        });
+    };
+
+    const handleApproveSelected = async () => {
+        if (!budget || selectedItems.size === 0) return;
+
+        Alert.alert(
+            'Aprovar Selecionados',
+            `Aprovar ${selectedItems.size} item(ns) selecionado(s)?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Aprovar',
+                    onPress: async () => {
+                        try {
+                            setSaving(true);
+                            const updatedList = teethList.map((t, idx) =>
+                                selectedItems.has(idx) && t.status === 'pending'
+                                    ? { ...t, status: 'approved' as const }
+                                    : t
+                            );
+                            setTeethList(updatedList);
+
+                            const newStatusCol = calculateBudgetStatus(updatedList);
+                            await budgetsService.update(budget.id, {
+                                notes: JSON.stringify({ teeth: updatedList, location: budgetLocation }),
+                                status: newStatusCol
+                            });
+                            setSelectedItems(new Set());
+                            onUpdate();
+                        } catch (error) {
+                            console.error('Error approving items:', error);
+                            Alert.alert('Erro', 'Não foi possível aprovar os itens');
+                        } finally {
+                            setSaving(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleApproveAll = async () => {
+        if (!budget || pendingItems.length === 0) return;
+
+        Alert.alert(
+            'Aprovar Todos',
+            `Aprovar todos os ${pendingItems.length} itens pendentes?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Aprovar Todos',
+                    onPress: async () => {
+                        try {
+                            setSaving(true);
+                            const updatedList = teethList.map(t =>
+                                t.status === 'pending' ? { ...t, status: 'approved' as const } : t
+                            );
+                            setTeethList(updatedList);
+
+                            const newStatusCol = calculateBudgetStatus(updatedList);
+                            await budgetsService.update(budget.id, {
+                                notes: JSON.stringify({ teeth: updatedList, location: budgetLocation }),
+                                status: newStatusCol
+                            });
+                            setSelectedItems(new Set());
+                            onUpdate();
+                        } catch (error) {
+                            console.error('Error approving all items:', error);
+                            Alert.alert('Erro', 'Não foi possível aprovar os itens');
+                        } finally {
+                            setSaving(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const toggleApprovedItemSelection = (originalIndex: number) => {
+        setSelectedApprovedItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(originalIndex)) {
+                newSet.delete(originalIndex);
+            } else {
+                newSet.add(originalIndex);
+            }
+            return newSet;
+        });
+    };
+
+    const handlePaySelected = () => {
+        if (!budget || selectedApprovedItems.size === 0) return;
+        if (!onPayItems && !onPayItem) return;
+
+        const indices = Array.from(selectedApprovedItems);
+        const selectedTeeth = indices.map(idx => ({ index: idx, tooth: teethList[idx] }));
+        const totalValue = selectedTeeth.reduce((sum, item) => sum + getToothTotal(item.tooth), 0);
+
+        Alert.alert(
+            'Pagar Selecionados',
+            `Pagar ${selectedApprovedItems.size} item(ns) no valor total de R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Pagar',
+                    onPress: () => {
+                        setSelectedApprovedItems(new Set());
+                        if (onPayItems) {
+                            onPayItems(budget.id, selectedTeeth, budget.date);
+                        } else if (onPayItem && selectedTeeth.length === 1) {
+                            onPayItem(budget.id, selectedTeeth[0].index, selectedTeeth[0].tooth, budget.date);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handlePayAll = () => {
+        if (!budget || approvedItems.length === 0) return;
+        if (!onPayItems && !onPayItem) return;
+
+        const totalValue = approvedItems.reduce((sum, t) => sum + getToothTotal(t), 0);
+
+        // Build the list of all approved items with their original indices
+        const allApprovedItems = teethList
+            .map((tooth, index) => ({ index, tooth }))
+            .filter(item => item.tooth.status === 'approved');
+
+        Alert.alert(
+            'Pagar Todos',
+            `Pagar todos os ${approvedItems.length} itens aprovados no valor total de R$ ${totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Pagar Todos',
+                    onPress: () => {
+                        setSelectedApprovedItems(new Set());
+                        if (onPayItems) {
+                            onPayItems(budget.id, allApprovedItems, budget.date);
+                        } else if (onPayItem && allApprovedItems.length === 1) {
+                            onPayItem(budget.id, allApprovedItems[0].index, allApprovedItems[0].tooth, budget.date);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr + 'T00:00:00');
@@ -219,8 +384,8 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                         </Text>
                     </View>
 
-                    {/* Pay Button */}
-                    {approvedItems.length > 0 && (
+                    {/* Pay Button - only show if no direct payment option */}
+                    {approvedItems.length > 0 && !onPayItem && (
                         <TouchableOpacity
                             onPress={() => {
                                 onClose();
@@ -229,7 +394,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             className="bg-[#a03f3d] rounded-xl p-4 mb-4 flex-row items-center justify-center"
                         >
                             <CreditCard size={20} color="#FFFFFF" />
-                            <Text className="text-white font-bold ml-2">Pagar</Text>
+                            <Text className="text-white font-bold ml-2">Ir para Pagamentos</Text>
                         </TouchableOpacity>
                     )}
 
@@ -249,73 +414,149 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                         )}
                     </TouchableOpacity>
 
-                    {/* Pending Items */}
-                    {pendingItems.length > 0 && (
+                    {/* Approved Items */}
+                    {approvedItems.length > 0 && (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 flex-row items-center gap-2 bg-yellow-50">
-                                <Clock size={16} color="#CA8A04" />
-                                <Text className="font-medium text-yellow-800">Pendentes</Text>
+                            <View className="p-3 border-b border-gray-100 bg-green-50">
+                                <View className="flex-row items-center justify-between">
+                                    <View className="flex-row items-center gap-2">
+                                        <CheckCircle size={16} color="#16A34A" />
+                                        <Text className="font-medium text-green-800">Aprovados</Text>
+                                    </View>
+                                    <View className="flex-row gap-2">
+                                        {selectedApprovedItems.size > 0 && (
+                                            <TouchableOpacity
+                                                onPress={handlePaySelected}
+                                                disabled={saving}
+                                                className="bg-[#b94a48] px-3 py-1.5 rounded-lg"
+                                            >
+                                                <Text className="text-white text-xs font-medium">Pagar ({selectedApprovedItems.size})</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {selectedApprovedItems.size === 0 && approvedItems.length > 1 && (
+                                            <TouchableOpacity
+                                                onPress={handlePayAll}
+                                                disabled={saving}
+                                                className="bg-[#b94a48] px-3 py-1.5 rounded-lg"
+                                            >
+                                                <Text className="text-white text-xs font-medium">Pagar Todos ({approvedItems.length})</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
                             </View>
                             {teethList.map((item, index) => {
-                                if (item.status !== 'pending') return null;
+                                if (item.status !== 'approved') return null;
                                 const total = getToothTotal(item);
+                                const isSelected = selectedApprovedItems.has(index);
                                 return (
-                                    <TouchableOpacity
-                                        key={index}
-                                        onPress={() => confirmToggleStatus(index)}
-                                        disabled={saving}
-                                        className="p-4 border-b border-gray-100 flex-row items-center"
-                                    >
-                                        <View className="bg-yellow-100 p-2 rounded-lg mr-3">
-                                            <Clock size={18} color="#CA8A04" />
-                                        </View>
-                                        <View className="flex-1">
-                                            <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                            <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
-                                        </View>
-                                        <View className="items-end">
-                                            <Text className="font-semibold text-gray-900">
-                                                R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </Text>
-                                            <Text className="text-[#a03f3d] text-xs">Toque para aprovar</Text>
-                                        </View>
-                                    </TouchableOpacity>
+                                    <View key={index} className="p-4 border-b border-gray-100 bg-green-50/50 flex-row items-center">
+                                        <TouchableOpacity
+                                            onPress={() => toggleApprovedItemSelection(index)}
+                                            className="mr-3"
+                                        >
+                                            {isSelected ? (
+                                                <CheckSquare size={24} color="#16A34A" />
+                                            ) : (
+                                                <Square size={24} color="#9CA3AF" />
+                                            )}
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                if (onPayItem && budget) {
+                                                    onPayItem(budget.id, index, item, budget.date);
+                                                }
+                                            }}
+                                            disabled={saving || !onPayItem}
+                                            className="flex-1 flex-row items-center"
+                                        >
+                                            <View className="bg-green-100 p-2 rounded-lg mr-3">
+                                                <CheckCircle size={18} color="#16A34A" />
+                                            </View>
+                                            <View className="flex-1">
+                                                <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
+                                                <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                            </View>
+                                            <View className="items-end">
+                                                <Text className="font-semibold text-green-700">
+                                                    R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </Text>
+                                                {onPayItem && <Text className="text-[#a03f3d] text-xs">Toque para pagar</Text>}
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
                                 );
                             })}
                         </View>
                     )}
 
-                    {/* Approved Items */}
-                    {approvedItems.length > 0 && (
+                    {/* Pending Items */}
+                    {pendingItems.length > 0 && (
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 flex-row items-center gap-2 bg-green-50">
-                                <CheckCircle size={16} color="#16A34A" />
-                                <Text className="font-medium text-green-800">Aprovados</Text>
+                            <View className="p-3 border-b border-gray-100 bg-yellow-50">
+                                <View className="flex-row items-center justify-between">
+                                    <View className="flex-row items-center gap-2">
+                                        <Clock size={16} color="#CA8A04" />
+                                        <Text className="font-medium text-yellow-800">Pendentes</Text>
+                                    </View>
+                                    <View className="flex-row gap-2">
+                                        {selectedItems.size > 0 && (
+                                            <TouchableOpacity
+                                                onPress={handleApproveSelected}
+                                                disabled={saving}
+                                                className="bg-yellow-600 px-3 py-1.5 rounded-lg"
+                                            >
+                                                <Text className="text-white text-xs font-medium">Aprovar ({selectedItems.size})</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {selectedItems.size === 0 && pendingItems.length > 1 && (
+                                            <TouchableOpacity
+                                                onPress={handleApproveAll}
+                                                disabled={saving}
+                                                className="bg-yellow-600 px-3 py-1.5 rounded-lg"
+                                            >
+                                                <Text className="text-white text-xs font-medium">Aprovar Todos ({pendingItems.length})</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                </View>
                             </View>
                             {teethList.map((item, index) => {
-                                if (item.status !== 'approved') return null;
+                                if (item.status !== 'pending') return null;
                                 const total = getToothTotal(item);
+                                const isSelected = selectedItems.has(index);
                                 return (
-                                    <TouchableOpacity
-                                        key={index}
-                                        onPress={() => confirmToggleStatus(index)}
-                                        disabled={saving}
-                                        className="p-4 border-b border-gray-100 flex-row items-center bg-green-50/50"
-                                    >
-                                        <View className="bg-green-100 p-2 rounded-lg mr-3">
-                                            <CheckCircle size={18} color="#16A34A" />
-                                        </View>
-                                        <View className="flex-1">
-                                            <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                            <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
-                                        </View>
-                                        <View className="items-end">
-                                            <Text className="font-semibold text-green-700">
-                                                R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                            </Text>
-                                            <Text className="text-gray-400 text-xs">Toque para pendente</Text>
-                                        </View>
-                                    </TouchableOpacity>
+                                    <View key={index} className="p-4 border-b border-gray-100 flex-row items-center">
+                                        <TouchableOpacity
+                                            onPress={() => toggleItemSelection(index)}
+                                            className="mr-3"
+                                        >
+                                            {isSelected ? (
+                                                <CheckSquare size={24} color="#CA8A04" />
+                                            ) : (
+                                                <Square size={24} color="#9CA3AF" />
+                                            )}
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => confirmToggleStatus(index)}
+                                            disabled={saving}
+                                            className="flex-1 flex-row items-center"
+                                        >
+                                            <View className="bg-yellow-100 p-2 rounded-lg mr-3">
+                                                <Clock size={18} color="#CA8A04" />
+                                            </View>
+                                            <View className="flex-1">
+                                                <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
+                                                <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                            </View>
+                                            <View className="items-end">
+                                                <Text className="font-semibold text-gray-900">
+                                                    R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                </Text>
+                                                <Text className="text-[#a03f3d] text-xs">Toque para aprovar</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
                                 );
                             })}
                         </View>

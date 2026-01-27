@@ -241,9 +241,191 @@ export function usePatientPayments(
         }
     };
 
+    const handleConfirmPaymentMultiple = async (
+        selectedItems: { budgetId: string; items: { index: number; tooth: ToothEntry }[]; budgetDate?: string },
+        method: string,
+        transactions?: Transaction[],
+        brand?: string,
+        breakdown?: PaymentBreakdown,
+        onComplete?: () => void,
+        payerData?: PayerData
+    ) => {
+        try {
+            const budget = budgets.find(b => b.id === selectedItems.budgetId);
+            if (!budget?.notes) return;
+
+            const parsed = JSON.parse(budget.notes);
+            if (!parsed.teeth) return;
+
+            const budgetLocation = parsed.location || null;
+            const installmentsCount = transactions ? transactions.length : 1;
+
+            // Calculate total value of all items
+            const totalValue = selectedItems.items.reduce((sum, item) => sum + calculateToothTotal(item.tooth.values), 0);
+
+            // Update all selected items to paid status
+            for (const item of selectedItems.items) {
+                const selectedTooth = parsed.teeth[item.index];
+                const itemValue = calculateToothTotal(item.tooth.values);
+                const ratio = itemValue / totalValue;
+
+                // Calculate proportional breakdown for this item
+                let itemBreakdown = breakdown ? {
+                    grossAmount: breakdown.grossAmount * ratio,
+                    netAmount: breakdown.netAmount * ratio,
+                    taxRate: breakdown.taxRate,
+                    taxAmount: breakdown.taxAmount * ratio,
+                    cardFeeRate: breakdown.cardFeeRate,
+                    cardFeeAmount: breakdown.cardFeeAmount * ratio,
+                    anticipationRate: breakdown.anticipationRate,
+                    anticipationAmount: (breakdown.anticipationAmount || 0) * ratio,
+                    locationRate: breakdown.locationRate,
+                    locationAmount: (breakdown.locationAmount || 0) * ratio,
+                } : undefined;
+
+                parsed.teeth[item.index] = {
+                    ...selectedTooth,
+                    status: 'paid',
+                    paymentMethod: method,
+                    paymentInstallments: installmentsCount,
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    location: budgetLocation,
+                    paymentDetails: transactions?.map(t => ({ ...t, amount: t.amount * ratio })),
+                    paymentBrand: brand,
+                    financialBreakdown: itemBreakdown
+                };
+            }
+
+            const newBudgetStatus = calculateBudgetStatus(parsed.teeth);
+
+            await budgetsService.update(selectedItems.budgetId, {
+                notes: JSON.stringify(parsed),
+                status: newBudgetStatus,
+            });
+
+            // Create financial entries
+            const methodLabels: Record<string, string> = {
+                credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
+            };
+            const methodLabel = methodLabels[method] || method;
+            const isCard = method === 'credit' || method === 'debit';
+            const displayBrand = isCard && brand ? brand : null;
+            const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
+
+            // Create one financial entry per item
+            for (const item of selectedItems.items) {
+                const itemValue = calculateToothTotal(item.tooth.values);
+                const ratio = itemValue / totalValue;
+                const targetLocationRate = item.tooth.locationRate ?? budget.location_rate ?? parsed.locationRate ?? 0;
+
+                const descriptionBase = `${item.tooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(item.tooth.tooth)} - ${patient?.name}`;
+
+                if (transactions && transactions.length > 0) {
+                    for (let i = 0; i < transactions.length; i++) {
+                        const t = transactions[i];
+                        const itemAmount = t.amount * ratio;
+                        const suffix = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
+
+                        let deductionPayload: Record<string, any> = {};
+                        if (breakdown) {
+                            const txRatio = t.amount / breakdown.grossAmount;
+                            const locationAmt = breakdown.locationAmount ? (breakdown.locationAmount * txRatio * ratio) : ((itemAmount * targetLocationRate) / 100);
+
+                            deductionPayload = {
+                                net_amount: (breakdown.netAmount * txRatio * ratio),
+                                tax_rate: breakdown.taxRate,
+                                tax_amount: breakdown.taxAmount * txRatio * ratio,
+                                card_fee_rate: breakdown.cardFeeRate,
+                                card_fee_amount: breakdown.cardFeeAmount * txRatio * ratio,
+                                anticipation_rate: breakdown.anticipationRate,
+                                anticipation_amount: (breakdown.anticipationAmount || 0) * txRatio * ratio,
+                                location_rate: targetLocationRate,
+                                location_amount: locationAmt
+                            };
+                        } else if (targetLocationRate > 0) {
+                            const locationAmt = (itemAmount * targetLocationRate) / 100;
+                            deductionPayload = {
+                                net_amount: itemAmount - locationAmt,
+                                location_rate: targetLocationRate,
+                                location_amount: locationAmt
+                            };
+                        }
+
+                        await financialService.create({
+                            type: 'income',
+                            amount: itemAmount,
+                            description: descriptionBase + suffix,
+                            category: 'Procedimento',
+                            date: t.date,
+                            location: budgetLocation,
+                            patient_id: patient?.id,
+                            related_entity_id: budget.id,
+                            ...deductionPayload,
+                            payer_is_patient: payerData?.payer_is_patient ?? true,
+                            payer_type: payerData?.payer_type || 'PF',
+                            payer_name: payerData?.payer_name || null,
+                            payer_cpf: payerData?.payer_cpf || null,
+                            pj_source_id: payerData?.pj_source_id || null,
+                        });
+                    }
+                } else {
+                    const budgetDate = selectedItems.budgetDate ? new Date(selectedItems.budgetDate + 'T12:00:00') : new Date();
+                    const dateStr = isNaN(budgetDate.getTime()) ? new Date().toISOString().split('T')[0] : budgetDate.toISOString().split('T')[0];
+
+                    let deductionPayload: Record<string, any> = {};
+                    if (breakdown) {
+                        deductionPayload = {
+                            net_amount: breakdown.netAmount * ratio,
+                            tax_rate: breakdown.taxRate,
+                            tax_amount: breakdown.taxAmount * ratio,
+                            card_fee_rate: breakdown.cardFeeRate,
+                            card_fee_amount: breakdown.cardFeeAmount * ratio,
+                            anticipation_rate: breakdown.anticipationRate,
+                            anticipation_amount: (breakdown.anticipationAmount || 0) * ratio,
+                            location_rate: targetLocationRate,
+                            location_amount: (breakdown.locationAmount || 0) * ratio
+                        };
+                    } else if (targetLocationRate > 0) {
+                        const locationAmt = (itemValue * targetLocationRate) / 100;
+                        deductionPayload = {
+                            net_amount: itemValue - locationAmt,
+                            location_rate: targetLocationRate,
+                            location_amount: locationAmt
+                        };
+                    }
+
+                    await financialService.create({
+                        type: 'income',
+                        amount: itemValue,
+                        description: descriptionBase,
+                        category: 'Procedimento',
+                        date: dateStr,
+                        location: budgetLocation,
+                        patient_id: patient?.id,
+                        related_entity_id: budget.id,
+                        ...deductionPayload,
+                        payer_is_patient: payerData?.payer_is_patient ?? true,
+                        payer_type: payerData?.payer_type || 'PF',
+                        payer_name: payerData?.payer_name || null,
+                        payer_cpf: payerData?.payer_cpf || null,
+                        pj_source_id: payerData?.pj_source_id || null,
+                    });
+                }
+            }
+
+            Alert.alert('Sucesso', `${selectedItems.items.length} pagamento(s) registrado(s) com sucesso!`);
+            loadBudgets();
+            onComplete?.();
+        } catch (error) {
+            console.error('Error registering payments:', error);
+            Alert.alert('Erro', 'Não foi possível registrar os pagamentos');
+        }
+    };
+
     return {
         getAllPaymentItems,
         handleConfirmPayment,
+        handleConfirmPaymentMultiple,
         getLocationRate,
     };
 }

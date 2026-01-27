@@ -813,6 +813,19 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                     <Separator className="my-4" />
 
+                    {/* Approved Items */}
+                    {approvedItems.length > 0 && (
+                        <div className="mb-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <h3 className="text-sm font-semibold text-emerald-600">Itens Aprovados</h3>
+                                <span className="text-xs text-muted-foreground font-normal">(Clique para desfazer)</span>
+                            </div>
+                            <div className="space-y-3">
+                                {approvedItems.map((item, idx) => renderApprovedItem(item, idx))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Pending Items */}
                     {pendingItems.length > 0 && (
                         <div className="mb-6">
@@ -858,19 +871,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                             </div>
                             <div className="space-y-3">
                                 {pendingItems.map((item, idx) => renderPendingItem(item, idx))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Approved Items */}
-                    {approvedItems.length > 0 && (
-                        <div className="mb-6">
-                            <div className="flex items-center gap-2 mb-3">
-                                <h3 className="text-sm font-semibold text-emerald-600">Itens Aprovados</h3>
-                                <span className="text-xs text-muted-foreground font-normal">(Clique para desfazer)</span>
-                            </div>
-                            <div className="space-y-3">
-                                {approvedItems.map((item, idx) => renderApprovedItem(item, idx))}
                             </div>
                         </div>
                     )}

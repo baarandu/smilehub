@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Calculator, Plus, Calendar, Banknote } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,13 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [editingBudget, setEditingBudget] = useState<BudgetWithItems | null>(null);
+
+    // Sort budgets by date descending
+    const sortedBudgets = useMemo(() => {
+        return [...budgets].sort((a, b) =>
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+    }, [budgets]);
 
     useEffect(() => {
         loadBudgets();
@@ -99,17 +106,53 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
         try {
             const parsed = JSON.parse(budget.notes || '{}');
             if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                // Group teeth by status
+                const teethByStatus = {
+                    pending: parsed.teeth.filter((t: ToothEntry) => !t.status || t.status === 'pending'),
+                    approved: parsed.teeth.filter((t: ToothEntry) => t.status === 'approved'),
+                    completed: parsed.teeth.filter((t: ToothEntry) => t.status === 'paid' || t.status === 'completed')
+                };
+
+                const getHintText = (key: string, count: number) => {
+                    if (key === 'pending') return `Clique para aprovar ${count === 1 ? 'o orçamento' : 'os orçamentos'}`;
+                    if (key === 'approved') return `Clique para pagar ${count === 1 ? 'o orçamento' : 'os orçamentos'}`;
+                    return '';
+                };
+
+                const statusConfig = [
+                    { key: 'pending', label: 'Pendentes', icon: <Clock className="w-4 h-4" />, color: 'text-amber-700' },
+                    { key: 'approved', label: 'Aprovados', icon: <CheckCircle2 className="w-4 h-4" />, color: 'text-emerald-700' },
+                    { key: 'completed', label: 'Pagos', icon: <CreditCard className="w-4 h-4" />, color: 'text-blue-700' }
+                ];
+
                 return (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                        {parsed.teeth.map((tooth: ToothEntry, idx: number) => (
-                            <div
-                                key={idx}
-                                className={`flex flex-col px-3 py-2 rounded-lg border text-sm ${getItemStatusColor(tooth.status)}`}
-                            >
-                                <span className="font-semibold">{getToothDisplayName(tooth.tooth)}</span>
-                                <span className="text-xs opacity-90">{tooth.treatments.join(', ')}</span>
-                            </div>
-                        ))}
+                    <div className="mt-4 space-y-4">
+                        {statusConfig.map(({ key, label, icon, color }) => {
+                            const teeth = teethByStatus[key as keyof typeof teethByStatus];
+                            if (teeth.length === 0) return null;
+                            const hint = getHintText(key, teeth.length);
+
+                            return (
+                                <div key={key}>
+                                    <div className={`flex items-center gap-2 text-sm font-medium ${color} mb-3`}>
+                                        {icon}
+                                        <span>{label}:</span>
+                                        {hint && <span className="text-gray-900 font-normal ml-1">{hint}</span>}
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        {teeth.map((tooth: ToothEntry, idx: number) => (
+                                            <div
+                                                key={idx}
+                                                className={`flex flex-col px-4 py-3 rounded-lg border ${getItemStatusColor(tooth.status)}`}
+                                            >
+                                                <span className="font-semibold text-base">{getToothDisplayName(tooth.tooth)}</span>
+                                                <span className="text-sm opacity-90">{tooth.treatments.join(', ')}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 );
             }
@@ -140,7 +183,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                             </div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-blue-400" />
-                                <span>Pago/Concluído</span>
+                                <span>Pago</span>
                             </div>
                         </div>
                     </div>
@@ -158,36 +201,21 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                             <p className="text-muted-foreground">Nenhum orçamento registrado</p>
                         </div>
                     ) : (
-                        <div className="divide-y">
-                            {budgets.map((budget) => (
+                        <div className="py-4 space-y-4">
+                            {sortedBudgets.map((budget) => (
                                 <div
                                     key={budget.id}
-                                    className="p-4 hover:bg-slate-50 transition-colors cursor-pointer"
+                                    className="p-5 mx-4 bg-white border border-gray-100 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => handleBudgetClick(budget)}
                                 >
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-lg">
-                                                    {budget.treatment || 'Tratamento Odontológico'}
-                                                </span>
-                                                <Badge
-                                                    variant="outline"
-                                                    className={`border-0 ${getStatusColor(budget.status)}`}
-                                                >
-                                                    {getStatusLabel(budget.status)}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-sm text-gray-500">
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    {formatDisplayDate(budget.date)}
-                                                </div>
-                                                <div className="flex items-center gap-1 font-medium text-gray-900">
-                                                    <Banknote className="w-3.5 h-3.5" />
-                                                    R$ {formatMoney(budget.value)}
-                                                </div>
-                                            </div>
+                                    <div className="flex items-center gap-6 mb-3">
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <Calendar className="w-4 h-4" />
+                                            <span className="text-base">{formatDisplayDate(budget.date)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 font-semibold text-gray-900">
+                                            <Banknote className="w-4 h-4" />
+                                            <span className="text-lg">R$ {formatMoney(budget.value)}</span>
                                         </div>
                                     </div>
 
