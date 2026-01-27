@@ -249,7 +249,7 @@ export function TaxCalculationSection({ summary, year }: Props) {
       {taxSummary.pf_calculation && (
         renderCalculationResult(
           taxSummary.pf_calculation,
-          'Impostos Pessoa Fisica',
+          'Impostos Pessoa Física',
           showPFDetails,
           setShowPFDetails,
           'text-[#a03f3d]'

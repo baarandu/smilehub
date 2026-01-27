@@ -308,7 +308,7 @@ function generateHtmlContent(summary: IRSummary): string {
 
       <!-- PAGE 4: PF Payers -->
       <div class="section page-break">
-        <div class="section-title">RELACAO DE PAGADORES PESSOA FISICA</div>
+        <div class="section-title">RELACAO DE PAGADORES PESSOA FÍSICA</div>
         ${summary.payers_pf.length === 0 ?
       '<p>Nenhum pagador PF registrado no periodo.</p>' : `
           <table>
@@ -329,7 +329,7 @@ function generateHtmlContent(summary: IRSummary): string {
 
       <!-- PAGE 5: PJ Sources -->
       <div class="section page-break">
-        <div class="section-title">RELACAO DE FONTES PAGADORAS PESSOA JURIDICA</div>
+        <div class="section-title">RELACAO DE FONTES PAGADORAS PESSOA JURÍDICA</div>
         ${summary.payers_pj.length === 0 ?
       '<p>Nenhuma fonte PJ registrada no periodo.</p>' : `
           <table>

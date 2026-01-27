@@ -120,7 +120,7 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
   const col2 = pageWidth / 2 + 10;
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Receita Pessoa Fisica:', col1, y);
+  doc.text('Receita Pessoa Física:', col1, y);
   doc.setFont('helvetica', 'normal');
   doc.text(`R$ ${formatCurrency(summary.total_income_pf)}`, col1 + 60, y);
 
@@ -541,7 +541,7 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
   // PF Checklist
   if (isPF) {
     doc.setFont('helvetica', 'bold');
-    doc.text('PESSOA FISICA (Autonomo):', margin, y);
+    doc.text('PESSOA FÍSICA (Autonomo):', margin, y);
     y += 8;
     doc.setFont('helvetica', 'normal');
 
@@ -571,7 +571,7 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
   // PJ Checklist
   if (isPJ) {
     doc.setFont('helvetica', 'bold');
-    doc.text(`PESSOA JURIDICA (${regime === 'simples' ? 'Simples Nacional' : regime === 'lucro_presumido' ? 'Lucro Presumido' : 'Lucro Real'}):`, margin, y);
+    doc.text(`PESSOA JURÍDICA (${regime === 'simples' ? 'Simples Nacional' : regime === 'lucro_presumido' ? 'Lucro Presumido' : 'Lucro Real'}):`, margin, y);
     y += 8;
     doc.setFont('helvetica', 'normal');
 

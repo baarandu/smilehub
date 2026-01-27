@@ -291,7 +291,7 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         <TabsContent value="payers_pf">
           <Card>
             <CardHeader>
-              <CardTitle>Relacao de Pagadores Pessoa Fisica</CardTitle>
+              <CardTitle>Relacao de Pagadores Pessoa Física</CardTitle>
               <CardDescription>
                 Lista de pacientes e terceiros que efetuaram pagamentos
               </CardDescription>
