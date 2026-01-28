@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Check, ArrowLeft, Shield, ArrowUp, ArrowDown, Sparkles } from 'lucide-react-native';
 import { supabase } from '../../src/lib/supabase';
@@ -94,7 +94,17 @@ export default function SubscriptionScreen() {
 
         if (plan.id === currentPlanId) return;
         if (plan.slug === 'enterprise') {
-            Alert.alert('Fale Conosco', 'Entre em contato com nosso suporte para contratar o plano Enterprise.');
+            Alert.alert(
+                'Fale Conosco',
+                'Entre em contato com nosso suporte para contratar o plano Enterprise.',
+                [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                        text: 'Abrir WhatsApp',
+                        onPress: () => Linking.openURL('https://wa.me/5571997118372?text=Olá! Tenho interesse no plano Enterprise.')
+                    }
+                ]
+            );
             return;
         }
 

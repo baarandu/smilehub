@@ -311,7 +311,7 @@ export default function Pricing() {
 
     const handleButtonClick = (plan: Plan) => {
         if (plan.slug === 'enterprise') {
-            window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse no plano Enterprise.', '_blank');
+            window.open('https://wa.me/5571997118372?text=Olá! Tenho interesse no plano Enterprise.', '_blank');
             return;
         }
 
