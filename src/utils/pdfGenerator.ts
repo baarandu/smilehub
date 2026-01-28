@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import type { BudgetWithItems } from '@/types/database';
-import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { formatMoney, type ToothEntry } from '@/utils/budgetUtils';
 
 interface BudgetPDFData {
     budget: BudgetWithItems;
@@ -11,240 +11,352 @@ interface BudgetPDFData {
     letterheadUrl?: string | null;
     clinicAddress?: string;
     clinicPhone?: string;
+    isClinic?: boolean;
 }
 
-// Helper function to load image as base64
-async function loadImageAsBase64(url: string): Promise<{ data: string; format: string } | null> {
-    try {
-        const response = await fetch(url, { mode: 'cors' });
-        if (!response.ok) {
-            console.error('Failed to fetch image:', response.status);
-            return null;
-        }
-        const blob = await response.blob();
-
-        // Detect format from MIME type
-        let format = 'PNG';
-        if (blob.type.includes('jpeg') || blob.type.includes('jpg')) {
-            format = 'JPEG';
-        } else if (blob.type.includes('webp')) {
-            format = 'WEBP';
-        }
-
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                if (result) {
-                    resolve({ data: result, format });
-                } else {
-                    resolve(null);
-                }
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(blob);
-        });
-    } catch (error) {
-        console.error('Error loading image:', error);
-        return null;
+// Helper to get status label
+function getStatusLabel(status: string): string {
+    switch (status) {
+        case 'approved': return 'Confirmado';
+        case 'paid': return 'Pago';
+        default: return 'Pendente';
     }
+}
+
+// Helper to draw rounded rectangle
+function drawRoundedRect(doc: jsPDF, x: number, y: number, width: number, height: number, radius: number, fill: boolean = true) {
+    doc.roundedRect(x, y, width, height, radius, radius, fill ? 'F' : 'S');
 }
 
 // Core function that builds the PDF document
 async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
-    const { budget, patientName, clinicName, dentistName, logoUrl, letterheadUrl, clinicAddress, clinicPhone } = data;
+    const { budget, patientName, clinicName, dentistName } = data;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    let y = 30; // Increased initial y to avoid top letterhead area
-    let textStartX = margin;
+    const margin = 15;
+    let y = 20;
 
     // Parse teeth from notes
     const parsedNotes = JSON.parse(budget.notes || '{}');
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
-    // Helper to add background to current page
-    const addBackground = async () => {
-        if (letterheadUrl) {
-            try {
-                const letterheadData = await loadImageAsBase64(letterheadUrl);
-                if (letterheadData) {
-                    doc.addImage(letterheadData.data, letterheadData.format, 0, 0, pageWidth, pageHeight);
-                }
-            } catch (error) {
-                console.error('Error adding letterhead to PDF:', error);
-            }
-        }
-    };
+    // Calculate dates
+    const budgetDate = new Date(budget.date + 'T00:00:00');
+    const validityDate = new Date(budgetDate);
+    validityDate.setDate(validityDate.getDate() + 30);
 
-    // Add background to the first page
-    await addBackground();
+    // Get unique treatments
+    const allTreatments = [...new Set(teeth.flatMap(t => t.treatments))];
 
-    // Load and add logo if available (only if no letterhead)
-    if (logoUrl && !letterheadUrl) {
-        try {
-            const logoData = await loadImageAsBase64(logoUrl);
-            if (logoData) {
-                const logoWidth = 30;
-                const logoHeight = 30;
-                doc.addImage(logoData.data, logoData.format, margin, y, logoWidth, logoHeight);
-                textStartX = margin + logoWidth + 10;
-            }
-        } catch (error) {
-            console.error('Error adding logo to PDF:', error);
-        }
-    }
+    // Generate budget number
+    const year = budgetDate.getFullYear();
+    const budgetNumber = `ORC-${year}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
 
-    // Header - Clinic Name (skip if letterhead present as it likely contains it)
-    if (!letterheadUrl) {
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text(clinicName || 'Clínica Odontológica', textStartX, y);
-        y += 8;
+    // Get responsible name
+    const responsibleName = dentistName || clinicName || 'Dentista';
 
-        if (dentistName) {
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(80, 80, 80);
-            doc.text(dentistName, textStartX, y);
-            doc.setTextColor(0, 0, 0);
-            y += 6;
-        }
-
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        if (clinicAddress) {
-            doc.text(clinicAddress, textStartX, y);
-            y += 5;
-        }
-        if (clinicPhone) {
-            doc.text(`Tel: ${clinicPhone}`, textStartX, y);
-            y += 5;
-        }
-    } else {
-        // If letterhead is present, we start directly with the budget info but lower down
-        y = 50;
-    }
-
-    // Divider
-    y += 5;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
-
+    // ========== HEADER ==========
     // Title
-    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('ORÇAMENTO ODONTOLÓGICO', pageWidth / 2, y, { align: 'center' });
-    y += 15;
+    doc.setFontSize(18);
+    doc.setTextColor(31, 41, 55);
+    doc.text('Orçamento Odontológico', margin, y + 7);
 
-    // Patient Info
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Paciente:', margin, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(patientName, margin + 25, y);
-
-    // Date - right aligned
-    const dateText = `Data: ${formatDisplayDate(budget.date)}`;
-    doc.text(dateText, pageWidth - margin, y, { align: 'right' });
-    y += 10;
-
-    // Treatment Title
-    doc.setFont('helvetica', 'bold');
-    doc.text('Tratamento Proposto:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(budget.treatment || 'Tratamento Odontológico', margin + 48, y);
-    y += 15;
-
-    // Divider
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
-
-    // Items Header
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text('ITENS DO ORÇAMENTO', margin, y);
-    // Table Header
-    doc.setFillColor(240, 240, 240);
-    doc.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Item', margin + 2, y);
-    doc.text('Procedimentos', margin + 60, y);
-    doc.text('Valor', pageWidth - margin - 30, y);
-    y += 10;
+    doc.setTextColor(107, 114, 128);
+    doc.text('Proposta de Tratamento Personalizada', margin, y + 13);
 
-    // Items
+    // Calendar icon + date (right side)
+    const dateText = budgetDate.toLocaleDateString('pt-BR');
+    const dateTextWidth = doc.getTextWidth(dateText);
+    const calendarX = pageWidth - margin - dateTextWidth - 10;
+
+    // Draw calendar icon (Lucide style)
+    doc.setDrawColor(107, 114, 128);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(calendarX, y + 2, 6, 6, 0.8, 0.8, 'S'); // Calendar body
+    doc.line(calendarX + 1.5, y + 1, calendarX + 1.5, y + 3); // Left pin
+    doc.line(calendarX + 4.5, y + 1, calendarX + 4.5, y + 3); // Right pin
+    doc.line(calendarX, y + 4, calendarX + 6, y + 4); // Divider line
+
     doc.setFont('helvetica', 'normal');
-    let totalValue = 0;
-    let index = 0;
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text(dateText, pageWidth - margin, y + 7, { align: 'right' });
+
+    y += 25;
+
+    // ========== INFO CARD ==========
+    // Draw card background (light burgundy/red)
+    doc.setFillColor(254, 242, 242);
+    drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, 35, 4);
+
+    const infoY = y + 8;
+    const colWidth = (pageWidth - 2 * margin - 20) / 3;
+
+    // Column 1: Patient
+    let colX = margin + 8;
+
+    // Icon background
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+
+    // Person icon (like mobile - head circle + shoulders curve)
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    doc.circle(colX + 5, infoY + 1, 1.5, 'S'); // Head
+    // Shoulders/body curve
+    doc.line(colX + 2, infoY + 7, colX + 3, infoY + 5);
+    doc.line(colX + 3, infoY + 5, colX + 7, infoY + 5);
+    doc.line(colX + 7, infoY + 5, colX + 8, infoY + 7);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('PACIENTE', colX + 13, infoY + 2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(31, 41, 55);
+
+    // Truncate patient name if too long
+    let displayName = patientName;
+    const maxNameWidth = colWidth - 15;
+    while (doc.getTextWidth(displayName) > maxNameWidth && displayName.length > 0) {
+        displayName = displayName.slice(0, -1);
+    }
+    if (displayName !== patientName) displayName += '...';
+    doc.text(displayName, colX + 13, infoY + 9);
+
+    // Column 2: Treatment
+    colX = margin + 8 + colWidth + 5;
+
+    // Icon background
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+
+    // Document icon (like mobile - rectangle with folded corner)
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    // Main document outline
+    doc.line(colX + 2.5, infoY - 0.5, colX + 2.5, infoY + 6); // Left
+    doc.line(colX + 2.5, infoY + 6, colX + 7.5, infoY + 6); // Bottom
+    doc.line(colX + 7.5, infoY + 6, colX + 7.5, infoY + 1.5); // Right
+    doc.line(colX + 7.5, infoY + 1.5, colX + 5.5, infoY - 0.5); // Diagonal fold
+    doc.line(colX + 5.5, infoY - 0.5, colX + 2.5, infoY - 0.5); // Top
+    // Fold corner
+    doc.line(colX + 5.5, infoY - 0.5, colX + 5.5, infoY + 1.5); // Fold vertical
+    doc.line(colX + 5.5, infoY + 1.5, colX + 7.5, infoY + 1.5); // Fold horizontal
+    // Small content rectangle inside
+    doc.setFillColor(185, 74, 72);
+    doc.rect(colX + 3.5, infoY + 3, 3, 2, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('TRATAMENTO PROPOSTO', colX + 13, infoY + 2);
+
+    // Treatment tags
+    let tagX = colX + 13;
+    let tagY = infoY + 7;
+    doc.setFontSize(8);
+    for (let i = 0; i < Math.min(allTreatments.length, 3); i++) {
+        const treatment = allTreatments[i];
+        const tagWidth = doc.getTextWidth(treatment) + 6;
+
+        if (tagX + tagWidth > colX + colWidth - 5) {
+            tagX = colX + 13;
+            tagY += 6;
+        }
+
+        doc.setFillColor(255, 255, 255);
+        drawRoundedRect(doc, tagX, tagY - 3, tagWidth, 5, 1.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(55, 65, 81);
+        doc.text(treatment, tagX + 3, tagY);
+        tagX += tagWidth + 2;
+    }
+    if (allTreatments.length > 3) {
+        doc.text(`+${allTreatments.length - 3}`, tagX + 2, tagY);
+    }
+
+    // Column 3: Validity
+    colX = margin + 8 + (colWidth + 5) * 2;
+
+    // Icon background
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+
+    // Clock icon (Lucide Clock style)
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    doc.circle(colX + 5, infoY + 3, 3.5, 'S'); // Clock face
+    // Clock hands
+    doc.line(colX + 5, infoY + 3, colX + 5, infoY + 0.8); // Hour hand (12 o'clock)
+    doc.line(colX + 5, infoY + 3, colX + 7, infoY + 4.2); // Minute hand
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('VALIDADE', colX + 13, infoY + 2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(31, 41, 55);
+    doc.text(validityDate.toLocaleDateString('pt-BR'), colX + 13, infoY + 9);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(107, 114, 128);
+    doc.text(`Responsável: ${responsibleName}`, colX + 13, infoY + 15);
+
+    y += 45;
+
+    // ========== ITEMS CARD ==========
+    // Draw white card with shadow effect
+    doc.setFillColor(250, 250, 250);
+    drawRoundedRect(doc, margin + 1, y + 1, pageWidth - 2 * margin, 10, 4); // Shadow
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, 10, 4);
+
+    // Card title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(31, 41, 55);
+    doc.text('Itens do Orçamento', margin + 10, y + 8);
+
+    y += 12;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(55, 65, 81);
+    doc.text('Detalhamento dos procedimentos clínicos', margin + 10, y + 4);
+
+    y += 12;
+
+    // Table header
+    const tableX = margin + 5;
+    const tableWidth = pageWidth - 2 * margin - 10;
+    const col1 = tableX;
+    const col2 = tableX + 40;
+    const col3 = tableX + tableWidth - 80;
+    const col4 = tableX + tableWidth - 5;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(31, 41, 55);
+    doc.text('Dente', col1, y);
+    doc.text('Procedimento', col2, y);
+    doc.text('Status', col3, y);
+    doc.text('Valor', col4, y, { align: 'right' });
+
+    y += 3;
+    doc.setDrawColor(243, 244, 246);
+    doc.setLineWidth(0.3);
+    doc.line(tableX, y, tableX + tableWidth, y);
+
+    y += 7;
+
+    // Table rows
     for (const tooth of teeth) {
         // Check if we need a new page
-        if (y > 260) {
+        if (y > 265) {
             doc.addPage();
-            await addBackground();
-            y = 40; // Higher margin on new pages as well
+            y = 20;
         }
 
-        const toothName = getToothDisplayName(tooth.tooth);
+        const toothNumber = tooth.tooth.includes('Arcada') ? tooth.tooth : tooth.tooth;
         const treatments = tooth.treatments.join(', ');
         const itemValue = Object.values(tooth.values).reduce(
             (sum, val) => sum + (parseFloat(val as string) || 0) / 100,
             0
         );
-        totalValue += itemValue;
+        const status = tooth.status || 'pending';
+        const statusLabel = getStatusLabel(status);
 
-        // Item row with subtle background for alternating rows
-        if (index % 2 === 0) {
-            doc.setFillColor(250, 250, 250);
-            doc.rect(margin, y - 4, pageWidth - 2 * margin, 8, 'F');
+        // Tooth number
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(107, 114, 128);
+        doc.text(toothNumber, col1, y);
+
+        // Procedure
+        doc.setTextColor(31, 41, 55);
+        let displayTreatment = treatments;
+        const maxTreatmentWidth = col3 - col2 - 10;
+        while (doc.getTextWidth(displayTreatment) > maxTreatmentWidth && displayTreatment.length > 0) {
+            displayTreatment = displayTreatment.slice(0, -1);
+        }
+        if (displayTreatment !== treatments) displayTreatment += '...';
+        doc.text(displayTreatment, col2, y);
+
+        // Status badge
+        const badgeWidth = doc.getTextWidth(statusLabel) + 12;
+        const badgeX = col3 - 5;
+        const badgeY = y - 3;
+
+        if (status === 'paid') {
+            doc.setFillColor(219, 234, 254); // Blue bg
+            doc.setTextColor(29, 78, 216); // Blue text
+        } else if (status === 'approved') {
+            doc.setFillColor(220, 252, 231); // Green bg
+            doc.setTextColor(21, 128, 61); // Green text
+        } else {
+            doc.setFillColor(254, 243, 199); // Yellow bg
+            doc.setTextColor(180, 83, 9); // Yellow text
         }
 
-        doc.setFontSize(9);
-        doc.text(toothName, margin + 2, y);
+        drawRoundedRect(doc, badgeX, badgeY, badgeWidth, 6, 3);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(statusLabel, badgeX + 6, y);
 
-        // Truncate treatments if too long
-        const maxWidth = 80;
-        let displayTreatments = treatments;
-        if (doc.getTextWidth(treatments) > maxWidth) {
-            while (doc.getTextWidth(displayTreatments + '...') > maxWidth && displayTreatments.length > 0) {
-                displayTreatments = displayTreatments.slice(0, -1);
-            }
-            displayTreatments += '...';
-        }
-        doc.text(displayTreatments, margin + 60, y);
+        // Value
+        doc.setTextColor(31, 41, 55);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(`R$ ${formatMoney(itemValue)}`, col4, y, { align: 'right' });
 
-        doc.text(`R$ ${formatMoney(itemValue)}`, pageWidth - margin - 2, y, { align: 'right' });
+        // Row separator
+        y += 4;
+        doc.setDrawColor(243, 244, 246);
+        doc.line(tableX, y, tableX + tableWidth, y);
 
         y += 8;
-        index++;
     }
 
-    // Total
+    // ========== TOTALS ==========
     y += 5;
-    doc.line(margin, y, pageWidth - margin, y);
+    doc.setDrawColor(243, 244, 246);
+    doc.setLineWidth(0.5);
+    doc.line(tableX + tableWidth - 80, y, tableX + tableWidth, y);
+
     y += 10;
 
-    doc.setFontSize(12);
+    // Total
     doc.setFont('helvetica', 'bold');
-    doc.text('VALOR TOTAL:', margin, y);
-    doc.setFontSize(14);
-    doc.setTextColor(16, 185, 129); // Emerald
-    doc.text(`R$ ${formatMoney(budget.value)}`, pageWidth - margin, y, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setTextColor(55, 65, 81);
+    doc.text('Valor Total', col4 - 60, y);
+    doc.setFontSize(16);
+    doc.setTextColor(185, 74, 72); // Burgundy
+    doc.text(`R$ ${formatMoney(budget.value)}`, col4, y, { align: 'right' });
 
-    // Footer
+    // ========== FOOTER ==========
     y += 20;
-    if (y < 250) {
+    if (y < 270) {
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageWidth - margin, y);
+
+        y += 8;
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(128, 128, 128);
-        doc.text('Este orçamento tem validade de 30 dias.', margin, y);
-        y += 5;
-        doc.text('Os valores podem sofrer alterações após este período.', margin, y);
+        doc.setTextColor(156, 163, 175);
+        const footerText = 'Este orçamento tem validade de 30 dias a partir da data de emissão. Os valores podem sofrer alterações após este período.';
+        doc.text(footerText, pageWidth / 2, y, { align: 'center', maxWidth: pageWidth - 2 * margin });
     }
 
     return doc;
@@ -273,4 +385,3 @@ export function downloadPDFFromBlob(blobUrl: string, patientName: string): void 
     link.click();
     document.body.removeChild(link);
 }
-

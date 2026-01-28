@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, CheckCircle, Clock, CreditCard, Eye, Square, CheckSquare } from 'lucide-react-native';
+import { X, CheckCircle, Clock, CreditCard, Eye, Square, CheckSquare, Undo2 } from 'lucide-react-native';
 import { FACES, TREATMENTS_WITH_DESCRIPTION, calculateToothTotal, calculateBudgetStatus, type ToothEntry } from './budgetUtils';
 import { budgetsService } from '../../services/budgets';
 import { profileService } from '../../services/profile';
@@ -32,6 +32,10 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
     const [showPdfPreview, setShowPdfPreview] = useState(false);
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+
+    // PDF Item Selection state
+    const [showPdfItemSelection, setShowPdfItemSelection] = useState(false);
+    const [pdfSelectedItems, setPdfSelectedItems] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         if (budget?.notes) {
@@ -278,9 +282,41 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
         return date.toLocaleDateString('pt-BR');
     };
 
-    // Show preview modal with HTML content
+    // Open PDF item selection modal
+    const handleOpenPdfSelection = () => {
+        // Initialize with all items selected
+        const allIndices = new Set(teethList.map((_, index) => index));
+        setPdfSelectedItems(allIndices);
+        setShowPdfItemSelection(true);
+    };
+
+    // Toggle PDF item selection
+    const togglePdfItemSelection = (index: number) => {
+        setPdfSelectedItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    };
+
+    // Select/Deselect all PDF items
+    const toggleAllPdfItems = () => {
+        if (pdfSelectedItems.size === teethList.length) {
+            setPdfSelectedItems(new Set());
+        } else {
+            setPdfSelectedItems(new Set(teethList.map((_, index) => index)));
+        }
+    };
+
+    // Show preview modal with HTML content (with selected items only)
     const handleExportPDF = async () => {
-        if (!budget) return;
+        if (!budget || pdfSelectedItems.size === 0) return;
+
+        setShowPdfItemSelection(false);
 
         try {
             setLoadingPreview(true);
@@ -288,13 +324,25 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
             const clinicInfo = await profileService.getClinicInfo();
 
+            // Filter teeth to only include selected items
+            const selectedTeeth = teethList.filter((_, index) => pdfSelectedItems.has(index));
+            const selectedTotal = selectedTeeth.reduce((sum, t) => sum + calculateToothTotal(t.values), 0);
+
+            // Create a modified budget with only selected items
+            const filteredBudget = {
+                ...budget,
+                notes: JSON.stringify({ teeth: selectedTeeth }),
+                value: selectedTotal
+            };
+
             const html = generateBudgetPDFHtml({
-                budget,
+                budget: filteredBudget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
                 letterheadUrl: clinicInfo.letterheadUrl,
+                isClinic: clinicInfo.isClinic,
             });
 
             setPreviewHtml(html);
@@ -309,19 +357,31 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
     // Actually generate and share the PDF
     const handleSharePDF = async () => {
-        if (!budget) return;
+        if (!budget || pdfSelectedItems.size === 0) return;
 
         try {
             setGeneratingPdf(true);
             const clinicInfo = await profileService.getClinicInfo();
 
+            // Filter teeth to only include selected items
+            const selectedTeeth = teethList.filter((_, index) => pdfSelectedItems.has(index));
+            const selectedTotal = selectedTeeth.reduce((sum, t) => sum + calculateToothTotal(t.values), 0);
+
+            // Create a modified budget with only selected items
+            const filteredBudget = {
+                ...budget,
+                notes: JSON.stringify({ teeth: selectedTeeth }),
+                value: selectedTotal
+            };
+
             const uri = await generateBudgetPDFFile({
-                budget,
+                budget: filteredBudget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
                 dentistName: clinicInfo.dentistName,
                 logoUrl: clinicInfo.logoUrl,
                 letterheadUrl: clinicInfo.letterheadUrl,
+                isClinic: clinicInfo.isClinic,
             });
 
             await sharePDF(uri);
@@ -400,7 +460,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
                     {/* Generate PDF Button */}
                     <TouchableOpacity
-                        onPress={handleExportPDF}
+                        onPress={handleOpenPdfSelection}
                         disabled={generatingPdf}
                         className="bg-white border border-[#b94a48] rounded-xl p-4 mb-4 flex-row items-center justify-center"
                     >
@@ -409,7 +469,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                         ) : (
                             <>
                                 <Eye size={20} color="#b94a48" />
-                                <Text className="text-[#a03f3d] font-medium ml-2">Visualizar PDF</Text>
+                                <Text className="text-[#a03f3d] font-medium ml-2">Gerar Orçamento em PDF</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -460,6 +520,13 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             ) : (
                                                 <Square size={24} color="#9CA3AF" />
                                             )}
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => confirmToggleStatus(index)}
+                                            disabled={saving}
+                                            className="bg-yellow-100 p-2 rounded-lg mr-2"
+                                        >
+                                            <Undo2 size={16} color="#CA8A04" />
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => {
@@ -606,6 +673,111 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                 loading={loadingPreview || generatingPdf}
                 htmlContent={previewHtml}
             />
+
+            {/* PDF Item Selection Modal */}
+            <Modal visible={showPdfItemSelection} animationType="slide" onRequestClose={() => setShowPdfItemSelection(false)}>
+                <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
+                    {/* Header */}
+                    <View className="bg-white border-b border-gray-200 px-4 py-4 flex-row items-center justify-between">
+                        <View>
+                            <Text className="text-xl font-semibold text-gray-900">Selecionar Itens</Text>
+                            <Text className="text-gray-500 text-sm mt-1">Escolha os itens para incluir no PDF</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => setShowPdfItemSelection(false)} className="bg-gray-100 p-3 rounded-full">
+                            <X size={24} color="#374151" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView className="flex-1 p-4" contentContainerStyle={{ paddingBottom: 20 }}>
+                        {/* Select All / Deselect All */}
+                        <TouchableOpacity
+                            onPress={toggleAllPdfItems}
+                            className="bg-white rounded-xl p-4 mb-4 flex-row items-center border border-gray-200"
+                        >
+                            {pdfSelectedItems.size === teethList.length ? (
+                                <CheckSquare size={24} color="#b94a48" />
+                            ) : (
+                                <Square size={24} color="#9CA3AF" />
+                            )}
+                            <Text className="ml-3 font-medium text-gray-900">
+                                {pdfSelectedItems.size === teethList.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                            </Text>
+                            <Text className="ml-auto text-gray-500">
+                                {pdfSelectedItems.size} de {teethList.length}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Items List */}
+                        <View className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                            {teethList.map((item, index) => {
+                                const total = getToothTotal(item);
+                                const isSelected = pdfSelectedItems.has(index);
+                                const statusColor = item.status === 'paid' ? '#2563EB' : item.status === 'approved' ? '#16A34A' : '#CA8A04';
+                                const statusBg = item.status === 'paid' ? 'bg-blue-50' : item.status === 'approved' ? 'bg-green-50' : 'bg-yellow-50';
+                                const statusLabel = item.status === 'paid' ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
+
+                                return (
+                                    <TouchableOpacity
+                                        key={index}
+                                        onPress={() => togglePdfItemSelection(index)}
+                                        className={`p-4 flex-row items-center ${index !== teethList.length - 1 ? 'border-b border-gray-100' : ''}`}
+                                    >
+                                        {isSelected ? (
+                                            <CheckSquare size={24} color="#b94a48" />
+                                        ) : (
+                                            <Square size={24} color="#9CA3AF" />
+                                        )}
+                                        <View className="flex-1 ml-3">
+                                            <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
+                                            <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                            <View className={`self-start mt-1 px-2 py-0.5 rounded ${statusBg}`}>
+                                                <Text style={{ color: statusColor, fontSize: 10, fontWeight: '600' }}>{statusLabel}</Text>
+                                            </View>
+                                        </View>
+                                        <Text className="font-semibold text-gray-900">
+                                            R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        {/* Selected Total */}
+                        {pdfSelectedItems.size > 0 && (
+                            <View className="mt-4 bg-[#fef2f2] rounded-xl p-4 border border-[#fecaca]">
+                                <Text className="text-[#a03f3d] text-sm">Total Selecionado</Text>
+                                <Text className="text-[#b94a48] font-bold text-xl">
+                                    R$ {teethList
+                                        .filter((_, index) => pdfSelectedItems.has(index))
+                                        .reduce((sum, t) => sum + getToothTotal(t), 0)
+                                        .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </Text>
+                            </View>
+                        )}
+                    </ScrollView>
+
+                    {/* Footer Buttons */}
+                    <View
+                        className="flex-row gap-3 px-4 py-3 bg-white border-t border-gray-100"
+                        style={{ paddingBottom: insets.bottom + 12 }}
+                    >
+                        <TouchableOpacity
+                            onPress={() => setShowPdfItemSelection(false)}
+                            className="flex-1 py-4 bg-gray-100 rounded-xl items-center"
+                        >
+                            <Text className="font-medium text-gray-600">Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={handleExportPDF}
+                            disabled={pdfSelectedItems.size === 0}
+                            className={`flex-1 py-4 rounded-xl items-center flex-row justify-center gap-2 ${pdfSelectedItems.size === 0 ? 'bg-gray-300' : 'bg-[#b94a48]'}`}
+                        >
+                            <Eye size={18} color="white" />
+                            <Text className="font-medium text-white">Gerar PDF</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </Modal>
     );
 }

@@ -87,7 +87,7 @@ export const profileService = {
 
         return {
             clinicName,
-            dentistName: isClinic ? dentistName : null,
+            dentistName,
             isClinic,
             logoUrl,
             letterheadUrl
