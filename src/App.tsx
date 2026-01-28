@@ -81,11 +81,10 @@ const AppContent = () => (
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/suporte" element={<Support />} />
-
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
         <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
+        <Route path="/suporte" element={<AppLayout><Support /></AppLayout>} />
         <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
         <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />

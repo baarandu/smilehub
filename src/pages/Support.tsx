@@ -247,27 +247,16 @@ export default function Support() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(-1)}
-            className="mb-4 -ml-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <h1 className="text-3xl font-bold text-gray-900">Central de Ajuda</h1>
-          <p className="text-gray-600 mt-2">
-            Encontre respostas para suas dúvidas ou entre em contato conosco
-          </p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Central de Ajuda</h1>
+        <p className="text-gray-600 mt-1">
+          Encontre respostas para suas dúvidas ou entre em contato conosco
+        </p>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div>
         {/* Quick Contact Cards */}
         <div className="grid md:grid-cols-3 gap-4 mb-10">
           {/* WhatsApp */}
@@ -466,12 +455,6 @@ export default function Support() {
               </p>
             </form>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-12 text-center text-sm text-gray-500">
-          <p>© 2026 Organiza Odonto®. Todos os direitos reservados.</p>
-          <p className="text-xs mt-1">Desenvolvido por Alqer® - Soluções em Tecnologia</p>
         </div>
       </div>
     </div>
