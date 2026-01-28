@@ -12,12 +12,15 @@ interface TodayAppointmentsProps {
 export function TodayAppointments({ appointments, isLoading }: TodayAppointmentsProps) {
   const navigate = useNavigate();
 
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string; class: string }> = {
     scheduled: { label: 'Agendado', class: 'bg-primary/10 text-primary' },
     confirmed: { label: 'Confirmado', class: 'bg-success/10 text-success' },
     completed: { label: 'Compareceu', class: 'bg-success/10 text-success' },
     cancelled: { label: 'Cancelado', class: 'bg-destructive/10 text-destructive' },
+    no_show: { label: 'Não compareceu', class: 'bg-orange-100 text-orange-700' },
   };
+
+  const defaultStatus = { label: 'Pendente', class: 'bg-gray-100 text-gray-600' };
 
   if (isLoading) {
     return (
@@ -69,7 +72,7 @@ export function TodayAppointments({ appointments, isLoading }: TodayAppointments
           </div>
         ) : (
           appointments.map((appointment, index) => {
-            const status = statusConfig[appointment.status];
+            const status = statusConfig[appointment.status] || defaultStatus;
             const patientName = appointment.patients?.name || 'Paciente';
             return (
               <div

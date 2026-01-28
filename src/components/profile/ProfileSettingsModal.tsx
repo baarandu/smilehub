@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Building2, Upload, X, Loader2, Image as ImageIcon, Users, UserPlus, Shield, Edit3, Eye, Trash2, Activity, Info, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building2, Loader2, Users, UserPlus, Shield, Trash2, Info, Phone, Mail, MapPin, Eye, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -73,13 +73,14 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
     const { markStepCompleted } = useOnboarding();
 
     // Clinic Info State
-    const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [clinicName, setClinicName] = useState('');
-    const [initialName, setInitialName] = useState('');
-    const [uploadingLogo, setUploadingLogo] = useState(false);
-    const [updatingName, setUpdatingName] = useState(false);
+    const [address, setAddress] = useState('');
+    const [city, setCity] = useState('');
+    const [state, setState] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [savingClinicInfo, setSavingClinicInfo] = useState(false);
     const [loadingInfo, setLoadingInfo] = useState(true);
-    const logoInputRef = useRef<HTMLInputElement>(null);
 
     // Team Management State
     const [activeTab, setActiveTab] = useState(initialTab || 'clinic');
@@ -154,14 +155,43 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
         setLoadingInfo(true);
         try {
             const clinicInfo = await profileService.getClinicInfo();
-            setLogoUrl(clinicInfo.logoUrl);
-            setClinicName(clinicInfo.clinicName);
-            setInitialName(clinicInfo.clinicName);
+            setClinicName(clinicInfo.clinicName || '');
+            setAddress(clinicInfo.address || '');
+            setCity(clinicInfo.city || '');
+            setState(clinicInfo.state || '');
+            setPhone(clinicInfo.phone || '');
+            setEmail(clinicInfo.email || '');
         } catch (error) {
             console.error('Error loading clinic info:', error);
-            // toast.error('Não foi possível carregar as informações da clínica.');
         } finally {
             setLoadingInfo(false);
+        }
+    };
+
+    const handleSaveClinicInfo = async () => {
+        if (!clinicName.trim()) {
+            toast.error('O nome da clínica é obrigatório');
+            return;
+        }
+
+        setSavingClinicInfo(true);
+        try {
+            await profileService.updateClinicInfo({
+                name: clinicName.trim(),
+                address: address.trim() || undefined,
+                city: city.trim() || undefined,
+                state: state.trim() || undefined,
+                phone: phone.trim() || undefined,
+                email: email.trim() || undefined,
+            });
+            await refetch();
+            toast.success('Informações da clínica atualizadas!');
+            markStepCompleted('clinic_data');
+        } catch (error) {
+            console.error('Error updating clinic info:', error);
+            toast.error('Não foi possível atualizar as informações.');
+        } finally {
+            setSavingClinicInfo(false);
         }
     };
 
@@ -226,77 +256,6 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
             console.error('Error loading audit logs:', error);
         } finally {
             setLoadingAudit(false);
-        }
-    };
-
-    const handleUpdateName = async () => {
-        if (!clinicName.trim()) {
-            toast.error('O nome da clínica não pode estar vazio.');
-            return;
-        }
-
-        if (clinicName === initialName) return;
-
-        setUpdatingName(true);
-        try {
-            await profileService.updateClinicName(clinicName.trim());
-            setInitialName(clinicName.trim());
-            await refetch();
-            toast.success('Nome da clínica atualizado com sucesso!');
-            // Mark onboarding step as completed
-            markStepCompleted('clinic_data');
-        } catch (error) {
-            console.error('Error updating clinic name:', error);
-            toast.error('Não foi possível atualizar o nome da clínica.');
-        } finally {
-            setUpdatingName(false);
-        }
-    };
-
-    const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (!file.type.startsWith('image/')) {
-            toast.error('Por favor, selecione uma imagem.');
-            return;
-        }
-
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error('A imagem deve ter no máximo 2MB.');
-            return;
-        }
-
-        setUploadingLogo(true);
-        try {
-            const url = await profileService.uploadLogo(file);
-            setLogoUrl(url);
-            await refetch();
-            toast.success('Logo atualizado com sucesso!');
-            // Mark onboarding step as completed
-            markStepCompleted('clinic_data');
-        } catch (error) {
-            console.error('Error uploading logo:', error);
-            toast.error('Não foi possível fazer upload do logo.');
-        } finally {
-            setUploadingLogo(false);
-            if (logoInputRef.current) {
-                logoInputRef.current.value = '';
-            }
-        }
-    };
-
-    const handleRemoveLogo = async () => {
-        if (!confirm('Tem certeza que deseja remover o logo?')) return;
-
-        try {
-            await profileService.removeLogo();
-            setLogoUrl(null);
-            await refetch();
-            toast.success('Logo removido com sucesso.');
-        } catch (error) {
-            console.error('Error removing logo:', error);
-            toast.error('Não foi possível remover o logo.');
         }
     };
 
@@ -405,94 +364,107 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                             </p>
                         </div>
 
-                        {/* Clinic Name Section */}
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium text-foreground">Nome da Clínica</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={clinicName}
-                                    onChange={(e) => setClinicName(e.target.value)}
-                                    placeholder="Nome da sua clínica"
-                                    className="flex-1 h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    disabled={loadingInfo || updatingName}
-                                />
+                        {loadingInfo ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {/* Clinic Name */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="clinic-name">Nome da Clínica *</Label>
+                                    <Input
+                                        id="clinic-name"
+                                        value={clinicName}
+                                        onChange={(e) => setClinicName(e.target.value)}
+                                        placeholder="Ex: Clínica Sorriso"
+                                    />
+                                </div>
+
+                                {/* Address */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="clinic-address" className="flex items-center gap-1">
+                                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                                        Endereço
+                                    </Label>
+                                    <Input
+                                        id="clinic-address"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        placeholder="Ex: Rua das Flores, 123"
+                                    />
+                                </div>
+
+                                {/* City and State */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="col-span-2 space-y-2">
+                                        <Label htmlFor="clinic-city">Cidade</Label>
+                                        <Input
+                                            id="clinic-city"
+                                            value={city}
+                                            onChange={(e) => setCity(e.target.value)}
+                                            placeholder="Ex: São Paulo"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="clinic-state">Estado</Label>
+                                        <Input
+                                            id="clinic-state"
+                                            value={state}
+                                            onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
+                                            placeholder="SP"
+                                            maxLength={2}
+                                            className="text-center"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Phone */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="clinic-phone" className="flex items-center gap-1">
+                                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                                        Telefone/WhatsApp
+                                    </Label>
+                                    <Input
+                                        id="clinic-phone"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="(11) 99999-9999"
+                                    />
+                                </div>
+
+                                {/* Email */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="clinic-email" className="flex items-center gap-1">
+                                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                                        Email
+                                    </Label>
+                                    <Input
+                                        id="clinic-email"
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="contato@clinica.com"
+                                    />
+                                </div>
+
+                                {/* Save Button */}
                                 <Button
-                                    onClick={handleUpdateName}
-                                    disabled={loadingInfo || updatingName || clinicName === initialName}
-                                    size="sm"
-                                    className="h-10"
+                                    onClick={handleSaveClinicInfo}
+                                    disabled={savingClinicInfo}
+                                    className="w-full bg-[#a03f3d] hover:bg-[#8b3634]"
                                 >
-                                    {updatingName ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                                    {savingClinicInfo ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Salvando...
+                                        </>
+                                    ) : (
+                                        'Salvar Informações'
+                                    )}
                                 </Button>
                             </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium text-foreground">Logomarca (PDF)</label>
-                            <div className="flex flex-col items-center gap-4 p-4 border rounded-xl bg-muted/20">
-                                <div className="relative group">
-                                    {loadingInfo ? (
-                                        <div className="w-24 h-24 rounded-xl border-2 border-dashed border-muted flex items-center justify-center">
-                                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                                        </div>
-                                    ) : logoUrl ? (
-                                        <div className="relative">
-                                            <div className="w-24 h-24 rounded-xl border bg-white flex items-center justify-center p-2 shadow-sm transition-all group-hover:shadow-md">
-                                                <img
-                                                    src={logoUrl}
-                                                    alt="Logo da clínica"
-                                                    className="max-w-full max-h-full object-contain overflow-hidden"
-                                                />
-                                            </div>
-                                            <button
-                                                onClick={handleRemoveLogo}
-                                                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 shadow-sm hover:scale-110 transition-transform opacity-0 group-hover:opacity-100"
-                                                title="Remover Logomarca"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-24 h-24 rounded-xl border-2 border-dashed border-muted flex flex-col items-center justify-center gap-1 bg-muted/30 transition-colors group-hover:bg-muted/50">
-                                            <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
-                                            <span className="text-[8px] uppercase tracking-wider font-semibold text-muted-foreground/60">Sem Logo</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="w-full space-y-2">
-                                    <input
-                                        ref={logoInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleLogoUpload}
-                                        className="hidden"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        className="w-full gap-2 h-10"
-                                        onClick={() => logoInputRef.current?.click()}
-                                        disabled={uploadingLogo || loadingInfo}
-                                    >
-                                        {uploadingLogo ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                Enviando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Upload className="w-4 h-4" />
-                                                {logoUrl ? 'Alterar Logomarca' : 'Fazer Upload'}
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </div>
-                            <p className="text-[10px] text-center text-muted-foreground">
-                                Formatos: PNG, JPG ou WEBP. Máx: 2MB.
-                            </p>
-                        </div>
+                        )}
                     </TabsContent>
 
                     <TabsContent value="team" className="space-y-6 py-4">

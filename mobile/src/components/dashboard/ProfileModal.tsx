@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { subscriptionService } from '../../services/subscription';
 
@@ -15,7 +15,6 @@ interface ProfileModalProps {
     userEmail?: string;
     userRole?: string;
     onLogout: () => void;
-    onOpenLocations: () => void;
     onOpenTeam: () => void;
 }
 
@@ -39,7 +38,6 @@ export function ProfileModal({
     userEmail = '',
     userRole = '',
     onLogout,
-    onOpenLocations,
     onOpenTeam
 }: ProfileModalProps) {
     const router = useRouter();
@@ -213,14 +211,6 @@ export function ProfileModal({
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity
-                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
-                                onPress={onOpenLocations}
-                            >
-                                <MapPin size={20} color="#6B7280" />
-                                <Text className="text-gray-700 font-medium">Gerenciar Locais</Text>
-                            </TouchableOpacity>
-
                             {isAdmin && (
                                 <TouchableOpacity
                                     className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
@@ -230,6 +220,17 @@ export function ProfileModal({
                                     <Text className="text-gray-700 font-medium">Gerenciar Equipe</Text>
                                 </TouchableOpacity>
                             )}
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/settings');
+                                }}
+                            >
+                                <Settings size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Configurações</Text>
+                            </TouchableOpacity>
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Ajuda</Text>
 
@@ -242,19 +243,6 @@ export function ProfileModal({
                             >
                                 <HelpCircle size={20} color="#6B7280" />
                                 <Text className="text-gray-700 font-medium">Ajuda e Suporte</Text>
-                            </TouchableOpacity>
-
-                            <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Conta</Text>
-
-                            <TouchableOpacity
-                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
-                                onPress={() => {
-                                    onClose();
-                                    router.push('/settings/password');
-                                }}
-                            >
-                                <Key size={20} color="#6B7280" />
-                                <Text className="text-gray-700 font-medium">Alterar Senha</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity

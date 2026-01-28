@@ -13,6 +13,11 @@ export interface ClinicInfo {
     logoUrl: string | null;
     letterheadUrl: string | null;
     clinicId: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    phone: string | null;
+    email: string | null;
 }
 
 export const profileService = {
@@ -43,7 +48,12 @@ export const profileService = {
                 isClinic: false,
                 logoUrl: null,
                 letterheadUrl: null,
-                clinicId: null
+                clinicId: null,
+                address: null,
+                city: null,
+                state: null,
+                phone: null,
+                email: null
             };
         }
 
@@ -59,17 +69,27 @@ export const profileService = {
         // Get clinic details directly
         let clinicName: string | null = null;
         let logoUrl: string | null = null;
+        let address: string | null = null;
+        let city: string | null = null;
+        let state: string | null = null;
+        let phone: string | null = null;
+        let email: string | null = null;
 
         if (clinicId) {
             const { data: clinic } = await supabase
                 .from('clinics')
-                .select('id, name, logo_url')
+                .select('id, name, logo_url, address, city, state, phone, email')
                 .eq('id', clinicId)
                 .maybeSingle() as any;
 
             if (clinic) {
                 clinicName = clinic.name;
                 logoUrl = clinic.logo_url;
+                address = clinic.address || null;
+                city = clinic.city || null;
+                state = clinic.state || null;
+                phone = clinic.phone || null;
+                email = clinic.email || null;
             }
         }
 
@@ -117,8 +137,54 @@ export const profileService = {
             isClinic,
             logoUrl,
             letterheadUrl,
-            clinicId
+            clinicId,
+            address,
+            city,
+            state,
+            phone,
+            email
         };
+    },
+
+    async updateClinicInfo(data: { name?: string; address?: string; city?: string; state?: string; phone?: string; email?: string }): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .maybeSingle() as any;
+
+        let clinicId = clinicUser?.clinic_id;
+
+        // If no clinic exists, create one
+        if (!clinicId) {
+            const { data: newClinic, error: createError } = await (supabase
+                .from('clinics') as any)
+                .insert({ name: data.name || 'Minha Clínica', ...data })
+                .select('id')
+                .single();
+
+            if (createError) throw createError;
+            if (!newClinic) throw new Error('Failed to create clinic');
+            clinicId = newClinic.id;
+
+            // Link user to clinic
+            const { error: linkError } = await (supabase
+                .from('clinic_users') as any)
+                .insert({ user_id: user.id, clinic_id: clinicId });
+
+            if (linkError) throw linkError;
+            return;
+        }
+
+        const { error } = await (supabase
+            .from('clinics') as any)
+            .update(data)
+            .eq('id', clinicId);
+
+        if (error) throw error;
     },
 
     async getClinicName(): Promise<string> {

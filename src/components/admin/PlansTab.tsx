@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { plansService } from '@/services/admin/plans';
+import { appSettingsService } from '@/services/admin/appSettings';
 import { SubscriptionPlan, SubscriptionPlanInsert } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,9 +24,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Loader2, Percent, Save } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export function PlansTab() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -34,6 +35,11 @@ export function PlansTab() {
     const [saving, setSaving] = useState(false);
     const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
     const { toast } = useToast();
+
+    // Annual discount settings
+    const [annualDiscount, setAnnualDiscount] = useState<number>(17);
+    const [annualDiscountInput, setAnnualDiscountInput] = useState<string>('17');
+    const [savingDiscount, setSavingDiscount] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState<Partial<SubscriptionPlanInsert>>({
@@ -55,7 +61,47 @@ export function PlansTab() {
 
     useEffect(() => {
         loadPlans();
+        loadAnnualDiscount();
     }, []);
+
+    async function loadAnnualDiscount() {
+        try {
+            const discount = await appSettingsService.getAnnualDiscount();
+            setAnnualDiscount(discount);
+            setAnnualDiscountInput(discount.toString());
+        } catch (error) {
+            console.error('Error loading annual discount:', error);
+        }
+    }
+
+    async function handleSaveAnnualDiscount() {
+        try {
+            setSavingDiscount(true);
+            const value = parseFloat(annualDiscountInput) || 0;
+
+            if (value < 0 || value > 100) {
+                toast({
+                    title: "Valor inválido",
+                    description: "O desconto deve estar entre 0% e 100%.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            await appSettingsService.setAnnualDiscount(value);
+            setAnnualDiscount(value);
+            toast({ title: "Desconto anual atualizado!" });
+        } catch (error: any) {
+            console.error('Error saving annual discount:', error);
+            toast({
+                title: "Erro ao salvar",
+                description: error.message || "Tente novamente.",
+                variant: "destructive"
+            });
+        } finally {
+            setSavingDiscount(false);
+        }
+    }
 
     async function loadPlans() {
         try {
@@ -197,6 +243,62 @@ export function PlansTab() {
 
     return (
         <div className="space-y-6">
+            {/* Annual Discount Settings Card */}
+            <Card className="border-[#a03f3d]/20 bg-gradient-to-r from-[#fdf8f7] to-white">
+                <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-[#a03f3d]/10">
+                            <Percent className="h-5 w-5 text-[#a03f3d]" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-lg">Desconto Plano Anual</CardTitle>
+                            <CardDescription>
+                                Define a porcentagem de desconto para assinaturas anuais
+                            </CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={annualDiscountInput}
+                                onChange={(e) => setAnnualDiscountInput(e.target.value)}
+                                className="w-24 text-center"
+                                placeholder="17"
+                            />
+                            <span className="text-gray-500 font-medium">%</span>
+                        </div>
+                        <Button
+                            onClick={handleSaveAnnualDiscount}
+                            disabled={savingDiscount || annualDiscountInput === annualDiscount.toString()}
+                            className="bg-[#a03f3d] hover:bg-[#8b3634]"
+                            size="sm"
+                        >
+                            {savingDiscount ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <>
+                                    <Save className="h-4 w-4 mr-1" />
+                                    Salvar
+                                </>
+                            )}
+                        </Button>
+                        <div className="flex-1 text-sm text-gray-500">
+                            <p>
+                                Exemplo: Plano de <strong>R$ 100/mês</strong> com <strong>{annualDiscountInput || 0}%</strong> de desconto
+                                = <strong>R$ {((100 * 12) * (1 - (parseFloat(annualDiscountInput) || 0) / 100)).toFixed(2)}/ano</strong>
+                                {' '}({((100 * 12) * (1 - (parseFloat(annualDiscountInput) || 0) / 100) / 12).toFixed(2)}/mês)
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold text-gray-800">Planos de Assinatura</h3>
                 <Button onClick={() => handleOpenDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">

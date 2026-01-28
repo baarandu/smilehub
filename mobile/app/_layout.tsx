@@ -115,7 +115,7 @@ function RootLayoutNav() {
     }
 
     return (
-        <>
+        <View style={{ flex: 1 }}>
             <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="secretary" options={{ presentation: 'card', animation: 'slide_from_right' }} />
@@ -129,7 +129,7 @@ function RootLayoutNav() {
                 <Stack.Screen name="admin" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" />
-        </>
+        </View>
     );
 }
 

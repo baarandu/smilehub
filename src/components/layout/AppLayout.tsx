@@ -15,7 +15,8 @@ import {
   CreditCard,
   FileText,
   ShieldCheck,
-  HelpCircle
+  HelpCircle,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ const navItems = [
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Assinatura' },
+  { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {

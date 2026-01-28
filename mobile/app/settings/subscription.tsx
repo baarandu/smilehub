@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Check, ArrowLeft, Shield, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { Check, ArrowLeft, Shield, ArrowUp, ArrowDown, Sparkles } from 'lucide-react-native';
 import { supabase } from '../../src/lib/supabase';
 import { Database } from '../../src/types/database';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { subscriptionService } from '../../src/services/subscription';
+import { appSettingsService } from '../../src/services/appSettings';
 import { useStripe } from '@stripe/stripe-react-native';
 
 type Plan = Database['public']['Tables']['subscription_plans']['Row'];
+type BillingCycle = 'monthly' | 'annual';
 
 export default function SubscriptionScreen() {
     const router = useRouter();
@@ -24,6 +26,10 @@ export default function SubscriptionScreen() {
     const [isTrialing, setIsTrialing] = useState(false);
     const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
 
+    // Billing cycle toggle and annual discount
+    const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+    const [annualDiscountPercent, setAnnualDiscountPercent] = useState<number>(17);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -32,7 +38,11 @@ export default function SubscriptionScreen() {
         try {
             setLoading(true);
 
-            // 1. Fetch Plans
+            // 1. Fetch Annual Discount Setting
+            const discount = await appSettingsService.getAnnualDiscount();
+            setAnnualDiscountPercent(discount);
+
+            // 2. Fetch Plans
             const { data: plansData, error } = await supabase
                 .from('subscription_plans')
                 .select('*')
@@ -228,6 +238,32 @@ export default function SubscriptionScreen() {
         }
     };
 
+    // Annual price calculation: monthly * 12 with configured discount percentage
+    const getAnnualPrice = (monthlyPriceInCents: number) => {
+        const yearlyTotal = monthlyPriceInCents * 12;
+        const discount = yearlyTotal * (annualDiscountPercent / 100);
+        return yearlyTotal - discount;
+    };
+
+    const getDisplayPrice = (plan: Plan) => {
+        if (billingCycle === 'annual') {
+            const annualTotal = getAnnualPrice(plan.price_monthly);
+            const monthlyEquivalent = annualTotal / 12;
+            return monthlyEquivalent;
+        }
+        return plan.price_monthly;
+    };
+
+    const getAnnualSavings = (plan: Plan) => {
+        const monthlyTotal = plan.price_monthly * 12;
+        const annualTotal = getAnnualPrice(plan.price_monthly);
+        return monthlyTotal - annualTotal;
+    };
+
+    const formatCurrency = (cents: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
+    };
+
     const getButtonText = (plan: Plan): string => {
         if (plan.id === currentPlanId) return 'Seu Plano';
         if (plan.slug === 'enterprise') return 'Fale Conosco';
@@ -320,11 +356,42 @@ export default function SubscriptionScreen() {
                         <Text className="text-gray-500 text-center mb-2">
                             Escolha o melhor plano para sua clínica crescer.
                         </Text>
-                        <View className="bg-[#fef2f2] p-4 rounded-xl mb-6 items-center">
-                            <Text className="text-[#6b2a28] font-bold text-center">30 Dias Grátis no Plano Mensal!</Text>
-                            <Text className="text-[#a03f3d] text-xs text-center mt-1">
-                                Cancele a qualquer momento. A cobrança só ocorre após o período de teste.
+
+                        {/* Trial/Discount Badge */}
+                        <View className="bg-[#fef2f2] p-4 rounded-xl mb-4 items-center flex-row justify-center">
+                            <Sparkles size={16} color="#a03f3d" />
+                            <Text className="text-[#6b2a28] font-bold text-center ml-2">
+                                {billingCycle === 'monthly'
+                                    ? '30 Dias Grátis no Plano Mensal!'
+                                    : `${annualDiscountPercent}% de desconto no Plano Anual!`}
                             </Text>
+                        </View>
+
+                        {/* Billing Cycle Toggle */}
+                        <View className="flex-row justify-center mb-6">
+                            <View className="flex-row bg-white rounded-full p-1 border border-gray-200">
+                                <TouchableOpacity
+                                    onPress={() => setBillingCycle('monthly')}
+                                    className={`px-5 py-2.5 rounded-full ${billingCycle === 'monthly' ? 'bg-[#a03f3d]' : ''}`}
+                                >
+                                    <Text className={`font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-600'}`}>
+                                        Mensal
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setBillingCycle('annual')}
+                                    className={`px-5 py-2.5 rounded-full flex-row items-center ${billingCycle === 'annual' ? 'bg-[#a03f3d]' : ''}`}
+                                >
+                                    <Text className={`font-medium ${billingCycle === 'annual' ? 'text-white' : 'text-gray-600'}`}>
+                                        Anual
+                                    </Text>
+                                    <View className={`ml-2 px-2 py-0.5 rounded-full ${billingCycle === 'annual' ? 'bg-white/20' : 'bg-green-100'}`}>
+                                        <Text className={`text-xs font-bold ${billingCycle === 'annual' ? 'text-white' : 'text-green-700'}`}>
+                                            -{annualDiscountPercent}%
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <View className="gap-6">
@@ -349,11 +416,24 @@ export default function SubscriptionScreen() {
                                         <Text className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</Text>
                                         <Text className="text-gray-500 mb-4">{plan.description}</Text>
 
-                                        <View className="flex-row items-baseline mb-6">
-                                            <Text className="text-3xl font-bold text-gray-900">
-                                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price_monthly / 100)}
-                                            </Text>
-                                            <Text className="text-gray-500 ml-1">/mês</Text>
+                                        {/* Price */}
+                                        <View className="mb-6">
+                                            <View className="flex-row items-baseline">
+                                                <Text className="text-3xl font-bold text-gray-900">
+                                                    {formatCurrency(getDisplayPrice(plan))}
+                                                </Text>
+                                                <Text className="text-gray-500 ml-1">/mês</Text>
+                                            </View>
+                                            {billingCycle === 'annual' && !isEnterprise && (
+                                                <View className="mt-1">
+                                                    <Text className="text-xs text-gray-400">
+                                                        Cobrado anualmente ({formatCurrency(getAnnualPrice(plan.price_monthly))}/ano)
+                                                    </Text>
+                                                    <Text className="text-xs text-green-600 font-medium mt-0.5">
+                                                        Economize {formatCurrency(getAnnualSavings(plan))}
+                                                    </Text>
+                                                </View>
+                                            )}
                                         </View>
 
                                         <View className="gap-2 mb-6">
