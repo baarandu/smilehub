@@ -3,6 +3,15 @@ import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
 
+// Silence console.logs in production (security + performance)
+if (import.meta.env.PROD) {
+  const noop = () => {};
+  console.log = noop;
+  console.debug = noop;
+  console.info = noop;
+  // Keep console.warn and console.error for critical issues
+}
+
 // Initialize Sentry for error monitoring
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

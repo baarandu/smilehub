@@ -8,6 +8,15 @@ import { ClinicProvider } from '../src/contexts/ClinicContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
 
+// Silence console.logs in production (security + performance)
+if (!__DEV__) {
+    const noop = () => {};
+    console.log = noop;
+    console.debug = noop;
+    console.info = noop;
+    // Keep console.warn and console.error for critical issues
+}
+
 // Initialize Sentry for error monitoring
 const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
 if (sentryDsn) {
