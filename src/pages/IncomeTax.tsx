@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { RefreshCw, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,12 +20,19 @@ import type { TaxRegime } from '@/types/fiscalDocuments';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { FiscalProfile, PJSource, TransactionWithIR, IRSummary } from '@/types/incomeTax';
 import { toast } from 'sonner';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export default function IncomeTax() {
+  const { isAdmin } = useClinic();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Apenas admin pode acessar esta página
+  if (!isAdmin) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   // Data state
   const [fiscalProfile, setFiscalProfile] = useState<FiscalProfile | null>(null);

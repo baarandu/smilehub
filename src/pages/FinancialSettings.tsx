@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { SectionHeader } from '@/components/onboarding';
+import { useClinic } from '@/contexts/ClinicContext';
 
 // Helper to format brand names with proper capitalization
 const formatBrandName = (brand: string): string => {
@@ -28,8 +29,14 @@ const formatBrandName = (brand: string): string => {
 export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isAdmin } = useClinic();
     const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
     const [loading, setLoading] = useState(true);
+
+    // Apenas admin pode acessar esta página
+    if (!isAdmin) {
+        return <Navigate to="/inicio" replace />;
+    }
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 

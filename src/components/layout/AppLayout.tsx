@@ -58,18 +58,18 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [planSlug, setPlanSlug] = useState<string | null>(null);
-  const { role, clinicId } = useClinic();
+  const { role, clinicId, isAdmin } = useClinic();
 
   // Filter nav items based on role
-  // Secretaries (assistant) cannot access Financeiro and Imposto de Renda
+  // Only admin can access Financeiro and Imposto de Renda
   const filteredNavItems = useMemo(() => {
-    if (role === 'assistant') {
+    if (!isAdmin) {
       return navItems.filter(item =>
         item.to !== '/financeiro' && item.to !== '/imposto-de-renda'
       );
     }
     return navItems;
-  }, [role]);
+  }, [isAdmin]);
 
   // Check if user has access to AI Secretary:
   // 1. Has enterprise plan, OR

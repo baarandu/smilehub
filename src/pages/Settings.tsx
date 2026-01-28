@@ -54,7 +54,8 @@ export default function Settings() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
-  const canAccessFinancials = role !== 'assistant';
+  // Apenas admin pode acessar configurações financeiras e de imposto de renda
+  const canAccessFinancials = isAdmin;
 
   const openProfileModal = (tab: 'clinic' | 'team' | 'audit') => {
     setProfileModalTab(tab);

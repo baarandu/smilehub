@@ -45,7 +45,8 @@ export default function SettingsPage() {
     const router = useRouter();
     const { role, isAdmin } = useClinic();
 
-    const canAccessFinancials = role !== 'assistant';
+    // Apenas admin pode acessar configurações financeiras e de imposto de renda
+    const canAccessFinancials = isAdmin;
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
