@@ -264,6 +264,7 @@ export interface Database {
           payment_method: string | null
           installments: number | null
           location: string | null
+          created_by: string | null
           status: 'pending' | 'in_progress' | 'completed'
           created_at: string
           updated_at: string
@@ -277,6 +278,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          created_by?: string | null
           status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
@@ -290,6 +292,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          created_by?: string | null
           status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
@@ -478,6 +481,7 @@ export interface Database {
           notes: string | null
           location_rate: number | null
           created_by: string | null
+          location: string | null
           created_at: string
           updated_at: string
         }
@@ -491,6 +495,7 @@ export interface Database {
           notes?: string | null
           location_rate?: number | null
           created_by?: string | null
+          location?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -504,6 +509,7 @@ export interface Database {
           notes?: string | null
           location_rate?: number | null
           created_by?: string | null
+          location?: string | null
           created_at?: string
           updated_at?: string
         }

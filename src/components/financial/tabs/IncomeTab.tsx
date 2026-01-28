@@ -10,7 +10,8 @@ import {
     Eye,
     EyeOff,
     Trash2,
-    Loader2
+    Loader2,
+    User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -554,6 +555,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <MapPin className="h-3 w-3" />
                                                             {t.location}
+                                                        </p>
+                                                    )}
+                                                    {(t as any).created_by_name && (
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <User className="h-3 w-3" />
+                                                            {(t as any).created_by_name}
                                                         </p>
                                                     )}
                                                 </>

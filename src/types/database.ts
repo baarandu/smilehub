@@ -179,6 +179,7 @@ export interface Database {
           payment_method: string | null
           installments: number | null
           location: string | null
+          created_by: string | null
           status: 'pending' | 'in_progress' | 'completed'
           created_at: string
           updated_at: string
@@ -192,6 +193,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          created_by?: string | null
           status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
@@ -205,6 +207,7 @@ export interface Database {
           payment_method?: string | null
           installments?: number | null
           location?: string | null
+          created_by?: string | null
           status?: 'pending' | 'in_progress' | 'completed'
           created_at?: string
           updated_at?: string
@@ -466,6 +469,7 @@ export interface Database {
           status: 'pending' | 'approved' | 'rejected' | 'completed'
           notes: string | null
           created_by: string | null
+          location: string | null
           created_at: string
           updated_at: string
         }
@@ -478,6 +482,7 @@ export interface Database {
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
           created_by?: string | null
+          location?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -490,6 +495,7 @@ export interface Database {
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
           created_by?: string | null
+          location?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -542,6 +548,7 @@ export interface Database {
           location_amount: number | null
           commission_rate: number | null
           commission_amount: number | null
+          created_by: string | null
           // IR fields - payer data
           payer_is_patient: boolean
           payer_name: string | null
@@ -582,6 +589,7 @@ export interface Database {
           location_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          created_by?: string | null
           // IR fields
           payer_is_patient?: boolean
           payer_name?: string | null
@@ -621,6 +629,7 @@ export interface Database {
           location_amount?: number | null
           commission_rate?: number | null
           commission_amount?: number | null
+          created_by?: string | null
           // IR fields
           payer_is_patient?: boolean
           payer_name?: string | null
@@ -1226,6 +1235,9 @@ export type BudgetWithItems = Budget & {
 }
 
 export type Procedure = Database['public']['Tables']['procedures']['Row']
+export type ProcedureWithCreator = Procedure & {
+  created_by_name?: string | null
+}
 export type Exam = Database['public']['Tables']['exams']['Row']
 export type Patient = Database['public']['Tables']['patients']['Row']
 export type Appointment = Database['public']['Tables']['appointments']['Row']
@@ -1243,4 +1255,5 @@ export type PJSourceUpdate = Database['public']['Tables']['pj_sources']['Update'
 export type FinancialTransactionWithIR = FinancialTransaction & {
   patient?: Pick<Patient, 'name' | 'cpf'> | null
   pj_source?: PJSource | null
+  created_by_name?: string | null
 }

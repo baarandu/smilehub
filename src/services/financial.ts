@@ -57,7 +57,26 @@ export const financialService = {
         const { data, error } = await query;
 
         if (error) throw error;
-        return data || [];
+
+        // Fetch creator names
+        const transactions = (data || []) as any[];
+        const creatorIds = [...new Set(transactions.map(t => t.created_by || t.user_id).filter(Boolean))];
+
+        let creatorNames: Record<string, string> = {};
+        if (creatorIds.length > 0) {
+            const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: creatorIds });
+            if (profiles) {
+                creatorNames = profiles.reduce((acc: Record<string, string>, p: any) => {
+                    acc[p.id] = p.full_name || p.email;
+                    return acc;
+                }, {});
+            }
+        }
+
+        return transactions.map(t => ({
+            ...t,
+            created_by_name: creatorNames[t.created_by || t.user_id] || null
+        }));
     },
 
     async createTransaction(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
@@ -77,7 +96,8 @@ export const financialService = {
             .insert({
                 ...transaction,
                 clinic_id: (clinicUser as any).clinic_id,
-                user_id: user.id  // Track which user created the transaction
+                user_id: user.id,  // Track which user created the transaction
+                created_by: user.id  // Also store in created_by for consistency
             } as any)
             .select()
             .single();
@@ -116,7 +136,8 @@ export const financialService = {
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
                 clinic_id: (clinicUser as any).clinic_id,
-                user_id: user.id  // Track which user created the expense
+                user_id: user.id,  // Track which user created the expense
+                created_by: user.id  // Also store in created_by for consistency
             } as any)
             .select()
             .single();

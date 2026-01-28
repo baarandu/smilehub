@@ -13,5 +13,8 @@ export interface ShoppingOrder {
     total_amount: number;
     status: 'pending' | 'completed';
     completed_at: string | null;
+    created_by: string | null;
+    created_by_name?: string | null;
+    location: string | null;
     created_at: string;
 }

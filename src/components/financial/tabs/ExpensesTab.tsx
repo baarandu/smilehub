@@ -15,7 +15,8 @@ import {
     Tag,
     Package,
     Loader2,
-    Eye
+    Eye,
+    User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -360,12 +361,18 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                                 ? 'Compra de materiais'
                                                 : t.description}
                                     </p>
-                                    <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                                         <span className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString()}</span>
                                         {t.category && (
                                             <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-slate-500">
                                                 {t.category}
                                             </Badge>
+                                        )}
+                                        {(t as any).created_by_name && (
+                                            <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                <User className="h-3 w-3" />
+                                                {(t as any).created_by_name}
+                                            </span>
                                         )}
                                     </div>
                                 </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User } from 'lucide-react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -221,6 +221,12 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <User className="w-4 h-4" />
                                                 <span className="text-sm">{budget.created_by_name}</span>
+                                            </div>
+                                        )}
+                                        {budget.location && (
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <MapPin className="w-4 h-4" />
+                                                <span className="text-sm">{budget.location}</span>
                                             </div>
                                         )}
                                     </div>

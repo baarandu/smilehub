@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hospital, Plus, MapPin, Calendar as CalendarIcon, Edit3, Trash2 } from 'lucide-react';
+import { Hospital, Plus, MapPin, Calendar as CalendarIcon, Edit3, Trash2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProcedures, useDeleteProcedure } from '@/hooks/useProcedures';
@@ -146,12 +146,20 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                         {getStatusInfo(procedure.status).label}
                       </span>
                     </div>
-                    {procedure.location && (
-                      <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                        <MapPin className="w-3 h-3" />
-                        {procedure.location}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-4 mb-2 text-sm text-muted-foreground flex-wrap">
+                      {procedure.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {procedure.location}
+                        </div>
+                      )}
+                      {(procedure as any).created_by_name && (
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {(procedure as any).created_by_name}
+                        </div>
+                      )}
+                    </div>
                     {procedure.description && (
                       <p className="text-sm text-foreground mb-2">{procedure.description}</p>
                     )}
