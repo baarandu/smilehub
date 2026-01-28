@@ -477,6 +477,7 @@ export interface Database {
           status: 'pending' | 'approved' | 'rejected' | 'completed'
           notes: string | null
           location_rate: number | null
+          created_by: string | null
           created_at: string
           updated_at: string
         }
@@ -489,6 +490,7 @@ export interface Database {
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
           location_rate?: number | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -501,6 +503,7 @@ export interface Database {
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
           location_rate?: number | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -907,6 +910,7 @@ export type FinancialTransactionWithPatient = FinancialTransaction & {
 
 export type BudgetWithItems = Budget & {
   budget_items: BudgetItem[]
+  created_by_name?: string | null
 }
 
 // Extended types with relations

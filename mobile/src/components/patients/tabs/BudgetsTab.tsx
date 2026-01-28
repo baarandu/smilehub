@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { Calculator, Edit3, Trash2, Plus, Clock, CheckCircle2, CreditCard, Calendar } from 'lucide-react-native';
+import { Calculator, Edit3, Trash2, Plus, Clock, CheckCircle2, CreditCard, Calendar, User } from 'lucide-react-native';
 import type { BudgetWithItems, BudgetItem } from '../../../types/database';
 import { type ToothEntry, getToothDisplayName } from '../budgetUtils';
 
@@ -48,11 +48,19 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
                         {sortedBudgets.map((budget) => (
                             <View key={budget.id} className="p-4 mx-4 mb-2 bg-white border border-gray-100 rounded-lg">
                                 <TouchableOpacity onPress={() => onView(budget)} activeOpacity={0.7}>
-                                    <View className="flex-row items-center gap-2 mb-2">
-                                        <Calendar size={12} color="#6b7280" />
-                                        <Text className="text-xs text-gray-500">
-                                            {new Date(budget.date + 'T00:00:00').toLocaleDateString('pt-BR')}
-                                        </Text>
+                                    <View className="flex-row items-center gap-4 mb-2 flex-wrap">
+                                        <View className="flex-row items-center gap-2">
+                                            <Calendar size={12} color="#6b7280" />
+                                            <Text className="text-xs text-gray-500">
+                                                {new Date(budget.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                                            </Text>
+                                        </View>
+                                        {budget.created_by_name && (
+                                            <View className="flex-row items-center gap-1">
+                                                <User size={12} color="#6b7280" />
+                                                <Text className="text-xs text-gray-500">{budget.created_by_name}</Text>
+                                            </View>
+                                        )}
                                     </View>
                                     {/* Teeth grouped by status */}
                                     {(() => {

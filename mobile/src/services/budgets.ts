@@ -14,14 +14,36 @@ export const budgetsService = {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return (data as unknown as BudgetWithItems[]) || [];
+
+        // Fetch creator names for budgets with created_by
+        const budgets = (data || []) as any[];
+        const creatorIds = [...new Set(budgets.map(b => b.created_by).filter(Boolean))];
+
+        let creatorNames: Record<string, string> = {};
+        if (creatorIds.length > 0) {
+            const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: creatorIds });
+            if (profiles) {
+                creatorNames = profiles.reduce((acc: Record<string, string>, p: any) => {
+                    acc[p.id] = p.full_name || p.email;
+                    return acc;
+                }, {});
+            }
+        }
+
+        return budgets.map(b => ({
+            ...b,
+            created_by_name: b.created_by ? creatorNames[b.created_by] || null : null
+        })) as BudgetWithItems[];
     },
 
     async create(budget: BudgetInsert, items: Omit<BudgetItemInsert, 'budget_id'>[]): Promise<BudgetWithItems> {
-        // Create budget first
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Create budget first with created_by
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert(budget as any)
+            .insert({ ...budget, created_by: user?.id } as any)
             .select()
             .single();
 

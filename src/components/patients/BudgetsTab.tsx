@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard } from 'lucide-react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -208,7 +208,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                     className="p-5 mx-4 bg-white border border-gray-100 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer shadow-sm"
                                     onClick={() => handleBudgetClick(budget)}
                                 >
-                                    <div className="flex items-center gap-6 mb-3">
+                                    <div className="flex items-center gap-6 mb-3 flex-wrap">
                                         <div className="flex items-center gap-2 text-gray-600">
                                             <Calendar className="w-4 h-4" />
                                             <span className="text-base">{formatDisplayDate(budget.date)}</span>
@@ -217,6 +217,12 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                             <Banknote className="w-4 h-4" />
                                             <span className="text-lg">R$ {formatMoney(budget.value)}</span>
                                         </div>
+                                        {budget.created_by_name && (
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <User className="w-4 h-4" />
+                                                <span className="text-sm">{budget.created_by_name}</span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {renderToothBadges(budget)}

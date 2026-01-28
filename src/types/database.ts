@@ -465,6 +465,7 @@ export interface Database {
           value: number
           status: 'pending' | 'approved' | 'rejected' | 'completed'
           notes: string | null
+          created_by: string | null
           created_at: string
           updated_at: string
         }
@@ -476,6 +477,7 @@ export interface Database {
           value: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -487,6 +489,7 @@ export interface Database {
           value?: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
+          created_by?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1116,10 +1119,6 @@ export type TaxConfig = Database['public']['Tables']['tax_config']['Row']
 export type TaxConfigInsert = Database['public']['Tables']['tax_config']['Insert']
 export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update']
 
-export type BudgetWithItems = Budget & {
-  budget_items: BudgetItem[]
-}
-
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
   patients: Pick<Patient, 'name' | 'phone'>
@@ -1223,6 +1222,7 @@ export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
 
 export type BudgetWithItems = Budget & {
   budget_items?: Database['public']['Tables']['budget_items']['Row'][]
+  created_by_name?: string | null
 }
 
 export type Procedure = Database['public']['Tables']['procedures']['Row']
