@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   MessageCircle,
   Mail,
@@ -13,7 +14,8 @@ import {
   Calendar,
   Users,
   Settings,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,6 +161,7 @@ const faqCategories = [
 ];
 
 export default function Support() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [openCategory, setOpenCategory] = useState<string | null>("geral");
   const [openQuestion, setOpenQuestion] = useState<string | null>(null);
@@ -248,6 +251,15 @@ export default function Support() {
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-5xl mx-auto px-4 py-8">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="mb-4 -ml-2 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
           <h1 className="text-3xl font-bold text-gray-900">Central de Ajuda</h1>
           <p className="text-gray-600 mt-2">
             Encontre respostas para suas dúvidas ou entre em contato conosco
