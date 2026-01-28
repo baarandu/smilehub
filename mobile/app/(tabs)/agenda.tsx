@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, RefreshControl, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Calendar, Plus, MapPin, X } from 'lucide-react-native';
 import { appointmentsService } from '../../src/services/appointments';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
@@ -43,6 +43,13 @@ export default function Agenda() {
         loadPatients();
         loadLocations();
     }, []);
+
+    // Recarrega pacientes quando a tela recebe foco (ex: volta de outra aba)
+    useFocusEffect(
+        useCallback(() => {
+            loadPatients();
+        }, [])
+    );
 
     useEffect(() => {
         if (params.date === 'today') {

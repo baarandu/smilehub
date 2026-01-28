@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentsService } from '@/services/appointments';
-import { getPatients, createPatientFromForm } from '@/services/patients';
 import { locationsService, type Location } from '@/services/locations';
+import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -34,7 +34,6 @@ export default function Agenda() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
   const [datesWithAppointments, setDatesWithAppointments] = useState<Date[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -43,11 +42,14 @@ export default function Agenda() {
   const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // React Query hooks for patients
+  const { data: patients = [] } = usePatients();
+  const createPatientMutation = useCreatePatient();
+
   // Patient creation flow
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
-  const [savingPatient, setSavingPatient] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -64,15 +66,8 @@ export default function Agenda() {
   }, [calendarMonth]);
 
   useEffect(() => {
-    loadPatients();
     loadLocations();
   }, []);
-
-  useEffect(() => {
-    if (dialogOpen) {
-      loadPatients();
-    }
-  }, [dialogOpen]);
 
   const loadDayAppointments = async () => {
     try {
@@ -98,15 +93,6 @@ export default function Agenda() {
       setDatesWithAppointments(dates.map(d => new Date(d + 'T00:00:00')));
     } catch (error) {
       console.error('Error loading month dates:', error);
-    }
-  };
-
-  const loadPatients = async () => {
-    try {
-      const data = await getPatients();
-      setPatients(data);
-    } catch (error) {
-      console.error('Error loading patients:', error);
     }
   };
 
@@ -245,7 +231,7 @@ export default function Agenda() {
   const handleRequestCreatePatient = (prefillName: string) => {
     setDialogOpen(false); // Close appointment dialog
     setPatientForm({ name: prefillName, phone: '' });
-    setTimeout(() => setPatientDialogOpen(true), 200);
+    setPatientDialogOpen(true);
   };
 
   const formatPhone = (value: string) => {
@@ -263,27 +249,23 @@ export default function Agenda() {
       toast.error('Nome e telefone são obrigatórios');
       return;
     }
-    try {
-      setSavingPatient(true);
-      const newPatient = await createPatientFromForm({
-        name: patientForm.name,
-        phone: patientForm.phone,
-      } as PatientFormData);
 
-      await loadPatients();
-      setPreSelectedPatient(newPatient);
-      setPatientDialogOpen(false);
-      setPatientForm({ name: '', phone: '' });
-
-      // Reopen appointment dialog with pre-selected patient
-      setTimeout(() => setDialogOpen(true), 200);
-      toast.success(`Paciente "${newPatient.name}" cadastrado!`);
-    } catch (error) {
-      console.error('Error creating patient:', error);
-      toast.error('Erro ao cadastrar paciente');
-    } finally {
-      setSavingPatient(false);
-    }
+    createPatientMutation.mutate(
+      { name: patientForm.name, phone: patientForm.phone } as PatientFormData,
+      {
+        onSuccess: (newPatient) => {
+          setPreSelectedPatient(newPatient);
+          setPatientDialogOpen(false);
+          setPatientForm({ name: '', phone: '' });
+          setDialogOpen(true);
+          toast.success(`Paciente "${newPatient.name}" cadastrado!`);
+        },
+        onError: (error) => {
+          console.error('Error creating patient:', error);
+          toast.error('Erro ao cadastrar paciente');
+        },
+      }
+    );
   };
 
   return (
@@ -427,12 +409,12 @@ export default function Agenda() {
               setPatientDialogOpen(false);
               setPatientForm({ name: '', phone: '' });
               // Reopen appointment dialog
-              setTimeout(() => setDialogOpen(true), 200);
+              setDialogOpen(true);
             }}>
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleSavePatient} disabled={savingPatient}>
-              {savingPatient ? 'Salvando...' : 'Cadastrar'}
+            <AlertDialogAction onClick={handleSavePatient} disabled={createPatientMutation.isPending}>
+              {createPatientMutation.isPending ? 'Salvando...' : 'Cadastrar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
