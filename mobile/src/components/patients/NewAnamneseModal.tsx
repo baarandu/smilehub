@@ -126,6 +126,8 @@ export function NewAnamneseModal({
         arthritisDetails: '',
         gastritisReflux: false,
         gastritisRefluxDetails: '',
+        bruxismDtmOrofacialPain: false,
+        bruxismDtmOrofacialPainDetails: '',
         notes: '',
         observations: '',
     });
@@ -179,6 +181,8 @@ export function NewAnamneseModal({
                     arthritisDetails: (anamnese as any).arthritis_details || '',
                     gastritisReflux: anamnese.gastritis_reflux,
                     gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
+                    bruxismDtmOrofacialPain: (anamnese as any).bruxism_dtm_orofacial_pain || false,
+                    bruxismDtmOrofacialPainDetails: (anamnese as any).bruxism_dtm_orofacial_pain_details || '',
                     notes: anamnese.notes || '',
                     observations: anamnese.observations || '',
                 });
@@ -235,6 +239,8 @@ export function NewAnamneseModal({
                     arthritisDetails: '',
                     gastritisReflux: false,
                     gastritisRefluxDetails: '',
+                    bruxismDtmOrofacialPain: false,
+                    bruxismDtmOrofacialPainDetails: '',
                     notes: '',
                     observations: '',
                 });
@@ -293,6 +299,8 @@ export function NewAnamneseModal({
                 arthritis_details: form.arthritis ? form.arthritisDetails || null : null,
                 gastritis_reflux: form.gastritisReflux,
                 gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
+                bruxism_dtm_orofacial_pain: form.bruxismDtmOrofacialPain,
+                bruxism_dtm_orofacial_pain_details: form.bruxismDtmOrofacialPain ? form.bruxismDtmOrofacialPainDetails || null : null,
                 notes: form.notes || null,
                 observations: form.observations || null,
             } as any;
@@ -405,7 +413,7 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
-                            label="Está fazendo uso de medicação nesse momento?"
+                            label="Faz ou está fazendo uso de alguma medicação?"
                             value={form.currentMedication}
                             onValueChange={(v) => setForm({ ...form, currentMedication: v })}
                             details={form.currentMedicationDetails}
@@ -414,30 +422,12 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
-                            label="Tem alguma alergia?"
+                            label="Tem algum tipo de alergia?"
                             value={form.allergy}
                             onValueChange={(v) => setForm({ ...form, allergy: v })}
                             details={form.allergyDetails}
                             onDetailsChange={(t) => setForm({ ...form, allergyDetails: t })}
-                            detailsPlaceholder="Quais alergias?"
-                        />
-
-                        <QuestionField
-                            label="Tem alergia medicamentosa?"
-                            value={form.drugAllergy}
-                            onValueChange={(v) => setForm({ ...form, drugAllergy: v })}
-                            details={form.drugAllergyDetails}
-                            onDetailsChange={(t) => setForm({ ...form, drugAllergyDetails: t })}
-                            detailsPlaceholder="Quais medicamentos?"
-                        />
-
-                        <QuestionField
-                            label="Faz uso de medicação contínua?"
-                            value={form.continuousMedication}
-                            onValueChange={(v) => setForm({ ...form, continuousMedication: v })}
-                            details={form.continuousMedicationDetails}
-                            onDetailsChange={(t) => setForm({ ...form, continuousMedicationDetails: t })}
-                            detailsPlaceholder="Quais medicações?"
+                            detailsPlaceholder="Quais alergias? (medicamentos, alimentos, materiais, etc.)"
                         />
 
                         <QuestionField
@@ -566,6 +556,15 @@ export function NewAnamneseModal({
                             details={form.fastingDetails}
                             onDetailsChange={(t) => setForm({ ...form, fastingDetails: t })}
                             detailsPlaceholder="Há quanto tempo?"
+                        />
+
+                        <QuestionField
+                            label="Tem bruxismo, DTM ou dor orofacial?"
+                            value={form.bruxismDtmOrofacialPain}
+                            onValueChange={(v) => setForm({ ...form, bruxismDtmOrofacialPain: v })}
+                            details={form.bruxismDtmOrofacialPainDetails}
+                            onDetailsChange={(t) => setForm({ ...form, bruxismDtmOrofacialPainDetails: t })}
+                            detailsPlaceholder="Descreva os sintomas"
                         />
 
                         {/* Notes */}

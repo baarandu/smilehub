@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,9 +12,15 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useCreateAnamnese, useUpdateAnamnese } from '@/hooks/useAnamneses';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
+import { ptBR } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 interface NewAnamneseDialogProps {
   open: boolean;
@@ -134,6 +139,8 @@ export function NewAnamneseDialog({
     arthritisDetails: '',
     gastritisReflux: false,
     gastritisRefluxDetails: '',
+    bruxismDtmOrofacialPain: false,
+    bruxismDtmOrofacialPainDetails: '',
     notes: '',
     observations: '',
   });
@@ -187,6 +194,8 @@ export function NewAnamneseDialog({
           arthritisDetails: (anamnese as any).arthritis_details || '',
           gastritisReflux: anamnese.gastritis_reflux,
           gastritisRefluxDetails: (anamnese as any).gastritis_reflux_details || '',
+          bruxismDtmOrofacialPain: (anamnese as any).bruxism_dtm_orofacial_pain || false,
+          bruxismDtmOrofacialPainDetails: (anamnese as any).bruxism_dtm_orofacial_pain_details || '',
           notes: anamnese.notes || '',
           observations: anamnese.observations || '',
         });
@@ -243,6 +252,8 @@ export function NewAnamneseDialog({
           arthritisDetails: '',
           gastritisReflux: false,
           gastritisRefluxDetails: '',
+          bruxismDtmOrofacialPain: false,
+          bruxismDtmOrofacialPainDetails: '',
           notes: '',
           observations: '',
         });
@@ -301,6 +312,8 @@ export function NewAnamneseDialog({
         arthritis_details: form.arthritis ? form.arthritisDetails || null : null,
         gastritis_reflux: form.gastritisReflux,
         gastritis_reflux_details: form.gastritisReflux ? form.gastritisRefluxDetails || null : null,
+        bruxism_dtm_orofacial_pain: form.bruxismDtmOrofacialPain,
+        bruxism_dtm_orofacial_pain_details: form.bruxismDtmOrofacialPain ? form.bruxismDtmOrofacialPainDetails || null : null,
         notes: form.notes || null,
         observations: form.observations || null,
       };
@@ -335,57 +348,72 @@ export function NewAnamneseDialog({
             {/* Data */}
             <div className="space-y-2">
               <Label>Data da Anamnese *</Label>
-              <Input
-                type="date"
-                value={form.date}
-                max={new Date().toISOString().split('T')[0]}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (!value) {
-                    setForm({ ...form, date: value });
-                    return;
-                  }
-                  const date = new Date(value);
-                  const isValidDate = !isNaN(date.getTime());
-                  const [year, month, day] = value.split('-').map(Number);
-                  const reconstructed = new Date(year, month - 1, day);
-                  const isRealDate = reconstructed.getFullYear() === year &&
-                    reconstructed.getMonth() === month - 1 &&
-                    reconstructed.getDate() === day;
-                  if (isValidDate && isRealDate) {
-                    setForm({ ...form, date: value });
-                  }
-                }}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.date ? (() => {
+                      const formatted = format(new Date(form.date + 'T12:00:00'), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+                      return formatted.replace(/de (\w)/, (match, letter) => `de ${letter.toUpperCase()}`);
+                    })() : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={form.date ? new Date(form.date + 'T12:00:00') : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        setForm({ ...form, date: `${year}-${month}-${day}` });
+                      }
+                    }}
+                    disabled={(date) => date > new Date()}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Separator />
 
             {/* Tratamento Médico */}
             <QuestionField
-              label="Está em tratamento médico?"
+              label="Está em algum tratamento médico?"
               value={form.medicalTreatment}
               onValueChange={(value) => setForm({ ...form, medicalTreatment: value })}
               details={form.medicalTreatmentDetails}
               onDetailsChange={(text) => setForm({ ...form, medicalTreatmentDetails: text })}
+              detailsPlaceholder="Qual tratamento?"
             />
 
             {/* Cirurgia Recente */}
             <QuestionField
-              label="Teve cirurgia recente?"
+              label="Cirurgia recente?"
               value={form.recentSurgery}
               onValueChange={(value) => setForm({ ...form, recentSurgery: value })}
               details={form.recentSurgeryDetails}
               onDetailsChange={(text) => setForm({ ...form, recentSurgeryDetails: text })}
+              detailsPlaceholder="Qual cirurgia e quando?"
             />
 
             {/* Problemas de Cicatrização */}
             <QuestionField
-              label="Tem problemas de cicatrização?"
+              label="Problema de cicatrização?"
               value={form.healingProblems}
               onValueChange={(value) => setForm({ ...form, healingProblems: value })}
               details={form.healingProblemsDetails}
               onDetailsChange={(text) => setForm({ ...form, healingProblemsDetails: text })}
+              detailsPlaceholder="Descreva o problema"
             />
 
             {/* Problemas Respiratórios */}
@@ -398,89 +426,47 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual problema?"
             />
 
-            {/* Medicação Atual */}
+            {/* Medicação */}
             <QuestionField
-              label="Está tomando medicação?"
+              label="Faz ou está fazendo uso de alguma medicação?"
               value={form.currentMedication}
               onValueChange={(value) => setForm({ ...form, currentMedication: value })}
               details={form.currentMedicationDetails}
               onDetailsChange={(text) => setForm({ ...form, currentMedicationDetails: text })}
+              detailsPlaceholder="Quais medicações?"
             />
 
-            {/* Alergia Geral */}
+            {/* Alergia */}
             <QuestionField
-              label="Tem alguma alergia?"
+              label="Tem algum tipo de alergia?"
               value={form.allergy}
               onValueChange={(value) => setForm({ ...form, allergy: value })}
               details={form.allergyDetails}
               onDetailsChange={(text) => setForm({ ...form, allergyDetails: text })}
-              detailsPlaceholder="Quais alergias?"
-            />
-
-            {/* Alergia Medicamentosa */}
-            <QuestionField
-              label="Tem alergia medicamentosa?"
-              value={form.drugAllergy}
-              onValueChange={(value) => setForm({ ...form, drugAllergy: value })}
-              details={form.drugAllergyDetails}
-              onDetailsChange={(text) => setForm({ ...form, drugAllergyDetails: text })}
-              detailsPlaceholder="Quais medicamentos?"
-            />
-
-            {/* Medicação Contínua */}
-            <QuestionField
-              label="Faz uso de medicação contínua?"
-              value={form.continuousMedication}
-              onValueChange={(value) => setForm({ ...form, continuousMedication: value })}
-              details={form.continuousMedicationDetails}
-              onDetailsChange={(text) => setForm({ ...form, continuousMedicationDetails: text })}
-              detailsPlaceholder="Quais medicações?"
+              detailsPlaceholder="Quais alergias? (medicamentos, alimentos, materiais, etc.)"
             />
 
             {/* Histórico de Anestesia Local */}
             <QuestionField
-              label="Tem histórico de anestesia local?"
+              label="Já foi submetido a procedimento sob anestesia local?"
               value={form.localAnesthesiaHistory}
               onValueChange={(value) => setForm({ ...form, localAnesthesiaHistory: value })}
               details={form.localAnesthesiaHistoryDetails}
               onDetailsChange={(text) => setForm({ ...form, localAnesthesiaHistoryDetails: text })}
+              detailsPlaceholder="Qual procedimento?"
             />
 
-            {/* Reação à Anestesia */}
-            <QuestionField
-              label="Já teve reação à anestesia?"
-              value={form.anesthesiaReaction}
-              onValueChange={(value) => setForm({ ...form, anesthesiaReaction: value })}
-              details={form.anesthesiaReactionDetails}
-              onDetailsChange={(text) => setForm({ ...form, anesthesiaReactionDetails: text })}
-            />
-
-            {/* Gestante ou Amamentando */}
-            <QuestionField
-              label="Está gestante ou amamentando?"
-              value={form.pregnantOrBreastfeeding}
-              onValueChange={(value) => setForm({ ...form, pregnantOrBreastfeeding: value })}
-              details={form.pregnantOrBreastfeedingDetails}
-              onDetailsChange={(text) => setForm({ ...form, pregnantOrBreastfeedingDetails: text })}
-            />
-
-            {/* Fumante ou Bebe */}
-            <QuestionField
-              label="É fumante ou etilista?"
-              value={form.smokerOrDrinker}
-              onValueChange={(value) => setForm({ ...form, smokerOrDrinker: value })}
-              details={form.smokerOrDrinkerDetails}
-              onDetailsChange={(text) => setForm({ ...form, smokerOrDrinkerDetails: text })}
-            />
-
-            {/* Jejum */}
-            <QuestionField
-              label="Está em jejum?"
-              value={form.fasting}
-              onValueChange={(value) => setForm({ ...form, fasting: value })}
-              details={form.fastingDetails}
-              onDetailsChange={(text) => setForm({ ...form, fastingDetails: text })}
-            />
+            {/* Reação à Anestesia - só aparece se tiver histórico de anestesia */}
+            {form.localAnesthesiaHistory && (
+              <QuestionField
+                label="Teve alguma reação à anestesia?"
+                value={form.anesthesiaReaction}
+                onValueChange={(value) => setForm({ ...form, anesthesiaReaction: value })}
+                details={form.anesthesiaReactionDetails}
+                onDetailsChange={(text) => setForm({ ...form, anesthesiaReactionDetails: text })}
+                detailsPlaceholder="Qual reação?"
+              />
+            )}
 
             {/* Diabetes */}
             <QuestionField
@@ -489,33 +475,37 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, diabetes: value })}
               details={form.diabetesDetails}
               onDetailsChange={(text) => setForm({ ...form, diabetesDetails: text })}
+              detailsPlaceholder="Tipo e tratamento"
             />
 
             {/* Depressão, Ansiedade ou Pânico */}
             <QuestionField
-              label="Tem depressão, ansiedade ou pânico?"
+              label="Depressão, pânico ou ansiedade?"
               value={form.depressionAnxietyPanic}
               onValueChange={(value) => setForm({ ...form, depressionAnxietyPanic: value })}
               details={form.depressionAnxietyPanicDetails}
               onDetailsChange={(text) => setForm({ ...form, depressionAnxietyPanicDetails: text })}
+              detailsPlaceholder="Descreva o quadro"
             />
 
             {/* Convulsão ou Epilepsia */}
             <QuestionField
-              label="Tem convulsão ou epilepsia?"
+              label="Histórico de convulsão ou epilepsia?"
               value={form.seizureEpilepsy}
               onValueChange={(value) => setForm({ ...form, seizureEpilepsy: value })}
               details={form.seizureEpilepsyDetails}
               onDetailsChange={(text) => setForm({ ...form, seizureEpilepsyDetails: text })}
+              detailsPlaceholder="Frequência e medicação"
             />
 
             {/* Doença Cardíaca */}
             <QuestionField
-              label="Tem doença cardíaca?"
+              label="Tem cardiopatia?"
               value={form.heartDisease}
               onValueChange={(value) => setForm({ ...form, heartDisease: value })}
               details={form.heartDiseaseDetails}
               onDetailsChange={(text) => setForm({ ...form, heartDiseaseDetails: text })}
+              detailsPlaceholder="Qual condição?"
             />
 
             {/* Hipertensão */}
@@ -525,6 +515,7 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, hypertension: value })}
               details={form.hypertensionDetails}
               onDetailsChange={(text) => setForm({ ...form, hypertensionDetails: text })}
+              detailsPlaceholder="Tratamento?"
             />
 
             {/* Marca-passo */}
@@ -534,15 +525,7 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, pacemaker: value })}
               details={form.pacemakerDetails}
               onDetailsChange={(text) => setForm({ ...form, pacemakerDetails: text })}
-            />
-
-            {/* Doença Infecciosa */}
-            <QuestionField
-              label="Tem doença infecciosa?"
-              value={form.infectiousDisease}
-              onValueChange={(value) => setForm({ ...form, infectiousDisease: value })}
-              details={form.infectiousDiseaseDetails}
-              onDetailsChange={(text) => setForm({ ...form, infectiousDiseaseDetails: text })}
+              detailsPlaceholder="Modelo/tipo?"
             />
 
             {/* Artrite */}
@@ -552,6 +535,7 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, arthritis: value })}
               details={form.arthritisDetails}
               onDetailsChange={(text) => setForm({ ...form, arthritisDetails: text })}
+              detailsPlaceholder="Qual tipo?"
             />
 
             {/* Gastrite ou Refluxo */}
@@ -561,6 +545,57 @@ export function NewAnamneseDialog({
               onValueChange={(value) => setForm({ ...form, gastritisReflux: value })}
               details={form.gastritisRefluxDetails}
               onDetailsChange={(text) => setForm({ ...form, gastritisRefluxDetails: text })}
+              detailsPlaceholder="Tratamento?"
+            />
+
+            {/* Doença Infecciosa */}
+            <QuestionField
+              label="Alguma doença infecciosa ou importante?"
+              value={form.infectiousDisease}
+              onValueChange={(value) => setForm({ ...form, infectiousDisease: value })}
+              details={form.infectiousDiseaseDetails}
+              onDetailsChange={(text) => setForm({ ...form, infectiousDiseaseDetails: text })}
+              detailsPlaceholder="Qual doença?"
+            />
+
+            {/* Gestante ou Amamentando */}
+            <QuestionField
+              label="Está grávida ou amamentando?"
+              value={form.pregnantOrBreastfeeding}
+              onValueChange={(value) => setForm({ ...form, pregnantOrBreastfeeding: value })}
+              details={form.pregnantOrBreastfeedingDetails}
+              onDetailsChange={(text) => setForm({ ...form, pregnantOrBreastfeedingDetails: text })}
+              detailsPlaceholder="Período de gestação?"
+            />
+
+            {/* Fumante ou Bebe */}
+            <QuestionField
+              label="É fumante ou etilista?"
+              value={form.smokerOrDrinker}
+              onValueChange={(value) => setForm({ ...form, smokerOrDrinker: value })}
+              details={form.smokerOrDrinkerDetails}
+              onDetailsChange={(text) => setForm({ ...form, smokerOrDrinkerDetails: text })}
+              detailsPlaceholder="Frequência/quantidade"
+            />
+
+            {/* Jejum */}
+            <QuestionField
+              label="Está de jejum?"
+              value={form.fasting}
+              onValueChange={(value) => setForm({ ...form, fasting: value })}
+              details={form.fastingDetails}
+              onDetailsChange={(text) => setForm({ ...form, fastingDetails: text })}
+              detailsPlaceholder="Há quanto tempo?"
+            />
+
+            {/* Bruxismo, DTM ou Dor Orofacial */}
+            <QuestionField
+              label="Tem bruxismo, DTM ou dor orofacial?"
+              value={form.bruxismDtmOrofacialPain}
+              onValueChange={(value) => setForm({ ...form, bruxismDtmOrofacialPain: value })}
+              details={form.bruxismDtmOrofacialPainDetails}
+              onDetailsChange={(text) => setForm({ ...form, bruxismDtmOrofacialPainDetails: text })}
+              detailsPlaceholder="Descreva os sintomas"
             />
 
             <Separator />

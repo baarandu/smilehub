@@ -347,6 +347,8 @@ export interface Database {
           arthritis_details: string | null
           gastritis_reflux: boolean
           gastritis_reflux_details: string | null
+          bruxism_dtm_orofacial_pain: boolean
+          bruxism_dtm_orofacial_pain_details: string | null
           notes: string | null
           observations: string | null
           created_at: string
@@ -400,6 +402,8 @@ export interface Database {
           arthritis_details?: string | null
           gastritis_reflux?: boolean
           gastritis_reflux_details?: string | null
+          bruxism_dtm_orofacial_pain?: boolean
+          bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
           observations?: string | null
           created_at?: string
@@ -453,6 +457,8 @@ export interface Database {
           arthritis_details?: string | null
           gastritis_reflux?: boolean
           gastritis_reflux_details?: string | null
+          bruxism_dtm_orofacial_pain?: boolean
+          bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
           observations?: string | null
           created_at?: string

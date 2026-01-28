@@ -35,7 +35,8 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
         { label: 'Cirurgia recente', value: anamnese.recent_surgery, details: anamnese.recent_surgery_details },
         { label: 'Problemas de cicatrização', value: anamnese.healing_problems, details: anamnese.healing_problems_details },
         { label: 'Doença respiratória', value: (anamnese as any).respiratory_problems, details: (anamnese as any).respiratory_problems_details },
-        { label: 'Medicação atual', value: anamnese.current_medication, details: anamnese.current_medication_details },
+        { label: 'Uso de medicação', value: anamnese.current_medication, details: anamnese.current_medication_details },
+        { label: 'Alergia', value: anamnese.allergy, details: anamnese.allergy_details },
         { label: 'Histórico de anestesia local', value: anamnese.local_anesthesia_history },
         { label: 'Reação à anestesia', value: anamnese.anesthesia_reaction, details: anamnese.anesthesia_reaction_details },
         { label: 'Gestante ou amamentando', value: anamnese.pregnant_or_breastfeeding },
@@ -50,6 +51,7 @@ export function AnamneseSummaryModal({ visible, anamnese, onClose }: AnamneseSum
         { label: 'Doença infecciosa', value: anamnese.infectious_disease, details: anamnese.infectious_disease_details },
         { label: 'Artrite', value: anamnese.arthritis },
         { label: 'Gastrite ou refluxo', value: anamnese.gastritis_reflux },
+        { label: 'Bruxismo, DTM ou dor orofacial', value: (anamnese as any).bruxism_dtm_orofacial_pain, details: (anamnese as any).bruxism_dtm_orofacial_pain_details },
     ];
 
     // Filtrar apenas os itens marcados como "sim" (true)

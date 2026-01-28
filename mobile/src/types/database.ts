@@ -380,6 +380,8 @@ export interface Database {
           infectious_disease_details: string | null
           arthritis: boolean
           gastritis_reflux: boolean
+          bruxism_dtm_orofacial_pain: boolean
+          bruxism_dtm_orofacial_pain_details: string | null
           notes: string | null
           observations: string | null
           created_at: string
@@ -422,6 +424,8 @@ export interface Database {
           infectious_disease_details?: string | null
           arthritis?: boolean
           gastritis_reflux?: boolean
+          bruxism_dtm_orofacial_pain?: boolean
+          bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
           observations?: string | null
           created_at?: string
@@ -464,6 +468,8 @@ export interface Database {
           infectious_disease_details?: string | null
           arthritis?: boolean
           gastritis_reflux?: boolean
+          bruxism_dtm_orofacial_pain?: boolean
+          bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
           observations?: string | null
           created_at?: string

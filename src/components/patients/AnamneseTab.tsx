@@ -55,6 +55,7 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
             { condition: anamnese.fasting, label: 'Jejum', color: 'bg-blue-100 text-blue-800' },
             { condition: anamnese.allergy, label: 'Alergia', color: 'bg-red-100 text-red-800' },
             { condition: anamnese.drug_allergy, label: 'Alergia Medicamentosa', color: 'bg-red-100 text-red-800' },
+            { condition: (anamnese as any).bruxism_dtm_orofacial_pain, label: 'Bruxismo/DTM', color: 'bg-orange-100 text-orange-800' },
         ];
 
         return badges.filter(b => b.condition);
