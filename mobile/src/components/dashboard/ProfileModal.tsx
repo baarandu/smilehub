@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck } from 'lucide-react-native';
+import { User, Key, MapPin, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { subscriptionService } from '../../services/subscription';
 
@@ -230,6 +230,19 @@ export function ProfileModal({
                                     <Text className="text-gray-700 font-medium">Gerenciar Equipe</Text>
                                 </TouchableOpacity>
                             )}
+
+                            <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Ajuda</Text>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/settings/support');
+                                }}
+                            >
+                                <HelpCircle size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Ajuda e Suporte</Text>
+                            </TouchableOpacity>
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Conta</Text>
 
