@@ -8,7 +8,6 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -36,7 +35,6 @@ export function ReportGenerationModal({
 
     const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
-    const [includeHeader, setIncludeHeader] = useState(true);
     const [notes, setNotes] = useState('');
     const [generating, setGenerating] = useState(false);
 
@@ -72,15 +70,62 @@ export function ReportGenerationModal({
             const { data: { user } } = await supabase.auth.getUser();
             const metadata = user?.user_metadata || {};
 
+            // Get clinic_id from clinic_users table
+            let clinicId: string | null = null;
+            if (user) {
+                const { data: clinicUser } = await supabase
+                    .from('clinic_users')
+                    .select('clinic_id')
+                    .eq('user_id', user.id)
+                    .single();
+                clinicId = (clinicUser as any)?.clinic_id || null;
+            }
+
+            // Fetch FiscalProfile for CRO
+            let dentistCRO: string | undefined;
+            if (clinicId) {
+                const { data: fiscalProfile } = await supabase
+                    .from('fiscal_profiles')
+                    .select('pf_cro')
+                    .eq('clinic_id', clinicId)
+                    .single();
+                dentistCRO = (fiscalProfile as any)?.pf_cro || undefined;
+            }
+
+            // Fetch clinic contact info from ai_secretary_settings
+            let clinicPhone: string | undefined;
+            let clinicEmail: string | undefined;
+            let clinicAddress: string | undefined;
+            if (clinicId) {
+                const { data: secretarySettings } = await supabase
+                    .from('ai_secretary_settings')
+                    .select('clinic_phone, clinic_email, clinic_address')
+                    .eq('clinic_id', clinicId)
+                    .single();
+                if (secretarySettings) {
+                    clinicPhone = (secretarySettings as any).clinic_phone || undefined;
+                    clinicEmail = (secretarySettings as any).clinic_email || undefined;
+                    clinicAddress = (secretarySettings as any).clinic_address || undefined;
+                }
+            }
+
+            // Generate report number
+            const reportNumber = `#${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
+
             await generatePatientReport({
                 patient,
                 procedures: proceduresToInclude,
                 exams: examsToInclude,
-                includeHeader,
+                includeHeader: true,
                 notes: notes.trim(),
                 clinicName: metadata.clinic_name || 'Organiza Odonto',
                 dentistName: metadata.full_name || '',
                 accountType: (metadata.account_type as 'solo' | 'clinic') || 'solo',
+                dentistCRO,
+                clinicPhone,
+                clinicEmail,
+                clinicAddress,
+                reportNumber,
             });
             onOpenChange(false);
         } catch (error) {
@@ -136,18 +181,6 @@ export function ReportGenerationModal({
                     </div>
                 ) : (
                     <div className="flex-1 overflow-y-auto space-y-6 px-1">
-                        {/* Header Option */}
-                        <div className="flex items-center space-x-2 border p-4 rounded-lg bg-slate-50">
-                            <Checkbox
-                                id="header"
-                                checked={includeHeader}
-                                onCheckedChange={(checked) => setIncludeHeader(!!checked)}
-                            />
-                            <Label htmlFor="header" className="cursor-pointer font-medium">
-                                Incluir Cabeçalho Personalizado
-                            </Label>
-                        </div>
-
                         {/* Procedures */}
                         <div>
                             <div className="flex items-center justify-between mb-3">

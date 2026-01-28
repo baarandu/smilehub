@@ -13,6 +13,12 @@ interface ReportOptions {
     clinicLogo?: string;
     dentistName?: string;
     accountType?: 'solo' | 'clinic';
+    // New fields
+    dentistCRO?: string;
+    clinicAddress?: string;
+    clinicPhone?: string;
+    clinicEmail?: string;
+    reportNumber?: string;
 }
 
 export const generatePatientReport = async ({
@@ -24,7 +30,12 @@ export const generatePatientReport = async ({
     clinicName = 'Organiza Odonto',
     clinicLogo,
     dentistName,
-    accountType = 'solo'
+    accountType = 'solo',
+    dentistCRO,
+    clinicAddress,
+    clinicPhone,
+    clinicEmail,
+    reportNumber
 }: ReportOptions) => {
 
     const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
@@ -100,6 +111,37 @@ export const generatePatientReport = async ({
         return obsPart ? `${result}\n\nObs: ${obsPart}` : result;
     };
 
+    // Helper to format date in full Brazilian format
+    const formatDateFull = (date: Date) => {
+        const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                       'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
+    };
+
+    // Helper to detect gender from name for Dr/Dra
+    const getDentistTitle = (name: string) => {
+        if (!name) return 'Dr(a).';
+        const firstName = name.split(' ')[0].toLowerCase();
+        const femaleEndings = ['a', 'e', 'i'];
+        const femaleNames = ['ana', 'maria', 'julia', 'juliana', 'fernanda', 'amanda', 'camila', 'carla', 'paula', 'patricia', 'mariana', 'beatriz', 'leticia', 'larissa', 'bruna', 'gabriela', 'rafaela', 'daniela', 'vanessa', 'jessica', 'aline', 'priscila', 'tatiana', 'renata', 'natalia', 'luciana', 'adriana', 'fabiana', 'cristiane', 'simone', 'denise', 'monica', 'claudia', 'sandra', 'regina', 'silvia', 'vera', 'lucia', 'rose', 'rosa', 'elaine', 'sueli', 'edilene', 'ivone', 'marta', 'edna', 'neide', 'tania', 'solange', 'cleide', 'celia', 'teresinha', 'elizabete', 'iracema', 'francisca', 'antonia', 'josefa', 'marlene', 'marcia', 'tereza', 'rita', 'lourdes', 'irene', 'dalva', 'nilza', 'luiza', 'lidia', 'aurora', 'ines', 'alice', 'helena', 'joana', 'cecilia', 'vitoria', 'isadora', 'valentina', 'sofia', 'laura', 'lorena', 'luana', 'bianca'];
+        if (femaleNames.includes(firstName)) return 'Dra.';
+        if (femaleEndings.includes(firstName.slice(-1)) && !['jose', 'jorge', 'carlos', 'marcos', 'lucas', 'matheus', 'felipe', 'andre', 'alexandre', 'ricardo'].includes(firstName)) return 'Dra.';
+        return 'Dr.';
+    };
+
+    // Get formatted CRO
+    const formatCRO = (cro: string | undefined) => {
+        if (!cro) return '';
+        if (cro.includes('-')) return `CRO-${cro}`;
+        const match = cro.match(/([A-Za-z]{2})[\s-]?(\d+)/);
+        if (match) return `CRO-${match[1].toUpperCase()} ${match[2]}`;
+        return `CRO ${cro}`;
+    };
+
+    const dentistTitle = getDentistTitle(dentistName || '');
+    const formattedCRO = formatCRO(dentistCRO);
+    const currentReportNumber = reportNumber || `#${new Date().getFullYear()}-001`;
+
     const htmlContent = `
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -108,220 +150,476 @@ export const generatePatientReport = async ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório do Paciente</title>
         <style>
-            /* ... (styles remain same) ... */
-            body { 
-                font-family: 'Helvetica', 'Arial', sans-serif; 
-                padding: 20px; 
-                color: #333; 
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            body {
+                font-family: 'Helvetica', 'Arial', sans-serif;
+                padding: 20px;
+                color: #1f2937;
                 line-height: 1.4;
+                margin: 0;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
-            .header { 
-                display: flex; 
-                align-items: center; 
-                border-bottom: 2px solid #b94a48; 
-                padding-bottom: 10px; 
-                margin-bottom: 20px; 
+
+            /* Header Styles */
+            .header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                background-color: #f8fafc;
+                padding: 16px;
+                border-radius: 10px;
+                margin-bottom: 20px;
             }
-            .logo { 
-                width: 60px; 
-                height: 60px; 
-                margin-right: 15px; 
-                background-color: #fef2f2;
-                border-radius: 8px;
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .avatar-placeholder {
+                width: 50px;
+                height: 50px;
+                background: linear-gradient(135deg, #a03f3d 0%, #c45a58 100%);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .avatar-placeholder svg {
+                width: 24px;
+                height: 24px;
+                color: white;
+            }
+            .logo-img {
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
                 object-fit: contain;
             }
-            .clinic-info { 
-                flex: 1; 
-            }
-            .clinic-title { 
-                font-size: 20px; 
-                font-weight: bold; 
-                color: #b94a48; 
-                margin: 0; 
-                line-height: 1.2;
-            }
-            .dentist-title { 
-                font-size: 20px; 
-                font-weight: bold; 
-                color: #000000; 
-                margin: 0; 
-                line-height: 1.2;
-            }
-            .sub-title {
-                font-size: 14px;
-                color: #555;
-                margin-top: 2px;
-                font-weight: 500;
-            }
-            .doc-title {
-                text-align: center;
+            .dentist-info h1 {
                 font-size: 18px;
-                font-weight: bold;
-                text-transform: uppercase;
-                margin-bottom: 20px;
+                font-weight: 700;
                 color: #1f2937;
+                margin: 0 0 2px 0;
             }
-            .section { 
-                margin-bottom: 20px; 
+            .dentist-specialty {
+                font-size: 11px;
+                font-weight: 600;
+                color: #1f2937;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 2px;
+            }
+            .dentist-cro {
+                font-size: 11px;
+                color: #6b7280;
+            }
+            .header-right {
+                text-align: right;
+            }
+            .report-badge {
+                display: inline-block;
+                padding: 4px 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                font-size: 10px;
+                font-weight: 600;
+                color: #374151;
+                background: white;
+                margin-bottom: 4px;
+            }
+            .report-date {
+                font-size: 11px;
+                color: #6b7280;
+            }
+
+            /* Section Styles */
+            .section {
+                margin-bottom: 20px;
                 break-inside: avoid;
             }
-            .section-title { 
-                font-size: 14px; 
-                font-weight: bold; 
-                color: #6b2a28; 
-                margin-bottom: 10px; 
-                border-bottom: 1px solid #fee2e2; 
-                padding-bottom: 5px; 
+            .section-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
             }
-            .patient-name {
-                font-size: 16px;
-                font-weight: bold;
-                margin-bottom: 15px;
+            .section-icon {
+                width: 20px;
+                height: 20px;
+                color: #a03f3d;
             }
-            table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin-top: 5px; 
+            .section-title {
+                font-size: 12px;
+                font-weight: 700;
+                color: #1f2937;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin: 0;
             }
-            th, td { 
-                text-align: left; 
-                padding: 8px; 
-                border-bottom: 1px solid #e5e7eb; 
-                font-size: 12px; 
+
+            /* Patient Card */
+            .patient-card {
+                background-color: #f1f5f9;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 18px 20px;
             }
-            th { 
-                color: #6b2a28; 
-                font-weight: 600; 
+            .patient-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
             }
-            tr:last-child td {
+            .patient-field {
+                flex: 1;
+                min-width: 120px;
+            }
+            .patient-field label {
+                display: block;
+                font-size: 9px;
+                font-weight: 600;
+                color: #000000;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 2px;
+            }
+            .patient-field span {
+                font-size: 13px;
+                font-weight: 500;
+                color: #000000;
+            }
+
+            /* Procedures Table Card */
+            .procedures-card {
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                overflow: hidden;
+                background-color: #f1f5f9;
+            }
+            .procedures-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .procedures-table th {
+                text-align: left;
+                padding: 12px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #000000;
+                background-color: #f1f5f9;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .procedures-table td {
+                padding: 14px;
+                font-size: 12px;
+                color: #000000;
+                border-bottom: 1px solid #e2e8f0;
+                vertical-align: middle;
+                background-color: #f1f5f9;
+            }
+            .procedures-table tr:last-child td {
                 border-bottom: none;
             }
+            .procedures-table .date-col {
+                width: 80px;
+                color: #000000;
+            }
+            .procedures-table .proc-col {
+                width: 160px;
+            }
+            .procedures-table .obs-col {
+                font-size: 11px;
+                color: #374151;
+            }
+            /* Exams Section */
             .exam-item {
                 margin-bottom: 15px;
-                border: 1px solid #e5e7eb;
-                padding: 10px;
-                border-radius: 8px;
-                background-color: #fafafa;
+                border: 1px solid #e8c4c4;
+                padding: 0;
+                border-radius: 10px;
+                background-color: #fdf2f2;
+                overflow: hidden;
                 break-inside: avoid;
             }
             .exam-header {
-                font-weight: bold;
-                margin-bottom: 5px;
                 display: flex;
                 justify-content: space-between;
-                font-size: 12px;
+                align-items: center;
+                padding: 12px 14px;
+                background-color: #a03f3d;
+                color: white;
+            }
+            .exam-name {
+                font-weight: 600;
+                color: #ffffff;
+                font-size: 13px;
+            }
+            .exam-date {
+                font-size: 11px;
+                color: #fecaca;
+            }
+            .exam-content {
+                padding: 12px;
             }
             .exam-images {
                 display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-top: 5px;
+                flex-direction: column;
+                gap: 10px;
             }
             .exam-img {
                 max-width: 100%;
                 height: auto;
-                border-radius: 4px;
-                border: 1px solid #ddd;
-                max-height: 250px;
+                border-radius: 6px;
+                border: 1px solid #e5e7eb;
+                max-height: 400px;
                 object-fit: contain;
             }
-            .notes-box {
-                background-color: #f9fafb;
-                border: 1px solid #e5e7eb;
-                padding: 10px;
-                border-radius: 8px;
-                font-size: 12px;
-                white-space: pre-wrap;
+            .no-images {
+                font-style: italic;
+                color: #9ca3af;
+                font-size: 11px;
             }
+
+            /* Notes Box */
+            .notes-box {
+                background-color: #f0fdf4;
+                border: 1px solid #22c55e;
+                border-left-width: 4px;
+                padding: 12px 16px;
+                border-radius: 6px;
+            }
+            .notes-content {
+                font-size: 12px;
+                color: #374151;
+                white-space: pre-wrap;
+                line-height: 1.5;
+            }
+
+            /* Footer */
             .footer {
                 margin-top: 30px;
+                padding-top: 16px;
+                border-top: 2px solid #a03f3d;
                 text-align: center;
-                font-size: 10px;
-                color: #6b7280;
-                border-top: 1px solid #e5e7eb;
-                padding-top: 15px;
             }
+            .footer-dentist {
+                font-size: 14px;
+                font-weight: 600;
+                color: #1f2937;
+                margin-bottom: 2px;
+            }
+            .footer-cro {
+                font-size: 11px;
+                color: #6b7280;
+                margin-bottom: 12px;
+            }
+            .footer-clinic-info {
+                font-size: 10px;
+                color: #9ca3af;
+            }
+            .footer-clinic-info span {
+                margin: 0 6px;
+            }
+
             .page-break {
                 page-break-before: always;
-                padding-top: 50px;
+                padding-top: 30px;
             }
         </style>
     </head>
     <body>
         ${includeHeader ? `
         <div class="header">
-            ${clinicLogo ? `<img src="${clinicLogo}" class="logo" />` : ''}
-            <div class="clinic-info">
-                ${accountType === 'clinic' ? `
-                    <h1 class="clinic-title">${clinicName}</h1>
-                    ${dentistName ? `<div class="sub-title">Dr(a). ${dentistName}</div>` : ''}
-                ` : `
-                    <h1 class="dentist-title">Dr(a). ${dentistName || 'Dentista'}</h1>
+            <div class="header-left">
+                ${clinicLogo ? `<img src="${clinicLogo}" class="logo-img" />` : `
+                <div class="avatar-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C8.5 2 6 5 6 9c0 2 1 4 2 5.5V22h8v-7.5c1-1.5 2-3.5 2-5.5 0-4-2.5-7-6-7z"/>
+                        <path d="M9 22v-3M15 22v-3M12 2v4"/>
+                    </svg>
+                </div>
                 `}
+                <div class="dentist-info">
+                    <h1>${dentistTitle} ${dentistName || 'Dentista'}</h1>
+                    <div class="dentist-specialty">Cirurgião(ã) Dentista</div>
+                    ${formattedCRO ? `<div class="dentist-cro">${formattedCRO}</div>` : ''}
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="report-badge">Relatório Oficial ${currentReportNumber}</div>
+                <div class="report-date">${formatDateFull(new Date())}</div>
             </div>
         </div>
         ` : ''}
 
-        <div class="doc-title">Relatório de Procedimentos e Exames</div>
-
+        <!-- Patient Section -->
         <div class="section">
-            <div class="section-title">Paciente</div>
-            <div class="patient-name">${patient.name}</div>
+            <div class="section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <h2 class="section-title">Identificação do Paciente</h2>
+            </div>
+            <div class="patient-card">
+                <div class="patient-grid">
+                    <div class="patient-field">
+                        <label>Nome Completo</label>
+                        <span>${patient.name}</span>
+                    </div>
+                    <div class="patient-field">
+                        <label>Data de Nascimento</label>
+                        <span>${patient.birth_date ? formatDate(patient.birth_date) : 'Não informado'}</span>
+                    </div>
+                    <div class="patient-field">
+                        <label>Convenio</label>
+                        <span>${patient.health_insurance || 'Particular'}</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         ${procedures.length > 0 ? `
+        <!-- Procedures Section -->
         <div class="section">
-            <div class="section-title">Procedimentos Realizados</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 120px;">Data</th>
-                        <th>Descrição</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${procedures.map(p => `
-                    <tr>
-                        <td>${formatDate(p.date)}</td>
-                        <td>${sanitizeDescription(p.description)}</td>
-                    </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <div class="section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+                    <rect x="9" y="3" width="6" height="4" rx="1"/>
+                    <path d="M9 12h6M9 16h6"/>
+                </svg>
+                <h2 class="section-title">Procedimentos Realizados</h2>
+            </div>
+            <div class="procedures-card">
+                <table class="procedures-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Procedimento</th>
+                            <th>Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${procedures.flatMap((p) => {
+                            const description = p.description || '';
+                            // Split potential Obs part
+                            const parts = description.split('\n\nObs: ');
+                            const itemsPart = parts[0];
+                            const obsPart = parts.length > 1 ? parts[1] : '';
+
+                            // Process procedure lines
+                            const lines = itemsPart.split('\n');
+                            const procedureLines: string[] = [];
+
+                            lines.forEach(line => {
+                                const cleanLine = line.trim().replace(/^•\s*/, '');
+                                if (!cleanLine || cleanLine.startsWith('Obs:')) return;
+
+                                let sections = cleanLine.split(' | ');
+                                if (sections.length < 3) {
+                                    sections = cleanLine.split(' - ');
+                                }
+
+                                if (sections.length >= 3) {
+                                    procedureLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+                                } else {
+                                    procedureLines.push(cleanLine);
+                                }
+                            });
+
+                            // If only one procedure line, put obs in same row
+                            if (procedureLines.length <= 1) {
+                                return [`
+                                <tr>
+                                    <td class="date-col">${formatDate(p.date)}</td>
+                                    <td class="proc-col">${procedureLines[0] || '-'}</td>
+                                    <td class="obs-col">${obsPart || '-'}</td>
+                                </tr>
+                                `];
+                            }
+
+                            // Multiple procedure lines - first row gets obs, others get empty obs
+                            return procedureLines.map((line, index) => `
+                            <tr>
+                                <td class="date-col">${formatDate(p.date)}</td>
+                                <td class="proc-col">${line}</td>
+                                <td class="obs-col">${index === 0 ? (obsPart || '-') : '-'}</td>
+                            </tr>
+                            `);
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
         </div>
         ` : ''}
 
         ${examsWithImages.length > 0 ? `
-        <div class="section page-break">
-            <div class="section-title">Exames</div>
+        <!-- Exams Section -->
+        <div class="section ${procedures.length > 0 ? 'page-break' : ''}">
+            <div class="section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <h2 class="section-title">Exames e Imagens</h2>
+            </div>
             ${examsWithImages.map(e => `
             <div class="exam-item">
                 <div class="exam-header">
-                    <span>${e.name}</span>
-                    <span style="font-weight: normal; color: #666;">${formatDate(e.order_date)}</span>
+                    <span class="exam-name">${e.name}</span>
+                    <span class="exam-date">${formatDate(e.order_date)}</span>
                 </div>
-                ${e.resolvedImages && e.resolvedImages.length > 0 ? `
-                <div class="exam-images">
-                    ${e.resolvedImages.map(img => `<img src="${img}" class="exam-img" />`).join('')}
+                <div class="exam-content">
+                    ${e.resolvedImages && e.resolvedImages.length > 0 ? `
+                    <div class="exam-images">
+                        ${e.resolvedImages.map(img => `<img src="${img}" class="exam-img" />`).join('')}
+                    </div>
+                    ` : '<div class="no-images">Sem imagens disponíveis (apenas documento ou pendente)</div>'}
                 </div>
-                ` : '<div style="font-style: italic; color: #888;">Sem imagens disponíveis (apenas documento ou pendente)</div>'}
             </div>
             `).join('')}
         </div>
         ` : ''}
 
         ${notes ? `
+        <!-- Notes Section -->
         <div class="section">
-            <div class="section-title">Observações</div>
+            <div class="section-header">
+                <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <h2 class="section-title">Observações Clínicas</h2>
+            </div>
             <div class="notes-box">
-                ${notes}
+                <div class="notes-content">${notes}</div>
             </div>
         </div>
         ` : ''}
 
+        <!-- Footer -->
         <div class="footer">
-            Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}<br>
-            ${clinicName}
+            <div class="footer-dentist">${dentistTitle} ${dentistName || 'Dentista'}</div>
+            <div class="footer-cro">Cirurgião(ã) Dentista${formattedCRO ? ` - ${formattedCRO}` : ''}</div>
+            ${(clinicPhone || clinicEmail || clinicAddress) ? `
+            <div class="footer-clinic-info">
+                ${[clinicPhone, clinicEmail, clinicAddress].filter(Boolean).map(item => `<span>${item}</span>`).join(' • ')}
+            </div>
+            ` : `
+            <div class="footer-clinic-info">
+                <span>${clinicName}</span>
+            </div>
+            `}
         </div>
     </body>
     </html>

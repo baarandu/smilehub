@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Procedure, Exam, Patient } from '../../types/database';
 import { generatePatientReport } from '../../utils/pdfGenerator';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface ReportGenerationModalProps {
     visible: boolean;
@@ -18,7 +19,6 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
     const { user } = useAuth();
     const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
-    const [includeHeader, setIncludeHeader] = useState(true);
     const [notes, setNotes] = useState('');
     const [generating, setGenerating] = useState(false);
 
@@ -55,15 +55,62 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
 
             const metadata = user?.user_metadata || {};
 
+            // Get clinic_id from clinic_users table
+            let clinicId: string | null = null;
+            if (user) {
+                const { data: clinicUser } = await supabase
+                    .from('clinic_users')
+                    .select('clinic_id')
+                    .eq('user_id', user.id)
+                    .single();
+                clinicId = (clinicUser as any)?.clinic_id || null;
+            }
+
+            // Fetch FiscalProfile for CRO
+            let dentistCRO: string | undefined;
+            if (clinicId) {
+                const { data: fiscalProfile } = await supabase
+                    .from('fiscal_profiles')
+                    .select('pf_cro')
+                    .eq('clinic_id', clinicId)
+                    .single();
+                dentistCRO = (fiscalProfile as any)?.pf_cro || undefined;
+            }
+
+            // Fetch clinic contact info from ai_secretary_settings
+            let clinicPhone: string | undefined;
+            let clinicEmail: string | undefined;
+            let clinicAddress: string | undefined;
+            if (clinicId) {
+                const { data: secretarySettings } = await supabase
+                    .from('ai_secretary_settings')
+                    .select('clinic_phone, clinic_email, clinic_address')
+                    .eq('clinic_id', clinicId)
+                    .single();
+                if (secretarySettings) {
+                    clinicPhone = (secretarySettings as any).clinic_phone || undefined;
+                    clinicEmail = (secretarySettings as any).clinic_email || undefined;
+                    clinicAddress = (secretarySettings as any).clinic_address || undefined;
+                }
+            }
+
+            // Generate report number
+            const reportNumber = `#${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
+
             await generatePatientReport({
                 patient,
                 procedures: proceduresToInclude,
                 exams: examsToInclude,
-                includeHeader,
+                includeHeader: true,
                 notes: notes.trim(),
                 clinicName: metadata.clinic_name || 'Organiza Odonto',
                 dentistName: metadata.full_name || '',
                 accountType: metadata.account_type as 'solo' | 'clinic' || 'solo',
+                dentistCRO,
+                clinicPhone,
+                clinicEmail,
+                clinicAddress,
+                reportNumber,
             });
             onClose();
         } catch (error) {
@@ -130,24 +177,9 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                         </View>
 
                         <ScrollView className="flex-1 px-5">
-                            {/* Options */}
-                            <View className="mt-5 mb-6">
-                                <Text className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Opções de Formatação</Text>
-                                <TouchableOpacity
-                                    className="flex-row items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100"
-                                    onPress={() => setIncludeHeader(!includeHeader)}
-                                >
-                                    {includeHeader ? <CheckSquare size={24} color="#b94a48" /> : <Square size={24} color="#9CA3AF" />}
-                                    <View>
-                                        <Text className="text-gray-900 font-semibold">Incluir Papel Timbrado</Text>
-                                        <Text className="text-gray-500 text-xs">Exibe logo e nome da clínica no topo</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-
                             {/* Procedures Selection */}
                             {procedures.length > 0 && (
-                                <View className="mb-6">
+                                <View className="mt-5 mb-6">
                                     <View className="flex-row justify-between items-center mb-3">
                                         <Text className="text-sm font-bold text-gray-900 uppercase tracking-wider">Procedimentos</Text>
                                         <TouchableOpacity onPress={() => setSelectedProcedures(selectedProcedures.length === procedures.length ? [] : procedures.map(p => p.id))}>
