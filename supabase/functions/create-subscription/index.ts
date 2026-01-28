@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -7,15 +8,12 @@ const stripe = new Stripe(stripeKey, {
     httpClient: Stripe.createFetchHttpClient(),
 })
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
 serve(async (req) => {
+    const corsHeaders = getCorsHeaders(req);
+
     // CORS Preflight
     if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
+        return handleCorsOptions(req);
     }
 
     try {

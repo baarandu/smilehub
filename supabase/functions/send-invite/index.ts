@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
 const handler = async (request: Request): Promise<Response> => {
+    const corsHeaders = getCorsHeaders(request);
+
     if (request.method === 'OPTIONS') {
-        return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+        return handleCorsOptions(request);
     }
 
     try {
@@ -56,14 +59,14 @@ const handler = async (request: Request): Promise<Response> => {
         }
 
         return new Response(JSON.stringify(data), {
-            headers: { 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
     } catch (error) {
         console.error('Error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
     }
 }
