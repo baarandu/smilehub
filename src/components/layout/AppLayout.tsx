@@ -14,7 +14,8 @@ import {
   Crown,
   CreditCard,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -258,6 +259,23 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         )}
         </div>{/* End Scrollable Navigation Area */}
+
+        {/* Help/Support Link - Fixed at bottom */}
+        <div className="p-4 border-t border-border shrink-0">
+          <NavLink
+            to="/suporte"
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+              location.pathname === '/suporte'
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <HelpCircle className={cn("w-5 h-5", location.pathname === '/suporte' && "text-primary")} />
+            <span className="flex-1">Ajuda e Suporte</span>
+          </NavLink>
+        </div>
       </aside>
 
       {/* Overlay */}

@@ -506,12 +506,12 @@ export default function Landing() {
             </div>
 
             <div>
-              <h4 className="text-white font-semibold mb-4">Empresa</h4>
+              <h4 className="text-white font-semibold mb-4">Suporte</h4>
               <ul className="space-y-3 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">Sobre Nós</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Carreiras</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contato</a></li>
+                <li><a href="/suporte" className="hover:text-white transition-colors">Central de Ajuda</a></li>
+                <li><a href="/suporte" className="hover:text-white transition-colors">FAQ</a></li>
+                <li><a href="https://wa.me/5571997118372" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
+                <li><a href="mailto:contato@alqer.tech" className="hover:text-white transition-colors">Contato</a></li>
               </ul>
             </div>
 

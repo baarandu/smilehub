@@ -32,6 +32,7 @@ const AdminPlans = lazy(() => import("./pages/AdminPlans"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const TrialExpired = lazy(() => import("./pages/TrialExpired"));
+const Support = lazy(() => import("./pages/Support"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const AppContent = () => (
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/suporte" element={<Support />} />
 
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
