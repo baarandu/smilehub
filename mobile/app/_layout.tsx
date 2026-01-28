@@ -6,6 +6,20 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ClinicProvider } from '../src/contexts/ClinicContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Sentry from '@sentry/react-native';
+
+// Initialize Sentry for error monitoring
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (sentryDsn) {
+    Sentry.init({
+        dsn: sentryDsn,
+        debug: __DEV__, // Show debug info in development
+        enabled: !__DEV__, // Only send errors in production
+        tracesSampleRate: 0.1, // Capture 10% of transactions for performance
+        attachScreenshot: true, // Attach screenshots to errors
+        attachViewHierarchy: true, // Attach view hierarchy to errors
+    });
+}
 
 function RootLayoutNav() {
     const { session, isLoading, hasActiveSubscription, isTrialExpired, role } = useAuth();
@@ -112,7 +126,7 @@ function RootLayoutNav() {
 
 import { StripeProvider } from '@stripe/stripe-react-native';
 
-export default function RootLayout() {
+function RootLayout() {
     const stripeKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
     return (
@@ -130,3 +144,6 @@ export default function RootLayout() {
         </GestureHandlerRootView>
     );
 }
+
+// Wrap with Sentry for automatic error boundary
+export default Sentry.wrap(RootLayout);
