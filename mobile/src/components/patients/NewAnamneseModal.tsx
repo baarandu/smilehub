@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X } from 'lucide-react-native';
+import { X, Calendar } from 'lucide-react-native';
 import { anamnesesService } from '../../services/anamneses';
 import type { AnamneseInsert, Anamnese } from '../../types/database';
+import { DatePickerModal } from '../common/DatePickerModal';
 
 interface NewAnamneseModalProps {
     visible: boolean;
@@ -72,6 +73,7 @@ export function NewAnamneseModal({
     anamnese,
 }: NewAnamneseModalProps) {
     const [saving, setSaving] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const [form, setForm] = useState({
         date: (() => {
             const today = new Date();
@@ -338,40 +340,34 @@ export function NewAnamneseModal({
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
                             <View className="p-4">
                                 <Text className="text-gray-900 font-medium mb-2">Data da Anamnese *</Text>
-                                <TextInput
-                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-gray-900"
-                                    value={form.date.includes('-')
-                                        ? (() => {
-                                            const [year, month, day] = form.date.split('-');
-                                            return `${day}/${month}/${year}`;
-                                        })()
-                                        : form.date}
-                                    onChangeText={(text) => {
-                                        const numbers = text.replace(/\D/g, '');
-                                        let formatted = numbers;
-                                        if (numbers.length > 2) formatted = `${numbers.slice(0, 2)}/${numbers.slice(2)}`;
-                                        if (numbers.length > 4) formatted = `${numbers.slice(0, 2)}/${numbers.slice(2, 4)}/${numbers.slice(4, 8)}`;
-
-                                        if (formatted.length === 10) {
-                                            const parts = formatted.split('/');
-                                            if (parts.length === 3) {
-                                                const dbDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                                                setForm({ ...form, date: dbDate });
-                                                return;
-                                            }
-                                        }
-                                        setForm({ ...form, date: formatted });
-                                    }}
-                                    placeholder="DD/MM/AAAA"
-                                    placeholderTextColor="#9CA3AF"
-                                    keyboardType="numeric"
-                                    maxLength={10}
-                                />
+                                <TouchableOpacity
+                                    onPress={() => setShowDatePicker(true)}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
+                                >
+                                    <Text className="text-gray-900">
+                                        {form.date.includes('-')
+                                            ? (() => {
+                                                const [year, month, day] = form.date.split('-');
+                                                return `${day}/${month}/${year}`;
+                                            })()
+                                            : form.date || 'Selecione a data'}
+                                    </Text>
+                                    <Calendar size={20} color="#6B7280" />
+                                </TouchableOpacity>
                             </View>
                         </View>
-                        {/* Seção: Tratamentos e Cirurgias */}
-                        <Text className="text-xs font-semibold text-gray-400 uppercase mb-2">Tratamentos e Cirurgias</Text>
 
+                        <DatePickerModal
+                            visible={showDatePicker}
+                            onClose={() => setShowDatePicker(false)}
+                            initialDate={form.date ? new Date(form.date) : new Date()}
+                            onSelectDate={(date) => {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                setForm({ ...form, date: `${year}-${month}-${day}` });
+                            }}
+                        />
                         <QuestionField
                             label="Está em algum tratamento médico?"
                             value={form.medicalTreatment}
@@ -407,9 +403,6 @@ export function NewAnamneseModal({
                             onDetailsChange={(t) => setForm({ ...form, respiratoryProblemsDetails: t })}
                             detailsPlaceholder="Qual problema?"
                         />
-
-                        {/* Seção: Medicação e Anestesia */}
-                        <Text className="text-xs font-semibold text-gray-400 uppercase mb-2 mt-4">Medicação e Anestesia</Text>
 
                         <QuestionField
                             label="Está fazendo uso de medicação nesse momento?"
@@ -466,9 +459,6 @@ export function NewAnamneseModal({
                                 detailsPlaceholder="Qual reação?"
                             />
                         )}
-
-                        {/* Seção: Condições de Saúde */}
-                        <Text className="text-xs font-semibold text-gray-400 uppercase mb-2 mt-4">Condições de Saúde</Text>
 
                         <QuestionField
                             label="Tem diabetes?"
@@ -550,9 +540,6 @@ export function NewAnamneseModal({
                             onDetailsChange={(t) => setForm({ ...form, infectiousDiseaseDetails: t })}
                             detailsPlaceholder="Qual doença?"
                         />
-
-                        {/* Seção: Estilo de Vida */}
-                        <Text className="text-xs font-semibold text-gray-400 uppercase mb-2 mt-4">Estilo de Vida e Outros</Text>
 
                         <QuestionField
                             label="Está grávida ou amamentando?"

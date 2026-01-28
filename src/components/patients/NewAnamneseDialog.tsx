@@ -338,7 +338,24 @@ export function NewAnamneseDialog({
               <Input
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) {
+                    setForm({ ...form, date: value });
+                    return;
+                  }
+                  const date = new Date(value);
+                  const isValidDate = !isNaN(date.getTime());
+                  const [year, month, day] = value.split('-').map(Number);
+                  const reconstructed = new Date(year, month - 1, day);
+                  const isRealDate = reconstructed.getFullYear() === year &&
+                    reconstructed.getMonth() === month - 1 &&
+                    reconstructed.getDate() === day;
+                  if (isValidDate && isRealDate) {
+                    setForm({ ...form, date: value });
+                  }
+                }}
               />
             </div>
 
