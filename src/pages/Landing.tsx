@@ -526,9 +526,10 @@ export default function Landing() {
           </div>
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm">
-              © 2026 Organiza Odonto. Todos os direitos reservados.
-            </p>
+            <div className="text-sm space-y-1 text-center md:text-left">
+              <p>© 2026 Organiza Odonto®. Todos os direitos reservados.</p>
+              <p className="text-xs text-gray-500">Desenvolvido por Alqer® - Soluções em Tecnologia</p>
+            </div>
             <p className="text-sm">
               Feito com <span className="text-red-500">❤</span> para dentistas em todo o Brasil
             </p>

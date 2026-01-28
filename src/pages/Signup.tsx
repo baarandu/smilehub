@@ -283,9 +283,10 @@ export default function Signup() {
                 </div>
 
                 {/* Footer */}
-                <p className="text-center text-gray-400 text-sm mt-6">
-                    © 2024 Organiza Odonto. Todos os direitos reservados.
-                </p>
+                <div className="text-center text-gray-400 text-sm mt-6 space-y-1">
+                    <p>© 2026 Organiza Odonto®. Todos os direitos reservados.</p>
+                    <p className="text-xs">Desenvolvido por Alqer® - Soluções em Tecnologia</p>
+                </div>
             </div>
         </div>
     );
