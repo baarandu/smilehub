@@ -11,10 +11,8 @@ import { alertsService, type Alert as PatientAlert } from '../../src/services/al
 import { budgetsService } from '../../src/services/budgets';
 import { PendingBudgetsModal } from '../../src/components/dashboard/PendingBudgetsModal';
 import { ProfileModal } from '../../src/components/dashboard/ProfileModal';
-import { LocationsModal } from '../../src/components/dashboard/LocationsModal';
 import { PendingReturnsModal } from '../../src/components/dashboard/PendingReturnsModal';
 import type { ReturnAlert } from '../../src/types/database';
-import { locationsService, type Location } from '../../src/services/locations';
 import { remindersService, type Reminder } from '../../src/services/reminders';
 import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
@@ -42,13 +40,6 @@ export default function Dashboard() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [showTeamModal, setShowTeamModal] = useState(false);
-
-    // Locations
-    const [locations, setLocations] = useState<Location[]>([]);
-    const [showLocationsModal, setShowLocationsModal] = useState(false);
-    const [showLocationForm, setShowLocationForm] = useState(false);
-    const [locationForm, setLocationForm] = useState({ name: '', address: '' });
-    const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
     // Pending Returns Modal
     const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
@@ -152,67 +143,6 @@ export default function Dashboard() {
         } finally {
             setLoading(false);
         }
-    };
-
-    const loadLocations = async () => {
-        try {
-            const data = await locationsService.getAll();
-            setLocations(data);
-        } catch (error) {
-            console.error('Error loading locations:', error);
-        }
-    };
-
-    const handleAddLocation = () => {
-        setLocationForm({ name: '', address: '' });
-        setEditingLocation(null);
-        setShowLocationForm(true);
-    };
-
-    const handleEditLocation = (location: Location) => {
-        setLocationForm({ name: location.name, address: location.address || '' });
-        setEditingLocation(location);
-        setShowLocationForm(true);
-    };
-
-    const handleDeleteLocation = (location: Location) => {
-        Alert.alert('Excluir Local', `Tem certeza que deseja excluir "${location.name}"?`, [
-            { text: 'Cancelar', style: 'cancel' },
-            {
-                text: 'Excluir', style: 'destructive', onPress: async () => {
-                    try {
-                        await locationsService.delete(location.id);
-                        loadLocations();
-                    } catch (error) {
-                        Alert.alert('Erro', 'Não foi possível excluir o local');
-                    }
-                }
-            }
-        ]);
-    };
-
-    const handleSaveLocation = async () => {
-        if (!locationForm.name.trim()) {
-            Alert.alert('Erro', 'Nome é obrigatório');
-            return;
-        }
-        try {
-            if (editingLocation) {
-                await locationsService.update(editingLocation.id, { name: locationForm.name, address: locationForm.address || null });
-            } else {
-                await locationsService.create({ name: locationForm.name, address: locationForm.address || null });
-            }
-            setShowLocationForm(false);
-            loadLocations();
-        } catch (error) {
-            Alert.alert('Erro', 'Não foi possível salvar o local');
-        }
-    };
-
-    const openLocationsModal = () => {
-        setShowProfileModal(false);
-        loadLocations();
-        setShowLocationsModal(true);
     };
 
     const handleMarkProcedureCompleted = async (procedureId: string) => {
@@ -394,23 +324,7 @@ export default function Dashboard() {
                 userEmail={session?.user?.email || ''}
                 userRole={clinicRole || ''}
                 onLogout={handleLogout}
-                onOpenLocations={openLocationsModal}
                 onOpenTeam={() => { setShowProfileModal(false); setShowTeamModal(true); }}
-            />
-
-            <LocationsModal
-                visible={showLocationsModal}
-                onClose={() => setShowLocationsModal(false)}
-                locations={locations}
-                showForm={showLocationForm}
-                setShowForm={setShowLocationForm}
-                form={locationForm}
-                setForm={setLocationForm}
-                editingLocation={editingLocation}
-                onAdd={handleAddLocation}
-                onEdit={handleEditLocation}
-                onDelete={handleDeleteLocation}
-                onSave={handleSaveLocation}
             />
 
             <TeamManagementModal visible={showTeamModal} onClose={() => setShowTeamModal(false)} />

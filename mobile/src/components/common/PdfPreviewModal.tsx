@@ -45,9 +45,11 @@ export function PdfPreviewModal({
                         <WebView
                             originWhitelist={['*']}
                             source={{ html: htmlContent }}
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, backgroundColor: '#f3f4f6' }}
                             scalesPageToFit={true}
                             showsVerticalScrollIndicator={true}
+                            contentMode="mobile"
+                            setBuiltInZoomControls={false}
                         />
                     ) : (
                         <View className="flex-1 items-center justify-center">

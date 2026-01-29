@@ -120,8 +120,9 @@ export function NewAppointmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {!appointmentToEdit && (
         <DialogTrigger asChild>
-          <Button size="icon" className="h-12 w-12 rounded-full shadow-lg">
-            <Plus className="w-6 h-6" />
+          <Button className="h-10 px-5 rounded-lg shadow-md gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Agendamento
           </Button>
         </DialogTrigger>
       )}

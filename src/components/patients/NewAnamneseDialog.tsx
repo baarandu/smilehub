@@ -446,27 +446,15 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Quais alergias? (medicamentos, alimentos, materiais, etc.)"
             />
 
-            {/* Histórico de Anestesia Local */}
+            {/* Reação Adversa à Anestesia Local */}
             <QuestionField
-              label="Já foi submetido a procedimento sob anestesia local?"
+              label="Tem histórico de reação adversa à anestesia local?"
               value={form.localAnesthesiaHistory}
               onValueChange={(value) => setForm({ ...form, localAnesthesiaHistory: value })}
               details={form.localAnesthesiaHistoryDetails}
               onDetailsChange={(text) => setForm({ ...form, localAnesthesiaHistoryDetails: text })}
-              detailsPlaceholder="Qual procedimento?"
+              detailsPlaceholder="Descreva a reação"
             />
-
-            {/* Reação à Anestesia - só aparece se tiver histórico de anestesia */}
-            {form.localAnesthesiaHistory && (
-              <QuestionField
-                label="Teve alguma reação à anestesia?"
-                value={form.anesthesiaReaction}
-                onValueChange={(value) => setForm({ ...form, anesthesiaReaction: value })}
-                details={form.anesthesiaReactionDetails}
-                onDetailsChange={(text) => setForm({ ...form, anesthesiaReactionDetails: text })}
-                detailsPlaceholder="Qual reação?"
-              />
-            )}
 
             {/* Diabetes */}
             <QuestionField

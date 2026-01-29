@@ -8,7 +8,7 @@ import {
     MapPin,
     AlertCircle,
     Filter,
-    X
+    Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,11 +28,12 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { locationsService } from '@/services/locations';
 import { settingsService } from '@/services/settings';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Transaction } from '@/components/financial/types';
+import { toast } from 'sonner';
 
 interface ClosureTabProps {
     transactions: Transaction[];
@@ -175,6 +176,53 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
+    // Exportar demonstrativo como CSV
+    const handleExportCSV = () => {
+        const rows = [
+            ['Demonstrativo Financeiro'],
+            [''],
+            ['Descrição', 'Valor'],
+            ['Receita Bruta', formatCurrency(totalIncome)],
+            ['(-) Taxas de Cartão', formatCurrency(totalCardFees)],
+            ['(-) Taxa de Antecipação', formatCurrency(totalAnticipation)],
+            ['(-) Taxas de Procedimentos', formatCurrency(totalProcedureFees)],
+            [`(-) Impostos (${taxRate}%)`, formatCurrency(totalTaxes)],
+            ['(-) Despesas Operacionais', formatCurrency(totalExpenses)],
+            [''],
+            ['Receita Líquida', formatCurrency(netResult)],
+        ];
+
+        // Add expense categories
+        if (Object.keys(expensesByCategory).length > 0) {
+            rows.push(['']);
+            rows.push(['Despesas por Categoria', '']);
+            Object.entries(expensesByCategory).forEach(([cat, amount]) => {
+                rows.push([cat, formatCurrency(amount)]);
+            });
+        }
+
+        // Add payment methods breakdown
+        if (Object.keys(byMethod).length > 0) {
+            rows.push(['']);
+            rows.push(['Receita por Forma de Pagamento', '']);
+            Object.entries(byMethod).forEach(([method, amount]) => {
+                rows.push([method, formatCurrency(amount)]);
+            });
+        }
+
+        const csvContent = rows.map(row => row.join(';')).join('\n');
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const date = new Date().toISOString().split('T')[0];
+        link.download = `demonstrativo-financeiro-${date}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success('Demonstrativo exportado com sucesso!');
+    };
 
     const getIcon = (method: string) => {
         switch (method) {
@@ -266,18 +314,27 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
             {/* Financial Statement (Demonstrativo Financeiro) */}
             <Card className="border-gray-200 shadow-sm">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-semibold text-gray-900">Demonstrativo Financeiro</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-base font-semibold text-gray-900">Demonstrativo Financeiro</CardTitle>
+                            <CardDescription className="text-xs">Resumo do período (estimado)</CardDescription>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleExportCSV}
+                            className="gap-2"
+                        >
+                            <Download className="h-4 w-4" />
+                            Exportar
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="mb-6">
-                        <div className="flex justify-between items-center mb-2">
+                    <div className="mb-4 pb-4 border-b">
+                        <div className="flex justify-between items-center">
                             <span className="text-gray-900 font-medium">Receita Bruta</span>
-                            <span className="text-gray-900 font-bold">{formatCurrency(totalIncome)}</span>
-                        </div>
-                        <Progress value={100} className="h-1.5 bg-gray-100" />
-                        {/* Green bar override inside Progress component might be needed or use inline style for simple bar */}
-                        <div className="h-1.5 w-full bg-gray-100 rounded-full mt-1 overflow-hidden">
-                            <div className="h-full bg-green-500" style={{ width: '100%' }}></div>
+                            <span className="text-gray-900 font-bold text-lg">{formatCurrency(totalIncome)}</span>
                         </div>
                     </div>
 
@@ -306,16 +363,18 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                         </div>
                     </div>
 
-                    <div className="h-px bg-gray-200 mb-4 border-t border-dashed" />
+                    <div className="h-px bg-gray-300 my-4" />
 
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-gray-900 font-bold text-lg">Receita Líquida</span>
-                        <span className={`text-xl font-bold ${netResult >= 0 ? 'text-[#a03f3d]' : 'text-red-600'}`}>
-                            {formatCurrency(netResult)}
-                        </span>
-                    </div>
-                    <div className="text-right text-xs text-gray-400">
-                        (Bruto - Taxas - Impostos - Despesas)
+                    <div className="bg-gray-50 rounded-lg p-4 -mx-2">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <span className="text-gray-900 font-bold text-lg">Receita Líquida</span>
+                                <p className="text-xs text-gray-500 mt-0.5">Bruta - taxas - impostos - despesas</p>
+                            </div>
+                            <span className={`text-2xl font-bold ${netResult >= 0 ? 'text-[#a03f3d]' : 'text-red-600'}`}>
+                                {formatCurrency(netResult)}
+                            </span>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

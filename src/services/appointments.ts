@@ -121,6 +121,54 @@ export const appointmentsService = {
     if (error) throw error;
     const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
     return uniqueDates;
+  },
+
+  async search(query: string): Promise<AppointmentWithPatient[]> {
+    // Search by patient name using inner join filter
+    const { data: byPatient, error: error1 } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        patients!inner (name, phone)
+      `)
+      .ilike('patients.name', `%${query}%`)
+      .order('date', { ascending: false })
+      .order('time', { ascending: false })
+      .limit(15);
+
+    if (error1) throw error1;
+
+    // Search by procedure name
+    const { data: byProcedure, error: error2 } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        patients (name, phone)
+      `)
+      .ilike('procedure_name', `%${query}%`)
+      .order('date', { ascending: false })
+      .order('time', { ascending: false })
+      .limit(10);
+
+    if (error2) throw error2;
+
+    // Merge and deduplicate results
+    const merged = [...(byPatient || []), ...(byProcedure || [])];
+    const uniqueIds = new Set<string>();
+    const unique = merged.filter(item => {
+      if (uniqueIds.has(item.id)) return false;
+      uniqueIds.add(item.id);
+      return true;
+    });
+
+    // Sort by date descending and limit to 20
+    return unique
+      .sort((a, b) => {
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        return (b.time || '').localeCompare(a.time || '');
+      })
+      .slice(0, 20);
   }
 };
 

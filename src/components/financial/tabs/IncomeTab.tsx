@@ -288,11 +288,12 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            {/* Summary Cards - 2 cards principais */}
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                {/* Card Receita */}
                 <Card className={`relative group border-green-100 shadow-sm bg-gradient-to-br from-white to-green-50/30 transition-all ${hiddenCards.has('total') ? 'opacity-50' : ''}`}>
                     <button
-                        onClick={() => toggleCardVisibility('total')}
+                        onClick={(e) => { e.stopPropagation(); toggleCardVisibility('total'); }}
                         className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
                         title={hiddenCards.has('total') ? 'Mostrar' : 'Ocultar'}
                     >
@@ -310,52 +311,32 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         <div className={`text-2xl font-bold text-green-600 ${hiddenCards.has('total') ? 'blur-md select-none' : ''}`}>
                             {formatCurrency(displayTotal)}
                         </div>
-                        {subTab === 'net' && (
-                            <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('total') ? 'blur-md select-none' : ''}`}>
-                                Deduções: {formatCurrency(totalGrossIncome - totalNetIncome)}
-                            </p>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card className={`relative group border-blue-100 shadow-sm bg-gradient-to-br from-white to-blue-50/30 transition-all ${hiddenCards.has('count') ? 'opacity-50' : ''}`}>
-                    <button
-                        onClick={() => toggleCardVisibility('count')}
-                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
-                        title={hiddenCards.has('count') ? 'Mostrar' : 'Ocultar'}
-                    >
-                        {hiddenCards.has('count') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
-                    </button>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Transações
-                        </CardTitle>
-                        <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <ArrowUpRight className="h-4 w-4 text-blue-600" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold text-blue-600 ${hiddenCards.has('count') ? 'blur-md select-none' : ''}`}>
-                            {transactionCount}
-                        </div>
-                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('count') ? 'blur-md select-none' : ''}`}>
-                            receitas no período
+                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('total') ? 'blur-md select-none' : ''}`}>
+                            {subTab === 'net' ? `Deduções: ${formatCurrency(totalGrossIncome - totalNetIncome)}` : `${transactionCount} receitas no período`}
                         </p>
                     </CardContent>
                 </Card>
 
+                {/* Card Ticket Médio */}
                 <Card className={`relative group border-purple-100 shadow-sm bg-gradient-to-br from-white to-purple-50/30 transition-all ${hiddenCards.has('average') ? 'opacity-50' : ''}`}>
                     <button
-                        onClick={() => toggleCardVisibility('average')}
+                        onClick={(e) => { e.stopPropagation(); toggleCardVisibility('average'); }}
                         className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
                         title={hiddenCards.has('average') ? 'Mostrar' : 'Ocultar'}
                     >
                         {hiddenCards.has('average') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
                     </button>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Ticket Médio
-                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Ticket Médio
+                            </CardTitle>
+                            {highestTransaction > 0 && (
+                                <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium" title={`Maior: ${formatCurrency(highestTransaction)}`}>
+                                    máx {formatCurrency(highestTransaction).replace('R$', '').trim()}
+                                </span>
+                            )}
+                        </div>
                         <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
                             <TrendingUp className="h-4 w-4 text-purple-600" />
                         </div>
@@ -369,130 +350,18 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                         </p>
                     </CardContent>
                 </Card>
-
-                <Card className={`relative group border-amber-100 shadow-sm bg-gradient-to-br from-white to-amber-50/30 transition-all ${hiddenCards.has('highest') ? 'opacity-50' : ''}`}>
-                    <button
-                        onClick={() => toggleCardVisibility('highest')}
-                        className="absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
-                        title={hiddenCards.has('highest') ? 'Mostrar' : 'Ocultar'}
-                    >
-                        {hiddenCards.has('highest') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
-                    </button>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Maior Receita
-                        </CardTitle>
-                        <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                            <TrendingUp className="h-4 w-4 text-amber-600" />
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className={`text-2xl font-bold text-amber-600 ${hiddenCards.has('highest') ? 'blur-md select-none' : ''}`}>
-                            {formatCurrency(highestTransaction)}
-                        </div>
-                        <p className={`text-xs text-muted-foreground mt-1 ${hiddenCards.has('highest') ? 'blur-md select-none' : ''}`}>
-                            valor máximo
-                        </p>
-                    </CardContent>
-                </Card>
             </div>
 
-            {/* Breakdowns */}
-            <div className="grid gap-6 md:grid-cols-2">
-                {/* Revenue by Location */}
-                {Object.keys(incomeByLocation).length > 0 && (
-                    <Card className={`relative group transition-all ${hiddenCards.has('location') ? 'opacity-50' : ''}`}>
-                        <button
-                            onClick={() => toggleCardVisibility('location')}
-                            className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
-                            title={hiddenCards.has('location') ? 'Mostrar' : 'Ocultar'}
-                        >
-                            {hiddenCards.has('location') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
-                        </button>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-medium">Receita por Local de Atendimento</CardTitle>
-                        </CardHeader>
-                        <CardContent className={hiddenCards.has('location') ? 'blur-md select-none' : ''}>
-                            <ScrollArea className="h-[180px] w-full pr-4">
-                                <div className="space-y-4">
-                                    {Object.entries(incomeByLocation).sort((a, b) => b[1] - a[1]).map(([loc, amount]) => (
-                                        <div key={loc} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-green-50 rounded-md">
-                                                    <MapPin className="h-3.5 w-3.5 text-green-600" />
-                                                </div>
-                                                <span className="text-sm font-medium truncate max-w-[150px]" title={loc}>{loc}</span>
-                                            </div>
-                                            <span className="text-sm font-bold text-green-600">{formatCurrency(amount)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Revenue by Payment Method */}
-                {Object.keys(incomeByMethod).length > 0 && (
-                    <Card className={`relative group transition-all ${hiddenCards.has('method') ? 'opacity-50' : ''}`}>
-                        <button
-                            onClick={() => toggleCardVisibility('method')}
-                            className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
-                            title={hiddenCards.has('method') ? 'Mostrar' : 'Ocultar'}
-                        >
-                            {hiddenCards.has('method') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
-                        </button>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-medium">Receita por Forma de Pagamento</CardTitle>
-                        </CardHeader>
-                        <CardContent className={hiddenCards.has('method') ? 'blur-md select-none' : ''}>
-                            <ScrollArea className="h-[180px] w-full pr-4">
-                                <div className="space-y-4">
-                                    {Object.entries(incomeByMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => {
-                                        const getMethodStyle = (m: string) => {
-                                            if (m.includes('Crédito')) return { bg: 'bg-purple-50', color: 'text-purple-600', bar: 'bg-purple-500' };
-                                            if (m.includes('Débito')) return { bg: 'bg-blue-50', color: 'text-blue-600', bar: 'bg-blue-500' };
-                                            if (m === 'Pix') return { bg: 'bg-teal-50', color: 'text-teal-600', bar: 'bg-teal-500' };
-                                            if (m === 'Dinheiro') return { bg: 'bg-green-50', color: 'text-green-600', bar: 'bg-green-500' };
-                                            return { bg: 'bg-gray-50', color: 'text-gray-600', bar: 'bg-gray-500' };
-                                        };
-                                        const style = getMethodStyle(method);
-                                        const percentage = displayTotal > 0 ? ((amount / displayTotal) * 100).toFixed(1) : '0';
-                                        return (
-                                            <div key={method} className="space-y-1">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`p-1.5 ${style.bg} rounded-md`}>
-                                                            <ArrowUpRight className={`h-3.5 w-3.5 ${style.color}`} />
-                                                        </div>
-                                                        <span className="text-sm font-medium">{method}</span>
-                                                    </div>
-                                                    <span className="text-sm font-bold text-green-600">{formatCurrency(amount)}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2 pl-8">
-                                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full ${style.bar} rounded-full transition-all`}
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs text-muted-foreground w-12 text-right">{percentage}%</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </ScrollArea>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-
-            {/* List */}
-            <div className="space-y-4">
+            {/* Título das Transações */}
+            <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-muted-foreground">Transações ({filteredTransactions.length})</h3>
+            </div>
 
-                <div className="bg-white rounded-lg border divide-y">
+            {/* Layout 2 colunas: Lista à esquerda, Breakdowns à direita */}
+            <div className="grid gap-6 lg:grid-cols-5 items-start">
+                {/* Coluna Esquerda: Lista de Transações */}
+                <div className="lg:col-span-3">
+                    <div className="bg-white rounded-lg border divide-y max-h-[500px] overflow-y-auto">
                     {filteredTransactions.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground italic">
                             Nenhuma transação encontrada.
@@ -586,6 +455,94 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 </div>
                             </div>
                         ))
+                    )}
+                    </div>
+                </div>
+
+                {/* Coluna Direita: Breakdowns */}
+                <div className="lg:col-span-2 space-y-4">
+                    {/* Revenue by Payment Method */}
+                    {Object.keys(incomeByMethod).length > 0 && (
+                        <Card className={`relative group transition-all ${hiddenCards.has('method') ? 'opacity-50' : ''}`}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleCardVisibility('method'); }}
+                                className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                                title={hiddenCards.has('method') ? 'Mostrar' : 'Ocultar'}
+                            >
+                                {hiddenCards.has('method') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                            </button>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium">Receita por Forma de Pagamento</CardTitle>
+                            </CardHeader>
+                            <CardContent className={hiddenCards.has('method') ? 'blur-md select-none' : ''}>
+                                <div className="space-y-3">
+                                    {Object.entries(incomeByMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => {
+                                        const getMethodStyle = (m: string) => {
+                                            if (m.includes('Crédito')) return { bg: 'bg-purple-50', color: 'text-purple-600', bar: 'bg-purple-500' };
+                                            if (m.includes('Débito')) return { bg: 'bg-blue-50', color: 'text-blue-600', bar: 'bg-blue-500' };
+                                            if (m === 'Pix') return { bg: 'bg-teal-50', color: 'text-teal-600', bar: 'bg-teal-500' };
+                                            if (m === 'Dinheiro') return { bg: 'bg-green-50', color: 'text-green-600', bar: 'bg-green-500' };
+                                            return { bg: 'bg-gray-50', color: 'text-gray-600', bar: 'bg-gray-500' };
+                                        };
+                                        const style = getMethodStyle(method);
+                                        const percentage = displayTotal > 0 ? ((amount / displayTotal) * 100).toFixed(0) : '0';
+                                        return (
+                                            <div key={method} className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`p-1 ${style.bg} rounded`}>
+                                                            <ArrowUpRight className={`h-3 w-3 ${style.color}`} />
+                                                        </div>
+                                                        <span className="text-xs font-medium">{method}</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-green-600">{formatCurrency(amount)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-full ${style.bar} rounded-full transition-all`}
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-[10px] text-muted-foreground w-8 text-right">{percentage}%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Revenue by Location */}
+                    {Object.keys(incomeByLocation).length > 0 && (
+                        <Card className={`relative group transition-all ${hiddenCards.has('location') ? 'opacity-50' : ''}`}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleCardVisibility('location'); }}
+                                className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                                title={hiddenCards.has('location') ? 'Mostrar' : 'Ocultar'}
+                            >
+                                {hiddenCards.has('location') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                            </button>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium">Receita por Local</CardTitle>
+                            </CardHeader>
+                            <CardContent className={hiddenCards.has('location') ? 'blur-md select-none' : ''}>
+                                <div className="space-y-2">
+                                    {Object.entries(incomeByLocation).sort((a, b) => b[1] - a[1]).map(([loc, amount]) => (
+                                        <div key={loc} className="flex items-center justify-between py-1">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1 bg-green-50 rounded">
+                                                    <MapPin className="h-3 w-3 text-green-600" />
+                                                </div>
+                                                <span className="text-xs font-medium truncate max-w-[120px]" title={loc}>{loc}</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-green-600">{formatCurrency(amount)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Settings, Calendar, Filter, X, ChevronDown, RefreshCw } from 'lucide-react';
+import { Settings, Calendar, ChevronDown, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,11 +10,10 @@ import { ClosureTab } from '@/components/financial/tabs/ClosureTab';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // Helper to format date to YYYY-MM-DD
 const formatDateInput = (date: Date) => {
@@ -41,17 +40,18 @@ export default function Financial() {
 
   const [startDate, setStartDate] = useState(formatDateInput(getDefaultStartDate()));
   const [endDate, setEndDate] = useState(formatDateInput(getDefaultEndDate()));
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [activePreset, setActivePreset] = useState<string>('month');
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [periodDropdownOpen, setPeriodDropdownOpen] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadData();
     setIsRefreshing(false);
+    toast.success('Dados atualizados');
   };
 
   // Quick presets
@@ -84,7 +84,7 @@ export default function Financial() {
     setStartDate(formatDateInput(start));
     setEndDate(formatDateInput(end));
     setActivePreset(preset);
-    setShowFilterModal(false);
+    setPeriodDropdownOpen(false);
   };
 
   // Get preset label
@@ -123,143 +123,142 @@ export default function Financial() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Financeiro</h1>
-          <p className="text-muted-foreground mt-1">Controle completo de receitas e despesas</p>
+      {/* Header Unificado */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <DollarSign className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Financeiro</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">Controle claro de receitas e despesas do seu consultório</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {/* Botão Atualizar */}
           <Button
             variant="outline"
-            size="icon"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="h-10 w-10"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          {/* Filter Button */}
-          <Button
-            variant="outline"
-            onClick={() => setShowFilterModal(true)}
             className="gap-2"
           >
-            <Filter className="w-4 h-4" />
-            <span className="hidden sm:inline">{getPresetLabel()}</span>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-              {formatDateDisplay(startDate)} - {formatDateDisplay(endDate)}
-            </span>
-            <ChevronDown className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/financeiro/configuracoes'}>
-            <Settings className="w-4 h-4 mr-2" />
-            Configurações
+
+          {/* Seletor de Período Inline */}
+          <Popover open={periodDropdownOpen} onOpenChange={setPeriodDropdownOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium">{getPresetLabel()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded hidden sm:inline">
+                    {formatDateDisplay(startDate)} - {formatDateDisplay(endDate)}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4" align="end">
+              <div className="space-y-4">
+                {/* Presets rápidos */}
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Período Rápido</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: 'today', label: 'Hoje' },
+                      { key: 'week', label: 'Esta Semana' },
+                      { key: 'month', label: 'Este Mês' },
+                      { key: 'year', label: 'Este Ano' },
+                    ].map(({ key, label }) => (
+                      <Button
+                        key={key}
+                        variant={activePreset === key ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPreset(key as 'today' | 'week' | 'month' | 'year')}
+                        className={activePreset === key ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Divisor */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-popover px-2 text-muted-foreground">ou personalizado</span>
+                  </div>
+                </div>
+
+                {/* Período Personalizado */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">De</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setActivePreset('custom');
+                      }}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Até</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setActivePreset('custom');
+                      }}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full bg-[#a03f3d] hover:bg-[#8b3634]"
+                  size="sm"
+                  onClick={() => setPeriodDropdownOpen(false)}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Botão Configurações */}
+          <Button variant="outline" onClick={() => window.location.href = '/financeiro/configuracoes'} className="gap-2">
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Configurações</span>
           </Button>
         </div>
       </div>
 
-      {/* Filter Modal */}
-      <Dialog open={showFilterModal} onOpenChange={setShowFilterModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtrar por Período
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Quick Presets */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Período Rápido</label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={activePreset === 'today' ? 'default' : 'outline'}
-                  onClick={() => setPreset('today')}
-                  className={activePreset === 'today' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
-                >
-                  Hoje
-                </Button>
-                <Button
-                  variant={activePreset === 'week' ? 'default' : 'outline'}
-                  onClick={() => setPreset('week')}
-                  className={activePreset === 'week' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
-                >
-                  Esta Semana
-                </Button>
-                <Button
-                  variant={activePreset === 'month' ? 'default' : 'outline'}
-                  onClick={() => setPreset('month')}
-                  className={activePreset === 'month' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
-                >
-                  Este Mês
-                </Button>
-                <Button
-                  variant={activePreset === 'year' ? 'default' : 'outline'}
-                  onClick={() => setPreset('year')}
-                  className={activePreset === 'year' ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
-                >
-                  Este Ano
-                </Button>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">ou</span>
-              </div>
-            </div>
-
-            {/* Custom Date Range */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-muted-foreground">Período Personalizado</label>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">De</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      setActivePreset('custom');
-                    }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Até</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => {
-                      setEndDate(e.target.value);
-                      setActivePreset('custom');
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Apply Button for custom dates */}
-            <Button
-              className="w-full bg-[#a03f3d] hover:bg-[#8b3634]"
-              onClick={() => setShowFilterModal(false)}
-            >
-              Aplicar Filtro
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
+      {/* Abas com Ícones */}
       <Tabs defaultValue="income" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
-          <TabsTrigger value="income">Receitas</TabsTrigger>
-          <TabsTrigger value="expenses">Despesas</TabsTrigger>
-          <TabsTrigger value="closure">Fechamento</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+          <TabsTrigger value="income" className="gap-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200">
+            <TrendingUp className="w-4 h-4" />
+            <span>Receitas</span>
+          </TabsTrigger>
+          <TabsTrigger value="expenses" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border-red-200">
+            <TrendingDown className="w-4 h-4" />
+            <span>Despesas</span>
+          </TabsTrigger>
+          <TabsTrigger value="closure" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200">
+            <ClipboardList className="w-4 h-4" />
+            <span>Fechamento</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="income">

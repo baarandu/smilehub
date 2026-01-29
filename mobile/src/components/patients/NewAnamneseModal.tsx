@@ -431,24 +431,13 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
-                            label="Já foi submetido a procedimento sob anestesia local?"
+                            label="Tem histórico de reação adversa à anestesia local?"
                             value={form.localAnesthesiaHistory}
                             onValueChange={(v) => setForm({ ...form, localAnesthesiaHistory: v })}
                             details={form.localAnesthesiaHistoryDetails}
                             onDetailsChange={(t) => setForm({ ...form, localAnesthesiaHistoryDetails: t })}
-                            detailsPlaceholder="Qual procedimento?"
+                            detailsPlaceholder="Descreva a reação"
                         />
-
-                        {form.localAnesthesiaHistory && (
-                            <QuestionField
-                                label="Teve alguma reação à anestesia?"
-                                value={form.anesthesiaReaction}
-                                onValueChange={(v) => setForm({ ...form, anesthesiaReaction: v })}
-                                details={form.anesthesiaReactionDetails}
-                                onDetailsChange={(t) => setForm({ ...form, anesthesiaReactionDetails: t })}
-                                detailsPlaceholder="Qual reação?"
-                            />
-                        )}
 
                         <QuestionField
                             label="Tem diabetes?"

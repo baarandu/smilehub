@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { format, addDays, startOfMonth, endOfMonth } from 'date-fns';
+import { useState, useEffect, useRef } from 'react';
+import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentsService } from '@/services/appointments';
 import { locationsService, type Location } from '@/services/locations';
@@ -7,10 +7,12 @@ import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,11 +24,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  AgendaCalendar,
-  WeekNavigation,
-  AppointmentCard,
-  NewAppointmentDialog,
-} from '@/components/agenda';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { NewAppointmentDialog } from '@/components/agenda';
+import { cn } from '@/lib/utils';
+
+const STATUS_CONFIG = {
+  scheduled: { label: 'Agendado', color: 'bg-primary/10 text-primary border-primary/20' },
+  confirmed: { label: 'Confirmado', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+  completed: { label: 'Compareceu', color: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
+  no_show: { label: 'Não compareceu', color: 'bg-red-50 text-red-600 border-red-200' },
+  cancelled: { label: 'Cancelado', color: 'bg-gray-100 text-gray-500 border-gray-200' },
+  rescheduled: { label: 'Remarcado', color: 'bg-purple-50 text-purple-600 border-purple-200' },
+} as const;
 
 export default function Agenda() {
   const navigate = useNavigate();
@@ -40,7 +54,13 @@ export default function Agenda() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentWithPatient | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchResults, setSearchResults] = useState<AppointmentWithPatient[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   // React Query hooks for patients
   const { data: patients = [] } = usePatients();
@@ -50,12 +70,6 @@ export default function Agenda() {
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await Promise.all([loadDayAppointments(), loadMonthDates()]);
-    setIsRefreshing(false);
-  };
 
   useEffect(() => {
     loadDayAppointments();
@@ -67,6 +81,42 @@ export default function Agenda() {
 
   useEffect(() => {
     loadLocations();
+  }, []);
+
+  // Global search
+  useEffect(() => {
+    const performSearch = async () => {
+      if (debouncedSearch.length < 2) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await appointmentsService.search(debouncedSearch);
+        setSearchResults(results);
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Error searching appointments:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    performSearch();
+  }, [debouncedSearch]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadDayAppointments = async () => {
@@ -106,7 +156,11 @@ export default function Agenda() {
   };
 
   const dateString = format(selectedDate, 'yyyy-MM-dd');
-  const dayAppointments = appointments.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  // Filter appointments by status only (search is now global)
+  const filteredAppointments = appointments
+    .filter(apt => statusFilter === 'all' || apt.status === statusFilter)
+    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
   const handleStatusChange = async (appointmentId: string, status: AppointmentWithPatient['status']) => {
     try {
@@ -196,8 +250,16 @@ export default function Agenda() {
     }
   };
 
-  const handleWeekChange = (days: number) => {
+  const handleDayChange = (days: number) => {
     setSelectedDate(addDays(selectedDate, days));
+  };
+
+  const handleSearchResultClick = (appointment: AppointmentWithPatient) => {
+    const appointmentDate = parseISO(appointment.date);
+    setSelectedDate(appointmentDate);
+    setCalendarMonth(appointmentDate);
+    setSearchQuery('');
+    setShowSearchResults(false);
   };
 
   const handleEditAppointment = (appointment: AppointmentWithPatient) => {
@@ -229,7 +291,7 @@ export default function Agenda() {
 
   // Patient creation flow handlers
   const handleRequestCreatePatient = (prefillName: string) => {
-    setDialogOpen(false); // Close appointment dialog
+    setDialogOpen(false);
     setPatientForm({ name: prefillName, phone: '' });
     setPatientDialogOpen(true);
   };
@@ -268,26 +330,106 @@ export default function Agenda() {
     );
   };
 
+  const hasAppointments = (date: Date) => {
+    return datesWithAppointments.some(
+      d => format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Agenda</h1>
           <p className="text-muted-foreground mt-1">
             {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="h-10 w-10"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
+
+        <div className="flex items-center gap-3">
+          {/* Search */}
+          <div className="relative" ref={searchRef}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar paciente, procedimento..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+              className="pl-9 w-[280px] bg-card"
+            />
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-elevated z-50 max-h-[400px] overflow-y-auto">
+                {isSearching ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    Buscando...
+                  </div>
+                ) : searchResults.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    Nenhum resultado encontrado
+                  </div>
+                ) : (
+                  <div className="py-1">
+                    <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
+                      {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''} encontrado{searchResults.length !== 1 ? 's' : ''}
+                    </div>
+                    {searchResults.map((result) => (
+                      <button
+                        key={result.id}
+                        onClick={() => handleSearchResultClick(result)}
+                        className="w-full px-3 py-3 flex items-center gap-3 hover:bg-accent/50 transition-colors text-left"
+                      >
+                        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Clock className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground text-sm truncate">
+                            {result.patients?.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              {format(parseISO(result.date), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                            <span>-</span>
+                            <span>{result.time?.slice(0, 5)}</span>
+                            {result.procedure_name && (
+                              <>
+                                <span>-</span>
+                                <span className="truncate">{result.procedure_name}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className={cn(
+                            "text-xs px-2 py-1 rounded-full border",
+                            STATUS_CONFIG[result.status]?.color
+                          )}>
+                            {STATUS_CONFIG[result.status]?.label}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Day Navigation */}
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" onClick={() => handleDayChange(-1)} className="h-10 w-10">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => handleDayChange(1)} className="h-10 w-10">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* New Appointment Button */}
           <NewAppointmentDialog
             open={dialogOpen}
             onOpenChange={(open) => {
@@ -309,51 +451,209 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Calendar */}
-      <AgendaCalendar
-        selectedDate={selectedDate}
-        calendarMonth={calendarMonth}
-        datesWithAppointments={datesWithAppointments}
-        onDateSelect={handleDateSelect}
-        onMonthChange={setCalendarMonth}
-        onDayDoubleClick={() => {
-          setEditingAppointment(null);
-          setDialogOpen(true);
-        }}
-      />
+      {/* Main Content - Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
+        {/* Left Column - Calendar */}
+        <div className="bg-card rounded-xl p-5 shadow-card border border-border h-fit">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-foreground">Calendário</h2>
+              <p className="text-sm text-muted-foreground">Selecione um dia para ver a agenda.</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
 
-      {/* Week Navigation */}
-      <WeekNavigation
-        selectedDate={selectedDate}
-        datesWithAppointments={datesWithAppointments}
-        onDateSelect={setSelectedDate}
-        onWeekChange={handleWeekChange}
-      />
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            month={calendarMonth}
+            onMonthChange={setCalendarMonth}
+            locale={ptBR}
+            className="w-full"
+            classNames={{
+              months: "flex flex-col w-full",
+              month: "space-y-4 w-full",
+              caption: "flex justify-center pt-1 pb-3 relative items-center",
+              caption_label: "text-sm font-semibold",
+              nav_button: "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-accent rounded-md transition-colors",
+              nav_button_previous: "absolute left-1",
+              nav_button_next: "absolute right-1",
+              table: "w-full border-collapse",
+              head_row: "flex w-full justify-between mb-1",
+              head_cell: "text-muted-foreground rounded-md flex-1 font-medium text-xs text-center py-1.5 uppercase",
+              row: "flex w-full justify-between mt-0.5",
+              cell: "flex-1 text-center text-sm p-0.5 relative [&:has([aria-selected])]:bg-accent/50 rounded-md",
+              day: "h-9 w-full p-0 font-normal aria-selected:opacity-100 hover:bg-accent rounded-md transition-colors flex items-center justify-center cursor-pointer text-sm",
+              day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
+              day_today: "bg-accent text-accent-foreground font-semibold",
+              day_outside: "text-muted-foreground opacity-40",
+              day_disabled: "text-muted-foreground opacity-50",
+            }}
+            components={{
+              DayContent: ({ date }) => (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <span>{date.getDate()}</span>
+                  {hasAppointments(date) && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                  )}
+                </div>
+              ),
+            }}
+          />
 
-      {/* Appointments List */}
-      {loading ? (
-        <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
-          <p className="text-muted-foreground">Carregando...</p>
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-border">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+              Confirmado
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+              Agendado
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              Não compareceu
+            </div>
+          </div>
         </div>
-      ) : dayAppointments.length === 0 ? (
-        <div className="bg-card rounded-xl p-12 text-center shadow-card border border-border">
-          <p className="text-muted-foreground">Nenhuma consulta agendada para este dia</p>
+
+        {/* Right Column - Appointments List */}
+        <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
+          {/* List Header */}
+          <div className="p-5 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-foreground">Consultas do dia</h2>
+                <p className="text-sm text-muted-foreground">
+                  {format(selectedDate, "d MMM yyyy", { locale: ptBR })}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">
+                  {filteredAppointments.length} atendimento{filteredAppointments.length !== 1 ? 's' : ''}
+                </span>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[120px] h-8 text-xs">
+                    <SelectValue placeholder="Filtros" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="scheduled">Agendados</SelectItem>
+                    <SelectItem value="confirmed">Confirmados</SelectItem>
+                    <SelectItem value="completed">Compareceu</SelectItem>
+                    <SelectItem value="no_show">Não compareceu</SelectItem>
+                    <SelectItem value="cancelled">Cancelados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Appointments */}
+          <div className="p-5">
+            {loading ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">Carregando...</p>
+              </div>
+            ) : filteredAppointments.length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  {statusFilter !== 'all'
+                    ? 'Nenhuma consulta encontrada com o filtro aplicado'
+                    : 'Nenhuma consulta agendada para este dia'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredAppointments.map((appointment, index) => (
+                  <div
+                    key={appointment.id}
+                    className="flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-colors animate-slide-up"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    {/* Time */}
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <span className="text-lg font-bold text-primary">
+                          {appointment.time?.slice(0, 5)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Patient Info */}
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}
+                    >
+                      <p className="font-semibold text-foreground truncate">
+                        {appointment.patients?.name}
+                      </p>
+                      {appointment.procedure_name && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {appointment.procedure_name}
+                        </p>
+                      )}
+                      {appointment.notes && (
+                        <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                          {appointment.notes}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className="flex-shrink-0">
+                      <Select
+                        value={appointment.status}
+                        onValueChange={(v) => handleStatusChange(appointment.id, v as AppointmentWithPatient['status'])}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "w-[140px] h-8 text-xs border font-medium",
+                            STATUS_CONFIG[appointment.status]?.color
+                          )}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="scheduled">Agendado</SelectItem>
+                          <SelectItem value="confirmed">Confirmado</SelectItem>
+                          <SelectItem value="completed">Compareceu</SelectItem>
+                          <SelectItem value="no_show">Não Compareceu</SelectItem>
+                          <SelectItem value="cancelled">Cancelado</SelectItem>
+                          <SelectItem value="rescheduled">Remarcado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => handleEditAppointment(appointment)}
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <Bell className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {dayAppointments.map((appointment, index) => (
-            <AppointmentCard
-              key={appointment.id}
-              appointment={appointment}
-              index={index}
-              onStatusChange={handleStatusChange}
-              onPatientClick={(patientId) => navigate(`/pacientes/${patientId}`)}
-              onEdit={handleEditAppointment}
-              onDelete={handleDeleteAppointment}
-            />
-          ))}
-        </div>
-      )}
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

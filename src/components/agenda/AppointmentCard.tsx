@@ -58,7 +58,7 @@ export function AppointmentCard({
             value={appointment.status}
             onValueChange={(v) => onStatusChange(appointment.id, v as AppointmentWithPatient['status'])}
           >
-            <SelectTrigger className={cn("w-[130px] h-8 text-xs", STATUS_CONFIG[appointment.status]?.class)}>
+            <SelectTrigger className={cn("w-[145px] h-8 text-xs [&>span:first-child]:flex-1 [&>span:first-child]:text-center", STATUS_CONFIG[appointment.status]?.class)}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

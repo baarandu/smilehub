@@ -51,6 +51,7 @@ import { locationsService } from '@/services/locations';
 import { toast } from 'sonner';
 import { NewExpenseForm } from './NewExpenseForm'; // We'll create this form component next
 import { supabase } from '@/lib/supabase';
+import { FinancialInsights } from '../FinancialInsights';
 
 interface ExpensesTabProps {
     transactions: Transaction[];
@@ -224,97 +225,103 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Despesas Manuais</p>
-                        <p className="text-2xl font-bold text-red-600">{formatCurrency(totalManualExpenses)}</p>
+            {/* Summary Cards - 3 cards horizontais */}
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Despesas manuais</p>
+                        <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
+                            <TrendingDown className="h-4 w-4 text-red-600" />
+                        </div>
                     </div>
-                    <div className="h-10 w-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <TrendingDown className="h-5 w-5 text-red-600" />
-                    </div>
+                    <p className="text-2xl font-bold text-red-600">{formatCurrency(totalManualExpenses)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">no período</p>
                 </div>
 
-                <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Descontos Automáticos</p>
-                        <p className="text-2xl font-bold text-orange-600">{formatCurrency(automaticDeductions.total)}</p>
+                <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Descontos auto</p>
+                        <div className="h-8 w-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <Percent className="h-4 w-4 text-orange-600" />
+                        </div>
                     </div>
-                    <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Percent className="h-5 w-5 text-orange-600" />
-                    </div>
+                    <p className="text-2xl font-bold text-orange-600">{formatCurrency(automaticDeductions.total)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">taxas e antecipações</p>
                 </div>
 
-                <div className="bg-white rounded-xl border border-red-200 p-4 shadow-sm flex items-center justify-between sm:col-span-2 lg:col-span-1">
-                    <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Despesas</p>
-                        <p className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</p>
+                <div className="bg-white rounded-xl border border-red-200 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium text-muted-foreground">Total despesas</p>
+                        <div className="h-8 w-8 bg-red-200 rounded-lg flex items-center justify-center">
+                            <Receipt className="h-4 w-4 text-red-700" />
+                        </div>
                     </div>
-                    <div className="h-10 w-10 bg-red-200 rounded-lg flex items-center justify-center">
-                        <Receipt className="h-5 w-5 text-red-700" />
-                    </div>
+                    <p className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">consolidado</p>
                 </div>
             </div>
 
-            {/* Automatic Deductions Section */}
-            {automaticDeductions.total > 0 && (
-                <div className="bg-orange-50/50 rounded-xl border border-orange-100 p-4">
-                    <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
-                        <Percent className="h-4 w-4" />
-                        Descontos Automáticos (Taxas e Impostos)
-                    </h3>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {automaticDeductions.cardFees > 0 && (
-                            <div className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                                        <CreditCard className="h-4 w-4 text-blue-600" />
+            {/* Layout 2 colunas: Lista à esquerda, Insights à direita */}
+            <div className="grid gap-6 lg:grid-cols-5">
+                {/* Coluna Esquerda: Lista de Despesas */}
+                <div className="lg:col-span-3 space-y-4">
+                    {/* Automatic Deductions Section */}
+                    {automaticDeductions.total > 0 && (
+                        <div className="bg-orange-50/50 rounded-xl border border-orange-100 p-4">
+                            <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                                <Percent className="h-4 w-4" />
+                                Descontos Automáticos
+                            </h3>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                                {automaticDeductions.cardFees > 0 && (
+                                    <div className="bg-white rounded-lg p-2.5 border border-orange-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-7 w-7 bg-blue-100 rounded flex items-center justify-center">
+                                                <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-foreground">Taxa de Cartão</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-red-600">- {formatCurrency(automaticDeductions.cardFees)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-foreground">Taxa de Cartão</p>
-                                        <p className="text-xs text-muted-foreground">Débito/Crédito</p>
-                                    </div>
-                                </div>
-                                <span className="font-bold text-red-600">- {formatCurrency(automaticDeductions.cardFees)}</span>
-                            </div>
-                        )}
+                                )}
 
-                        {automaticDeductions.taxes > 0 && (
-                            <div className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                        <Receipt className="h-4 w-4 text-purple-600" />
+                                {automaticDeductions.taxes > 0 && (
+                                    <div className="bg-white rounded-lg p-2.5 border border-orange-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-7 w-7 bg-purple-100 rounded flex items-center justify-center">
+                                                <Receipt className="h-3.5 w-3.5 text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-foreground">Impostos</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-red-600">- {formatCurrency(automaticDeductions.taxes)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-foreground">Impostos</p>
-                                        <p className="text-xs text-muted-foreground">Retenção na fonte</p>
-                                    </div>
-                                </div>
-                                <span className="font-bold text-red-600">- {formatCurrency(automaticDeductions.taxes)}</span>
-                            </div>
-                        )}
+                                )}
 
-                        {Object.entries(automaticDeductions.locationBreakdown).map(([location, amount]) => (
-                            <div key={location} className="bg-white rounded-lg p-3 border border-orange-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
-                                        <MapPin className="h-4 w-4 text-[#a03f3d]" />
+                                {Object.entries(automaticDeductions.locationBreakdown).map(([location, amount]) => (
+                                    <div key={location} className="bg-white rounded-lg p-2.5 border border-orange-100 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-7 w-7 bg-red-100 rounded flex items-center justify-center">
+                                                <MapPin className="h-3.5 w-3.5 text-[#a03f3d]" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-foreground truncate max-w-[100px]" title={location}>{location}</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-red-600">- {formatCurrency(amount)}</span>
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-foreground">Taxa do Local</p>
-                                        <p className="text-xs text-muted-foreground">{location}</p>
-                                    </div>
-                                </div>
-                                <span className="font-bold text-red-600">- {formatCurrency(amount)}</span>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
-            )}
+                        </div>
+                    )}
 
-            {/* List */}
-            <div className="bg-white rounded-lg border divide-y">
+                    {/* Lista de Despesas */}
+                    <div className="space-y-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">Despesas manuais ({filtered.length})</h3>
+                        <div className="bg-white rounded-lg border divide-y max-h-[400px] overflow-y-auto">
                 {filtered.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground italic">
                         Nenhuma despesa encontrada.
@@ -386,6 +393,14 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         </div>
                     ))
                 )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Coluna Direita: Insights */}
+                <div className="lg:col-span-2">
+                    <FinancialInsights transactions={transactions} />
+                </div>
             </div>
 
             {/* Expense Detail Modal */}
