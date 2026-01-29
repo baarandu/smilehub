@@ -121,25 +121,29 @@ export function PJSourcesManager({ sources, onUpdated }: PJSourcesManagerProps) 
 
   return (
     <>
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building className="w-5 h-5 text-[#a03f3d]" />
-              <CardTitle>Fontes Pagadoras PJ (Convenios)</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-rose-100 rounded-lg">
+                <Building className="w-5 h-5 text-[#a03f3d]" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Fontes Pagadoras PJ (Convênios)</CardTitle>
+                <CardDescription className="text-sm">
+                  Cadastre convênios e empresas que efetuam pagamentos (para receitas de pessoa jurídica)
+                </CardDescription>
+              </div>
             </div>
             <Button onClick={openCreateDialog} size="sm" className="bg-[#a03f3d] hover:bg-[#8b3634]">
               <Plus className="w-4 h-4 mr-2" />
               Adicionar
             </Button>
           </div>
-          <CardDescription>
-            Cadastre convenios e empresas que efetuam pagamentos (para receitas de pessoa juridica)
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {sources.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
               Nenhuma fonte PJ cadastrada.
             </div>
           ) : (

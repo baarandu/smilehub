@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { RefreshCw, FileText } from 'lucide-react';
+import { RefreshCw, FileText, Search, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -10,6 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { FiscalSettingsTab } from '@/components/incomeTax/FiscalSettingsTab';
 import { IRIncomeTab } from '@/components/incomeTax/IRIncomeTab';
 import { IRExpensesTab } from '@/components/incomeTax/IRExpensesTab';
@@ -28,6 +35,8 @@ export default function IncomeTax() {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   // Apenas admin pode acessar esta página
   if (!isAdmin) {
@@ -111,108 +120,182 @@ export default function IncomeTax() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground flex items-center gap-2">
-            <FileText className="w-7 h-7" />
-            Imposto de Renda
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Documentação fiscal para o contador
-          </p>
-        </div>
-        <div className="flex gap-2 items-center">
-          {/* Tax Rates Config Modal */}
-          <TaxRatesConfigModal onConfigUpdated={handleTaxConfigUpdated} />
+    <div className="space-y-4">
+      {/* Main Card */}
+      <Card className="overflow-hidden">
+        <Tabs defaultValue="settings" className="w-full">
+          {/* Fixed Header */}
+          <div className="bg-gradient-to-r from-rose-50 to-white border-b px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Title Section */}
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-100 rounded-xl">
+                  <FileText className="w-6 h-6 text-[#a03f3d]" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-foreground">
+                    Imposto de Renda
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Documentação fiscal para o contador
+                  </p>
+                </div>
+              </div>
 
-          {/* Year Selector */}
-          <Select
-            value={selectedYear.toString()}
-            onValueChange={(value) => setSelectedYear(parseInt(value))}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Ano" />
-            </SelectTrigger>
-            <SelectContent>
-              {yearOptions.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              {/* Actions Section */}
+              <div className="flex gap-2 items-center flex-wrap">
+                {/* Tax Rates Config Modal - mantém o botão completo */}
+                <TaxRatesConfigModal onConfigUpdated={handleTaxConfigUpdated} />
 
-          {/* Refresh Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="h-10 w-10"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
+                {/* Year Selector */}
+                <Select
+                  value={selectedYear.toString()}
+                  onValueChange={(value) => setSelectedYear(parseInt(value))}
+                >
+                  <SelectTrigger className="w-[100px] bg-white">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Refresh Button */}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="h-10 w-10 bg-white"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </Button>
+
+                {/* Global Search */}
+                <Popover open={showSearch} onOpenChange={setShowSearch}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="bg-white">
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Busca Global</p>
+                      <Input
+                        placeholder="Buscar em todas as abas..."
+                        value={globalSearch}
+                        onChange={(e) => setGlobalSearch(e.target.value)}
+                        autoFocus
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Busque por receitas, despesas, documentos ou configurações
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Tabs Navigation */}
+            <TabsList className="w-full grid grid-cols-5 bg-white/50 p-1 h-auto mt-4">
+            <TabsTrigger
+              value="settings"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2.5"
+            >
+              Configurações
+            </TabsTrigger>
+            <TabsTrigger
+              value="documents"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2.5"
+            >
+              Documentos
+            </TabsTrigger>
+            <TabsTrigger
+              value="income"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2.5"
+            >
+              Receitas
+            </TabsTrigger>
+            <TabsTrigger
+              value="expenses"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2.5"
+            >
+              Despesas
+            </TabsTrigger>
+            <TabsTrigger
+              value="report"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm py-2.5"
+            >
+              Relatório
+            </TabsTrigger>
+          </TabsList>
         </div>
+
+        {/* Tab Contents */}
+        <div className="p-6 bg-slate-50/50">
+          <TabsContent value="settings" className="mt-0">
+            <FiscalSettingsTab
+              fiscalProfile={fiscalProfile}
+              pjSources={pjSources}
+              onProfileUpdated={handleProfileUpdated}
+              onPJSourcesUpdated={handlePJSourcesUpdated}
+            />
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-0">
+            <FiscalDocumentsTab
+              year={selectedYear}
+              taxRegime={
+                fiscalProfile?.pj_enabled
+                  ? (fiscalProfile.pj_regime_tributario as TaxRegime) || 'simples'
+                  : 'pf'
+              }
+            />
+          </TabsContent>
+
+          <TabsContent value="income" className="mt-0">
+            <IRIncomeTab
+              transactions={incomeTransactions}
+              pjSources={pjSources}
+              loading={loading}
+              onTransactionUpdated={handleTransactionUpdated}
+              globalSearch={globalSearch}
+            />
+          </TabsContent>
+
+          <TabsContent value="expenses" className="mt-0">
+            <IRExpensesTab
+              transactions={expenseTransactions}
+              loading={loading}
+              onTransactionUpdated={handleTransactionUpdated}
+              globalSearch={globalSearch}
+            />
+          </TabsContent>
+
+          <TabsContent value="report" className="mt-0">
+            <AnnualReportTab
+              year={selectedYear}
+              summary={summary}
+              loading={loading}
+              onRefresh={handleRefresh}
+            />
+          </TabsContent>
+          </div>
+        </Tabs>
+      </Card>
+
+      {/* Info Banner - At the bottom of the page */}
+      <div className="px-4 py-3 text-xs text-muted-foreground">
+        <p>
+          Esta página centraliza dados, receitas, despesas e documentos para declaração de IR.
+          Os cálculos são estimativas para planejamento e não substituem o trabalho de um contador.
+        </p>
       </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8">
-          <TabsTrigger value="settings">Configurações</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="income">Receitas</TabsTrigger>
-          <TabsTrigger value="expenses">Despesas</TabsTrigger>
-          <TabsTrigger value="report">Relatório</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="settings">
-          <FiscalSettingsTab
-            fiscalProfile={fiscalProfile}
-            pjSources={pjSources}
-            onProfileUpdated={handleProfileUpdated}
-            onPJSourcesUpdated={handlePJSourcesUpdated}
-          />
-        </TabsContent>
-
-        <TabsContent value="documents">
-          <FiscalDocumentsTab
-            year={selectedYear}
-            taxRegime={
-              fiscalProfile?.pj_enabled
-                ? (fiscalProfile.pj_regime_tributario as TaxRegime) || 'simples'
-                : 'pf'
-            }
-          />
-        </TabsContent>
-
-        <TabsContent value="income">
-          <IRIncomeTab
-            transactions={incomeTransactions}
-            pjSources={pjSources}
-            loading={loading}
-            onTransactionUpdated={handleTransactionUpdated}
-          />
-        </TabsContent>
-
-        <TabsContent value="expenses">
-          <IRExpensesTab
-            transactions={expenseTransactions}
-            loading={loading}
-            onTransactionUpdated={handleTransactionUpdated}
-          />
-        </TabsContent>
-
-        <TabsContent value="report">
-          <AnnualReportTab
-            year={selectedYear}
-            summary={summary}
-            loading={loading}
-            onRefresh={handleRefresh}
-          />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }

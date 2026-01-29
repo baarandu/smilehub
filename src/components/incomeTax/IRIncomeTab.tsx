@@ -29,6 +29,7 @@ interface IRIncomeTabProps {
   pjSources: PJSource[];
   loading: boolean;
   onTransactionUpdated: () => void;
+  globalSearch?: string;
 }
 
 const formatCurrency = (value: number) => {
@@ -45,19 +46,23 @@ export function IRIncomeTab({
   pjSources,
   loading,
   onTransactionUpdated,
+  globalSearch = '',
 }: IRIncomeTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [payerTypeFilter, setPayerTypeFilter] = useState<string>('all');
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithIR | null>(null);
   const [showFilterSection, setShowFilterSection] = useState(false);
 
+  // Combine local and global search
+  const effectiveSearch = globalSearch || searchTerm;
+
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      // Search filter
-      const searchLower = searchTerm.toLowerCase();
+      // Search filter (combines local and global search)
+      const searchLower = effectiveSearch.toLowerCase();
       const matchesSearch =
-        !searchTerm ||
+        !effectiveSearch ||
         t.description.toLowerCase().includes(searchLower) ||
         t.patient?.name?.toLowerCase().includes(searchLower) ||
         t.payer_name?.toLowerCase().includes(searchLower);
@@ -77,7 +82,7 @@ export function IRIncomeTab({
 
       return matchesSearch && matchesPayerType;
     });
-  }, [transactions, searchTerm, payerTypeFilter]);
+  }, [transactions, effectiveSearch, payerTypeFilter]);
 
   // Calculate summaries
   const summaries = useMemo(() => {
@@ -152,10 +157,13 @@ export function IRIncomeTab({
       />
 
       {/* Transactions List */}
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>Receitas</CardTitle>
+            <div>
+              <CardTitle className="text-base">Receitas</CardTitle>
+              <p className="text-sm text-muted-foreground">Confira lançamentos e revise dados faltantes</p>
+            </div>
             <div className="flex gap-2">
               <Input
                 placeholder="Buscar..."

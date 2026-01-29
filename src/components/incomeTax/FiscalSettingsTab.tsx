@@ -125,21 +125,25 @@ export function FiscalSettingsTab({
   return (
     <div className="space-y-6">
       {/* PF Section */}
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-[#a03f3d]" />
-              <CardTitle>Pessoa Física (PF)</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-rose-100 rounded-lg">
+                <User className="w-5 h-5 text-[#a03f3d]" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Pessoa Física (PF)</CardTitle>
+                <CardDescription className="text-sm">
+                  Dados do profissional para declaração como pessoa física
+                </CardDescription>
+              </div>
             </div>
             <Switch
               checked={formData.pf_enabled}
               onCheckedChange={(checked) => setFormData({ ...formData, pf_enabled: checked })}
             />
           </div>
-          <CardDescription>
-            Dados do profissional para declaração como pessoa física
-          </CardDescription>
         </CardHeader>
 
         {formData.pf_enabled && (
@@ -233,21 +237,25 @@ export function FiscalSettingsTab({
       </Card>
 
       {/* PJ Section */}
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-[#a03f3d]" />
-              <CardTitle>Pessoa Jurídica (PJ)</CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-rose-100 rounded-lg">
+                <Building2 className="w-5 h-5 text-[#a03f3d]" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Pessoa Jurídica (PJ)</CardTitle>
+                <CardDescription className="text-sm">
+                  Dados da empresa para declaração como pessoa jurídica
+                </CardDescription>
+              </div>
             </div>
             <Switch
               checked={formData.pj_enabled}
               onCheckedChange={(checked) => setFormData({ ...formData, pj_enabled: checked })}
             />
           </div>
-          <CardDescription>
-            Dados da empresa para declaração como pessoa jurídica
-          </CardDescription>
         </CardHeader>
 
         {formData.pj_enabled && (
@@ -390,11 +398,11 @@ export function FiscalSettingsTab({
       />
 
       {/* Save Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4">
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="bg-[#a03f3d] hover:bg-[#8b3634]"
+          className="bg-[#a03f3d] hover:bg-[#8b3634] px-6"
         >
           <Save className="w-4 h-4 mr-2" />
           {saving ? 'Salvando...' : 'Salvar Configurações'}

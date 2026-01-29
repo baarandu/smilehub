@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Edit2, CheckCircle, XCircle, Filter, FileText, AlertCircle } from 'lucide-react';
+import { Edit2, CheckCircle, XCircle, Filter, FileText, AlertCircle, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +27,7 @@ interface IRExpensesTabProps {
   transactions: TransactionWithIR[];
   loading: boolean;
   onTransactionUpdated: () => void;
+  globalSearch?: string;
 }
 
 const formatCurrency = (value: number) => {
@@ -42,12 +43,16 @@ export function IRExpensesTab({
   transactions,
   loading,
   onTransactionUpdated,
+  globalSearch = '',
 }: IRExpensesTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deductibleFilter, setDeductibleFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [editingTransaction, setEditingTransaction] = useState<TransactionWithIR | null>(null);
   const [showFilterSection, setShowFilterSection] = useState(false);
+
+  // Combine local and global search
+  const effectiveSearch = globalSearch || searchTerm;
 
   // Get unique categories
   const categories = useMemo(() => {
@@ -61,10 +66,10 @@ export function IRExpensesTab({
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      // Search filter
-      const searchLower = searchTerm.toLowerCase();
+      // Search filter (combines local and global search)
+      const searchLower = effectiveSearch.toLowerCase();
       const matchesSearch =
-        !searchTerm ||
+        !effectiveSearch ||
         t.description.toLowerCase().includes(searchLower) ||
         t.supplier_name?.toLowerCase().includes(searchLower) ||
         t.category?.toLowerCase().includes(searchLower);
@@ -84,7 +89,7 @@ export function IRExpensesTab({
 
       return matchesSearch && matchesDeductible && matchesCategory;
     });
-  }, [transactions, searchTerm, deductibleFilter, categoryFilter]);
+  }, [transactions, effectiveSearch, deductibleFilter, categoryFilter]);
 
   // Calculate summaries
   const summaries = useMemo(() => {
@@ -112,62 +117,68 @@ export function IRExpensesTab({
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summaries.totalExpenses)}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total de Despesas</p>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(summaries.totalExpenses)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">No período selecionado</p>
+              </div>
+              <div className="p-2 bg-red-100 rounded-lg">
+                <FileText className="h-5 w-5 text-red-600" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">No periodo selecionado</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Despesas Dedutiveis</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaries.deductibleTotal)}
+        <Card className="border-0 shadow-sm">
+          <CardContent className="pt-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Despesas Dedutíveis</p>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(summaries.deductibleTotal)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Livro Caixa</p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Livro Caixa</p>
           </CardContent>
         </Card>
 
-        <Card className={summaries.incompleteCount > 0 ? 'border-amber-200 bg-amber-50' : ''}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dados Incompletos</CardTitle>
-            <AlertCircle
-              className={`h-4 w-4 ${
-                summaries.incompleteCount > 0 ? 'text-amber-600' : 'text-muted-foreground'
-              }`}
-            />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                summaries.incompleteCount > 0 ? 'text-amber-600' : 'text-green-600'
-              }`}
-            >
-              {summaries.incompleteCount}
+        <Card className={`border-0 shadow-sm ${summaries.incompleteCount > 0 ? 'bg-rose-50' : ''}`}>
+          <CardContent className="pt-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Dados Incompletos</p>
+                <div className={`text-2xl font-bold ${summaries.incompleteCount > 0 ? 'text-[#a03f3d]' : 'text-green-600'}`}>
+                  {summaries.incompleteCount}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {summaries.incompleteCount > 0 ? 'Despesas dedutíveis para revisar' : 'Tudo em ordem'}
+                </p>
+              </div>
+              <div className={`p-2 rounded-lg ${summaries.incompleteCount > 0 ? 'bg-rose-100' : 'bg-green-100'}`}>
+                <AlertCircle className={`h-5 w-5 ${summaries.incompleteCount > 0 ? 'text-[#a03f3d]' : 'text-green-600'}`} />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {summaries.incompleteCount > 0
-                ? 'Despesas dedutiveis para revisar'
-                : 'Tudo em ordem'}
-            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Transactions List */}
-      <Card>
-        <CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle>Despesas (Livro Caixa)</CardTitle>
+            <div>
+              <CardTitle className="text-base">Despesas (Livro Caixa)</CardTitle>
+              <p className="text-sm text-muted-foreground">Organização com foco em revisão rápida</p>
+            </div>
             <div className="flex gap-2">
               <Input
                 placeholder="Buscar..."

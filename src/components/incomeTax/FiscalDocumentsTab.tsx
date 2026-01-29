@@ -486,17 +486,22 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
     return (
         <div className="space-y-6">
             {/* Progress Overview */}
-            <Card>
+            <Card className="border-0 shadow-sm">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="text-lg">Documentos Fiscais - {year}</CardTitle>
-                            <CardDescription>
-                                {TAX_REGIME_LABELS[taxRegime]} - Checklist para o contador
-                            </CardDescription>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-rose-100 rounded-lg">
+                                <FileText className="w-5 h-5 text-[#a03f3d]" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base">Documentos Fiscais - {year}</CardTitle>
+                                <CardDescription className="text-sm">
+                                    {TAX_REGIME_LABELS[taxRegime]} • Checklist para o contador
+                                </CardDescription>
+                            </div>
                         </div>
                         <div className="text-right">
-                            <div className="text-2xl font-bold text-primary">
+                            <div className="text-2xl font-bold text-[#a03f3d]">
                                 {completionStats.percentage}%
                             </div>
                             <div className="text-sm text-muted-foreground">
@@ -506,7 +511,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Progress value={completionStats.percentage} className="h-3" />
+                    <Progress value={completionStats.percentage} className="h-2" />
                     <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
                         <div className="flex gap-4 text-sm">
                             <div className="flex items-center gap-2">
@@ -535,10 +540,10 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                 Enviar Resumo
                             </Button>
                             <Button
-                                variant="default"
                                 size="sm"
                                 onClick={handleExportZip}
                                 disabled={documents.length === 0 || exporting}
+                                className="bg-[#a03f3d] hover:bg-[#8b3634]"
                             >
                                 {exporting ? (
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -637,26 +642,36 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                 </Card>
             )}
 
-            {/* Search */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                    placeholder="Buscar documentos, categorias..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                />
-                {searchQuery && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                        onClick={() => setSearchQuery('')}
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
-                )}
-            </div>
+            {/* Search and Filters */}
+            <Card className="border-0 shadow-sm">
+                <CardContent className="py-4">
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar documentos, categorias..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9"
+                            />
+                            {searchQuery && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                                    onClick={() => setSearchQuery('')}
+                                >
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            )}
+                        </div>
+                        <Button variant="outline">
+                            <AlertTriangle className="w-4 h-4 mr-2" />
+                            Filtros
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Search results info */}
             {searchQuery && (
@@ -681,7 +696,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                     </Card>
                 )}
                 {filteredSections.map((section) => (
-                    <Card key={section.category}>
+                    <Card key={section.category} className="border-0 shadow-sm">
                         <Collapsible
                             open={expandedSections.has(section.category)}
                             onOpenChange={() => toggleSection(section.category)}
