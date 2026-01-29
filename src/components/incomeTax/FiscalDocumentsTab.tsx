@@ -396,7 +396,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Share with accountant via email/WhatsApp
     const handleShareWithAccountant = () => {
-        const pendingItems = sections.flatMap(s => s.items.filter(i => !i.isComplete && i.required));
+        const pendingItems = sections.flatMap(s => s.items.filter(i => !i.isComplete));
         const completedCount = completionStats.completed;
         const totalCount = completionStats.total;
 
@@ -419,7 +419,7 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
         }
 
         if (pendingItems.length > 0) {
-            body += `\n⚠️ Documentos pendentes (obrigatórios):\n`;
+            body += `\n⚠️ Documentos pendentes:\n`;
             pendingItems.forEach(item => {
                 body += `  • ${item.label}\n`;
             });
@@ -521,10 +521,6 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                             <div className="flex items-center gap-2">
                                 <Circle className="w-4 h-4 text-muted-foreground" />
                                 <span>Pendente</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                <span>Obrigatório</span>
                             </div>
                         </div>
 
@@ -753,11 +749,6 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                                             <div className="flex-1">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-medium">{item.label}</span>
-                                                                    {item.required && (
-                                                                        <Badge variant="outline" className="text-amber-600 border-amber-300">
-                                                                            Obrigatório
-                                                                        </Badge>
-                                                                    )}
                                                                     {item.frequency !== 'once' && (
                                                                         <Badge variant="secondary" className="text-xs">
                                                                             {item.frequency === 'monthly' ? 'Mensal' :
