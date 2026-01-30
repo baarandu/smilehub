@@ -113,8 +113,9 @@ export const documentTemplatesService = {
         }
 
         // Signature
-        const isConsentForm = name.toLowerCase().includes('termo') ||
-            name.toLowerCase().includes('consentimento');
+        const nameLower = name.toLowerCase();
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento');
+        const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado');
 
         let dentistName = 'Responsável Técnico';
         if (!isConsentForm) {
@@ -141,10 +142,17 @@ export const documentTemplatesService = {
         doc.setFontSize(10);
 
         if (isConsentForm) {
+            // Termo de consentimento: apenas assinatura do paciente
             doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
             y += 5;
             doc.text(patientName, pageWidth / 2, y, { align: 'center' });
+        } else if (isDentistOnlyDoc) {
+            // Receituário/Atestado: apenas assinatura do dentista
+            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
+            y += 5;
+            doc.text(dentistName, pageWidth / 2, y, { align: 'center' });
         } else {
+            // Outros documentos: assinatura do paciente e dentista
             const leftCenter = pageWidth / 4;
             const rightCenter = (pageWidth * 3) / 4;
 
