@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Calendar, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useProcedures } from '@/hooks/useProcedures';
