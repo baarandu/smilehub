@@ -174,25 +174,14 @@ export const documentTemplatesService = {
             .from('exams')
             .getPublicUrl(fileName);
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser) throw new Error('Clinic not found');
-
         const { error: insertError } = await (supabase
             .from('exams') as any)
             .insert({
                 patient_id: patientId,
-                clinic_id: (clinicUser as any).clinic_id,
-                title: name,
                 name: name,
-                date: new Date().toISOString().split('T')[0],
                 order_date: new Date().toISOString().split('T')[0],
                 file_urls: [publicUrl],
-                type: 'document'
+                file_type: 'document'
             });
 
         if (insertError) throw insertError;
