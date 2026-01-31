@@ -269,19 +269,32 @@ export function usePatientPayments(
                 const itemValue = calculateToothTotal(item.tooth.values);
                 const ratio = itemValue / totalValue;
 
-                // Calculate proportional breakdown for this item
-                let itemBreakdown = breakdown ? {
-                    grossAmount: breakdown.grossAmount * ratio,
-                    netAmount: breakdown.netAmount * ratio,
-                    taxRate: breakdown.taxRate,
-                    taxAmount: breakdown.taxAmount * ratio,
-                    cardFeeRate: breakdown.cardFeeRate,
-                    cardFeeAmount: breakdown.cardFeeAmount * ratio,
-                    anticipationRate: breakdown.anticipationRate,
-                    anticipationAmount: (breakdown.anticipationAmount || 0) * ratio,
-                    locationRate: breakdown.locationRate,
-                    locationAmount: (breakdown.locationAmount || 0) * ratio,
-                } : undefined;
+                // Pegar a taxa individual do item (não a média do breakdown)
+                const itemLocationRate = item.tooth.locationRate ?? budget.location_rate ?? parsed.locationRate ?? 0;
+
+                // Calculate proportional breakdown for this item - usando taxa individual
+                let itemBreakdown: PaymentBreakdown | undefined = undefined;
+                if (breakdown) {
+                    const cardFeeAmt = breakdown.cardFeeAmount * ratio;
+                    const baseForLocation = itemValue - cardFeeAmt;
+                    const locationAmt = (baseForLocation * itemLocationRate) / 100;
+                    const taxAmt = breakdown.taxAmount * ratio;
+                    const anticipationAmt = (breakdown.anticipationAmount || 0) * ratio;
+                    const netAmt = itemValue - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
+
+                    itemBreakdown = {
+                        grossAmount: itemValue,
+                        netAmount: netAmt,
+                        taxRate: breakdown.taxRate,
+                        taxAmount: taxAmt,
+                        cardFeeRate: breakdown.cardFeeRate,
+                        cardFeeAmount: cardFeeAmt,
+                        anticipationRate: breakdown.anticipationRate,
+                        anticipationAmount: anticipationAmt,
+                        locationRate: itemLocationRate,
+                        locationAmount: locationAmt,
+                    };
+                }
 
                 parsed.teeth[item.index] = {
                     ...selectedTooth,
@@ -329,16 +342,24 @@ export function usePatientPayments(
                         let deductionPayload: Record<string, any> = {};
                         if (breakdown) {
                             const txRatio = t.amount / breakdown.grossAmount;
-                            const locationAmt = breakdown.locationAmount ? (breakdown.locationAmount * txRatio * ratio) : ((itemAmount * targetLocationRate) / 100);
+                            // SEMPRE calcular locationAmt usando a taxa individual do item (não a média do breakdown)
+                            const cardFeeAmt = breakdown.cardFeeAmount * txRatio * ratio;
+                            const baseForLocation = itemAmount - cardFeeAmt;
+                            const locationAmt = (baseForLocation * targetLocationRate) / 100;
+
+                            const taxAmt = breakdown.taxAmount * txRatio * ratio;
+                            const anticipationAmt = (breakdown.anticipationAmount || 0) * txRatio * ratio;
+                            // Recalcular net_amount com o location correto
+                            const netAmt = itemAmount - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
 
                             deductionPayload = {
-                                net_amount: (breakdown.netAmount * txRatio * ratio),
+                                net_amount: netAmt,
                                 tax_rate: breakdown.taxRate,
-                                tax_amount: breakdown.taxAmount * txRatio * ratio,
+                                tax_amount: taxAmt,
                                 card_fee_rate: breakdown.cardFeeRate,
-                                card_fee_amount: breakdown.cardFeeAmount * txRatio * ratio,
+                                card_fee_amount: cardFeeAmt,
                                 anticipation_rate: breakdown.anticipationRate,
-                                anticipation_amount: (breakdown.anticipationAmount || 0) * txRatio * ratio,
+                                anticipation_amount: anticipationAmt,
                                 location_rate: targetLocationRate,
                                 location_amount: locationAmt
                             };
@@ -374,16 +395,26 @@ export function usePatientPayments(
 
                     let deductionPayload: Record<string, any> = {};
                     if (breakdown) {
+                        // SEMPRE calcular locationAmt usando a taxa individual do item (não a média do breakdown)
+                        const cardFeeAmt = breakdown.cardFeeAmount * ratio;
+                        const baseForLocation = itemValue - cardFeeAmt;
+                        const locationAmt = (baseForLocation * targetLocationRate) / 100;
+
+                        const taxAmt = breakdown.taxAmount * ratio;
+                        const anticipationAmt = (breakdown.anticipationAmount || 0) * ratio;
+                        // Recalcular net_amount com o location correto
+                        const netAmt = itemValue - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
+
                         deductionPayload = {
-                            net_amount: breakdown.netAmount * ratio,
+                            net_amount: netAmt,
                             tax_rate: breakdown.taxRate,
-                            tax_amount: breakdown.taxAmount * ratio,
+                            tax_amount: taxAmt,
                             card_fee_rate: breakdown.cardFeeRate,
-                            card_fee_amount: breakdown.cardFeeAmount * ratio,
+                            card_fee_amount: cardFeeAmt,
                             anticipation_rate: breakdown.anticipationRate,
-                            anticipation_amount: (breakdown.anticipationAmount || 0) * ratio,
+                            anticipation_amount: anticipationAmt,
                             location_rate: targetLocationRate,
-                            location_amount: (breakdown.locationAmount || 0) * ratio
+                            location_amount: locationAmt
                         };
                     } else if (targetLocationRate > 0) {
                         const locationAmt = (itemValue * targetLocationRate) / 100;

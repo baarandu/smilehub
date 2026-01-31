@@ -522,17 +522,17 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             const effectiveLocationRate = totalAmount > 0 ? (locationAmountTotal / totalAmount) * 100 : 0;
 
             if (breakdown) {
-                netAmountPerTx = breakdown.netAmount / numTransactions;
+                // Usar taxas do breakdown (imposto, cartão, antecipação)
                 taxAmountPerTx = breakdown.taxAmount / numTransactions;
                 cardFeeAmountPerTx = breakdown.cardFeeAmount / numTransactions;
                 anticipationAmountPerTx = breakdown.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
 
-                if (breakdown.locationAmount) {
-                    locationAmountPerTx = breakdown.locationAmount / numTransactions;
-                } else if (locationAmountTotal > 0) {
-                    locationAmountPerTx = locationAmountTotal / numTransactions;
-                    netAmountPerTx -= locationAmountPerTx;
-                }
+                // SEMPRE usar o locationAmountTotal calculado individualmente por procedimento
+                // (não usar breakdown.locationAmount que é calculado com a taxa média/global)
+                locationAmountPerTx = locationAmountTotal / numTransactions;
+
+                // Recalcular net_amount com o location correto
+                netAmountPerTx = txAmount - taxAmountPerTx - cardFeeAmountPerTx - anticipationAmountPerTx - locationAmountPerTx;
             } else {
                 if (locationAmountTotal > 0) {
                     locationAmountPerTx = locationAmountTotal / numTransactions;
