@@ -404,91 +404,57 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
     return (
         <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
             <View className="flex-1 bg-gray-50" style={{ paddingTop: insets.top }}>
-                {/* Header */}
-                <View className="bg-white border-b border-gray-200 px-4 py-4 flex-row items-center justify-between">
+                {/* Header with Total */}
+                <View className="bg-[#b94a48] px-4 py-3 flex-row items-center justify-between">
                     <View>
-                        <Text className="text-xl font-semibold text-gray-900">Resumo do Orçamento</Text>
-                        <Text className="text-gray-500 text-sm mt-1">{formatDate(budget.date)}</Text>
+                        <Text className="text-base font-semibold text-white">Resumo do Orçamento</Text>
+                        <View className="flex-row items-center gap-2 mt-0.5">
+                            <Text className="text-[#fee2e2] text-xs">{formatDate(budget.date)}</Text>
+                            <Text className="text-[#fee2e2]">|</Text>
+                            <Text className="text-white font-bold text-base">R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+                        </View>
                     </View>
-                    <TouchableOpacity onPress={onClose} className="bg-gray-100 p-3 rounded-full">
-                        <X size={24} color="#374151" />
+                    <TouchableOpacity onPress={onClose} className="bg-white/20 p-2 rounded-full">
+                        <X size={20} color="#FFFFFF" />
                     </TouchableOpacity>
                 </View>
 
+                {/* Status Summary - Compact */}
+                <View className="flex-row bg-gray-100 px-4 py-2 gap-4 border-b border-gray-200">
+                    <View className="flex-row items-center gap-1">
+                        <Clock size={14} color="#CA8A04" />
+                        <Text className="text-yellow-700 text-xs font-medium">{pendingItems.length} pendentes</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                        <CheckCircle size={14} color="#16A34A" />
+                        <Text className="text-green-700 text-xs font-medium">{approvedItems.length} aprovados</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1">
+                        <CreditCard size={14} color="#2563EB" />
+                        <Text className="text-blue-700 text-xs font-medium">{paidItems.length} pagos</Text>
+                    </View>
+                </View>
+
                 <ScrollView
-                    className="flex-1 p-4"
+                    className="flex-1 p-3"
                     contentContainerStyle={{ paddingBottom: 40 }}
                     showsVerticalScrollIndicator={true}
                 >
-                    {/* Summary Cards */}
-                    <View className="flex-row gap-2 mb-4">
-                        <View className="flex-1 bg-yellow-50 rounded-xl p-3 border border-yellow-100">
-                            <Text className="text-yellow-600 text-xs">Pendentes</Text>
-                            <Text className="text-yellow-700 font-bold text-lg">{pendingItems.length}</Text>
-                        </View>
-                        <View className="flex-1 bg-green-50 rounded-xl p-3 border border-green-100">
-                            <Text className="text-green-600 text-xs">Aprovados</Text>
-                            <Text className="text-green-700 font-bold text-lg">{approvedItems.length}</Text>
-                        </View>
-                        <View className="flex-1 bg-blue-50 rounded-xl p-3 border border-blue-100">
-                            <Text className="text-blue-600 text-xs">Pagos</Text>
-                            <Text className="text-blue-700 font-bold text-lg">{paidItems.length}</Text>
-                        </View>
-                    </View>
-
-                    {/* Total */}
-                    <View className="bg-[#b94a48] rounded-xl p-4 mb-4">
-                        <Text className="text-[#fee2e2] text-sm">Total do Orçamento</Text>
-                        <Text className="text-white font-bold text-2xl">
-                            R$ {grandTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </Text>
-                    </View>
-
-                    {/* Pay Button - only show if no direct payment option */}
-                    {approvedItems.length > 0 && !onPayItem && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                onClose();
-                                onNavigateToPayments?.();
-                            }}
-                            className="bg-[#a03f3d] rounded-xl p-4 mb-4 flex-row items-center justify-center"
-                        >
-                            <CreditCard size={20} color="#FFFFFF" />
-                            <Text className="text-white font-bold ml-2">Ir para Pagamentos</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* Generate PDF Button */}
-                    <TouchableOpacity
-                        onPress={handleOpenPdfSelection}
-                        disabled={generatingPdf}
-                        className="bg-white border border-[#b94a48] rounded-xl p-4 mb-4 flex-row items-center justify-center"
-                    >
-                        {generatingPdf ? (
-                            <ActivityIndicator color="#b94a48" />
-                        ) : (
-                            <>
-                                <Eye size={20} color="#b94a48" />
-                                <Text className="text-[#a03f3d] font-medium ml-2">Gerar Orçamento em PDF</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-
                     {/* Approved Items */}
                     {approvedItems.length > 0 && (
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 bg-green-50">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3">
+                            <View className="px-3 py-2 border-b border-gray-100 bg-green-50">
                                 <View className="flex-row items-center justify-between">
                                     <View className="flex-row items-center gap-2">
-                                        <CheckCircle size={16} color="#16A34A" />
-                                        <Text className="font-medium text-green-800">Aprovados</Text>
+                                        <CheckCircle size={14} color="#16A34A" />
+                                        <Text className="font-medium text-green-800 text-sm">Aprovados</Text>
                                     </View>
                                     <View className="flex-row gap-2">
                                         {selectedApprovedItems.size > 0 && (
                                             <TouchableOpacity
                                                 onPress={handlePaySelected}
                                                 disabled={saving}
-                                                className="bg-[#b94a48] px-3 py-1.5 rounded-lg"
+                                                className="bg-[#b94a48] px-2 py-1 rounded"
                                             >
                                                 <Text className="text-white text-xs font-medium">Pagar ({selectedApprovedItems.size})</Text>
                                             </TouchableOpacity>
@@ -497,9 +463,9 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             <TouchableOpacity
                                                 onPress={handlePayAll}
                                                 disabled={saving}
-                                                className="bg-[#b94a48] px-3 py-1.5 rounded-lg"
+                                                className="bg-[#b94a48] px-2 py-1 rounded"
                                             >
-                                                <Text className="text-white text-xs font-medium">Pagar Todos ({approvedItems.length})</Text>
+                                                <Text className="text-white text-xs font-medium">Pagar Todos</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -510,23 +476,23 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                 const total = getToothTotal(item);
                                 const isSelected = selectedApprovedItems.has(index);
                                 return (
-                                    <View key={index} className="p-4 border-b border-gray-100 bg-green-50/50 flex-row items-center">
+                                    <View key={index} className="px-3 py-2 border-b border-gray-100 bg-green-50/50 flex-row items-center">
                                         <TouchableOpacity
                                             onPress={() => toggleApprovedItemSelection(index)}
-                                            className="mr-3"
+                                            className="mr-2"
                                         >
                                             {isSelected ? (
-                                                <CheckSquare size={24} color="#16A34A" />
+                                                <CheckSquare size={20} color="#16A34A" />
                                             ) : (
-                                                <Square size={24} color="#9CA3AF" />
+                                                <Square size={20} color="#9CA3AF" />
                                             )}
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => confirmToggleStatus(index)}
                                             disabled={saving}
-                                            className="bg-yellow-100 p-2 rounded-lg mr-2"
+                                            className="bg-yellow-100 p-1.5 rounded mr-2"
                                         >
-                                            <Undo2 size={16} color="#CA8A04" />
+                                            <Undo2 size={14} color="#CA8A04" />
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => {
@@ -537,18 +503,15 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             disabled={saving || !onPayItem}
                                             className="flex-1 flex-row items-center"
                                         >
-                                            <View className="bg-green-100 p-2 rounded-lg mr-3">
-                                                <CheckCircle size={18} color="#16A34A" />
-                                            </View>
                                             <View className="flex-1">
-                                                <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                                <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                                <Text className="font-medium text-gray-900 text-sm">{getDisplayName(item.tooth)}</Text>
+                                                <Text className="text-gray-500 text-xs" numberOfLines={1}>{item.treatments.join(', ')}</Text>
                                             </View>
                                             <View className="items-end">
-                                                <Text className="font-semibold text-green-700">
+                                                <Text className="font-semibold text-green-700 text-sm">
                                                     R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </Text>
-                                                {onPayItem && <Text className="text-[#a03f3d] text-xs">Toque para pagar</Text>}
+                                                {onPayItem && <Text className="text-[#a03f3d] text-xs">Pagar</Text>}
                                             </View>
                                         </TouchableOpacity>
                                     </View>
@@ -559,19 +522,19 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
                     {/* Pending Items */}
                     {pendingItems.length > 0 && (
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 bg-yellow-50">
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3">
+                            <View className="px-3 py-2 border-b border-gray-100 bg-yellow-50">
                                 <View className="flex-row items-center justify-between">
                                     <View className="flex-row items-center gap-2">
-                                        <Clock size={16} color="#CA8A04" />
-                                        <Text className="font-medium text-yellow-800">Pendentes</Text>
+                                        <Clock size={14} color="#CA8A04" />
+                                        <Text className="font-medium text-yellow-800 text-sm">Pendentes</Text>
                                     </View>
                                     <View className="flex-row gap-2">
                                         {selectedItems.size > 0 && (
                                             <TouchableOpacity
                                                 onPress={handleApproveSelected}
                                                 disabled={saving}
-                                                className="bg-yellow-600 px-3 py-1.5 rounded-lg"
+                                                className="bg-yellow-600 px-2 py-1 rounded"
                                             >
                                                 <Text className="text-white text-xs font-medium">Aprovar ({selectedItems.size})</Text>
                                             </TouchableOpacity>
@@ -580,9 +543,9 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             <TouchableOpacity
                                                 onPress={handleApproveAll}
                                                 disabled={saving}
-                                                className="bg-yellow-600 px-3 py-1.5 rounded-lg"
+                                                className="bg-yellow-600 px-2 py-1 rounded"
                                             >
-                                                <Text className="text-white text-xs font-medium">Aprovar Todos ({pendingItems.length})</Text>
+                                                <Text className="text-white text-xs font-medium">Aprovar Todos</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -593,15 +556,15 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                 const total = getToothTotal(item);
                                 const isSelected = selectedItems.has(index);
                                 return (
-                                    <View key={index} className="p-4 border-b border-gray-100 flex-row items-center">
+                                    <View key={index} className="px-3 py-2 border-b border-gray-100 flex-row items-center">
                                         <TouchableOpacity
                                             onPress={() => toggleItemSelection(index)}
-                                            className="mr-3"
+                                            className="mr-2"
                                         >
                                             {isSelected ? (
-                                                <CheckSquare size={24} color="#CA8A04" />
+                                                <CheckSquare size={20} color="#CA8A04" />
                                             ) : (
-                                                <Square size={24} color="#9CA3AF" />
+                                                <Square size={20} color="#9CA3AF" />
                                             )}
                                         </TouchableOpacity>
                                         <TouchableOpacity
@@ -609,18 +572,15 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                             disabled={saving}
                                             className="flex-1 flex-row items-center"
                                         >
-                                            <View className="bg-yellow-100 p-2 rounded-lg mr-3">
-                                                <Clock size={18} color="#CA8A04" />
-                                            </View>
                                             <View className="flex-1">
-                                                <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                                <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                                <Text className="font-medium text-gray-900 text-sm">{getDisplayName(item.tooth)}</Text>
+                                                <Text className="text-gray-500 text-xs" numberOfLines={1}>{item.treatments.join(', ')}</Text>
                                             </View>
                                             <View className="items-end">
-                                                <Text className="font-semibold text-gray-900">
+                                                <Text className="font-semibold text-gray-900 text-sm">
                                                     R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </Text>
-                                                <Text className="text-[#a03f3d] text-xs">Toque para aprovar</Text>
+                                                <Text className="text-[#a03f3d] text-xs">Aprovar</Text>
                                             </View>
                                         </TouchableOpacity>
                                     </View>
@@ -631,10 +591,10 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
                     {/* Paid Items */}
                     {paidItems.length > 0 && (
-                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">
-                            <View className="p-3 border-b border-gray-100 flex-row items-center gap-2 bg-blue-50">
-                                <CreditCard size={16} color="#2563EB" />
-                                <Text className="font-medium text-blue-800">Pagos</Text>
+                        <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-3">
+                            <View className="px-3 py-2 border-b border-gray-100 flex-row items-center gap-2 bg-blue-50">
+                                <CreditCard size={14} color="#2563EB" />
+                                <Text className="font-medium text-blue-800 text-sm">Pagos</Text>
                             </View>
                             {teethList.map((item, index) => {
                                 if (item.status !== 'paid' && item.status !== 'completed') return null;
@@ -642,16 +602,13 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                 return (
                                     <View
                                         key={index}
-                                        className="p-4 border-b border-gray-100 flex-row items-center bg-blue-50/50"
+                                        className="px-3 py-2 border-b border-gray-100 flex-row items-center bg-blue-50/50"
                                     >
-                                        <View className="bg-blue-100 p-2 rounded-lg mr-3">
-                                            <CreditCard size={18} color="#2563EB" />
-                                        </View>
                                         <View className="flex-1">
-                                            <Text className="font-medium text-gray-900">{getDisplayName(item.tooth)}</Text>
-                                            <Text className="text-gray-500 text-sm">{item.treatments.join(', ')}</Text>
+                                            <Text className="font-medium text-gray-900 text-sm">{getDisplayName(item.tooth)}</Text>
+                                            <Text className="text-gray-500 text-xs" numberOfLines={1}>{item.treatments.join(', ')}</Text>
                                         </View>
-                                        <Text className="font-semibold text-blue-700">
+                                        <Text className="font-semibold text-blue-700 text-sm">
                                             R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </Text>
                                     </View>
@@ -659,6 +616,39 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             })}
                         </View>
                     )}
+
+                    {/* Action Buttons */}
+                    <View className="flex-row gap-2 mt-2">
+                        {/* Pay Button - only show if no direct payment option */}
+                        {approvedItems.length > 0 && !onPayItem && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    onClose();
+                                    onNavigateToPayments?.();
+                                }}
+                                className="flex-1 bg-[#a03f3d] rounded-xl py-3 flex-row items-center justify-center"
+                            >
+                                <CreditCard size={16} color="#FFFFFF" />
+                                <Text className="text-white font-medium text-sm ml-1">Pagamentos</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Generate PDF Button */}
+                        <TouchableOpacity
+                            onPress={handleOpenPdfSelection}
+                            disabled={generatingPdf}
+                            className="flex-1 bg-white border border-[#b94a48] rounded-xl py-3 flex-row items-center justify-center"
+                        >
+                            {generatingPdf ? (
+                                <ActivityIndicator color="#b94a48" size="small" />
+                            ) : (
+                                <>
+                                    <Eye size={16} color="#b94a48" />
+                                    <Text className="text-[#a03f3d] font-medium text-sm ml-1">PDF</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </View>
 

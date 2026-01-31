@@ -629,60 +629,46 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden" hideCloseButton>
-                {/* Header */}
-                <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
+                {/* Header with Total */}
+                <div className="bg-[#b94a48] px-6 py-4 flex items-center justify-between flex-shrink-0">
                     <div>
-                        <h2 className="text-xl font-semibold text-gray-900">Resumo do Orçamento</h2>
-                        <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatDisplayDate(budget.date)}</span>
+                        <h2 className="text-lg font-semibold text-white">Resumo do Orçamento</h2>
+                        <div className="flex items-center gap-3 mt-1">
+                            <div className="flex items-center gap-1 text-[#fee2e2] text-sm">
+                                <Calendar className="w-4 h-4" />
+                                <span>{formatDisplayDate(budget.date)}</span>
+                            </div>
+                            <span className="text-[#fee2e2]">|</span>
+                            <span className="text-white font-bold text-lg">R$ {formatMoney(grandTotal)}</span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="bg-gray-100 p-3 rounded-full hover:bg-gray-200 transition-colors">
-                        <X className="w-5 h-5 text-gray-600" />
+                    <button onClick={onClose} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors">
+                        <X className="w-5 h-5 text-white" />
                     </button>
                 </div>
 
+                {/* Status Summary - Compact */}
+                <div className="flex border-b bg-gray-50 px-6 py-2 gap-4 text-sm flex-shrink-0">
+                    <div className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-yellow-600" />
+                        <span className="text-yellow-700 font-medium">{pendingItems.length} pendentes</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-green-700 font-medium">{approvedItems.length} aprovados</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        <span className="text-blue-700 font-medium">{paidItems.length} pagos</span>
+                    </div>
+                </div>
+
                 <ScrollArea className="flex-1 overflow-auto">
-                    <div className="p-6">
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                            <div className="bg-yellow-50 rounded-xl p-4 border border-yellow-100">
-                                <p className="text-yellow-600 text-sm">Pendentes</p>
-                                <p className="text-yellow-700 font-bold text-2xl">{pendingItems.length}</p>
-                            </div>
-                            <div className="bg-green-50 rounded-xl p-4 border border-green-100">
-                                <p className="text-green-600 text-sm">Aprovados</p>
-                                <p className="text-green-700 font-bold text-2xl">{approvedItems.length}</p>
-                            </div>
-                            <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                                <p className="text-blue-600 text-sm">Pagos</p>
-                                <p className="text-blue-700 font-bold text-2xl">{paidItems.length}</p>
-                            </div>
-                        </div>
-
-                        {/* Total */}
-                        <div className="bg-[#b94a48] rounded-xl p-5 mb-4">
-                            <p className="text-[#fee2e2] text-sm">Total do Orçamento</p>
-                            <p className="text-white font-bold text-3xl">
-                                R$ {formatMoney(grandTotal)}
-                            </p>
-                        </div>
-
-                        {/* PDF Button */}
-                        <button
-                            onClick={handleOpenPdfSelection}
-                            disabled={generatingPdf}
-                            className="w-full bg-white border-2 border-[#b94a48] rounded-xl p-4 mb-4 flex items-center justify-center gap-2 hover:bg-red-50 transition-colors disabled:opacity-50"
-                        >
-                            <Eye className="w-5 h-5 text-[#b94a48]" />
-                            <span className="text-[#a03f3d] font-medium">Gerar Orçamento em PDF</span>
-                        </button>
-
+                    <div className="p-4">
                         {/* Approved Items */}
                         {approvedItems.length > 0 && (
-                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-                                <div className="p-4 border-b bg-green-50 flex items-center justify-between">
+                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3">
+                                <div className="px-3 py-2 border-b bg-green-50 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <CheckCircle className="w-5 h-5 text-green-600" />
                                         <span className="font-medium text-green-800">Aprovados</span>
@@ -715,40 +701,37 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     const total = getItemValue(item);
                                     const isSelected = selectedApprovedItems.has(index);
                                     return (
-                                        <div key={index} className="p-4 border-b border-gray-100 bg-green-50/30 flex items-center gap-3">
+                                        <div key={index} className="px-3 py-2 border-b border-gray-100 bg-green-50/30 flex items-center gap-2">
                                             <button
                                                 onClick={() => toggleApprovedSelection(index)}
                                                 className="text-gray-400 hover:text-green-600 transition-colors"
                                             >
                                                 {isSelected ? (
-                                                    <CheckSquare className="w-6 h-6 text-green-600" />
+                                                    <CheckSquare className="w-5 h-5 text-green-600" />
                                                 ) : (
-                                                    <Square className="w-6 h-6" />
+                                                    <Square className="w-5 h-5" />
                                                 )}
                                             </button>
                                             <button
                                                 onClick={() => toggleItemStatus(index)}
                                                 disabled={updating}
-                                                className="bg-yellow-100 p-2 rounded-lg hover:bg-yellow-200 transition-colors"
+                                                className="bg-yellow-100 p-1.5 rounded-lg hover:bg-yellow-200 transition-colors"
                                                 title="Retornar para pendente"
                                             >
-                                                <Undo2 className="w-4 h-4 text-yellow-600" />
+                                                <Undo2 className="w-3.5 h-3.5 text-yellow-600" />
                                             </button>
                                             <button
                                                 onClick={() => handlePayItem(index, item)}
                                                 disabled={updating}
-                                                className="flex-1 flex items-center gap-3 text-left hover:bg-green-100/50 rounded-lg p-2 -m-2 transition-colors"
+                                                className="flex-1 flex items-center gap-2 text-left hover:bg-green-100/50 rounded-lg px-2 py-1 -mx-1 transition-colors"
                                             >
-                                                <div className="bg-green-100 p-2.5 rounded-lg">
-                                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
+                                                    <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-gray-900">{getToothDisplayName(item.tooth)}</p>
-                                                    <p className="text-gray-500 text-sm">{item.treatments.join(', ')}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-semibold text-green-700">R$ {formatMoney(total)}</p>
-                                                    <p className="text-[#a03f3d] text-xs">Clique para pagar</p>
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="font-semibold text-green-700 text-sm">R$ {formatMoney(total)}</p>
+                                                    <p className="text-[#a03f3d] text-xs">Pagar</p>
                                                 </div>
                                             </button>
                                         </div>
@@ -759,8 +742,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                         {/* Pending Items */}
                         {pendingItems.length > 0 && (
-                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-                                <div className="p-4 border-b bg-yellow-50 flex items-center justify-between">
+                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3">
+                                <div className="px-3 py-2 border-b bg-yellow-50 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Clock className="w-5 h-5 text-yellow-600" />
                                         <span className="font-medium text-yellow-800">Pendentes</span>
@@ -793,32 +776,29 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     const total = getItemValue(item);
                                     const isSelected = selectedPendingItems.has(index);
                                     return (
-                                        <div key={index} className="p-4 border-b border-gray-100 flex items-center gap-3">
+                                        <div key={index} className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
                                             <button
                                                 onClick={() => togglePendingSelection(index)}
                                                 className="text-gray-400 hover:text-yellow-600 transition-colors"
                                             >
                                                 {isSelected ? (
-                                                    <CheckSquare className="w-6 h-6 text-yellow-600" />
+                                                    <CheckSquare className="w-5 h-5 text-yellow-600" />
                                                 ) : (
-                                                    <Square className="w-6 h-6" />
+                                                    <Square className="w-5 h-5" />
                                                 )}
                                             </button>
                                             <button
                                                 onClick={() => toggleItemStatus(index)}
                                                 disabled={updating}
-                                                className="flex-1 flex items-center gap-3 text-left hover:bg-yellow-50 rounded-lg p-2 -m-2 transition-colors"
+                                                className="flex-1 flex items-center gap-2 text-left hover:bg-yellow-50 rounded-lg px-2 py-1 -mx-1 transition-colors"
                                             >
-                                                <div className="bg-yellow-100 p-2.5 rounded-lg">
-                                                    <Clock className="w-5 h-5 text-yellow-600" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
+                                                    <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-gray-900">{getToothDisplayName(item.tooth)}</p>
-                                                    <p className="text-gray-500 text-sm">{item.treatments.join(', ')}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="font-semibold text-gray-900">R$ {formatMoney(total)}</p>
-                                                    <p className="text-[#a03f3d] text-xs">Clique para aprovar</p>
+                                                <div className="text-right flex-shrink-0">
+                                                    <p className="font-semibold text-gray-900 text-sm">R$ {formatMoney(total)}</p>
+                                                    <p className="text-[#a03f3d] text-xs">Aprovar</p>
                                                 </div>
                                             </button>
                                         </div>
@@ -829,8 +809,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                         {/* Paid Items */}
                         {paidItems.length > 0 && (
-                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
-                                <div className="p-4 border-b bg-blue-50 flex items-center gap-2">
+                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-3">
+                                <div className="px-3 py-2 border-b bg-blue-50 flex items-center gap-2">
                                     <CreditCard className="w-5 h-5 text-blue-600" />
                                     <span className="font-medium text-blue-800">Pagos</span>
                                 </div>
@@ -838,15 +818,12 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     if (item.status !== 'paid' && item.status !== 'completed') return null;
                                     const total = getItemValue(item);
                                     return (
-                                        <div key={index} className="p-4 border-b border-gray-100 bg-blue-50/30 flex items-center gap-3">
-                                            <div className="bg-blue-100 p-2.5 rounded-lg">
-                                                <CreditCard className="w-5 h-5 text-blue-600" />
+                                        <div key={index} className="px-3 py-2 border-b border-gray-100 bg-blue-50/30 flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
+                                                <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900">{getToothDisplayName(item.tooth)}</p>
-                                                <p className="text-gray-500 text-sm">{item.treatments.join(', ')}</p>
-                                            </div>
-                                            <p className="font-semibold text-blue-700">R$ {formatMoney(total)}</p>
+                                            <p className="font-semibold text-blue-700 text-sm flex-shrink-0">R$ {formatMoney(total)}</p>
                                         </div>
                                     );
                                 })}
@@ -856,23 +833,35 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                 </ScrollArea>
 
                 {/* Footer Actions */}
-                <div className="p-4 border-t bg-gray-50 flex gap-3 flex-shrink-0">
+                <div className="p-3 border-t bg-gray-50 flex gap-2 flex-shrink-0">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenPdfSelection}
+                        disabled={generatingPdf}
+                        className="flex-1"
+                    >
+                        <Eye className="w-4 h-4 mr-1" />
+                        PDF
+                    </Button>
                     {onEdit && (
                         <Button
                             variant="outline"
+                            size="sm"
                             className="flex-1"
                             onClick={() => { onClose(); onEdit(budget); }}
                         >
-                            <Pencil className="w-4 h-4 mr-2" />
+                            <Pencil className="w-4 h-4 mr-1" />
                             Editar
                         </Button>
                     )}
                     <Button
                         variant="outline"
+                        size="sm"
                         className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                         onClick={handleDelete}
                     >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="w-4 h-4 mr-1" />
                         Excluir
                     </Button>
                 </div>
