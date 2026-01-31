@@ -97,7 +97,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
             if (tooth.status === 'approved') {
               toPay.push(item);
               approvedTotal += itemVal;
-            } else if (tooth.status === 'paid') {
+            } else if (tooth.status === 'paid' || tooth.status === 'completed') {
               history.push(item);
               paidTotal += itemVal;
             }

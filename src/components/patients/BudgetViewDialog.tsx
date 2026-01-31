@@ -85,7 +85,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     // Group items by status
     const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid');
     const approvedItems = teeth.filter(t => t.status === 'approved');
-    const paidItems = teeth.filter(t => t.status === 'paid');
+    const paidItems = teeth.filter(t => t.status === 'paid' || t.status === 'completed');
 
     const getItemValue = (tooth: ToothEntry) => {
         return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b) || 0) / 100, 0);
@@ -223,7 +223,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     // Toggle item status (approve/unapprove)
     const toggleItemStatus = async (index: number) => {
         const item = teeth[index];
-        if (item.status === 'paid') return;
+        if (item.status === 'paid' || item.status === 'completed') return;
 
         const newStatus = item.status === 'pending' ? 'approved' : 'pending';
         const action = newStatus === 'approved' ? 'aprovar' : 'marcar como pendente';
@@ -835,7 +835,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     <span className="font-medium text-blue-800">Pagos</span>
                                 </div>
                                 {teeth.map((item, index) => {
-                                    if (item.status !== 'paid') return null;
+                                    if (item.status !== 'paid' && item.status !== 'completed') return null;
                                     const total = getItemValue(item);
                                     return (
                                         <div key={index} className="p-4 border-b border-gray-100 bg-blue-50/30 flex items-center gap-3">
@@ -959,8 +959,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 {teeth.map((item, index) => {
                                     const total = getItemValue(item);
                                     const isSelected = pdfSelectedItems.has(index);
-                                    const statusColor = item.status === 'paid' ? 'text-blue-700 bg-blue-50' : item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-yellow-700 bg-yellow-50';
-                                    const statusLabel = item.status === 'paid' ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
+                                    const statusColor = (item.status === 'paid' || item.status === 'completed') ? 'text-blue-700 bg-blue-50' : item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-yellow-700 bg-yellow-50';
+                                    const statusLabel = (item.status === 'paid' || item.status === 'completed') ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
 
                                     return (
                                         <button

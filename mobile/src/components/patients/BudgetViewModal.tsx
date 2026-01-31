@@ -70,7 +70,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
         if (!budget) return;
 
         const item = teethList[index];
-        if (item.status === 'paid') return;
+        if (item.status === 'paid' || item.status === 'completed') return;
 
         const newStatus = item.status === 'pending' ? 'approved' : 'pending';
         const actionText = newStatus === 'approved' ? 'aprovar' : 'retornar para pendente';
@@ -116,7 +116,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
     const pendingItems = teethList.filter(t => t.status === 'pending');
     const approvedItems = teethList.filter(t => t.status === 'approved');
-    const paidItems = teethList.filter(t => t.status === 'paid');
+    const paidItems = teethList.filter(t => t.status === 'paid' || t.status === 'completed');
 
     const toggleItemSelection = (originalIndex: number) => {
         setSelectedItems(prev => {
@@ -637,7 +637,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                                 <Text className="font-medium text-blue-800">Pagos</Text>
                             </View>
                             {teethList.map((item, index) => {
-                                if (item.status !== 'paid') return null;
+                                if (item.status !== 'paid' && item.status !== 'completed') return null;
                                 const total = getToothTotal(item);
                                 return (
                                     <View
@@ -712,9 +712,9 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             {teethList.map((item, index) => {
                                 const total = getToothTotal(item);
                                 const isSelected = pdfSelectedItems.has(index);
-                                const statusColor = item.status === 'paid' ? '#2563EB' : item.status === 'approved' ? '#16A34A' : '#CA8A04';
-                                const statusBg = item.status === 'paid' ? 'bg-blue-50' : item.status === 'approved' ? 'bg-green-50' : 'bg-yellow-50';
-                                const statusLabel = item.status === 'paid' ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
+                                const statusColor = (item.status === 'paid' || item.status === 'completed') ? '#2563EB' : item.status === 'approved' ? '#16A34A' : '#CA8A04';
+                                const statusBg = (item.status === 'paid' || item.status === 'completed') ? 'bg-blue-50' : item.status === 'approved' ? 'bg-green-50' : 'bg-yellow-50';
+                                const statusLabel = (item.status === 'paid' || item.status === 'completed') ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
 
                                 return (
                                     <TouchableOpacity

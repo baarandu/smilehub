@@ -24,7 +24,7 @@ export function PaymentsTab({
         .sort((a, b) => new Date(b.budgetDate).getTime() - new Date(a.budgetDate).getTime());
 
     const paidItems = paymentItems
-        .filter(i => i.tooth.status === 'paid')
+        .filter(i => i.tooth.status === 'paid' || i.tooth.status === 'completed')
         .sort((a, b) => {
             const dateA = a.tooth.paymentDate || a.budgetDate;
             const dateB = b.tooth.paymentDate || b.budgetDate;

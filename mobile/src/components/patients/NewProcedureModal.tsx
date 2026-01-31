@@ -166,7 +166,7 @@ export function NewProcedureModal({
             const teeth: ToothEntry[] = notesData.teeth;
 
             teeth.forEach((toothEntry, toothIndex) => {
-              if (toothEntry.status === 'paid') {
+              if (toothEntry.status === 'paid' || toothEntry.status === 'completed') {
                 toothEntry.treatments.forEach((treatment, treatmentIndex) => {
                   const valStr = toothEntry.values[treatment] || '0';
                   const val = parseInt(valStr) / 100;

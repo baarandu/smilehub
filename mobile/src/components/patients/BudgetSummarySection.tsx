@@ -24,7 +24,7 @@ export function BudgetSummarySection({
 
     const approvedCount = teethList.filter(t => t.status === 'approved').length;
     const pendingCount = teethList.filter(t => t.status === 'pending').length;
-    const paidCount = teethList.filter(t => t.status === 'paid').length;
+    const paidCount = teethList.filter(t => t.status === 'paid' || t.status === 'completed').length;
 
     const getToothTotal = (item: ToothEntry) =>
         Object.values(item.values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
@@ -60,17 +60,17 @@ export function BudgetSummarySection({
                         key={index}
                         onPress={() => onSelectItem?.(item, index)}
                         activeOpacity={onSelectItem ? 0.7 : 1}
-                        className={`p-4 border-b border-[#fecaca] ${item.status === 'approved' ? 'bg-green-50' : item.status === 'paid' ? 'bg-blue-50' : ''} ${selectedIndex === index ? 'border-l-4 border-l-[#b94a48]' : ''}`}
+                        className={`p-4 border-b border-[#fecaca] ${item.status === 'approved' ? 'bg-green-50' : (item.status === 'paid' || item.status === 'completed') ? 'bg-blue-50' : ''} ${selectedIndex === index ? 'border-l-4 border-l-[#b94a48]' : ''}`}
                     >
                         {/* Header Row */}
                         <View className="flex-row items-center justify-between mb-2">
                             <View className="flex-row items-center gap-2 flex-1">
                                 <TouchableOpacity
-                                    onPress={() => item.status !== 'paid' && onToggleStatus(index)}
-                                    disabled={item.status === 'paid'}
-                                    className={`p-1 rounded ${item.status === 'paid' ? 'bg-blue-100' : item.status === 'approved' ? 'bg-green-100' : 'bg-yellow-100'}`}
+                                    onPress={() => item.status !== 'paid' && item.status !== 'completed' && onToggleStatus(index)}
+                                    disabled={item.status === 'paid' || item.status === 'completed'}
+                                    className={`p-1 rounded ${(item.status === 'paid' || item.status === 'completed') ? 'bg-blue-100' : item.status === 'approved' ? 'bg-green-100' : 'bg-yellow-100'}`}
                                 >
-                                    {item.status === 'paid' ? (
+                                    {(item.status === 'paid' || item.status === 'completed') ? (
                                         <CreditCard size={16} color="#2563EB" />
                                     ) : item.status === 'approved' ? (
                                         <CheckCircle size={16} color="#16A34A" />
