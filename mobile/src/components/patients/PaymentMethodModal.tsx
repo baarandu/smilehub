@@ -236,11 +236,9 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         let transactions: PaymentTransaction[] = [];
 
         // If Anticipated, we ignore installments for the Transaction Record (it becomes one single Income today)
-        // OR we mark them as paid?
-        // User request: "eliminate other installments". This implies single receipt.
-
-        // Force anticipation logic for cards here too
-        const effectiveIsAnticipated = isAnticipated || selectedMethod === 'credit' || selectedMethod === 'debit';
+        // When anticipation is enabled, register as a single transaction even if payment is installment-based
+        // The installment count is still used to calculate the correct fee rate
+        const effectiveIsAnticipated = isAnticipated;
 
         // Use budgetDate if available
         const startDate = budgetDate ? new Date(budgetDate + 'T12:00:00') : new Date();

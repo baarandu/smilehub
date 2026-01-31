@@ -148,9 +148,11 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       // 1. Create Financial Transactions
       const totalAmount = getItemValue(selectedItem);
 
-      const numTransactions = installments || 1;
+      // When anticipated, register as single transaction even if payment is installment-based
+      // The installment count is still used to calculate the correct fee rate
+      const isAnticipated = breakdown?.isAnticipated || false;
+      const numTransactions = isAnticipated ? 1 : (installments || 1);
       const txAmount = totalAmount / numTransactions;
-      const isAnticipated = breakdown?.anticipationRate ? true : false;
 
       // Calculate Deductions (Per Transaction)
       let netAmountPerTx = txAmount;

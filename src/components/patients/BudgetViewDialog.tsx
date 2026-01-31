@@ -360,9 +360,11 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             const selectedTooth = currentTeeth[paymentItem.index];
             const totalAmount = getItemValue(selectedTooth);
 
-            const numTransactions = installments || 1;
+            // When anticipated, register as single transaction even if payment is installment-based
+            // The installment count is still used to calculate the correct fee rate
+            const isAnticipated = breakdown?.isAnticipated || false;
+            const numTransactions = isAnticipated ? 1 : (installments || 1);
             const txAmount = totalAmount / numTransactions;
-            const isAnticipated = breakdown?.anticipationRate ? true : false;
 
             const targetLocationRate = (selectedTooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
 
@@ -496,9 +498,11 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             const { indices } = paymentBatch;
             const totalAmount = paymentBatch.totalValue;
 
-            const numTransactions = installments || 1;
+            // When anticipated, register as single transaction even if payment is installment-based
+            // The installment count is still used to calculate the correct fee rate
+            const isAnticipated = breakdown?.isAnticipated || false;
+            const numTransactions = isAnticipated ? 1 : (installments || 1);
             const txAmount = totalAmount / numTransactions;
-            const isAnticipated = breakdown?.anticipationRate ? true : false;
 
             let netAmountPerTx = txAmount;
             let taxAmountPerTx = 0;
