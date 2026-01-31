@@ -260,7 +260,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden">
+            <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden" hideCloseButton>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b bg-slate-50">
                     <div className="flex items-center gap-2">
