@@ -373,5 +373,240 @@ export const financialService = {
                 }).eq('id', tx.id);
             }
         }
+    },
+
+    /**
+     * Migração: Recalcula taxas de localização de transações em lote
+     * Corrige transações que usavam média das taxas em vez de cálculo individual
+     * Retorna um relatório com as transações corrigidas
+     */
+    async migrateBatchLocationRates(): Promise<{
+        total: number;
+        corrected: number;
+        skipped: number;
+        errors: string[];
+        details: Array<{
+            transactionId: string;
+            budgetId: string;
+            description: string;
+            oldLocationAmount: number;
+            newLocationAmount: number;
+            difference: number;
+        }>;
+    }> {
+        const report = {
+            total: 0,
+            corrected: 0,
+            skipped: 0,
+            errors: [] as string[],
+            details: [] as Array<{
+                transactionId: string;
+                budgetId: string;
+                description: string;
+                oldLocationAmount: number;
+                newLocationAmount: number;
+                difference: number;
+            }>
+        };
+
+        // 1. Busca todas as transações de income vinculadas a orçamentos
+        const { data: transactions, error: txError } = await supabase
+            .from('financial_transactions')
+            .select('*')
+            .eq('type', 'income')
+            .not('related_entity_id', 'is', null);
+
+        if (txError) {
+            report.errors.push(`Erro ao buscar transações: ${txError.message}`);
+            return report;
+        }
+
+        if (!transactions || transactions.length === 0) {
+            return report;
+        }
+
+        // Agrupa transações por budget_id para otimizar consultas
+        const transactionsByBudget = new Map<string, any[]>();
+        for (const tx of transactions) {
+            const budgetId = tx.related_entity_id;
+            if (!transactionsByBudget.has(budgetId)) {
+                transactionsByBudget.set(budgetId, []);
+            }
+            transactionsByBudget.get(budgetId)!.push(tx);
+        }
+
+        // 2. Processa cada orçamento
+        for (const [budgetId, budgetTransactions] of transactionsByBudget) {
+            // Busca o orçamento
+            const { data: budget, error: budgetError } = await supabase
+                .from('budgets')
+                .select('notes, location_rate')
+                .eq('id', budgetId)
+                .single();
+
+            if (budgetError || !budget) {
+                report.errors.push(`Orçamento ${budgetId} não encontrado`);
+                report.skipped += budgetTransactions.length;
+                continue;
+            }
+
+            let teeth: ToothEntry[] = [];
+            let defaultLocationRate = (budget as any).location_rate || 0;
+
+            try {
+                const parsed = JSON.parse((budget as any).notes || '{}');
+                teeth = parsed.teeth || [];
+                if (parsed.locationRate) {
+                    defaultLocationRate = parseFloat(parsed.locationRate);
+                }
+            } catch {
+                report.errors.push(`Erro ao parsear notes do orçamento ${budgetId}`);
+                report.skipped += budgetTransactions.length;
+                continue;
+            }
+
+            if (teeth.length === 0) {
+                report.skipped += budgetTransactions.length;
+                continue;
+            }
+
+            // 3. Processa cada transação deste orçamento
+            for (const tx of budgetTransactions) {
+                report.total++;
+
+                // Verifica se é transação em lote (contém "|" na descrição)
+                const isBatch = tx.description && tx.description.includes(' | ');
+
+                if (!isBatch) {
+                    // Transação individual - já está correta
+                    report.skipped++;
+                    continue;
+                }
+
+                // Identifica os itens da transação pela descrição
+                // Formato: "Tratamento - Dente | Tratamento - Dente (Método)"
+                const descWithoutMethod = tx.description.replace(/\s*\([^)]+\)\s*(\(\d+\/\d+\))?$/, '');
+                const itemDescriptions = descWithoutMethod.split(' | ');
+
+                // Encontra os itens correspondentes no orçamento
+                const matchedTeeth: ToothEntry[] = [];
+                for (const itemDesc of itemDescriptions) {
+                    // Formato: "Tratamento1, Tratamento2 - Dente"
+                    const match = itemDesc.match(/^(.+)\s*-\s*(.+)$/);
+                    if (!match) continue;
+
+                    const treatments = match[1].split(',').map(t => t.trim());
+                    const toothName = match[2].trim();
+
+                    // Busca o tooth correspondente
+                    const matchedTooth = teeth.find(t => {
+                        const toothDisplay = getToothDisplayName(t.tooth);
+                        const matchesTooth = toothDisplay === toothName || t.tooth === toothName;
+                        const matchesTreatments = treatments.every(treatment =>
+                            t.treatments.some(tt => tt.includes(treatment) || treatment.includes(tt))
+                        );
+                        return matchesTooth && matchesTreatments;
+                    });
+
+                    if (matchedTooth) {
+                        matchedTeeth.push(matchedTooth);
+                    }
+                }
+
+                if (matchedTeeth.length === 0) {
+                    report.errors.push(`Transação ${tx.id}: nenhum item encontrado no orçamento`);
+                    report.skipped++;
+                    continue;
+                }
+
+                // 4. Recalcula a taxa de localização individualmente
+                let newLocationAmountTotal = 0;
+                let totalItemValue = 0;
+
+                for (const tooth of matchedTeeth) {
+                    const itemValue = Object.values(tooth.values as Record<string, string>)
+                        .reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                    const itemRate = (tooth as any).locationRate ?? defaultLocationRate;
+
+                    totalItemValue += itemValue;
+                    newLocationAmountTotal += (itemValue * itemRate / 100);
+                }
+
+                // Considera a taxa de cartão se houver
+                const cardFeePerTx = tx.card_fee_amount || 0;
+                const baseForLocation = tx.amount - cardFeePerTx;
+
+                // Se o valor total dos itens encontrados for diferente do valor da transação,
+                // ajusta proporcionalmente (pode haver parcelamento)
+                if (totalItemValue > 0 && Math.abs(totalItemValue - tx.amount) > 0.01) {
+                    const ratio = tx.amount / totalItemValue;
+                    newLocationAmountTotal = newLocationAmountTotal * ratio;
+                }
+
+                // Ajusta considerando a taxa de cartão
+                if (cardFeePerTx > 0 && totalItemValue > 0) {
+                    // Recalcula: para cada item, (valor - proporcional da taxa de cartão) * taxa
+                    const cardFeeRatio = cardFeePerTx / tx.amount;
+                    newLocationAmountTotal = matchedTeeth.reduce((sum, tooth) => {
+                        const itemValue = Object.values(tooth.values as Record<string, string>)
+                            .reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                        const itemRate = (tooth as any).locationRate ?? defaultLocationRate;
+                        const itemBase = itemValue * (1 - cardFeeRatio);
+                        return sum + (itemBase * itemRate / 100);
+                    }, 0);
+
+                    // Ajusta proporcionalmente se for parcela
+                    if (totalItemValue > 0 && Math.abs(totalItemValue - tx.amount) > 0.01) {
+                        const ratio = tx.amount / totalItemValue;
+                        newLocationAmountTotal = newLocationAmountTotal * ratio;
+                    }
+                }
+
+                const oldLocationAmount = tx.location_amount || 0;
+                const difference = newLocationAmountTotal - oldLocationAmount;
+
+                // Só atualiza se houver diferença significativa (> 1 centavo)
+                if (Math.abs(difference) < 0.01) {
+                    report.skipped++;
+                    continue;
+                }
+
+                // 5. Calcula nova taxa efetiva e net_amount
+                const effectiveRate = tx.amount > 0 ? (newLocationAmountTotal / tx.amount) * 100 : 0;
+
+                let newNetAmount = tx.amount;
+                if (tx.tax_amount) newNetAmount -= tx.tax_amount;
+                if (tx.card_fee_amount) newNetAmount -= tx.card_fee_amount;
+                if (tx.anticipation_amount) newNetAmount -= tx.anticipation_amount;
+                if (tx.commission_amount) newNetAmount -= tx.commission_amount;
+                newNetAmount -= newLocationAmountTotal;
+
+                // 6. Atualiza a transação
+                const { error: updateError } = await (supabase.from('financial_transactions') as any)
+                    .update({
+                        location_rate: effectiveRate,
+                        location_amount: newLocationAmountTotal,
+                        net_amount: newNetAmount
+                    })
+                    .eq('id', tx.id);
+
+                if (updateError) {
+                    report.errors.push(`Erro ao atualizar transação ${tx.id}: ${updateError.message}`);
+                    continue;
+                }
+
+                report.corrected++;
+                report.details.push({
+                    transactionId: tx.id,
+                    budgetId,
+                    description: tx.description,
+                    oldLocationAmount,
+                    newLocationAmount: newLocationAmountTotal,
+                    difference
+                });
+            }
+        }
+
+        return report;
     }
 };

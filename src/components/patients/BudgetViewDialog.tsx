@@ -506,10 +506,16 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             let anticipationAmountPerTx = 0;
             let locationAmountPerTx = 0;
 
-            const avgLocationRate = indices.reduce((sum, idx) => {
+            // Calcular taxa de localização individualmente por item (não como média)
+            const locationAmountTotal = indices.reduce((sum, idx) => {
                 const tooth = currentTeeth[idx];
-                return sum + ((tooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0));
-            }, 0) / indices.length;
+                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const itemLocationRate = (tooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
+                return sum + (itemValue * itemLocationRate / 100);
+            }, 0);
+
+            // Taxa efetiva para registro (baseada no valor total)
+            const effectiveLocationRate = totalAmount > 0 ? (locationAmountTotal / totalAmount) * 100 : 0;
 
             if (breakdown) {
                 netAmountPerTx = breakdown.netAmount / numTransactions;
@@ -519,14 +525,13 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                 if (breakdown.locationAmount) {
                     locationAmountPerTx = breakdown.locationAmount / numTransactions;
-                } else if (avgLocationRate > 0) {
-                    const baseForLocation = txAmount - cardFeeAmountPerTx;
-                    locationAmountPerTx = (baseForLocation * avgLocationRate) / 100;
+                } else if (locationAmountTotal > 0) {
+                    locationAmountPerTx = locationAmountTotal / numTransactions;
                     netAmountPerTx -= locationAmountPerTx;
                 }
             } else {
-                if (avgLocationRate > 0) {
-                    locationAmountPerTx = (txAmount * avgLocationRate) / 100;
+                if (locationAmountTotal > 0) {
+                    locationAmountPerTx = locationAmountTotal / numTransactions;
                     netAmountPerTx = txAmount - locationAmountPerTx;
                 }
             }
@@ -586,7 +591,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                     card_fee_amount: cardFeeAmountPerTx,
                     anticipation_rate: breakdown?.anticipationRate,
                     anticipation_amount: anticipationAmountPerTx,
-                    location_rate: avgLocationRate,
+                    location_rate: effectiveLocationRate,
                     location_amount: locationAmountPerTx,
                     payer_is_patient: payerData?.payer_is_patient ?? true,
                     payer_type: payerData?.payer_type || 'PF',
