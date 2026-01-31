@@ -18,6 +18,7 @@ export const FACES = [
 
 // Lista de tratamentos
 export const TREATMENTS = [
+    'Avaliação',
     'Bloco',
     'Canal',
     'Clareamento',
