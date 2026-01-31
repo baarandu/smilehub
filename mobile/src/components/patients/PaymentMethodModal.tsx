@@ -327,119 +327,82 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     if (!visible) return null;
 
     return (
-        <Modal visible={visible} transparent animationType="fade">
+        <Modal visible={visible} transparent animationType="slide">
             <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-white rounded-t-3xl h-[95%] flex flex-col">
-                    <View className="p-6 border-b border-gray-100 flex-row justify-between items-center bg-white rounded-t-3xl z-10">
-                        <Text className="text-xl font-bold text-gray-900">Pagamento</Text>
-                        <TouchableOpacity onPress={onClose}>
-                            <X size={24} color="#6B7280" />
-                        </TouchableOpacity>
+                <View className="bg-white rounded-t-2xl max-h-[85%] flex flex-col">
+                    {/* Compact Header */}
+                    <View className="px-4 py-3 border-b border-gray-100 flex-row justify-between items-center bg-slate-50 rounded-t-2xl">
+                        <View className="flex-row items-center gap-2">
+                            <CreditCard size={16} color="#b94a48" />
+                            <Text className="font-semibold text-gray-900">Pagamento</Text>
+                        </View>
+                        <View className="flex-row items-center gap-3">
+                            <View className="items-end">
+                                <Text className="text-[10px] text-gray-500">{itemName}</Text>
+                                <Text className="text-base font-bold text-[#a03f3d]">R$ {formatCurrency(value)}</Text>
+                            </View>
+                            <TouchableOpacity onPress={onClose} className="p-1">
+                                <X size={20} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <ScrollView className="flex-1 p-6">
-                        {loadingSettings && <ActivityIndicator size="small" color="#b94a48" className="mb-4" />}
+                    <ScrollView className="flex-1 px-4 py-3">
+                        {loadingSettings && <ActivityIndicator size="small" color="#b94a48" className="mb-2" />}
 
-                        {/* Summary & Breakdown */}
-                        <View className="items-center mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <Text className="text-gray-500 text-sm mb-1">{itemName}</Text>
-                            <Text className="text-3xl font-bold text-[#a03f3d]">R$ {formatCurrency(value)}</Text>
-
-                            {/* Visual Breakdown */}
-                            <View className="w-full mt-4 pt-4 border-t border-gray-200 gap-2">
-                                {(breakdown.cardFeeAmount > 0) && (
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-xs text-gray-500">Taxa Cartão ({breakdown.cardFeeRate}%):</Text>
-                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.cardFeeAmount)}</Text>
-                                    </View>
-                                )}
-                                {(breakdown.taxAmount > 0) && (
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-xs text-gray-500">Impostos ({breakdown.taxRate}%):</Text>
-                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.taxAmount)}</Text>
-                                    </View>
-                                )}
-                                {(breakdown.isAnticipated && breakdown.anticipationAmount > 0) && (
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-xs text-gray-500">Antecipação ({breakdown.anticipationRate}%):</Text>
-                                        <Text className="text-xs text-[#b94a48]">- R$ {formatCurrency(breakdown.anticipationAmount)}</Text>
-                                    </View>
-                                )}
-                                {(breakdown.locationAmount > 0) && (
-                                    <View className="flex-row justify-between mb-1">
-                                        <Text className="text-gray-500 text-sm">
-                                            Taxa do Procedimento ({locationRate ? locationRate.toFixed(2).replace('.', ',') : '0'}%):
-                                        </Text>
-                                        <Text className="text-[#b94a48] text-sm font-medium">
-                                            - R$ {breakdown.locationAmount.toFixed(2).replace('.', ',')}
-                                        </Text>
-                                    </View>)}
-                                <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-200">
-                                    <Text className="font-semibold text-gray-900">Valor Líquido:</Text>
-                                    <Text className="font-bold text-[#8b3634]">R$ {formatCurrency(breakdown.netAmount)}</Text>
-                                </View>
-                            </View>
+                        {/* Methods - Compact Grid */}
+                        <Text className="text-xs font-medium text-gray-700 mb-2">Forma de Pagamento</Text>
+                        <View className="flex-row flex-wrap gap-2 mb-3">
+                            {methods.map((method) => (
+                                <TouchableOpacity
+                                    key={method.id}
+                                    onPress={() => {
+                                        setSelectedMethod(method.id);
+                                        if (method.id !== 'credit' && method.id !== 'debit') {
+                                            setSelectedBrand(null);
+                                            setIsAnticipated(false);
+                                        }
+                                    }}
+                                    className={`items-center p-2 rounded-lg border flex-1 min-w-[60px] ${selectedMethod === method.id ? 'bg-[#fef2f2] border-[#b94a48]' : 'border-gray-200 bg-white'}`}
+                                >
+                                    <method.icon size={18} color={selectedMethod === method.id ? '#b94a48' : '#6B7280'} />
+                                    <Text className={`text-[10px] font-medium mt-1 ${selectedMethod === method.id ? 'text-[#5a2322]' : 'text-gray-600'}`}>
+                                        {method.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
 
-                        {/* Methods */}
-                        <Text className="text-sm font-semibold text-gray-900 mb-3">Forma de Pagamento</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-6">
-                            <View className="flex-row gap-3">
-                                {methods.map((method) => (
-                                    <TouchableOpacity
-                                        key={method.id}
-                                        onPress={() => {
-                                            setSelectedMethod(method.id);
-                                            if (method.id !== 'credit' && method.id !== 'debit') {
-                                                setSelectedBrand(null);
-                                                setIsAnticipated(false);
-                                            }
-                                        }}
-                                        className={`items-center p-3 rounded-xl border w-24 ${selectedMethod === method.id
-                                            ? 'bg-[#fef2f2] border-[#b94a48]'
-                                            : 'border-gray-100 bg-gray-50'
-                                            }`}
-                                    >
-                                        <method.icon size={24} color={selectedMethod === method.id ? '#b94a48' : '#6B7280'} />
-                                        <Text className={`text-xs font-medium mt-2 text-center ${selectedMethod === method.id ? 'text-[#5a2322]' : 'text-gray-700'}`}>
-                                            {method.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </ScrollView>
-
                         {selectedMethod && (
-                            <View className="mb-8 animate-fade-in">
-                                {/* Brand Selection */}
+                            <View>
+                                {/* Brand Selection - Compact */}
                                 {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
-                                    <View className="mb-6">
-                                        <Text className="text-sm font-semibold text-gray-900 mb-3">Bandeira do Cartão</Text>
-                                        <View className="flex-row flex-wrap gap-2">
-                                            {availableBrands.map((brand) => (
-                                                <TouchableOpacity
-                                                    key={brand.id}
-                                                    onPress={() => setSelectedBrand(brand.id)}
-                                                    className={`px-4 py-2 rounded-lg border ${selectedBrand === brand.id
-                                                        ? 'bg-[#b94a48] border-[#b94a48]'
-                                                        : 'border-gray-200 bg-white'
-                                                        }`}
-                                                >
-                                                    <Text className={`text-sm font-medium ${selectedBrand === brand.id ? 'text-white' : 'text-gray-700'}`}>
-                                                        {brand.label}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
+                                    <View className="mb-3">
+                                        <Text className="text-xs font-medium text-gray-700 mb-2">Bandeira</Text>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                            <View className="flex-row gap-1.5">
+                                                {availableBrands.map((brand) => (
+                                                    <TouchableOpacity
+                                                        key={brand.id}
+                                                        onPress={() => setSelectedBrand(brand.id)}
+                                                        className={`px-3 py-1.5 rounded-lg border ${selectedBrand === brand.id ? 'bg-[#b94a48] border-[#b94a48]' : 'border-gray-200 bg-white'}`}
+                                                    >
+                                                        <Text className={`text-xs font-medium ${selectedBrand === brand.id ? 'text-white' : 'text-gray-600'}`}>
+                                                            {brand.label}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </ScrollView>
                                     </View>
                                 )}
 
-                                {/* Installments Toggle */}
+                                {/* Installments - Compact */}
                                 {selectedMethod !== 'debit' && (
-                                    <View className="flex-row items-center justify-between mb-4 bg-gray-50 p-4 rounded-xl">
-                                        <View>
-                                            <Text className="font-semibold text-gray-900">Parcelar Pagamento?</Text>
-                                            <Text className="text-xs text-gray-500">Dividir em múltiplas parcelas</Text>
+                                    <View className="flex-row items-center justify-between mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                                        <View className="flex-1">
+                                            <Text className="text-xs font-medium text-gray-900">Parcelar?</Text>
+                                            <Text className="text-[10px] text-gray-500">Múltiplas parcelas</Text>
                                         </View>
                                         <Switch
                                             value={isInstallments}
@@ -453,61 +416,50 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     </View>
                                 )}
 
-                                {/* Installments Logic */}
+                                {/* Installments List - Compact */}
                                 {isInstallments && (
-                                    <View className="gap-4 mb-6">
-                                        <View className="flex-row gap-4 items-end">
+                                    <View className="mb-3">
+                                        <View className="flex-row gap-2 items-end mb-2">
                                             <View className="flex-1">
-                                                <Text className="text-xs font-medium text-gray-700 mb-1">Nº de Parcelas</Text>
+                                                <Text className="text-[10px] text-gray-500 mb-1">Nº Parcelas</Text>
                                                 <TextInput
                                                     value={numInstallments}
                                                     onChangeText={setNumInstallments}
                                                     keyboardType="numeric"
-                                                    className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-base text-gray-900"
+                                                    className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 text-center"
                                                 />
                                             </View>
-                                            <TouchableOpacity
-                                                onPress={handleGenerateClick}
-                                                className="bg-[#a03f3d] p-3 rounded-lg mb-[1px]"
-                                            >
-                                                <Text className="text-white font-medium">Recalcular</Text>
+                                            <TouchableOpacity onPress={handleGenerateClick} className="bg-[#a03f3d] px-3 py-2 rounded-lg">
+                                                <Text className="text-white text-xs font-medium">Gerar</Text>
                                             </TouchableOpacity>
                                         </View>
 
-                                        {/* Anticipation Toggle (Only if Installments is ON) */}
-
-                                        {/* Installment List */}
-                                        {!isAnticipated && (
-                                            <View className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                                <View className="flex-row mb-2 px-1">
-                                                    <Text className="flex-1 text-xs text-gray-400 font-medium">Data (DD/MM/AAAA)</Text>
-                                                    <Text className="w-24 text-xs text-gray-400 font-medium text-right">Valor (R$)</Text>
-                                                </View>
+                                        {!isAnticipated && installmentItems.length > 0 && (
+                                            <View className="bg-gray-50 rounded-lg p-2 border border-gray-100">
                                                 {installmentItems.map((item, index) => (
-                                                    <View key={item.id} className="flex-row gap-3 mb-2">
-                                                        <View className="flex-1 bg-white border border-gray-200 rounded-lg flex-row items-center px-3">
-                                                            <Calendar size={14} color="#9CA3AF" />
+                                                    <View key={item.id} className="flex-row gap-2 mb-1.5">
+                                                        <View className="flex-1 bg-white border border-gray-200 rounded flex-row items-center px-2">
+                                                            <Calendar size={12} color="#9CA3AF" />
                                                             <TextInput
                                                                 value={item.date}
                                                                 onChangeText={(text) => updateInstallment(index, 'date', text)}
-                                                                placeholder="DD/MM/AAAA"
-                                                                className="flex-1 ml-2 py-2 text-sm text-gray-900"
+                                                                className="flex-1 ml-1 py-1.5 text-xs text-gray-900"
                                                             />
                                                         </View>
-                                                        <View className="w-28 bg-white border border-gray-200 rounded-lg flex-row items-center px-3">
-                                                            <Text className="text-gray-400 text-xs mr-1">R$</Text>
+                                                        <View className="w-24 bg-white border border-gray-200 rounded flex-row items-center px-2">
+                                                            <Text className="text-gray-400 text-[10px]">R$</Text>
                                                             <TextInput
                                                                 value={item.amount}
                                                                 onChangeText={(text) => updateInstallment(index, 'amount', text)}
                                                                 keyboardType="numeric"
-                                                                className="flex-1 py-2 text-sm text-gray-900 text-right"
+                                                                className="flex-1 py-1.5 text-xs text-gray-900 text-right"
                                                             />
                                                         </View>
                                                     </View>
                                                 ))}
-                                                <View className="mt-2 pt-2 border-t border-gray-200 flex-row justify-between items-center">
-                                                    <Text className="text-xs text-gray-500">Total Planejado:</Text>
-                                                    <Text className={`font-bold ${Math.abs(getTotalPlanned() - value) > 0.05 ? 'text-[#b94a48]' : 'text-green-600'}`}>
+                                                <View className="flex-row justify-between pt-1.5 border-t border-gray-200 mt-1">
+                                                    <Text className="text-[10px] text-gray-500">Total:</Text>
+                                                    <Text className={`text-xs font-semibold ${Math.abs(getTotalPlanned() - value) > 0.05 ? 'text-[#b94a48]' : 'text-green-600'}`}>
                                                         R$ {formatCurrency(getTotalPlanned())}
                                                     </Text>
                                                 </View>
@@ -516,15 +468,15 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                     </View>
                                 )}
 
-                                {/* Anticipation Toggle */}
+                                {/* Anticipation Toggle - Compact */}
                                 {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
-                                    <View className="mb-6 bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex-row items-center justify-between">
-                                        <View className="flex-1 mr-4">
-                                            <View className="flex-row items-center gap-2 mb-1">
-                                                <PiggyBank size={20} color="#4F46E5" />
-                                                <Text className="font-semibold text-indigo-900">Antecipar Recebimento?</Text>
+                                    <View className="mb-3 bg-indigo-50 p-2.5 rounded-lg border border-indigo-100 flex-row items-center justify-between">
+                                        <View className="flex-1 mr-3">
+                                            <View className="flex-row items-center gap-1.5">
+                                                <PiggyBank size={14} color="#4F46E5" />
+                                                <Text className="text-xs font-medium text-indigo-900">Antecipar?</Text>
                                             </View>
-                                            <Text className="text-xs text-indigo-700">Receber o valor total hoje (taxa de antecipação será aplicada conforme configuração).</Text>
+                                            <Text className="text-[10px] text-indigo-700">Receber tudo hoje</Text>
                                         </View>
                                         <Switch
                                             value={isAnticipated}
@@ -537,160 +489,127 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                             </View>
                         )}
 
-                        {/* Payer Section */}
-                        <View className="mb-6">
-                            <Text className="text-sm font-semibold text-gray-900 mb-3">Quem está pagando?</Text>
-
-                            {/* Patient is payer toggle */}
-                            <View className="flex-row items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3">
+                        {/* Payer Section - Compact */}
+                        <View className="mb-3 pt-2 border-t border-gray-100">
+                            <View className="flex-row items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-100">
                                 <View className="flex-row items-center flex-1">
-                                    <User size={18} color="#6B7280" />
-                                    <View className="ml-3 flex-1">
-                                        <Text className="font-medium text-gray-900">Paciente é o pagador</Text>
-                                        {patientName && (
-                                            <Text className="text-xs text-gray-500">{patientName}</Text>
-                                        )}
+                                    <User size={14} color="#6B7280" />
+                                    <View className="ml-2 flex-1">
+                                        <Text className="text-xs font-medium text-gray-900">Paciente é o pagador</Text>
+                                        {patientName && <Text className="text-[10px] text-gray-500">{patientName}</Text>}
                                     </View>
                                 </View>
                                 <Switch
                                     value={payerIsPatient}
-                                    onValueChange={(checked) => {
-                                        setPayerIsPatient(checked);
-                                        if (checked) {
-                                            setPayerType('PF');
-                                        }
-                                    }}
+                                    onValueChange={(checked) => { setPayerIsPatient(checked); if (checked) setPayerType('PF'); }}
                                     trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
                                     thumbColor={payerIsPatient ? '#a03f3d' : '#9CA3AF'}
                                 />
                             </View>
 
-                            {/* Show patient CPF status */}
-                            {payerIsPatient && (
-                                <View className={`p-3 rounded-lg flex-row items-center mb-3 ${patientCpf ? 'bg-green-50' : 'bg-amber-50'}`}>
-                                    {patientCpf ? (
-                                        <>
-                                            <User size={14} color="#15803D" />
-                                            <Text className="text-xs text-green-700 ml-2">CPF: {patientCpf}</Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <AlertCircle size={14} color="#D97706" />
-                                            <Text className="text-xs text-amber-700 ml-2 flex-1">
-                                                CPF não cadastrado - pode ser preenchido depois no menu IR
-                                            </Text>
-                                        </>
-                                    )}
+                            {payerIsPatient && patientCpf && (
+                                <View className="mt-2 p-2 rounded bg-green-50 flex-row items-center">
+                                    <User size={12} color="#15803D" />
+                                    <Text className="text-[10px] text-green-700 ml-1.5">CPF: {patientCpf}</Text>
                                 </View>
                             )}
 
-                            {/* Alternative payer options */}
                             {!payerIsPatient && (
-                                <View className="gap-3">
-                                    {/* PF/PJ Toggle */}
-                                    <View className="flex-row gap-2">
+                                <View className="mt-2 gap-2">
+                                    <View className="flex-row gap-1.5">
                                         <TouchableOpacity
                                             onPress={() => setPayerType('PF')}
-                                            className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${payerType === 'PF' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
+                                            className={`flex-1 flex-row items-center justify-center py-2 rounded-lg border ${payerType === 'PF' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
                                         >
-                                            <User size={16} color={payerType === 'PF' ? '#FFFFFF' : '#6B7280'} />
-                                            <Text className={`ml-2 font-medium ${payerType === 'PF' ? 'text-white' : 'text-gray-700'}`}>
-                                                Pessoa Física
-                                            </Text>
+                                            <User size={12} color={payerType === 'PF' ? '#FFF' : '#6B7280'} />
+                                            <Text className={`ml-1 text-xs font-medium ${payerType === 'PF' ? 'text-white' : 'text-gray-600'}`}>PF</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             onPress={() => setPayerType('PJ')}
-                                            className={`flex-1 flex-row items-center justify-center py-3 rounded-lg border ${payerType === 'PJ' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
+                                            className={`flex-1 flex-row items-center justify-center py-2 rounded-lg border ${payerType === 'PJ' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'border-gray-200 bg-white'}`}
                                         >
-                                            <Building2 size={16} color={payerType === 'PJ' ? '#FFFFFF' : '#6B7280'} />
-                                            <Text className={`ml-2 font-medium ${payerType === 'PJ' ? 'text-white' : 'text-gray-700'}`}>
-                                                Convênio/PJ
-                                            </Text>
+                                            <Building2 size={12} color={payerType === 'PJ' ? '#FFF' : '#6B7280'} />
+                                            <Text className={`ml-1 text-xs font-medium ${payerType === 'PJ' ? 'text-white' : 'text-gray-600'}`}>PJ</Text>
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* PF Fields */}
                                     {payerType === 'PF' && (
-                                        <View className="gap-3">
-                                            <View>
-                                                <Text className="text-xs text-gray-500 mb-1">Nome do Pagador</Text>
-                                                <TextInput
-                                                    placeholder="Nome completo"
-                                                    value={payerName}
-                                                    onChangeText={setPayerName}
-                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
-                                                />
-                                            </View>
-                                            <View>
-                                                <Text className="text-xs text-gray-500 mb-1">CPF do Pagador</Text>
-                                                <TextInput
-                                                    placeholder="000.000.000-00"
-                                                    value={payerCpf}
-                                                    onChangeText={(v) => setPayerCpf(applyCPFMask(v))}
-                                                    keyboardType="numeric"
-                                                    className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3"
-                                                />
-                                            </View>
+                                        <View className="flex-row gap-2">
+                                            <TextInput placeholder="Nome" value={payerName} onChangeText={setPayerName} className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs" />
+                                            <TextInput placeholder="CPF" value={payerCpf} onChangeText={(v) => setPayerCpf(applyCPFMask(v))} keyboardType="numeric" className="w-28 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs" />
                                         </View>
                                     )}
 
-                                    {/* PJ Fields */}
-                                    {payerType === 'PJ' && (
-                                        <View>
-                                            <Text className="text-xs text-gray-500 mb-1">Fonte Pagadora (Convênio)</Text>
-                                            {pjSources.length === 0 ? (
-                                                <View className="p-3 bg-amber-50 rounded-lg">
-                                                    <Text className="text-xs text-amber-700">
-                                                        Nenhum convênio cadastrado. Adicione nas configurações do IR.
-                                                    </Text>
-                                                </View>
-                                            ) : (
-                                                <View className="gap-2">
-                                                    {pjSources.filter(s => s.is_active).map((source) => (
-                                                        <TouchableOpacity
-                                                            key={source.id}
-                                                            onPress={() => setSelectedPJSource(source.id)}
-                                                            className={`p-3 rounded-lg border flex-row items-center justify-between ${selectedPJSource === source.id ? 'bg-[#fef2f2] border-[#b94a48]' : 'bg-gray-50 border-gray-200'}`}
-                                                        >
-                                                            <View>
-                                                                <Text className={`font-medium ${selectedPJSource === source.id ? 'text-[#8b3634]' : 'text-gray-700'}`}>
-                                                                    {source.nome_fantasia || source.razao_social}
-                                                                </Text>
-                                                                <Text className="text-xs text-gray-500">{source.cnpj}</Text>
-                                                            </View>
-                                                            {selectedPJSource === source.id && (
-                                                                <View className="w-5 h-5 bg-[#b94a48] rounded-full items-center justify-center">
-                                                                    <Text className="text-white text-xs">✓</Text>
-                                                                </View>
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            )}
-                                        </View>
+                                    {payerType === 'PJ' && pjSources.length > 0 && (
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                            <View className="flex-row gap-2">
+                                                {pjSources.filter(s => s.is_active).map((source) => (
+                                                    <TouchableOpacity
+                                                        key={source.id}
+                                                        onPress={() => setSelectedPJSource(source.id)}
+                                                        className={`px-3 py-2 rounded-lg border ${selectedPJSource === source.id ? 'bg-[#fef2f2] border-[#b94a48]' : 'bg-white border-gray-200'}`}
+                                                    >
+                                                        <Text className={`text-xs font-medium ${selectedPJSource === source.id ? 'text-[#8b3634]' : 'text-gray-600'}`}>
+                                                            {source.nome_fantasia || source.razao_social}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </ScrollView>
                                     )}
                                 </View>
                             )}
                         </View>
+
+                        {/* Breakdown - Compact */}
+                        <View className="bg-slate-50 p-2.5 rounded-lg mb-2">
+                            <View className="flex-row justify-between mb-1">
+                                <Text className="text-[10px] text-gray-500">Bruto</Text>
+                                <Text className="text-xs text-gray-700">R$ {formatCurrency(breakdown.grossAmount)}</Text>
+                            </View>
+                            {breakdown.cardFeeAmount > 0 && (
+                                <View className="flex-row justify-between">
+                                    <Text className="text-[10px] text-gray-500">Taxa Cartão ({breakdown.cardFeeRate}%)</Text>
+                                    <Text className="text-[10px] text-[#b94a48]">- R$ {formatCurrency(breakdown.cardFeeAmount)}</Text>
+                                </View>
+                            )}
+                            {breakdown.taxAmount > 0 && (
+                                <View className="flex-row justify-between">
+                                    <Text className="text-[10px] text-gray-500">Impostos ({breakdown.taxRate}%)</Text>
+                                    <Text className="text-[10px] text-[#b94a48]">- R$ {formatCurrency(breakdown.taxAmount)}</Text>
+                                </View>
+                            )}
+                            {breakdown.locationAmount > 0 && (
+                                <View className="flex-row justify-between">
+                                    <Text className="text-[10px] text-gray-500">Taxa Local ({locationRate}%)</Text>
+                                    <Text className="text-[10px] text-[#b94a48]">- R$ {formatCurrency(breakdown.locationAmount)}</Text>
+                                </View>
+                            )}
+                            <View className="flex-row justify-between pt-1.5 mt-1 border-t border-gray-200">
+                                <Text className="text-xs font-semibold text-gray-900">Líquido</Text>
+                                <Text className="text-sm font-bold text-emerald-600">R$ {formatCurrency(breakdown.netAmount)}</Text>
+                            </View>
+                        </View>
                     </ScrollView>
 
-                    <View className="p-4 border-t border-gray-100 bg-white">
+                    {/* Footer */}
+                    <View className="px-4 py-3 border-t border-gray-100 bg-white">
                         <TouchableOpacity
                             onPress={handleConfirm}
                             disabled={!selectedMethod || loading}
-                            className={`w-full py-4 rounded-xl items-center flex-row justify-center gap-2 ${selectedMethod && !loading ? 'bg-[#b94a48]' : 'bg-gray-200'}`}
+                            className={`w-full py-3 rounded-xl items-center flex-row justify-center ${selectedMethod && !loading ? 'bg-[#b94a48]' : 'bg-gray-200'}`}
                         >
                             {loading ? (
                                 <>
                                     <ActivityIndicator size="small" color="#9CA3AF" />
-                                    <Text className="font-semibold text-lg text-gray-400 ml-2">Processando...</Text>
+                                    <Text className="font-medium text-gray-400 ml-2">Processando...</Text>
                                 </>
                             ) : (
                                 <>
-                                    <Text className={`font-semibold text-lg ${selectedMethod ? 'text-white' : 'text-gray-400'}`}>
-                                        Confirmar Pagamento
+                                    <ArrowRight size={16} color={selectedMethod ? '#FFF' : '#9CA3AF'} />
+                                    <Text className={`font-semibold ml-2 ${selectedMethod ? 'text-white' : 'text-gray-400'}`}>
+                                        Confirmar
                                     </Text>
-                                    {selectedMethod && <ArrowRight size={20} color="#FFF" />}
                                 </>
                             )}
                         </TouchableOpacity>
