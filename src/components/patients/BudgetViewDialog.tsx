@@ -510,16 +510,31 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             let anticipationAmountPerTx = 0;
             let locationAmountPerTx = 0;
 
-            // Calcular taxa de localização individualmente por item (não como média)
+            // Taxa de cartão total (se houver breakdown)
+            const totalCardFee = breakdown?.cardFeeAmount || 0;
+
+            // Calcular taxa de localização individualmente por item
+            // Considerando: (valor do item - taxa de cartão proporcional) * taxa individual do item
             const locationAmountTotal = indices.reduce((sum, idx) => {
                 const tooth = currentTeeth[idx];
                 const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
-                const itemLocationRate = (tooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
-                return sum + (itemValue * itemLocationRate / 100);
+
+                // Taxa individual do item (fallback para taxa global se não definida ou for 0)
+                const toothRate = (tooth as any).locationRate;
+                const budgetRate = (refreshedBudget as any).location_rate;
+                const notesRate = parsed.locationRate ? parseFloat(parsed.locationRate) : 0;
+                const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
+
+                // Descontar taxa de cartão proporcional antes de aplicar taxa de localização
+                const itemCardFee = totalAmount > 0 ? (totalCardFee * itemValue / totalAmount) : 0;
+                const baseForLocation = itemValue - itemCardFee;
+
+                return sum + (baseForLocation * itemLocationRate / 100);
             }, 0);
 
-            // Taxa efetiva para registro (baseada no valor total)
-            const effectiveLocationRate = totalAmount > 0 ? (locationAmountTotal / totalAmount) * 100 : 0;
+            // Taxa efetiva para registro (baseada no valor total menos taxa de cartão)
+            const baseForEffectiveRate = totalAmount - totalCardFee;
+            const effectiveLocationRate = baseForEffectiveRate > 0 ? (locationAmountTotal / baseForEffectiveRate) * 100 : 0;
 
             if (breakdown) {
                 // Usar taxas do breakdown (imposto, cartão, antecipação)
@@ -528,7 +543,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                 anticipationAmountPerTx = breakdown.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
 
                 // SEMPRE usar o locationAmountTotal calculado individualmente por procedimento
-                // (não usar breakdown.locationAmount que é calculado com a taxa média/global)
                 locationAmountPerTx = locationAmountTotal / numTransactions;
 
                 // Recalcular net_amount com o location correto

@@ -269,8 +269,11 @@ export function usePatientPayments(
                 const itemValue = calculateToothTotal(item.tooth.values);
                 const ratio = itemValue / totalValue;
 
-                // Pegar a taxa individual do item (não a média do breakdown)
-                const itemLocationRate = item.tooth.locationRate ?? budget.location_rate ?? parsed.locationRate ?? 0;
+                // Pegar a taxa individual do item (fallback para taxa global se não definida ou for 0)
+                const toothRate = item.tooth.locationRate;
+                const budgetRate = budget.location_rate;
+                const notesRate = parsed.locationRate ?? 0;
+                const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
 
                 // Calculate proportional breakdown for this item - usando taxa individual
                 let itemBreakdown: PaymentBreakdown | undefined = undefined;
@@ -329,7 +332,9 @@ export function usePatientPayments(
             for (const item of selectedItems.items) {
                 const itemValue = calculateToothTotal(item.tooth.values);
                 const ratio = itemValue / totalValue;
-                const targetLocationRate = item.tooth.locationRate ?? budget.location_rate ?? parsed.locationRate ?? 0;
+                // Taxa individual (fallback para taxa global se não definida ou for 0)
+                const toothRateForTx = item.tooth.locationRate;
+                const targetLocationRate = (toothRateForTx && toothRateForTx > 0) ? toothRateForTx : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
 
                 const descriptionBase = `${item.tooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(item.tooth.tooth)} - ${patient?.name}`;
 
