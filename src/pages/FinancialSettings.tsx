@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { settingsService } from "@/services/settings";
-import { financialService } from "@/services/financial";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, X, ArrowLeft, CreditCard, Search, CheckCircle, Tag, Wrench } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, X, ArrowLeft, CreditCard, Search, CheckCircle, Tag } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -65,23 +64,6 @@ export default function FinancialSettings() {
     // Card Fee Filters
     const [filterBrand, setFilterBrand] = useState('all');
     const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
-
-    // Migration State
-    const [runningMigration, setRunningMigration] = useState(false);
-    const [migrationReport, setMigrationReport] = useState<{
-        total: number;
-        corrected: number;
-        skipped: number;
-        errors: string[];
-        details: Array<{
-            transactionId: string;
-            budgetId: string;
-            description: string;
-            oldLocationAmount: number;
-            newLocationAmount: number;
-            difference: number;
-        }>;
-    } | null>(null);
 
     useEffect(() => {
         loadData();
@@ -243,26 +225,6 @@ export default function FinancialSettings() {
 
     // Search filter
     const [searchQuery, setSearchQuery] = useState('');
-
-    const handleRunMigration = async () => {
-        if (!confirm('Esta ação irá recalcular as taxas de localização de pagamentos em lote. Deseja continuar?')) return;
-        setRunningMigration(true);
-        setMigrationReport(null);
-        try {
-            const report = await financialService.migrateBatchLocationRates();
-            setMigrationReport(report);
-            if (report.corrected > 0) {
-                toast({ title: "Migração concluída", description: `${report.corrected} transação(ões) corrigida(s).` });
-            } else {
-                toast({ title: "Migração concluída", description: "Nenhuma transação precisou ser corrigida." });
-            }
-        } catch (error) {
-            console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Erro ao executar migração." });
-        } finally {
-            setRunningMigration(false);
-        }
-    };
 
     if (loading) {
         return (
@@ -711,106 +673,6 @@ export default function FinancialSettings() {
                                 </Table>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-
-                {/* Maintenance Section */}
-                <Card className="border-slate-200 shadow-sm">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[#7a3b3b]/10 flex items-center justify-center">
-                                    <Wrench className="w-5 h-5 text-[#7a3b3b]" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900">Manutenção</h3>
-                                    <p className="text-sm text-slate-500">Ferramentas de correção e manutenção de dados</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div>
-                                        <p className="font-medium text-slate-900">Recalcular Taxas de Localização</p>
-                                        <p className="text-sm text-slate-500 mt-1">
-                                            Corrige transações em lote que usavam média das taxas em vez de cálculo individual por procedimento.
-                                        </p>
-                                    </div>
-                                    <Button
-                                        onClick={handleRunMigration}
-                                        disabled={runningMigration}
-                                        variant="outline"
-                                        className="shrink-0 border-slate-300"
-                                    >
-                                        {runningMigration ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Executando...
-                                            </>
-                                        ) : (
-                                            'Executar'
-                                        )}
-                                    </Button>
-                                </div>
-
-                                {/* Migration Report */}
-                                {migrationReport && (
-                                    <div className="mt-4 p-3 bg-white rounded-lg border border-slate-200">
-                                        <p className="font-medium text-slate-900 mb-2">Resultado da Migração</p>
-                                        <div className="grid grid-cols-3 gap-4 text-sm mb-3">
-                                            <div>
-                                                <span className="text-slate-500">Total analisado:</span>
-                                                <span className="ml-2 font-medium">{migrationReport.total}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Corrigidos:</span>
-                                                <span className="ml-2 font-medium text-green-600">{migrationReport.corrected}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-500">Ignorados:</span>
-                                                <span className="ml-2 font-medium">{migrationReport.skipped}</span>
-                                            </div>
-                                        </div>
-
-                                        {migrationReport.errors.length > 0 && (
-                                            <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
-                                                <p className="font-medium">Erros:</p>
-                                                <ul className="list-disc list-inside">
-                                                    {migrationReport.errors.slice(0, 5).map((err, i) => (
-                                                        <li key={i}>{err}</li>
-                                                    ))}
-                                                    {migrationReport.errors.length > 5 && (
-                                                        <li>... e mais {migrationReport.errors.length - 5} erro(s)</li>
-                                                    )}
-                                                </ul>
-                                            </div>
-                                        )}
-
-                                        {migrationReport.details.length > 0 && (
-                                            <div className="mt-3">
-                                                <p className="text-sm font-medium text-slate-700 mb-2">Transações corrigidas:</p>
-                                                <div className="max-h-48 overflow-y-auto space-y-2">
-                                                    {migrationReport.details.map((detail, i) => (
-                                                        <div key={i} className="text-xs p-2 bg-slate-50 rounded">
-                                                            <p className="text-slate-600 truncate">{detail.description}</p>
-                                                            <div className="flex gap-4 mt-1">
-                                                                <span>Antes: <span className="text-red-600">R$ {detail.oldLocationAmount.toFixed(2)}</span></span>
-                                                                <span>Depois: <span className="text-green-600">R$ {detail.newLocationAmount.toFixed(2)}</span></span>
-                                                                <span>Diferença: <span className={detail.difference > 0 ? 'text-red-600' : 'text-green-600'}>
-                                                                    {detail.difference > 0 ? '+' : ''}R$ {detail.difference.toFixed(2)}
-                                                                </span></span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
                     </CardContent>
                 </Card>
             </div>

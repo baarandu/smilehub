@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Settings, Calendar, ChevronDown, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Transaction } from '@/components/financial';
 import { IncomeTab } from '@/components/financial/tabs/IncomeTab';
@@ -9,43 +8,35 @@ import { ExpensesTab } from '@/components/financial/tabs/ExpensesTab';
 import { ClosureTab } from '@/components/financial/tabs/ClosureTab';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
-// Helper to format date to YYYY-MM-DD
-const formatDateInput = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
-
-// Helper to format date for display
-const formatDateDisplay = (dateStr: string) => {
-  const [year, month, day] = dateStr.split('-');
-  return `${day}/${month}/${year}`;
-};
+// Month names in Portuguese
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
 
 export default function Financial() {
-  // Get current month range as default
-  const getDefaultStartDate = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  };
-
-  const getDefaultEndDate = () => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  };
-
-  const [startDate, setStartDate] = useState(formatDateInput(getDefaultStartDate()));
-  const [endDate, setEndDate] = useState(formatDateInput(getDefaultEndDate()));
-  const [activePreset, setActivePreset] = useState<string>('month');
+  const now = new Date();
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [periodDropdownOpen, setPeriodDropdownOpen] = useState(false);
+
+  // Calculate date range based on view mode
+  const getDateRange = useCallback(() => {
+    if (viewMode === 'monthly') {
+      const start = new Date(selectedYear, selectedMonth, 1);
+      const end = new Date(selectedYear, selectedMonth + 1, 0);
+      return { start, end };
+    } else {
+      const start = new Date(selectedYear, 0, 1);
+      const end = new Date(selectedYear, 11, 31);
+      return { start, end };
+    }
+  }, [viewMode, selectedMonth, selectedYear]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -54,60 +45,64 @@ export default function Financial() {
     toast.success('Dados atualizados');
   };
 
-  // Quick presets
-  const setPreset = (preset: 'today' | 'week' | 'month' | 'year') => {
-    const now = new Date();
-    let start: Date, end: Date;
-
-    switch (preset) {
-      case 'today':
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        end = start;
-        break;
-      case 'week':
-        const day = now.getDay();
-        const diff = now.getDate() - day;
-        start = new Date(now.getFullYear(), now.getMonth(), diff);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        break;
-      case 'month':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        break;
-      case 'year':
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-        break;
+  // Navigate to previous period
+  const goToPrevious = () => {
+    if (viewMode === 'monthly') {
+      if (selectedMonth === 0) {
+        setSelectedMonth(11);
+        setSelectedYear(selectedYear - 1);
+      } else {
+        setSelectedMonth(selectedMonth - 1);
+      }
+    } else {
+      setSelectedYear(selectedYear - 1);
     }
-
-    setStartDate(formatDateInput(start));
-    setEndDate(formatDateInput(end));
-    setActivePreset(preset);
-    setPeriodDropdownOpen(false);
   };
 
-  // Get preset label
-  const getPresetLabel = () => {
-    switch (activePreset) {
-      case 'today': return 'Hoje';
-      case 'week': return 'Esta Semana';
-      case 'month': return 'Este Mês';
-      case 'year': return 'Este Ano';
-      default: return 'Personalizado';
+  // Navigate to next period
+  const goToNext = () => {
+    if (viewMode === 'monthly') {
+      if (selectedMonth === 11) {
+        setSelectedMonth(0);
+        setSelectedYear(selectedYear + 1);
+      } else {
+        setSelectedMonth(selectedMonth + 1);
+      }
+    } else {
+      setSelectedYear(selectedYear + 1);
     }
+  };
+
+  // Get display label for current period
+  const getPeriodLabel = () => {
+    if (viewMode === 'monthly') {
+      return `${MONTH_NAMES[selectedMonth]} ${selectedYear}`;
+    } else {
+      return `${selectedYear}`;
+    }
+  };
+
+  // Handle view mode change
+  const handleViewModeChange = (mode: 'monthly' | 'yearly') => {
+    setViewMode(mode);
+    // Reset to current month/year when switching modes
+    const now = new Date();
+    setSelectedMonth(now.getMonth());
+    setSelectedYear(now.getFullYear());
   };
 
   // Load Data
   const loadData = useCallback(async () => {
-    if (!startDate || !endDate) return;
+    const { start, end } = getDateRange();
 
     setLoading(true);
     try {
-      const start = new Date(startDate + 'T00:00:00');
-      const end = new Date(endDate + 'T23:59:59');
+      const startDate = new Date(start);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(end);
+      endDate.setHours(23, 59, 59, 999);
 
-      const data = await financialService.getTransactions(start, end);
+      const data = await financialService.getTransactions(startDate, endDate);
       setTransactions(data);
     } catch (error) {
       console.error('Error loading financial data:', error);
@@ -115,7 +110,7 @@ export default function Financial() {
     } finally {
       setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [getDateRange]);
 
   useEffect(() => {
     loadData();
@@ -134,7 +129,7 @@ export default function Financial() {
             <p className="text-muted-foreground mt-0.5 text-sm">Controle claro de receitas e despesas do seu consultório</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Botão Atualizar */}
           <Button
             variant="outline"
@@ -146,95 +141,48 @@ export default function Financial() {
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
 
-          {/* Seletor de Período Inline */}
-          <Popover open={periodDropdownOpen} onOpenChange={setPeriodDropdownOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="gap-2 min-w-[200px] justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{getPresetLabel()}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded hidden sm:inline">
-                    {formatDateDisplay(startDate)} - {formatDateDisplay(endDate)}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-4" align="end">
-              <div className="space-y-4">
-                {/* Presets rápidos */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Período Rápido</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { key: 'today', label: 'Hoje' },
-                      { key: 'week', label: 'Esta Semana' },
-                      { key: 'month', label: 'Este Mês' },
-                      { key: 'year', label: 'Este Ano' },
-                    ].map(({ key, label }) => (
-                      <Button
-                        key={key}
-                        variant={activePreset === key ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPreset(key as 'today' | 'week' | 'month' | 'year')}
-                        className={activePreset === key ? 'bg-[#a03f3d] hover:bg-[#8b3634]' : ''}
-                      >
-                        {label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+          {/* Toggle Mensal/Anual */}
+          <div className="flex items-center bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'monthly' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('monthly')}
+              className={viewMode === 'monthly' ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white' : 'hover:bg-transparent'}
+            >
+              Mensal
+            </Button>
+            <Button
+              variant={viewMode === 'yearly' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('yearly')}
+              className={viewMode === 'yearly' ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white' : 'hover:bg-transparent'}
+            >
+              Anual
+            </Button>
+          </div>
 
-                {/* Divisor */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-popover px-2 text-muted-foreground">ou personalizado</span>
-                  </div>
-                </div>
-
-                {/* Período Personalizado */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">De</label>
-                    <Input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value);
-                        setActivePreset('custom');
-                      }}
-                      className="h-9"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Até</label>
-                    <Input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value);
-                        setActivePreset('custom');
-                      }}
-                      className="h-9"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full bg-[#a03f3d] hover:bg-[#8b3634]"
-                  size="sm"
-                  onClick={() => setPeriodDropdownOpen(false)}
-                >
-                  Aplicar
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {/* Navegação de Período */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToPrevious}
+              className="h-8 w-8 hover:bg-background"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="px-3 font-medium text-sm min-w-[140px] text-center">
+              {getPeriodLabel()}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToNext}
+              className="h-8 w-8 hover:bg-background"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
 
           {/* Botão Configurações */}
           <Button variant="outline" onClick={() => window.location.href = '/financeiro/configuracoes'} className="gap-2">
