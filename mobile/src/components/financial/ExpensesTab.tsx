@@ -167,7 +167,7 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
 
                 {automaticDeductions.total > 0 && (
                     <View className="mb-6">
-                        <Text className="text-sm font-semibold text-orange-700 mb-3">Descontos Automáticos (Taxas e Impostos)</Text>
+                        <Text className="text-sm font-semibold text-orange-700 mb-3">Detalhamento de Taxas</Text>
                         <View className="gap-2">
                             {automaticDeductions.cardFees > 0 && (
                                 <View className="bg-white p-3 rounded-xl border border-orange-100 flex-row items-center justify-between">

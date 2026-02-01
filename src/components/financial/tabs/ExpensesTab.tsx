@@ -229,7 +229,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Despesas manuais</p>
+                        <p className="text-sm font-medium text-muted-foreground">Despesas Cadastradas</p>
                         <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
                             <TrendingDown className="h-4 w-4 text-red-600" />
                         </div>
@@ -240,7 +240,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
 
                 <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Descontos auto</p>
+                        <p className="text-sm font-medium text-muted-foreground">Taxas e Impostos</p>
                         <div className="h-8 w-8 bg-orange-100 rounded-lg flex items-center justify-center">
                             <Percent className="h-4 w-4 text-orange-600" />
                         </div>
@@ -270,7 +270,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         <div className="bg-orange-50/50 rounded-xl border border-orange-100 p-4">
                             <h3 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
                                 <Percent className="h-4 w-4" />
-                                Descontos Automáticos
+                                Detalhamento de Taxas
                             </h3>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 {automaticDeductions.cardFees > 0 && (
@@ -320,7 +320,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
 
                     {/* Lista de Despesas */}
                     <div className="space-y-2">
-                        <h3 className="text-sm font-medium text-muted-foreground">Despesas manuais ({filtered.length})</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground">Despesas Cadastradas ({filtered.length})</h3>
                         <div className="bg-white rounded-lg border divide-y max-h-[400px] overflow-y-auto">
                 {filtered.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground italic">
