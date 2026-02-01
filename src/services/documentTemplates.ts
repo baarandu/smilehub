@@ -62,11 +62,17 @@ export const documentTemplatesService = {
     fillTemplate(content: string, patient: { name: string; cpf?: string | null; birth_date?: string | null }, documentDate: string): string {
         let filled = content;
 
+        // Formata data YYYY-MM-DD para DD/MM/YYYY sem usar Date (evita problema de timezone)
+        const formatDate = (dateStr: string) => {
+            const [year, month, day] = dateStr.split('-');
+            return `${day}/${month}/${year}`;
+        };
+
         const replacements = {
             'nome': patient.name || '',
             'cpf': patient.cpf || '___.___.___-__',
-            'data_nascimento': patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : '__/__/____',
-            'data': new Date(documentDate).toLocaleDateString('pt-BR')
+            'data_nascimento': patient.birth_date ? formatDate(patient.birth_date) : '__/__/____',
+            'data': formatDate(documentDate)
         };
 
         for (const [key, value] of Object.entries(replacements)) {

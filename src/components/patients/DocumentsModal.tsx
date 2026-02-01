@@ -115,8 +115,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [selectedPatientId, setSelectedPatientId] = useState('');
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
-    const [previewContent, setPreviewContent] = useState('');
+    const [editableContent, setEditableContent] = useState('');
     const [isSavingExam, setIsSavingExam] = useState(false);
+    const [isSavingAsTemplate, setIsSavingAsTemplate] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -231,13 +232,14 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         setSelectedTemplate(template);
         setSelectedPatientId('');
         setDocumentDate(new Date().toISOString().split('T')[0]);
-        setPreviewContent('');
+        setEditableContent('');
         setView('generate');
     };
 
-    const updatePreview = () => {
+    // Preenche o conteúdo editável quando paciente/data mudam
+    useEffect(() => {
         if (!selectedTemplate || !selectedPatientId) {
-            setPreviewContent('');
+            setEditableContent('');
             return;
         }
 
@@ -249,15 +251,29 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             patient,
             documentDate
         );
-        setPreviewContent(filled);
+        setEditableContent(filled);
+    }, [selectedPatientId, documentDate, selectedTemplate, patients]);
+
+    const handleSaveAsTemplate = async () => {
+        if (!editableContent.trim() || !selectedTemplate) return;
+
+        try {
+            setIsSavingAsTemplate(true);
+            await documentTemplatesService.create({
+                name: `${selectedTemplate.name} (cópia)`,
+                content: editableContent
+            });
+            toast({ title: 'Salvo como novo modelo!' });
+            loadTemplates();
+        } catch (error) {
+            toast({ title: 'Erro ao salvar modelo', variant: 'destructive' });
+        } finally {
+            setIsSavingAsTemplate(false);
+        }
     };
 
-    useEffect(() => {
-        updatePreview();
-    }, [selectedPatientId, documentDate, selectedTemplate]);
-
     const handleDownloadPDF = async () => {
-        if (!previewContent) {
+        if (!editableContent) {
             toast({ title: 'Selecione um paciente', variant: 'destructive' });
             return;
         }
@@ -305,7 +321,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             </head>
             <body>
                 <h1>${selectedTemplate?.name}</h1>
-                <div class="content">${previewContent}</div>
+                <div class="content">${editableContent}</div>
                 <div class="signature">
                     <div class="signature-line">${patient?.name}</div>
                 </div>
@@ -322,7 +338,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     };
 
     const handleSaveToExams = async () => {
-        if (!previewContent || !selectedPatientId || !selectedTemplate) {
+        if (!editableContent || !selectedPatientId || !selectedTemplate) {
             toast({ title: 'Dados insuficientes', variant: 'destructive' });
             return;
         }
@@ -334,7 +350,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 selectedPatientId,
                 patient?.name || 'Paciente',
                 selectedTemplate.name,
-                previewContent
+                editableContent
             );
             toast({ title: 'Documento salvo nos exames do paciente!' });
         } catch (error) {
@@ -510,6 +526,13 @@ Nesta data {{data}}, declaro que...`}
                 {/* Generate View */}
                 {view === 'generate' && (
                     <div className="space-y-4">
+                        <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700 flex items-start gap-2">
+                            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                                Edite o documento abaixo. O modelo original não será alterado.
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Paciente</Label>
@@ -537,30 +560,52 @@ Nesta data {{data}}, declaro que...`}
                         </div>
 
                         <div>
-                            <Label>Prévia do Documento</Label>
-                            <div className="border rounded-lg p-4 min-h-[200px] bg-white whitespace-pre-wrap text-sm">
-                                {previewContent || (
-                                    <span className="text-gray-400">Selecione um paciente para ver a prévia</span>
-                                )}
-                            </div>
+                            <Label>Documento</Label>
+                            {selectedPatientId ? (
+                                <Textarea
+                                    value={editableContent}
+                                    onChange={e => setEditableContent(e.target.value)}
+                                    className="min-h-[250px] font-mono text-sm"
+                                    placeholder="Selecione um paciente para preencher o documento"
+                                />
+                            ) : (
+                                <div className="border rounded-lg p-4 min-h-[200px] bg-gray-50 text-sm text-gray-400">
+                                    Selecione um paciente para preencher o documento
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={goBack}>
-                                Voltar
-                            </Button>
-                            <Button onClick={handleSaveToExams} disabled={!previewContent || isSavingExam} variant="outline">
-                                {isSavingExam ? (
+                        <div className="flex justify-between">
+                            <Button
+                                variant="ghost"
+                                onClick={handleSaveAsTemplate}
+                                disabled={!editableContent || isSavingAsTemplate}
+                                className="text-gray-600"
+                            >
+                                {isSavingAsTemplate ? (
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                 ) : (
-                                    <Save className="w-4 h-4 mr-2" />
+                                    <Plus className="w-4 h-4 mr-2" />
                                 )}
-                                Salvar em Exames
+                                Salvar como Modelo
                             </Button>
-                            <Button onClick={handleDownloadPDF} disabled={!previewContent}>
-                                <FileDown className="w-4 h-4 mr-2" />
-                                Imprimir / PDF
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={goBack}>
+                                    Voltar
+                                </Button>
+                                <Button onClick={handleSaveToExams} disabled={!editableContent || isSavingExam} variant="outline">
+                                    {isSavingExam ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Save className="w-4 h-4 mr-2" />
+                                    )}
+                                    Salvar em Exames
+                                </Button>
+                                <Button onClick={handleDownloadPDF} disabled={!editableContent}>
+                                    <FileDown className="w-4 h-4 mr-2" />
+                                    Imprimir / PDF
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
