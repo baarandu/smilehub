@@ -499,60 +499,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             const totalAmount = paymentBatch.totalValue;
 
             // When anticipated, register as single transaction even if payment is installment-based
-            // The installment count is still used to calculate the correct fee rate
             const isAnticipated = breakdown?.isAnticipated || false;
-            const numTransactions = isAnticipated ? 1 : (installments || 1);
-            const txAmount = totalAmount / numTransactions;
-
-            let netAmountPerTx = txAmount;
-            let taxAmountPerTx = 0;
-            let cardFeeAmountPerTx = 0;
-            let anticipationAmountPerTx = 0;
-            let locationAmountPerTx = 0;
-
-            // Taxa de cartão total (se houver breakdown)
-            const totalCardFee = breakdown?.cardFeeAmount || 0;
-
-            // Calcular taxa de localização individualmente por item
-            // Considerando: (valor do item - taxa de cartão proporcional) * taxa individual do item
-            const locationAmountTotal = indices.reduce((sum, idx) => {
-                const tooth = currentTeeth[idx];
-                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
-
-                // Taxa individual do item (fallback para taxa global se não definida ou for 0)
-                const toothRate = (tooth as any).locationRate;
-                const budgetRate = (refreshedBudget as any).location_rate;
-                const notesRate = parsed.locationRate ? parseFloat(parsed.locationRate) : 0;
-                const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
-
-                // Descontar taxa de cartão proporcional antes de aplicar taxa de localização
-                const itemCardFee = totalAmount > 0 ? (totalCardFee * itemValue / totalAmount) : 0;
-                const baseForLocation = itemValue - itemCardFee;
-
-                return sum + (baseForLocation * itemLocationRate / 100);
-            }, 0);
-
-            // Taxa efetiva para registro (baseada no valor total menos taxa de cartão)
-            const baseForEffectiveRate = totalAmount - totalCardFee;
-            const effectiveLocationRate = baseForEffectiveRate > 0 ? (locationAmountTotal / baseForEffectiveRate) * 100 : 0;
-
-            if (breakdown) {
-                // Usar taxas do breakdown (imposto, cartão, antecipação)
-                taxAmountPerTx = breakdown.taxAmount / numTransactions;
-                cardFeeAmountPerTx = breakdown.cardFeeAmount / numTransactions;
-                anticipationAmountPerTx = breakdown.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
-
-                // SEMPRE usar o locationAmountTotal calculado individualmente por procedimento
-                locationAmountPerTx = locationAmountTotal / numTransactions;
-
-                // Recalcular net_amount com o location correto
-                netAmountPerTx = txAmount - taxAmountPerTx - cardFeeAmountPerTx - anticipationAmountPerTx - locationAmountPerTx;
-            } else {
-                if (locationAmountTotal > 0) {
-                    locationAmountPerTx = locationAmountTotal / numTransactions;
-                    netAmountPerTx = txAmount - locationAmountPerTx;
-                }
-            }
+            const numInstallments = isAnticipated ? 1 : (installments || 1);
 
             let budgetDateStr = refreshedBudget.date;
             if (budgetDateStr && budgetDateStr.includes('/')) {
@@ -581,52 +529,98 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             const displayBrand = isCard && brand ? brand : null;
             const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
 
-            const itemsDescription = indices.map(idx => {
-                const tooth = currentTeeth[idx];
-                return `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
-            }).join(' | ');
+            // Taxa de cartão e imposto totais (se houver breakdown)
+            const totalCardFee = breakdown?.cardFeeAmount || 0;
+            const totalTaxAmount = breakdown?.taxAmount || 0;
+            const totalAnticipationAmount = breakdown?.anticipationAmount || 0;
 
-            for (let i = 0; i < numTransactions; i++) {
-                const date = new Date(startDate);
-                if (!isAnticipated) {
-                    date.setMonth(date.getMonth() + i);
+            // Criar uma transação separada para CADA ITEM do lote
+            for (const idx of indices) {
+                const tooth = currentTeeth[idx];
+                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const ratio = itemValue / totalAmount;
+
+                // Taxa individual do item (fallback para taxa global se não definida ou for 0)
+                const toothRate = (tooth as any).locationRate;
+                const budgetRate = (refreshedBudget as any).location_rate;
+                const notesRate = parsed.locationRate ? parseFloat(parsed.locationRate) : 0;
+                const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
+
+                // Taxas proporcionais para este item
+                const itemCardFee = totalCardFee * ratio;
+                const itemTaxAmount = totalTaxAmount * ratio;
+                const itemAnticipationAmount = totalAnticipationAmount * ratio;
+
+                // Taxa de localização: (valor - taxa cartão proporcional) * taxa individual
+                const baseForLocation = itemValue - itemCardFee;
+                const itemLocationAmount = (baseForLocation * itemLocationRate) / 100;
+
+                // Valor líquido do item
+                const itemNetAmount = itemValue - itemTaxAmount - itemCardFee - itemAnticipationAmount - itemLocationAmount;
+
+                // Valor por parcela
+                const amountPerInstallment = itemValue / numInstallments;
+                const cardFeePerInstallment = itemCardFee / numInstallments;
+                const taxPerInstallment = itemTaxAmount / numInstallments;
+                const anticipationPerInstallment = itemAnticipationAmount / numInstallments;
+                const locationPerInstallment = itemLocationAmount / numInstallments;
+                const netPerInstallment = itemNetAmount / numInstallments;
+
+                const itemDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
+
+                // Criar transações para cada parcela deste item
+                for (let i = 0; i < numInstallments; i++) {
+                    const date = new Date(startDate);
+                    if (!isAnticipated) {
+                        date.setMonth(date.getMonth() + i);
+                    }
+
+                    await financialService.createTransaction({
+                        type: 'income',
+                        amount: amountPerInstallment,
+                        description: `${itemDescription} ${paymentTag}${numInstallments > 1 ? ` (${i + 1}/${numInstallments})` : ''}`,
+                        category: 'Tratamento',
+                        date: formatLocalDate(date),
+                        patient_id: patientId,
+                        related_entity_id: budget.id,
+                        location: budgetLocation,
+                        payment_method: method,
+                        net_amount: netPerInstallment,
+                        tax_rate: breakdown?.taxRate,
+                        tax_amount: taxPerInstallment,
+                        card_fee_rate: breakdown?.cardFeeRate,
+                        card_fee_amount: cardFeePerInstallment,
+                        anticipation_rate: breakdown?.anticipationRate,
+                        anticipation_amount: anticipationPerInstallment,
+                        location_rate: itemLocationRate,
+                        location_amount: locationPerInstallment,
+                        payer_is_patient: payerData?.payer_is_patient ?? true,
+                        payer_type: payerData?.payer_type || 'PF',
+                        payer_name: payerData?.payer_name || null,
+                        payer_cpf: payerData?.payer_cpf || null,
+                        pj_source_id: payerData?.pj_source_id || null,
+                    } as any);
                 }
 
-                await financialService.createTransaction({
-                    type: 'income',
-                    amount: txAmount,
-                    description: `${itemsDescription} ${paymentTag}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
-                    category: 'Tratamento',
-                    date: formatLocalDate(date),
-                    patient_id: patientId,
-                    related_entity_id: budget.id,
-                    location: budgetLocation,
-                    payment_method: method,
-                    net_amount: netAmountPerTx,
-                    tax_rate: breakdown?.taxRate,
-                    tax_amount: taxAmountPerTx,
-                    card_fee_rate: breakdown?.cardFeeRate,
-                    card_fee_amount: cardFeeAmountPerTx,
-                    anticipation_rate: breakdown?.anticipationRate,
-                    anticipation_amount: anticipationAmountPerTx,
-                    location_rate: effectiveLocationRate,
-                    location_amount: locationAmountPerTx,
-                    payer_is_patient: payerData?.payer_is_patient ?? true,
-                    payer_type: payerData?.payer_type || 'PF',
-                    payer_name: payerData?.payer_name || null,
-                    payer_cpf: payerData?.payer_cpf || null,
-                    pj_source_id: payerData?.pj_source_id || null,
-                } as any);
-            }
-
-            for (const idx of indices) {
+                // Atualizar status do item
                 currentTeeth[idx] = {
-                    ...currentTeeth[idx],
+                    ...tooth,
                     status: 'paid',
                     paymentMethod: method as any,
                     paymentInstallments: installments,
                     paymentDate: new Date().toISOString().split('T')[0],
-                    financialBreakdown: breakdown
+                    financialBreakdown: {
+                        grossAmount: itemValue,
+                        netAmount: itemNetAmount,
+                        taxRate: breakdown?.taxRate || 0,
+                        taxAmount: itemTaxAmount,
+                        cardFeeRate: breakdown?.cardFeeRate || 0,
+                        cardFeeAmount: itemCardFee,
+                        anticipationRate: breakdown?.anticipationRate || 0,
+                        anticipationAmount: itemAnticipationAmount,
+                        locationRate: itemLocationRate,
+                        locationAmount: itemLocationAmount,
+                    }
                 };
             }
 
