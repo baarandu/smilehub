@@ -263,6 +263,10 @@ export function usePatientPayments(
             // Calculate total value of all items
             const totalValue = selectedItems.items.reduce((sum, item) => sum + calculateToothTotal(item.tooth.values), 0);
 
+            // Taxa do orçamento (global para todos os itens)
+            const budgetRate = budget.location_rate;
+            const notesRate = parsed.locationRate ?? 0;
+
             // Update all selected items to paid status
             for (const item of selectedItems.items) {
                 const selectedTooth = parsed.teeth[item.index];
@@ -271,8 +275,6 @@ export function usePatientPayments(
 
                 // Pegar a taxa individual do item (fallback para taxa global se não definida ou for 0)
                 const toothRate = item.tooth.locationRate;
-                const budgetRate = budget.location_rate;
-                const notesRate = parsed.locationRate ?? 0;
                 const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
 
                 // Calculate proportional breakdown for this item - usando taxa individual

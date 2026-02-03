@@ -218,7 +218,15 @@ export default function AISecretarySettingsScreen() {
                 out_of_hours_message: 'Olá! Nosso atendimento é das {inicio} às {fim}. Retornaremos em breve!',
                 message_limit_per_conversation: 20,
                 human_keywords: ['atendente', 'humano', 'pessoa'],
-            });
+                secretary_name: '',
+                personality_tone: 'friendly',
+                use_emojis: 'moderate',
+                clinic_name: '',
+                clinic_specialty: '',
+                procedures_list: '[]',
+                special_rules: '',
+                additional_info: '',
+            } as AISecretarySettings);
             setBehavior({
                 clinic_id: '',
                 ...DEFAULT_BEHAVIOR_SETTINGS,
@@ -279,7 +287,15 @@ export default function AISecretarySettingsScreen() {
                     out_of_hours_message: 'Olá! Nosso atendimento é das {inicio} às {fim}. Retornaremos em breve!',
                     message_limit_per_conversation: 20,
                     human_keywords: ['atendente', 'humano', 'pessoa'],
-                });
+                    secretary_name: '',
+                    personality_tone: 'friendly',
+                    use_emojis: 'moderate',
+                    clinic_name: '',
+                    clinic_specialty: '',
+                    procedures_list: '[]',
+                    special_rules: '',
+                    additional_info: '',
+                } as AISecretarySettings);
             }
 
             setBlockedNumbers(blockedData);
@@ -322,7 +338,7 @@ export default function AISecretarySettingsScreen() {
         return success;
     };
 
-    const toggleActive = (value: boolean) => updateSetting('is_active', value);
+    const toggleActive = (value: boolean) => { updateSetting('is_active', value); };
 
     // Behavior Prompt handlers
     const handleOpenBehaviorPromptModal = () => {

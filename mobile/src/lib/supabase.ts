@@ -24,6 +24,48 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     },
 });
 
+// Listener global para tratar erros de refresh token inválido
+// Quando o token é inválido, faz logout automático ao invés de ficar em loop
+supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'TOKEN_REFRESHED' && !session) {
+        // Token refresh falhou - limpar sessão
+        supabase.auth.signOut();
+    }
+});
+
+// Interceptar erros de auth para tratar refresh token inválido
+const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
+(supabase.auth as any).getSession = async () => {
+    try {
+        const result = await originalGetSession();
+        return result;
+    } catch (error: any) {
+        if (error?.message?.includes('Refresh Token') ||
+            error?.code === 'refresh_token_not_found') {
+            // Refresh token inválido - fazer logout silencioso
+            await supabase.auth.signOut();
+            return { data: { session: null }, error: null };
+        }
+        throw error;
+    }
+};
+
+const originalGetUser = supabase.auth.getUser.bind(supabase.auth);
+(supabase.auth as any).getUser = async () => {
+    try {
+        const result = await originalGetUser();
+        return result;
+    } catch (error: any) {
+        if (error?.message?.includes('Refresh Token') ||
+            error?.code === 'refresh_token_not_found') {
+            // Refresh token inválido - fazer logout silencioso
+            await supabase.auth.signOut();
+            return { data: { user: null }, error: null };
+        }
+        throw error;
+    }
+};
+
 
 
 

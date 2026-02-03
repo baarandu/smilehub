@@ -93,14 +93,16 @@ export function NewBudgetModal({
                         }
                     } catch {
                         // Backwards compatibility
-                        setTeethList(budget.budget_items.map(item => ({
-                            tooth: item.tooth,
-                            faces: item.faces,
-                            treatments: budget.treatment.split(', '),
-                            values: {},
-                            materials: {},
-                            status: 'pending' as const,
-                        })));
+                        if (budget.budget_items) {
+                            setTeethList(budget.budget_items.map(item => ({
+                                tooth: item.tooth,
+                                faces: item.faces,
+                                treatments: budget.treatment.split(', '),
+                                values: {},
+                                materials: {},
+                                status: 'pending' as const,
+                            })));
+                        }
                     }
                 }
             } else {

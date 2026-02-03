@@ -128,7 +128,7 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
                                         } catch (e) { }
                                         return (
                                             <View className="flex-row flex-wrap gap-2 mb-3">
-                                                {budget.budget_items.map((item: BudgetItem, idx: number) => (
+                                                {budget.budget_items?.map((item: BudgetItem, idx: number) => (
                                                     <View key={idx} className="bg-gray-100 px-2 py-1 rounded">
                                                         <Text className="text-xs text-gray-600">{getToothDisplayName(item.tooth)}</Text>
                                                     </View>

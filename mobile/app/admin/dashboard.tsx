@@ -593,26 +593,26 @@ export default function AdminDashboardScreen() {
             .from('clinics')
             .select(`id, name, created_at, subscriptions (status, plan_id)`)
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(10) as { data: any[] | null };
 
         if (!clinicsData) return;
 
-        const { data: plans } = await supabase.from('subscription_plans').select('id, name');
+        const { data: plans } = await supabase.from('subscription_plans').select('id, name') as { data: any[] | null };
         const planNameMap: Record<string, string> = {};
-        plans?.forEach(plan => { planNameMap[plan.id] = plan.name; });
+        plans?.forEach((plan: any) => { planNameMap[plan.id] = plan.name; });
 
-        const clinicIds = clinicsData.map(c => c.id);
+        const clinicIds = clinicsData.map((c: any) => c.id);
         const { data: clinicUsers } = await supabase
             .from('clinic_users')
             .select('clinic_id')
-            .in('clinic_id', clinicIds);
+            .in('clinic_id', clinicIds) as { data: any[] | null };
 
         const userCountMap: Record<string, number> = {};
-        clinicUsers?.forEach(cu => {
+        clinicUsers?.forEach((cu: any) => {
             userCountMap[cu.clinic_id] = (userCountMap[cu.clinic_id] || 0) + 1;
         });
 
-        setClinics(clinicsData.map(clinic => {
+        setClinics(clinicsData.map((clinic: any) => {
             const subscription = Array.isArray(clinic.subscriptions)
                 ? clinic.subscriptions[0]
                 : clinic.subscriptions;
@@ -631,17 +631,17 @@ export default function AdminDashboardScreen() {
         const { data: profiles } = await supabase
             .from('profiles')
             .select('id, email, full_name, created_at')
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false }) as { data: any[] | null };
 
         if (!profiles) return;
 
         const { data: clinicUsers } = await supabase
             .from('clinic_users')
-            .select('user_id, clinic_id, clinics(name)');
+            .select('user_id, clinic_id, clinics(name)') as { data: any[] | null };
 
         const { data: subscriptions } = await supabase
             .from('subscriptions')
-            .select('clinic_id, status, subscription_plans(name)');
+            .select('clinic_id, status, subscription_plans(name)') as { data: any[] | null };
 
         const clinicUserMap: Record<string, { clinic_id: string; clinic_name: string }> = {};
         clinicUsers?.forEach((cu: any) => {
@@ -659,7 +659,7 @@ export default function AdminDashboardScreen() {
             };
         });
 
-        setUsers(profiles.map(profile => {
+        setUsers(profiles.map((profile: any) => {
             const clinicInfo = clinicUserMap[profile.id];
             const subInfo = clinicInfo ? subscriptionMap[clinicInfo.clinic_id] : null;
             return {
@@ -677,18 +677,18 @@ export default function AdminDashboardScreen() {
     const loadSubscriptionStats = async () => {
         const { data: subscriptions } = await supabase
             .from('subscriptions')
-            .select('status, plan_id');
+            .select('status, plan_id') as { data: any[] | null };
 
         if (!subscriptions) return;
 
-        const { data: plans } = await supabase.from('subscription_plans').select('id, name');
+        const { data: plans } = await supabase.from('subscription_plans').select('id, name') as { data: any[] | null };
         const planNameMap: Record<string, string> = {};
-        plans?.forEach(plan => { planNameMap[plan.id] = plan.name; });
+        plans?.forEach((plan: any) => { planNameMap[plan.id] = plan.name; });
 
         const statusCounts: Record<string, number> = {};
         const planCounts: Record<string, number> = {};
 
-        subscriptions.forEach(sub => {
+        subscriptions.forEach((sub: any) => {
             statusCounts[sub.status] = (statusCounts[sub.status] || 0) + 1;
             if (sub.plan_id) {
                 const planName = planNameMap[sub.plan_id] || 'Desconhecido';

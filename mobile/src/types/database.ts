@@ -12,6 +12,7 @@ export interface Database {
       profiles: {
         Row: {
           id: string
+          email: string | null
           updated_at: string | null
           username: string | null
           full_name: string | null
@@ -20,9 +21,11 @@ export interface Database {
           role: string | null
           gender: string | null
           is_super_admin: boolean | null
+          created_at: string | null
         }
         Insert: {
           id: string
+          email?: string | null
           updated_at?: string | null
           username?: string | null
           full_name?: string | null
@@ -31,9 +34,11 @@ export interface Database {
           role?: string | null
           gender?: string | null
           is_super_admin?: boolean | null
+          created_at?: string | null
         }
         Update: {
           id?: string
+          email?: string | null
           updated_at?: string | null
           username?: string | null
           full_name?: string | null
@@ -42,8 +47,9 @@ export interface Database {
           role?: string | null
           gender?: string | null
           is_super_admin?: boolean | null
+          created_at?: string | null
         }
-      },
+      }
       subscriptions: {
         Row: {
           id: string
@@ -84,56 +90,6 @@ export interface Database {
           stripe_subscription_id?: string | null
           stripe_customer_id?: string | null
           pending_plan_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
-      subscription_plans: {
-        Row: {
-          id: string
-          name: string
-          slug: string
-          description: string | null
-          price_monthly: number
-          price_yearly: number | null
-          max_users: number
-          max_patients: number | null
-          max_locations: number
-          features: Json
-          is_active: boolean
-          sort_order: number | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          slug: string
-          description?: string | null
-          price_monthly: number
-          price_yearly?: number | null
-          max_users?: number
-          max_patients?: number | null
-          max_locations?: number
-          features?: Json
-          is_active?: boolean
-          sort_order?: number | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          slug?: string
-          description?: string | null
-          price_monthly?: number
-          price_yearly?: number | null
-          max_users?: number
-          max_patients?: number | null
-          max_locations?: number
-          features?: Json
-          is_active?: boolean
-          sort_order?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -342,6 +298,59 @@ export interface Database {
           updated_at?: string
         }
       }
+      exams: {
+        Row: {
+          id: string
+          patient_id: string
+          procedure_id: string | null
+          title: string
+          name: string
+          date: string
+          order_date: string
+          exam_date: string | null
+          description: string | null
+          file_url: string | null
+          file_urls: string[] | null
+          file_type: 'document' | 'photo' | null
+          type: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          patient_id: string
+          procedure_id?: string | null
+          title: string
+          name: string
+          date: string
+          order_date: string
+          exam_date?: string | null
+          description?: string | null
+          file_url?: string | null
+          file_urls?: string[] | null
+          file_type?: 'document' | 'photo' | null
+          type?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          patient_id?: string
+          procedure_id?: string | null
+          title?: string
+          name?: string
+          date?: string
+          order_date?: string
+          exam_date?: string | null
+          description?: string | null
+          file_url?: string | null
+          file_urls?: string[] | null
+          file_type?: 'document' | 'photo' | null
+          type?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
       anamneses: {
         Row: {
           id: string
@@ -359,13 +368,20 @@ export interface Database {
           current_medication_details: string | null
           allergy: boolean
           allergy_details: string | null
+          drug_allergy: boolean
+          drug_allergy_details: string | null
+          continuous_medication: boolean
+          continuous_medication_details: string | null
           local_anesthesia_history: boolean
+          local_anesthesia_history_details: string | null
           anesthesia_reaction: boolean
           anesthesia_reaction_details: string | null
           pregnant_or_breastfeeding: boolean
+          pregnant_or_breastfeeding_details: string | null
           smoker_or_drinker: boolean
           smoker_or_drinker_details: string | null
           fasting: boolean
+          fasting_details: string | null
           diabetes: boolean
           diabetes_details: string | null
           depression_anxiety_panic: boolean
@@ -375,11 +391,15 @@ export interface Database {
           heart_disease: boolean
           heart_disease_details: string | null
           hypertension: boolean
+          hypertension_details: string | null
           pacemaker: boolean
+          pacemaker_details: string | null
           infectious_disease: boolean
           infectious_disease_details: string | null
           arthritis: boolean
+          arthritis_details: string | null
           gastritis_reflux: boolean
+          gastritis_reflux_details: string | null
           bruxism_dtm_orofacial_pain: boolean
           bruxism_dtm_orofacial_pain_details: string | null
           notes: string | null
@@ -403,13 +423,20 @@ export interface Database {
           current_medication_details?: string | null
           allergy?: boolean
           allergy_details?: string | null
+          drug_allergy?: boolean
+          drug_allergy_details?: string | null
+          continuous_medication?: boolean
+          continuous_medication_details?: string | null
           local_anesthesia_history?: boolean
+          local_anesthesia_history_details?: string | null
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null
           pregnant_or_breastfeeding?: boolean
+          pregnant_or_breastfeeding_details?: string | null
           smoker_or_drinker?: boolean
           smoker_or_drinker_details?: string | null
           fasting?: boolean
+          fasting_details?: string | null
           diabetes?: boolean
           diabetes_details?: string | null
           depression_anxiety_panic?: boolean
@@ -419,11 +446,15 @@ export interface Database {
           heart_disease?: boolean
           heart_disease_details?: string | null
           hypertension?: boolean
+          hypertension_details?: string | null
           pacemaker?: boolean
+          pacemaker_details?: string | null
           infectious_disease?: boolean
           infectious_disease_details?: string | null
           arthritis?: boolean
+          arthritis_details?: string | null
           gastritis_reflux?: boolean
+          gastritis_reflux_details?: string | null
           bruxism_dtm_orofacial_pain?: boolean
           bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
@@ -447,13 +478,20 @@ export interface Database {
           current_medication_details?: string | null
           allergy?: boolean
           allergy_details?: string | null
+          drug_allergy?: boolean
+          drug_allergy_details?: string | null
+          continuous_medication?: boolean
+          continuous_medication_details?: string | null
           local_anesthesia_history?: boolean
+          local_anesthesia_history_details?: string | null
           anesthesia_reaction?: boolean
           anesthesia_reaction_details?: string | null
           pregnant_or_breastfeeding?: boolean
+          pregnant_or_breastfeeding_details?: string | null
           smoker_or_drinker?: boolean
           smoker_or_drinker_details?: string | null
           fasting?: boolean
+          fasting_details?: string | null
           diabetes?: boolean
           diabetes_details?: string | null
           depression_anxiety_panic?: boolean
@@ -463,11 +501,15 @@ export interface Database {
           heart_disease?: boolean
           heart_disease_details?: string | null
           hypertension?: boolean
+          hypertension_details?: string | null
           pacemaker?: boolean
+          pacemaker_details?: string | null
           infectious_disease?: boolean
           infectious_disease_details?: string | null
           arthritis?: boolean
+          arthritis_details?: string | null
           gastritis_reflux?: boolean
+          gastritis_reflux_details?: string | null
           bruxism_dtm_orofacial_pain?: boolean
           bruxism_dtm_orofacial_pain_details?: string | null
           notes?: string | null
@@ -485,9 +527,9 @@ export interface Database {
           value: number
           status: 'pending' | 'approved' | 'rejected' | 'completed'
           notes: string | null
-          location_rate: number | null
           created_by: string | null
           location: string | null
+          location_rate: number | null
           created_at: string
           updated_at: string
         }
@@ -499,9 +541,9 @@ export interface Database {
           value: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
-          location_rate?: number | null
           created_by?: string | null
           location?: string | null
+          location_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -513,9 +555,9 @@ export interface Database {
           value?: number
           status?: 'pending' | 'approved' | 'rejected' | 'completed'
           notes?: string | null
-          location_rate?: number | null
           created_by?: string | null
           location?: string | null
+          location_rate?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -542,51 +584,7 @@ export interface Database {
           faces?: string[]
           created_at?: string
         }
-      }
-      exams: {
-        Row: {
-          id: string
-          patient_id: string
-          procedure_id: string | null
-          title: string
-          name: string
-          date: string
-          order_date: string
-          description: string | null
-          file_urls: string[]
-          type: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          patient_id: string
-          procedure_id?: string | null
-          title: string
-          name: string
-          date: string
-          order_date: string
-          description?: string | null
-          file_urls?: string[]
-          type?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          patient_id?: string
-          procedure_id?: string | null
-          title?: string
-          name?: string
-          date?: string
-          order_date?: string
-          description?: string | null
-          file_urls?: string[]
-          type?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
+      },
       financial_transactions: {
         Row: {
           id: string
@@ -598,18 +596,34 @@ export interface Database {
           location: string | null
           patient_id: string | null
           related_entity_id: string | null
-          user_id: string
           net_amount: number | null
           tax_rate: number | null
           tax_amount: number | null
           card_fee_rate: number | null
           card_fee_amount: number | null
-          commission_rate: number | null
-          commission_amount: number | null
+          anticipation_rate: number | null
+          anticipation_amount: number | null
+          payment_method: string | null
+          recurrence_id: string | null
+          clinic_id: string | null
           location_rate: number | null
           location_amount: number | null
-          recurrence_id: string | null
-          payment_method: string | null
+          commission_rate: number | null
+          commission_amount: number | null
+          created_by: string | null
+          // IR fields - payer data
+          payer_is_patient: boolean
+          payer_name: string | null
+          payer_cpf: string | null
+          payer_type: 'PF' | 'PJ' | null
+          pj_source_id: string | null
+          irrf_amount: number
+          // IR fields - supplier data (Livro Caixa)
+          supplier_name: string | null
+          supplier_cpf_cnpj: string | null
+          receipt_number: string | null
+          receipt_attachment_url: string | null
+          is_deductible: boolean
           created_at: string
           updated_at: string
         }
@@ -623,18 +637,33 @@ export interface Database {
           location?: string | null
           patient_id?: string | null
           related_entity_id?: string | null
-          user_id?: string
           net_amount?: number | null
           tax_rate?: number | null
           tax_amount?: number | null
           card_fee_rate?: number | null
           card_fee_amount?: number | null
-          commission_rate?: number | null
-          commission_amount?: number | null
+          anticipation_rate?: number | null
+          anticipation_amount?: number | null
+          payment_method?: string | null
+          recurrence_id?: string | null
+          clinic_id?: string | null
           location_rate?: number | null
           location_amount?: number | null
-          recurrence_id?: string | null
-          payment_method?: string | null
+          commission_rate?: number | null
+          commission_amount?: number | null
+          created_by?: string | null
+          // IR fields
+          payer_is_patient?: boolean
+          payer_name?: string | null
+          payer_cpf?: string | null
+          payer_type?: 'PF' | 'PJ' | null
+          pj_source_id?: string | null
+          irrf_amount?: number
+          supplier_name?: string | null
+          supplier_cpf_cnpj?: string | null
+          receipt_number?: string | null
+          receipt_attachment_url?: string | null
+          is_deductible?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -653,42 +682,32 @@ export interface Database {
           tax_amount?: number | null
           card_fee_rate?: number | null
           card_fee_amount?: number | null
-          commission_rate?: number | null
-          commission_amount?: number | null
+          anticipation_rate?: number | null
+          anticipation_amount?: number | null
+          payment_method?: string | null
+          recurrence_id?: string | null
+          clinic_id?: string | null
           location_rate?: number | null
           location_amount?: number | null
-          recurrence_id?: string | null
-          payment_method?: string | null
+          commission_rate?: number | null
+          commission_amount?: number | null
+          created_by?: string | null
+          // IR fields
+          payer_is_patient?: boolean
+          payer_name?: string | null
+          payer_cpf?: string | null
+          payer_type?: 'PF' | 'PJ' | null
+          pj_source_id?: string | null
+          irrf_amount?: number
+          supplier_name?: string | null
+          supplier_cpf_cnpj?: string | null
+          receipt_number?: string | null
+          receipt_attachment_url?: string | null
+          is_deductible?: boolean
           created_at?: string
           updated_at?: string
         }
-      }
-      clinic_users: {
-        Row: {
-          id: string
-          user_id: string
-          clinic_id: string
-          role: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          clinic_id: string
-          role?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          clinic_id?: string
-          role?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
+      },
       financial_settings: {
         Row: {
           id: string
@@ -714,7 +733,82 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-      }
+      },
+      clinic_users: {
+        Row: {
+          id: string
+          user_id: string
+          clinic_id: string
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          clinic_id: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          clinic_id?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      clinics: {
+        Row: {
+          id: string
+          name: string
+          logo_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          logo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          logo_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      },
+      document_templates: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          content: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          content: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          content?: string
+          created_at?: string
+          updated_at?: string
+        }
+      },
       card_fee_config: {
         Row: {
           id: string
@@ -746,7 +840,7 @@ export interface Database {
           anticipation_rate?: number | null
           created_at?: string
         }
-      }
+      },
       tax_config: {
         Row: {
           id: string
@@ -769,56 +863,33 @@ export interface Database {
           rate?: number
           created_at?: string
         }
-      }
-      document_templates: {
+      },
+      clinic_invites: {
         Row: {
           id: string
-          user_id: string
-          name: string
-          content: string
+          clinic_id: string
+          email: string
+          role: string
+          status: string
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
-          name: string
-          content: string
+          clinic_id: string
+          email: string
+          role: string
+          status?: string
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
-          name?: string
-          content?: string
+          clinic_id?: string
+          email?: string
+          role?: string
+          status?: string
           created_at?: string
-          updated_at?: string
         }
-      }
-      clinic_settings: {
-        Row: {
-          id: string
-          user_id: string
-          letterhead_url: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          letterhead_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          letterhead_url?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-      }
+      },
       audit_logs: {
         Row: {
           id: string
@@ -849,6 +920,197 @@ export interface Database {
           entity_id?: string | null
           details?: Json
           created_at?: string
+        }
+      },
+      subscription_plans: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          price_monthly: number
+          price_yearly: number | null
+          max_users: number
+          max_patients: number | null
+          max_locations: number | null
+          features: Json
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          price_monthly: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          price_monthly?: number
+          price_yearly?: number | null
+          max_users?: number
+          max_patients?: number | null
+          max_locations?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      discount_coupons: {
+        Row: {
+          id: string
+          code: string
+          description: string | null
+          discount_type: 'percentage' | 'fixed'
+          discount_value: number
+          max_uses: number | null
+          used_count: number
+          valid_from: string
+          valid_until: string
+          applicable_plan_ids: string[] | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          description?: string | null
+          discount_type: 'percentage' | 'fixed'
+          discount_value: number
+          max_uses?: number | null
+          used_count?: number
+          valid_from: string
+          valid_until: string
+          applicable_plan_ids?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          description?: string | null
+          discount_type?: 'percentage' | 'fixed'
+          discount_value?: number
+          max_uses?: number | null
+          used_count?: number
+          valid_from?: string
+          valid_until?: string
+          applicable_plan_ids?: string[] | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      fiscal_profiles: {
+        Row: {
+          id: string
+          clinic_id: string
+          pf_enabled: boolean
+          pf_cpf: string | null
+          pf_cro: string | null
+          pf_address: string | null
+          pf_city: string | null
+          pf_state: string | null
+          pf_zip_code: string | null
+          pf_uses_carne_leao: boolean
+          pj_enabled: boolean
+          pj_cnpj: string | null
+          pj_razao_social: string | null
+          pj_nome_fantasia: string | null
+          pj_regime_tributario: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          pf_enabled?: boolean
+          pf_cpf?: string | null
+          pf_cro?: string | null
+          pf_address?: string | null
+          pf_city?: string | null
+          pf_state?: string | null
+          pf_zip_code?: string | null
+          pf_uses_carne_leao?: boolean
+          pj_enabled?: boolean
+          pj_cnpj?: string | null
+          pj_razao_social?: string | null
+          pj_nome_fantasia?: string | null
+          pj_regime_tributario?: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          pf_enabled?: boolean
+          pf_cpf?: string | null
+          pf_cro?: string | null
+          pf_address?: string | null
+          pf_city?: string | null
+          pf_state?: string | null
+          pf_zip_code?: string | null
+          pf_uses_carne_leao?: boolean
+          pj_enabled?: boolean
+          pj_cnpj?: string | null
+          pj_razao_social?: string | null
+          pj_nome_fantasia?: string | null
+          pj_regime_tributario?: 'simples' | 'lucro_presumido' | 'lucro_real' | null
+          pj_cnae?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      pj_sources: {
+        Row: {
+          id: string
+          clinic_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clinic_id: string
+          cnpj: string
+          razao_social: string
+          nome_fantasia?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clinic_id?: string
+          cnpj?: string
+          razao_social?: string
+          nome_fantasia?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
     }
@@ -883,12 +1145,14 @@ export type ConsultationUpdate = Database['public']['Tables']['consultations']['
 export type Appointment = Database['public']['Tables']['appointments']['Row']
 export type AppointmentInsert = Database['public']['Tables']['appointments']['Insert']
 export type AppointmentUpdate = Database['public']['Tables']['appointments']['Update']
-export type FinancialSettings = Database['public']['Tables']['financial_settings']['Row']
-export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
-export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
+
 export type Procedure = Database['public']['Tables']['procedures']['Row']
 export type ProcedureInsert = Database['public']['Tables']['procedures']['Insert']
 export type ProcedureUpdate = Database['public']['Tables']['procedures']['Update']
+
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type ExamInsert = Database['public']['Tables']['exams']['Insert']
+export type ExamUpdate = Database['public']['Tables']['exams']['Update']
 
 export type Anamnese = Database['public']['Tables']['anamneses']['Row']
 export type AnamneseInsert = Database['public']['Tables']['anamneses']['Insert']
@@ -906,24 +1170,25 @@ export type FinancialTransaction = Database['public']['Tables']['financial_trans
 export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
 export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
 
-export type Exam = Database['public']['Tables']['exams']['Row']
-export type ExamInsert = Database['public']['Tables']['exams']['Insert']
-export type ExamUpdate = Database['public']['Tables']['exams']['Update']
+export type FinancialSettings = Database['public']['Tables']['financial_settings']['Row']
+export type FinancialSettingsInsert = Database['public']['Tables']['financial_settings']['Insert']
+export type FinancialSettingsUpdate = Database['public']['Tables']['financial_settings']['Update']
 
-export type DocumentTemplate = Database['public']['Tables']['document_templates']['Row']
-export type DocumentTemplateInsert = Database['public']['Tables']['document_templates']['Insert']
-export type DocumentTemplateUpdate = Database['public']['Tables']['document_templates']['Update']
+export type CardFeeConfig = Database['public']['Tables']['card_fee_config']['Row']
+export type CardFeeConfigInsert = Database['public']['Tables']['card_fee_config']['Insert']
+export type CardFeeConfigUpdate = Database['public']['Tables']['card_fee_config']['Update']
 
-export type ClinicSettings = Database['public']['Tables']['clinic_settings']['Row']
+export type SubscriptionPlan = Database['public']['Tables']['subscription_plans']['Row']
+export type SubscriptionPlanInsert = Database['public']['Tables']['subscription_plans']['Insert']
+export type SubscriptionPlanUpdate = Database['public']['Tables']['subscription_plans']['Update']
 
-export type FinancialTransactionWithPatient = FinancialTransaction & {
-  patients: Pick<Patient, 'name'> | null
-}
+export type DiscountCoupon = Database['public']['Tables']['discount_coupons']['Row']
+export type DiscountCouponInsert = Database['public']['Tables']['discount_coupons']['Insert']
+export type DiscountCouponUpdate = Database['public']['Tables']['discount_coupons']['Update']
 
-export type BudgetWithItems = Budget & {
-  budget_items: BudgetItem[]
-  created_by_name?: string | null
-}
+export type TaxConfig = Database['public']['Tables']['tax_config']['Row']
+export type TaxConfigInsert = Database['public']['Tables']['tax_config']['Insert']
+export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update']
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
@@ -964,4 +1229,99 @@ export type PatientFormData = {
   medications: string
   medicalHistory: string
   notes: string
+}
+
+// Document Templates
+export type DocumentTemplate = {
+  id: string
+  user_id: string
+  name: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export type DocumentTemplateInsert = {
+  id?: string
+  user_id: string
+  name: string
+  content: string
+  created_at?: string
+  updated_at?: string
+}
+
+export type DocumentTemplateUpdate = {
+  name?: string
+  content?: string
+  updated_at?: string
+}
+
+// Patient Documents (for file uploads)
+export type PatientDocument = {
+  id: string
+  patient_id: string
+  name: string
+  description: string | null
+  file_url: string
+  file_type: 'image' | 'pdf' | 'document'
+  file_size: number
+  category: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
+  uploaded_at: string
+  created_at: string
+}
+
+export type PatientDocumentInsert = {
+  id?: string
+  patient_id: string
+  name: string
+  description?: string | null
+  file_url: string
+  file_type?: 'image' | 'pdf' | 'document'
+  file_size?: number
+  category?: 'exam' | 'xray' | 'photo' | 'document' | 'prescription' | null
+  uploaded_at?: string
+  created_at?: string
+}
+
+export type FinancialTransaction = Database['public']['Tables']['financial_transactions']['Row']
+export type FinancialTransactionInsert = Database['public']['Tables']['financial_transactions']['Insert']
+export type FinancialTransactionUpdate = Database['public']['Tables']['financial_transactions']['Update']
+
+export type Budget = Database['public']['Tables']['budgets']['Row']
+export type BudgetInsert = Database['public']['Tables']['budgets']['Insert']
+export type BudgetUpdate = Database['public']['Tables']['budgets']['Update']
+
+export type BudgetWithItems = Budget & {
+  budget_items?: Database['public']['Tables']['budget_items']['Row'][]
+  created_by_name?: string | null
+  location_rate?: number | null
+}
+
+export type Procedure = Database['public']['Tables']['procedures']['Row']
+export type ProcedureWithCreator = Procedure & {
+  created_by_name?: string | null
+}
+export type Exam = Database['public']['Tables']['exams']['Row']
+export type Patient = Database['public']['Tables']['patients']['Row']
+export type Appointment = Database['public']['Tables']['appointments']['Row']
+
+// Fiscal/IR Types
+export type FiscalProfile = Database['public']['Tables']['fiscal_profiles']['Row']
+export type FiscalProfileInsert = Database['public']['Tables']['fiscal_profiles']['Insert']
+export type FiscalProfileUpdate = Database['public']['Tables']['fiscal_profiles']['Update']
+
+export type PJSource = Database['public']['Tables']['pj_sources']['Row']
+export type PJSourceInsert = Database['public']['Tables']['pj_sources']['Insert']
+export type PJSourceUpdate = Database['public']['Tables']['pj_sources']['Update']
+
+// Transaction with IR relations
+export type FinancialTransactionWithIR = FinancialTransaction & {
+  patient?: Pick<Patient, 'name' | 'cpf'> | null
+  pj_source?: PJSource | null
+  created_by_name?: string | null
+}
+
+// Legacy type for mobile compatibility
+export type FinancialTransactionWithPatient = FinancialTransaction & {
+  patients: Pick<Patient, 'name'> | null
 }
