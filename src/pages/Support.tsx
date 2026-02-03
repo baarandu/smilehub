@@ -191,10 +191,10 @@ export default function Support() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.message) {
+    if (!formData.name || !formData.message) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha nome, email e mensagem.",
+        description: "Preencha nome e mensagem.",
         variant: "destructive"
       });
       return;
@@ -203,19 +203,24 @@ export default function Support() {
     setIsSubmitting(true);
 
     try {
-      // Abre o cliente de email com os dados preenchidos
-      const subject = encodeURIComponent(
-        formData.subject || `Contato via Suporte - ${formData.category || "Geral"}`
-      );
-      const body = encodeURIComponent(
-        `Nome: ${formData.name}\nEmail: ${formData.email}\nCategoria: ${formData.category || "Não especificada"}\n\nMensagem:\n${formData.message}`
-      );
+      // Monta a mensagem formatada para WhatsApp
+      const categoryLabel = formData.category
+        ? { duvida: "Dúvida", problema: "Problema técnico", sugestao: "Sugestão", financeiro: "Financeiro/Pagamento", outro: "Outro" }[formData.category] || formData.category
+        : "";
 
-      window.open(`mailto:${supportEmail}?subject=${subject}&body=${body}`, "_blank");
+      let whatsappMessage = `*Contato via Suporte*\n\n`;
+      whatsappMessage += `*Nome:* ${formData.name}\n`;
+      if (formData.email) whatsappMessage += `*Email:* ${formData.email}\n`;
+      if (categoryLabel) whatsappMessage += `*Categoria:* ${categoryLabel}\n`;
+      if (formData.subject) whatsappMessage += `*Assunto:* ${formData.subject}\n`;
+      whatsappMessage += `\n*Mensagem:*\n${formData.message}`;
+
+      const encodedMessage = encodeURIComponent(whatsappMessage);
+      window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, "_blank");
 
       toast({
-        title: "Email preparado!",
-        description: "Seu cliente de email foi aberto com a mensagem. Clique em enviar.",
+        title: "WhatsApp aberto!",
+        description: "Clique em enviar para concluir o contato.",
       });
 
       // Limpa o formulário
@@ -229,7 +234,7 @@ export default function Support() {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível preparar o email. Tente pelo WhatsApp.",
+        description: "Não foi possível abrir o WhatsApp.",
         variant: "destructive"
       });
     } finally {
@@ -429,29 +434,22 @@ export default function Support() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Preparando...
+                    Abrindo WhatsApp...
                   </>
                 ) : (
                   <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar Mensagem
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Enviar via WhatsApp
                   </>
                 )}
               </Button>
 
               <p className="text-xs text-gray-500 text-center">
-                Ou entre em contato diretamente pelo{" "}
-                <button
-                  type="button"
-                  onClick={handleWhatsApp}
-                  className="text-green-600 hover:underline font-medium"
-                >
-                  WhatsApp
-                </button>
+                Ao clicar, o WhatsApp será aberto com sua mensagem
               </p>
             </form>
           </div>
