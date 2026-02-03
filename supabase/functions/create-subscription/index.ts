@@ -51,15 +51,14 @@ serve(async (req) => {
             };
         }
 
-        // 3. Create Subscription
-        console.log('[create-subscription] Creating subscription with trial...');
+        // 3. Create Subscription (cobrança imediata, sem trial)
+        console.log('[create-subscription] Creating subscription with immediate payment...');
         const subscription = await stripe.subscriptions.create({
             customer: stripeCustomerId,
             items: [subscriptionItem],
             payment_behavior: 'default_incomplete',
             payment_settings: { save_default_payment_method: 'on_subscription' },
-            expand: ['latest_invoice.payment_intent', 'pending_setup_intent'],
-            trial_period_days: 30, // 30-day free trial force
+            expand: ['latest_invoice.payment_intent'],
             metadata: {
                 supabase_user_id: userId,
                 plan_id: priceId
@@ -68,29 +67,16 @@ serve(async (req) => {
 
         console.log(`[create-subscription] Subscription created: ${subscription.id}`);
 
-        // 4. Extract Client Secret
-        // For trials (trial_period_days > 0), payment_behavior='default_incomplete' creates a SetupIntent (pending_setup_intent).
-        // It does NOT create a PaymentIntent immediately usually, or creates one with amount=0 if configured differently.
+        // 4. Extract Client Secret from PaymentIntent
+        const invoice = subscription.latest_invoice as Stripe.Invoice | null;
+        const paymentIntent = invoice ? (invoice.payment_intent as Stripe.PaymentIntent | null) : null;
 
         let clientSecret = null;
-        let type = 'payment';
+        const type = 'payment';
 
-        // Check Setup Intent (Priority for Trial)
-        const setupIntent = subscription.pending_setup_intent as Stripe.SetupIntent | null;
-        if (setupIntent && setupIntent.client_secret) {
-            clientSecret = setupIntent.client_secret;
-            type = 'setup';
-            console.log('[create-subscription] Using SetupIntent for Trial');
-        } else {
-            // Check Payment Intent (Fallback / Paid)
-            const invoice = subscription.latest_invoice as Stripe.Invoice | null;
-            const paymentIntent = invoice ? (invoice.payment_intent as Stripe.PaymentIntent | null) : null;
-
-            if (paymentIntent && paymentIntent.client_secret) {
-                clientSecret = paymentIntent.client_secret;
-                type = 'payment';
-                console.log('[create-subscription] Using PaymentIntent');
-            }
+        if (paymentIntent && paymentIntent.client_secret) {
+            clientSecret = paymentIntent.client_secret;
+            console.log('[create-subscription] Using PaymentIntent for immediate payment');
         }
 
         if (!clientSecret) {
