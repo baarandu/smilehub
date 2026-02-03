@@ -264,7 +264,6 @@ export default function Pricing() {
 
     const getButtonConfig = (plan: Plan) => {
         const isCurrent = currentPlanId === plan.id;
-        const currentPlan = plans.find(p => p.id === currentPlanId);
 
         if (plan.slug === 'enterprise') {
             return {
@@ -284,25 +283,8 @@ export default function Pricing() {
             };
         }
 
-        if (currentPlan) {
-            if (plan.price_monthly > currentPlan.price_monthly) {
-                return {
-                    text: 'Fazer upgrade',
-                    variant: 'outline' as const,
-                    disabled: false,
-                    isContact: false
-                };
-            }
-            return {
-                text: 'Fazer downgrade',
-                variant: 'muted' as const,
-                disabled: false,
-                isContact: false
-            };
-        }
-
         return {
-            text: 'Assinar agora',
+            text: 'Selecionar plano',
             variant: 'primary' as const,
             disabled: false,
             isContact: false
@@ -315,11 +297,8 @@ export default function Pricing() {
             return;
         }
 
-        if (!currentPlanId || currentPlanId === plan.id) {
-            handleSubscribe(plan);
-            return;
-        }
-        handlePlanChange(plan);
+        // Sempre vai para assinatura/pagamento
+        handleSubscribe(plan);
     };
 
     if (loading) {
