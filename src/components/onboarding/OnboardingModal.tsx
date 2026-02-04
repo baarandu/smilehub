@@ -279,7 +279,7 @@ export function OnboardingFloatingButton() {
           </span>
         </div>
         <span className="text-sm font-medium text-gray-700 group-hover:text-[#a03f3d] transition-colors">
-          Configuração
+          Guia de Configuração
         </span>
       </div>
       <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#a03f3d] transition-colors" />
