@@ -88,13 +88,9 @@ export function ProcedureForm({
                 <Label htmlFor="value">Valor Total (R$)</Label>
                 <Input
                     id="value"
-                    value={form.value}
-                    onChange={(e) => {
-                        const formatted = formatCurrency(e.target.value);
-                        onChange({ value: formatted });
-                    }}
-                    placeholder="0,00"
-                    disabled={loading}
+                    value={form.value ? `R$ ${form.value}` : 'R$ 0,00'}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
                 />
             </div>
 

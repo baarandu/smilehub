@@ -40,18 +40,11 @@ export function ProcedureFooter({
 
             <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2">Valor Total (R$)</Text>
-                <TextInput
-                    className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                    placeholder="0,00"
-                    placeholderTextColor="#9CA3AF"
-                    value={formatCurrency(form.value)}
-                    onChangeText={(text) => {
-                        // Remove tudo que não é número
-                        const numbers = text.replace(/\D/g, '');
-                        onChange({ value: numbers || '0' });
-                    }}
-                    keyboardType="numeric"
-                />
+                <View className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3">
+                    <Text className="text-gray-900">
+                        R$ {formatCurrency(form.value) || '0,00'}
+                    </Text>
+                </View>
             </View>
         </View>
     );
