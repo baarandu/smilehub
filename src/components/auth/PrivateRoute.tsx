@@ -116,10 +116,14 @@ export function PrivateRoute() {
 
         checkAccess();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (mounted) {
-                setLoading(true); // Reset loading on auth change to re-verify
-                checkAccess();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            // Só reage a eventos de login/logout, não a refresh de token
+            // Isso evita que a página "recarregue" quando o usuário muda de aba
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                if (mounted) {
+                    setLoading(true);
+                    checkAccess();
+                }
             }
         });
 
