@@ -9,7 +9,8 @@ import {
   Key,
   HelpCircle,
   ChevronRight,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Database
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
@@ -97,6 +98,14 @@ export default function Settings() {
               title="Equipe"
               description="Gerenciar membros"
               onClick={() => openProfileModal('team')}
+            />
+          )}
+          {isAdmin && (
+            <SettingCard
+              icon={Database}
+              title="Migração de Dados"
+              description="Importar dados de outras plataformas"
+              to="/configuracoes/migracao"
             />
           )}
         </div>

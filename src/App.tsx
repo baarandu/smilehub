@@ -34,6 +34,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const TrialExpired = lazy(() => import("./pages/TrialExpired"));
 const Support = lazy(() => import("./pages/Support"));
 const Settings = lazy(() => import("./pages/Settings"));
+const DataMigration = lazy(() => import("./pages/DataMigration"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ const AppContent = () => (
         <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
         <Route path="/suporte" element={<AppLayout><Support /></AppLayout>} />
         <Route path="/configuracoes" element={<AppLayout><Settings /></AppLayout>} />
+        <Route path="/configuracoes/migracao" element={<AppLayout><DataMigration /></AppLayout>} />
         <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
         <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />
