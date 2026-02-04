@@ -37,7 +37,15 @@ const Settings = lazy(() => import("./pages/Settings"));
 const DataMigration = lazy(() => import("./pages/DataMigration"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Desabilita refetch automático ao voltar para a aba
+      // Isso evita que modais fechem quando o usuário muda de aba
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const LoadingFallback = () => (
   <div className="flex min-h-screen bg-background w-full">
