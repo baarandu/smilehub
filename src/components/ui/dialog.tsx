@@ -30,7 +30,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideCloseButton?: boolean }
->(({ className, children, hideCloseButton, onFocusOutside, ...props }, ref) => (
+>(({ className, children, hideCloseButton, onFocusOutside, onPointerDownOutside, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -40,8 +40,26 @@ const DialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
+        // Ignora eventos de foco quando a página não está visível (mudança de aba)
+        if (document.hidden) {
+          e.preventDefault();
+          return;
+        }
+        // Ignora se o foco foi para fora da janela (ex: DevTools, outra janela)
+        if (!document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
         e.preventDefault();
         onFocusOutside?.(e);
+      }}
+      onPointerDownOutside={(e) => {
+        // Permite fechar ao clicar fora, mas não quando a página não está visível
+        if (document.hidden || !document.hasFocus()) {
+          e.preventDefault();
+          return;
+        }
+        onPointerDownOutside?.(e);
       }}
       {...props}
     >
