@@ -135,35 +135,17 @@ export const subscriptionService = {
     },
 
     /**
-     * Cancel subscription at period end
+     * Cancel subscription at period end (via Stripe)
      */
-    async cancelSubscription(clinicId: string): Promise<{ success: boolean; message: string }> {
-        const { data: currentSub } = await supabase
-            .from('subscriptions')
-            .select('stripe_subscription_id')
-            .eq('clinic_id', clinicId)
-            .in('status', ['active', 'trialing'])
-            .single();
-
-        if (!currentSub?.stripe_subscription_id) {
-            throw new Error('Nenhuma assinatura ativa encontrada');
-        }
-
-        // Update cancel_at_period_end flag
-        const { error } = await supabase
-            .from('subscriptions')
-            .update({
-                cancel_at_period_end: true,
-                updated_at: new Date().toISOString()
-            })
-            .eq('clinic_id', clinicId);
+    async cancelSubscription(clinicId: string, reason?: string): Promise<{ success: boolean; message: string; accessUntil?: string }> {
+        const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+            body: { clinicId, reason },
+        });
 
         if (error) throw error;
+        if (data.error) throw new Error(data.error);
 
-        return {
-            success: true,
-            message: 'Assinatura sera cancelada ao fim do periodo atual.'
-        };
+        return data;
     }
 };
 

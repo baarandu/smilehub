@@ -16,8 +16,12 @@ import {
     Bot,
     UserCog,
     Briefcase,
-    MessageCircle
+    MessageCircle,
+    XCircle,
+    AlertTriangle
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { PaymentModal } from '@/components/subscription/PaymentModal';
 import { subscriptionService } from '@/services/subscription';
 import { appSettingsService } from '@/services/admin/appSettings';
@@ -75,6 +79,12 @@ export default function Pricing() {
     const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
     const [pendingPlanChange, setPendingPlanChange] = useState<Plan | null>(null);
 
+    // Cancellation dialog state
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [canceling, setCanceling] = useState(false);
+    const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+
     // Annual discount from admin settings
     const [annualDiscountPercent, setAnnualDiscountPercent] = useState<number>(17);
 
@@ -113,6 +123,7 @@ export default function Pricing() {
                     setCurrentPlanId(subStatus.plan?.id || null);
                     setIsTrialing(subStatus.isTrialing);
                     setCurrentPeriodEnd(subStatus.subscription?.current_period_end || null);
+                    setCancelAtPeriodEnd(subStatus.subscription?.cancel_at_period_end || false);
                 }
             }
         }
@@ -168,6 +179,33 @@ export default function Pricing() {
         } finally {
             setProcessing(false);
             setPendingPlanChange(null);
+        }
+    };
+
+    const handleCancelSubscription = async () => {
+        if (!clinicId) return;
+
+        setCanceling(true);
+        try {
+            const result = await subscriptionService.cancelSubscription(clinicId, cancelReason || undefined);
+
+            if (result.success) {
+                toast({
+                    title: 'Assinatura Cancelada',
+                    description: result.message,
+                });
+                setCancelDialogOpen(false);
+                setCancelReason('');
+                setCancelAtPeriodEnd(true);
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao cancelar',
+                description: error.message || 'Tente novamente.',
+            });
+        } finally {
+            setCanceling(false);
         }
     };
 
@@ -493,6 +531,27 @@ export default function Pricing() {
                                     {buttonConfig.text}
                                 </Button>
 
+                                {/* Cancel Button - only for current plan */}
+                                {isCurrent && (
+                                    <div className="mt-3 pt-3 border-t border-gray-100">
+                                        {cancelAtPeriodEnd ? (
+                                            <div className="flex items-center justify-center gap-2 text-amber-600 text-sm">
+                                                <AlertTriangle className="w-4 h-4" />
+                                                <span>Cancelado - acesso até {currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR') : 'fim do período'}</span>
+                                            </div>
+                                        ) : (
+                                            <Button
+                                                variant="ghost"
+                                                className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                                onClick={() => setCancelDialogOpen(true)}
+                                            >
+                                                <XCircle className="w-4 h-4 mr-2" />
+                                                Cancelar assinatura
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Footer Text */}
                                 <p className="text-xs text-center text-gray-400 mt-4">
                                     {isEnterprise
@@ -623,6 +682,64 @@ export default function Pricing() {
                         >
                             {processing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
                             Confirmar Downgrade
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cancel Subscription Dialog */}
+            <AlertDialog open={cancelDialogOpen} onOpenChange={(open) => !canceling && setCancelDialogOpen(open)}>
+                <AlertDialogContent className="rounded-2xl">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                            <XCircle className="w-5 h-5" />
+                            Cancelar Assinatura
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-4">
+                                <p className="text-gray-600">
+                                    Tem certeza que deseja cancelar sua assinatura?
+                                </p>
+
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800">
+                                    <p className="text-sm">
+                                        Você continuará com acesso completo até{' '}
+                                        <strong>
+                                            {currentPeriodEnd
+                                                ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR')
+                                                : 'o fim do período atual'}
+                                        </strong>.
+                                        Após essa data, seu acesso será suspenso.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="cancel-reason" className="text-gray-700">
+                                        Motivo do cancelamento (opcional)
+                                    </Label>
+                                    <Textarea
+                                        id="cancel-reason"
+                                        placeholder="Conte-nos por que está cancelando para que possamos melhorar..."
+                                        value={cancelReason}
+                                        onChange={(e) => setCancelReason(e.target.value)}
+                                        rows={3}
+                                        className="resize-none"
+                                    />
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={canceling} className="rounded-xl">
+                            Manter Assinatura
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleCancelSubscription}
+                            disabled={canceling}
+                            className="bg-red-600 hover:bg-red-700 rounded-xl"
+                        >
+                            {canceling ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                            Confirmar Cancelamento
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

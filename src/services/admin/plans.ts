@@ -57,5 +57,28 @@ export const plansService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async getSubscriberCount(planId: string): Promise<number> {
+        const { count, error } = await supabase
+            .from('subscriptions')
+            .select('*', { count: 'exact', head: true })
+            .eq('plan_id', planId)
+            .in('status', ['active', 'trialing', 'past_due']);
+
+        if (error) throw error;
+        return count || 0;
+    },
+
+    async migrateSubscribers(fromPlanId: string, toPlanId: string): Promise<number> {
+        const { data, error } = await supabase
+            .from('subscriptions')
+            .update({ plan_id: toPlanId })
+            .eq('plan_id', fromPlanId)
+            .in('status', ['active', 'trialing', 'past_due'])
+            .select();
+
+        if (error) throw error;
+        return data?.length || 0;
     }
 };

@@ -24,9 +24,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Trash2, Check, X, Loader2, Percent, Save } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Loader2, Percent, Save, AlertTriangle, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function PlansTab() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -58,6 +66,16 @@ export function PlansTab() {
     const [featuresText, setFeaturesText] = useState('');
     const [priceMonthlyInput, setPriceMonthlyInput] = useState('');
     const [priceYearlyInput, setPriceYearlyInput] = useState('');
+
+    // Delete/Migration dialog state
+    const [deleteDialog, setDeleteDialog] = useState<{
+        open: boolean;
+        plan: SubscriptionPlan | null;
+        subscriberCount: number;
+        targetPlanId: string;
+        loading: boolean;
+        migrating: boolean;
+    }>({ open: false, plan: null, subscriberCount: 0, targetPlanId: '', loading: false, migrating: false });
 
     useEffect(() => {
         loadPlans();
@@ -206,12 +224,30 @@ export function PlansTab() {
         }
     };
 
-    const handleDelete = async (id: string, name: string) => {
-        if (!confirm(`Tem certeza que deseja excluir o plano "${name}"?`)) return;
+    const handleDeleteClick = async (plan: SubscriptionPlan) => {
+        setDeleteDialog(prev => ({ ...prev, open: true, plan, loading: true, subscriberCount: 0, targetPlanId: '' }));
 
         try {
-            await plansService.delete(id);
-            toast({ title: "Plano excluído" });
+            const count = await plansService.getSubscriberCount(plan.id);
+            setDeleteDialog(prev => ({ ...prev, subscriberCount: count, loading: false }));
+        } catch (error) {
+            console.error('Error getting subscriber count:', error);
+            setDeleteDialog(prev => ({ ...prev, loading: false }));
+            toast({
+                title: "Erro ao verificar assinantes",
+                description: "Tente novamente.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteDialog.plan) return;
+
+        try {
+            await plansService.delete(deleteDialog.plan.id);
+            toast({ title: "Plano excluído com sucesso!" });
+            setDeleteDialog({ open: false, plan: null, subscriberCount: 0, targetPlanId: '', loading: false, migrating: false });
             loadPlans();
         } catch (error) {
             toast({
@@ -219,6 +255,32 @@ export function PlansTab() {
                 description: "O plano pode estar em uso.",
                 variant: "destructive"
             });
+        }
+    };
+
+    const handleMigrateAndDelete = async () => {
+        if (!deleteDialog.plan || !deleteDialog.targetPlanId) return;
+
+        setDeleteDialog(prev => ({ ...prev, migrating: true }));
+
+        try {
+            const migratedCount = await plansService.migrateSubscribers(deleteDialog.plan.id, deleteDialog.targetPlanId);
+            await plansService.delete(deleteDialog.plan.id);
+
+            toast({
+                title: "Plano excluído com sucesso!",
+                description: `${migratedCount} clínica(s) migrada(s) para o novo plano.`
+            });
+            setDeleteDialog({ open: false, plan: null, subscriberCount: 0, targetPlanId: '', loading: false, migrating: false });
+            loadPlans();
+        } catch (error: any) {
+            console.error('Error migrating and deleting:', error);
+            toast({
+                title: "Erro ao migrar/excluir",
+                description: error.message || "Tente novamente.",
+                variant: "destructive"
+            });
+            setDeleteDialog(prev => ({ ...prev, migrating: false }));
         }
     };
 
@@ -322,7 +384,7 @@ export function PlansTab() {
                                     <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(plan)}>
                                         <Pencil className="h-4 w-4 text-gray-500" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(plan.id, plan.name)}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(plan)}>
                                         <Trash2 className="h-4 w-4 text-red-500" />
                                     </Button>
                                 </div>
@@ -411,6 +473,16 @@ export function PlansTab() {
                             </div>
                         </div>
 
+                        {editingPlan && (
+                            <Alert className="bg-blue-50 border-blue-200">
+                                <Info className="h-4 w-4 text-blue-600" />
+                                <AlertDescription className="text-blue-800 text-sm">
+                                    O novo preço será aplicado apenas para novas assinaturas e renovações.
+                                    Assinantes atuais mantêm o preço até a próxima cobrança.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
                         <div className="space-y-2">
                             <Label>Descrição</Label>
                             <Input
@@ -483,6 +555,102 @@ export function PlansTab() {
                             Salvar
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete/Migration Dialog */}
+            <Dialog open={deleteDialog.open} onOpenChange={(open) => !deleteDialog.migrating && setDeleteDialog(prev => ({ ...prev, open }))}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Excluir Plano
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {deleteDialog.loading ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#a03f3d]" />
+                        </div>
+                    ) : deleteDialog.subscriberCount === 0 ? (
+                        <div className="space-y-4">
+                            <p className="text-gray-600">
+                                Tem certeza que deseja excluir o plano <strong>"{deleteDialog.plan?.name}"</strong>?
+                            </p>
+                            <p className="text-sm text-gray-500">
+                                Este plano não possui assinantes ativos e pode ser excluído diretamente.
+                            </p>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleDeleteConfirm}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir Plano
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <Alert className="bg-amber-50 border-amber-200">
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                <AlertDescription className="text-amber-800">
+                                    Este plano possui <strong>{deleteDialog.subscriberCount} clínica(s)</strong> com assinatura ativa.
+                                    É necessário migrar os assinantes para outro plano antes de excluir.
+                                </AlertDescription>
+                            </Alert>
+
+                            <div className="space-y-2">
+                                <Label>Migrar assinantes para:</Label>
+                                <Select
+                                    value={deleteDialog.targetPlanId}
+                                    onValueChange={(value) => setDeleteDialog(prev => ({ ...prev, targetPlanId: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o plano de destino" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {plans
+                                            .filter(p => p.id !== deleteDialog.plan?.id && p.is_active)
+                                            .map(p => (
+                                                <SelectItem key={p.id} value={p.id}>
+                                                    {p.name} - {formatCurrency(p.price_monthly)}/mês
+                                                </SelectItem>
+                                            ))
+                                        }
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setDeleteDialog(prev => ({ ...prev, open: false }))}
+                                    disabled={deleteDialog.migrating}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    onClick={handleMigrateAndDelete}
+                                    disabled={!deleteDialog.targetPlanId || deleteDialog.migrating}
+                                >
+                                    {deleteDialog.migrating ? (
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    ) : (
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    Migrar e Excluir
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
