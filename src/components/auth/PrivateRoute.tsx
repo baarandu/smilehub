@@ -3,17 +3,17 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-const CACHE_KEY = 'auth_cache';
+const CACHE_KEY = 'organiza_auth_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
-// Funções para gerenciar cache no sessionStorage
+// Funções para gerenciar cache no localStorage (persiste entre tab discards)
 const getCache = () => {
     try {
-        const cached = sessionStorage.getItem(CACHE_KEY);
+        const cached = localStorage.getItem(CACHE_KEY);
         if (!cached) return null;
         const data = JSON.parse(cached);
         if (Date.now() - data.timestamp > CACHE_DURATION) {
-            sessionStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_KEY);
             return null;
         }
         return data;
@@ -24,7 +24,7 @@ const getCache = () => {
 
 const setCache = (isAllowed: boolean, isTrialExpired: boolean) => {
     try {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
             isAllowed,
             isTrialExpired,
             timestamp: Date.now(),
@@ -36,7 +36,7 @@ const setCache = (isAllowed: boolean, isTrialExpired: boolean) => {
 
 const clearCache = () => {
     try {
-        sessionStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_KEY);
     } catch {
         // Ignora erros
     }
