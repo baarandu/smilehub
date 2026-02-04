@@ -7,6 +7,7 @@ const ALLOWED_ORIGINS = [
   'https://organizaodonto.vercel.app',
   'http://localhost:5173', // Desenvolvimento local
   'http://localhost:3000', // Desenvolvimento local alternativo
+  'http://localhost:8080', // Desenvolvimento local alternativo
 ];
 
 export function getCorsHeaders(request: Request): Record<string, string> {
