@@ -311,11 +311,11 @@ export default function Pricing() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#fdf8f7] via-[#fef6f5] to-[#fdf2f0]">
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-screen-2xl mx-auto px-4 py-6">
                 {/* Header */}
-                <div className="text-center mb-12">
+                <div className="text-center mb-8">
                     {/* Trial Badge */}
-                    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 mb-6 shadow-sm">
+                    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 mb-4 shadow-sm">
                         <Sparkles className="w-4 h-4 text-[#a03f3d]" />
                         <span className="text-sm text-gray-700">
                             {billingCycle === 'monthly'
@@ -333,7 +333,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Benefits Bar */}
-                <div className="flex flex-wrap justify-center gap-4 mb-12">
+                <div className="flex flex-wrap justify-center gap-4 mb-6">
                     <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
                         <Shield className="w-5 h-5 text-[#a03f3d]" />
                         <div>
@@ -358,7 +358,7 @@ export default function Pricing() {
                 </div>
 
                 {/* Billing Cycle Toggle */}
-                <div className="flex justify-center mb-10">
+                <div className="flex justify-center mb-8">
                     <div className="inline-flex items-center bg-white rounded-full p-1.5 shadow-sm border border-gray-200">
                         <button
                             onClick={() => setBillingCycle('monthly')}

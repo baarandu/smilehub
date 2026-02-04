@@ -47,7 +47,7 @@ const navItems = [
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
-  { to: '/planos', icon: CreditCard, label: 'Assinatura' },
+  { to: '/planos', icon: CreditCard, label: 'Planos e Assinatura' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
