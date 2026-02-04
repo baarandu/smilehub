@@ -3,68 +3,22 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-const CACHE_KEY = 'organiza_auth_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-
-// Funções para gerenciar cache no localStorage (persiste entre tab discards)
-const getCache = () => {
-    try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (!cached) return null;
-        const data = JSON.parse(cached);
-        if (Date.now() - data.timestamp > CACHE_DURATION) {
-            localStorage.removeItem(CACHE_KEY);
-            return null;
-        }
-        return data;
-    } catch {
-        return null;
-    }
-};
-
-const setCache = (isAllowed: boolean, isTrialExpired: boolean) => {
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-            isAllowed,
-            isTrialExpired,
-            timestamp: Date.now(),
-        }));
-    } catch {
-        // Ignora erros de storage
-    }
-};
-
-const clearCache = () => {
-    try {
-        localStorage.removeItem(CACHE_KEY);
-    } catch {
-        // Ignora erros
-    }
-};
-
 export function PrivateRoute() {
-    const cachedData = getCache();
-
     const [session, setSession] = useState<any>(null);
-    const [loading, setLoading] = useState(!cachedData);
-    const [isChecking, setIsChecking] = useState(!cachedData);
-    const [isAllowed, setIsAllowed] = useState(cachedData?.isAllowed ?? false);
-    const [isTrialExpired, setIsTrialExpired] = useState(cachedData?.isTrialExpired ?? false);
-    const [initialCheckDone, setInitialCheckDone] = useState(!!cachedData);
+    const [loading, setLoading] = useState(true);
+
+    // Add Super Admin and Subscription logic
+    const [isChecking, setIsChecking] = useState(true);
+    const [isAllowed, setIsAllowed] = useState(false);
+    const [isTrialExpired, setIsTrialExpired] = useState(false);
 
     useEffect(() => {
         let mounted = true;
 
-        const checkAccess = async (forceCheck = false) => {
-            // Se tem cache válido e não é forçado, pula a verificação
-            if (!forceCheck && initialCheckDone) {
-                return;
-            }
+        const checkAccess = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
 
-            const { data: { session: sessionData } } = await supabase.auth.getSession();
-
-            if (!sessionData) {
-                clearCache();
+            if (!session) {
                 if (mounted) {
                     setSession(null);
                     setLoading(false);
@@ -73,13 +27,13 @@ export function PrivateRoute() {
                 return;
             }
 
-            if (mounted) setSession(sessionData);
+            setSession(session);
 
             // 1. Check Super Admin
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('is_super_admin')
-                .eq('id', sessionData.user.id)
+                .eq('id', session.user.id)
                 .single();
 
             if (profile?.is_super_admin) {
@@ -88,8 +42,6 @@ export function PrivateRoute() {
                     setIsTrialExpired(false);
                     setLoading(false);
                     setIsChecking(false);
-                    setInitialCheckDone(true);
-                    setCache(true, false);
                 }
                 return;
             }
@@ -98,13 +50,11 @@ export function PrivateRoute() {
             const { data: clinicUser } = await supabase
                 .from('clinic_users')
                 .select('clinic_id, role')
-                .eq('user_id', sessionData.user.id)
+                .eq('user_id', session.user.id)
                 .single();
 
-            let finalAllowed = false;
-            let finalTrialExpired = false;
-
             if (clinicUser) {
+                // Fetch subscription with current_period_end to check expiration
                 const { data: subscriptions } = await supabase
                     .from('subscriptions')
                     .select('status, plan_id, current_period_end')
@@ -116,54 +66,60 @@ export function PrivateRoute() {
                 const subscription = subscriptions?.[0];
 
                 if (subscription) {
+                    // Check if subscription is active (not expired)
                     if (subscription.status === 'active') {
-                        finalAllowed = true;
+                        // Active paid subscription - allow access
+                        if (mounted) {
+                            setIsAllowed(true);
+                            setIsTrialExpired(false);
+                        }
                     } else if (subscription.status === 'trialing') {
+                        // Trial - check if not expired
                         const periodEnd = new Date(subscription.current_period_end);
-                        if (periodEnd > new Date()) {
-                            finalAllowed = true;
+                        const now = new Date();
+
+                        if (periodEnd > now) {
+                            // Trial still valid
+                            if (mounted) {
+                                setIsAllowed(true);
+                                setIsTrialExpired(false);
+                            }
                         } else {
-                            finalTrialExpired = true;
+                            // Trial expired
+                            if (mounted) {
+                                setIsAllowed(false);
+                                setIsTrialExpired(true);
+                            }
                         }
                     }
+                } else {
+                    // No subscription found
+                    if (mounted) {
+                        setIsAllowed(false);
+                        setIsTrialExpired(false);
+                    }
                 }
-            }
 
-            if (mounted) {
-                setIsAllowed(finalAllowed);
-                setIsTrialExpired(finalTrialExpired);
-                setLoading(false);
-                setIsChecking(false);
-                setInitialCheckDone(true);
-                setCache(finalAllowed, finalTrialExpired);
+                if (mounted) {
+                    setLoading(false);
+                    setIsChecking(false);
+                }
+            } else {
+                if (mounted) {
+                    setIsAllowed(false);
+                    setIsTrialExpired(false);
+                    setLoading(false);
+                    setIsChecking(false);
+                }
             }
         };
 
-        // Verifica sessão do Supabase primeiro (necessário para o session state)
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
-            if (mounted) setSession(s);
-            if (!s) {
-                clearCache();
-                setLoading(false);
-                setIsChecking(false);
-            }
-        });
+        checkAccess();
 
-        // Se não tem cache, faz a verificação completa
-        if (!initialCheckDone) {
-            checkAccess();
-        }
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-            // Só reage a eventos de login/logout
-            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-                clearCache();
-                if (mounted) {
-                    setInitialCheckDone(false);
-                    setLoading(true);
-                    setIsChecking(true);
-                    checkAccess(true);
-                }
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            if (mounted) {
+                setLoading(true); // Reset loading on auth change to re-verify
+                checkAccess();
             }
         });
 
@@ -171,8 +127,9 @@ export function PrivateRoute() {
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [initialCheckDone]);
+    }, []);
 
+    // Use useLocation to ensure re-render on route change
     const location = useLocation();
 
     if (loading || isChecking) {
@@ -190,10 +147,12 @@ export function PrivateRoute() {
     const isPlansPage = location.pathname.startsWith('/planos');
     const isTrialExpiredPage = location.pathname === '/trial-expirado';
 
+    // Trial expired - redirect to trial expired page
     if (isTrialExpired && !isTrialExpiredPage && !isPlansPage) {
         return <Navigate to="/trial-expirado" replace />;
     }
 
+    // No subscription - redirect to plans
     if (!isAllowed && !isPlansPage && !isTrialExpiredPage) {
         return <Navigate to="/planos" replace />;
     }
