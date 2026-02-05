@@ -37,6 +37,29 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     const [selectedPendingItems, setSelectedPendingItems] = useState<Set<number>>(new Set());
     const [selectedApprovedItems, setSelectedApprovedItems] = useState<Set<number>>(new Set());
 
+    // Parse budget data (safe for null budget)
+    const parsedNotes = budget ? JSON.parse(budget.notes || '{}') : {};
+    const teeth: ToothEntry[] = parsedNotes.teeth || [];
+
+    // Payment hook - must be called before any early return
+    const payment = useBudgetPayment({
+        budget: budget!,
+        patientId: patientId || '',
+        parsedNotes,
+        onSuccess: () => { onUpdate(); onClose(); },
+        toast,
+    });
+
+    // PDF hook - must be called before any early return
+    const pdf = useBudgetPdf({
+        budget: budget!,
+        parsedNotes,
+        teeth,
+        patientName: patientName || 'Paciente',
+        getItemValue: payment.getItemValue,
+        toast,
+    });
+
     // Load patient data and PJ sources when dialog opens
     useEffect(() => {
         if (open && patientId) {
@@ -60,34 +83,13 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
         setSelectedApprovedItems(new Set());
     }, [open, patientId]);
 
+    // Early return after all hooks are called
     if (!budget) return null;
-
-    const parsedNotes = JSON.parse(budget.notes || '{}');
-    const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
     // Group items by status
     const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid');
     const approvedItems = teeth.filter(t => t.status === 'approved');
     const paidItems = teeth.filter(t => t.status === 'paid' || t.status === 'completed');
-
-    // Payment hook
-    const payment = useBudgetPayment({
-        budget,
-        patientId: patientId || '',
-        parsedNotes,
-        onSuccess: () => { onUpdate(); onClose(); },
-        toast,
-    });
-
-    // PDF hook
-    const pdf = useBudgetPdf({
-        budget,
-        parsedNotes,
-        teeth,
-        patientName: patientName || 'Paciente',
-        getItemValue: payment.getItemValue,
-        toast,
-    });
 
     const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
