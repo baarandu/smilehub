@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,11 +13,122 @@ import {
   ChevronDown,
   Star,
   Play,
+  Loader2,
 } from 'lucide-react';
+import { plansService } from '@/services/admin/plans';
+import { appSettingsService } from '@/services/admin/appSettings';
+import { SubscriptionPlan } from '@/types/database';
+
+// Map database features to user-friendly display text
+const getFeaturesList = (plan: SubscriptionPlan): string[] => {
+  const features: string[] = [];
+  const f = plan.features as Record<string, boolean> | null;
+
+  // Add user/patient limits first
+  if (plan.max_users === 1) {
+    features.push('1 Dentista');
+  } else if (plan.max_users <= 5) {
+    features.push(`Até ${plan.max_users} Dentistas`);
+  } else {
+    features.push('Dentistas ilimitados');
+  }
+
+  if (plan.max_patients) {
+    if (plan.max_patients >= 10000) {
+      features.push('Pacientes ilimitados');
+    } else {
+      features.push(`Até ${plan.max_patients.toLocaleString('pt-BR')} pacientes`);
+    }
+  } else {
+    features.push('Pacientes ilimitados');
+  }
+
+  // Map features to display text
+  if (f) {
+    // Core features
+    if (f.agenda) features.push('Agenda inteligente');
+    if (f.prontuario) features.push('Prontuário digital');
+    if (f.orcamentos) features.push('Orçamentos');
+    if (f.alertas) features.push('Lembretes via WhatsApp');
+
+    // Financial features
+    if (f.financeiro_avancado) {
+      features.push('Financeiro completo');
+    } else if (f.financeiro_basico) {
+      features.push('Controle financeiro básico');
+    }
+
+    if (f.estoque) features.push('Controle de estoque');
+    if (f.comissoes) features.push('Gestão de comissões');
+    if (f.imposto_renda) features.push('Imposto de renda');
+    if (f.relatorios_avancados) features.push('Relatórios avançados');
+
+    // Advanced features
+    if (f.multi_unidades && plan.max_locations && plan.max_locations > 1) {
+      features.push(`Até ${plan.max_locations} unidades`);
+    }
+    if (f.api) features.push('API personalizada');
+    if (f.secretaria_ia) features.push('Secretária IA');
+    if (f.whitelabel) features.push('White-label');
+
+    // Support
+    if (f.gerente_dedicado || f.suporte_telefone) {
+      features.push('Gerente de conta dedicado');
+    } else if (f.suporte_chat) {
+      features.push('Suporte prioritário');
+    } else if (f.suporte_email) {
+      features.push('Suporte por email');
+    }
+  }
+
+  return features;
+};
 
 export default function Landing() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [annualDiscount, setAnnualDiscount] = useState<number>(17);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  useEffect(() => {
+    const loadPlansAndSettings = async () => {
+      try {
+        const [activePlans, discount] = await Promise.all([
+          plansService.getActive(),
+          appSettingsService.getAnnualDiscount()
+        ]);
+        // Filter out enterprise plan (custom pricing) and take first 3
+        const displayPlans = activePlans
+          .filter(p => p.slug !== 'enterprise')
+          .slice(0, 3);
+        setPlans(displayPlans);
+        setAnnualDiscount(discount);
+      } catch (error) {
+        console.error('Error loading plans:', error);
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+
+    loadPlansAndSettings();
+  }, []);
+
+  // Helper to format price from cents to BRL (exact value with decimals)
+  const formatPrice = (priceInCents: number, isYearly: boolean = false): string => {
+    let price = priceInCents;
+    if (isYearly) {
+      // Calculate discounted price
+      price = priceInCents * (1 - annualDiscount / 100);
+    }
+    // Convert cents to reais and format with 2 decimal places
+    const priceInReais = price / 100;
+    // If it's a whole number, show without decimals, otherwise show with 2 decimals
+    if (priceInReais % 1 === 0) {
+      return priceInReais.toFixed(0);
+    }
+    return priceInReais.toFixed(2).replace('.', ',');
+  };
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -312,61 +423,85 @@ export default function Landing() {
               >
                 Anual
                 <span className="bg-red-100 text-[#b94a48] text-xs px-2 py-0.5 rounded-full">
-                  -20%
+                  -{annualDiscount}%
                 </span>
               </button>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <PricingCard
-              name="Básico"
-              description="Ideal para dentistas autônomos que estão começando."
-              price={billingPeriod === 'monthly' ? '79' : '63'}
-              period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-              buttonText="Começar Agora"
-              buttonVariant="outline"
-              features={[
-                '1 Dentista',
-                'Até 200 pacientes',
-                'Agenda simples',
-                'Prontuário básico',
-                'Suporte por email',
-              ]}
-            />
-            <PricingCard
-              name="Profissional"
-              description="Para clínicas em crescimento que precisam de mais controle."
-              price={billingPeriod === 'monthly' ? '149' : '119'}
-              period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-              buttonText="Testar Grátis"
-              highlighted
-              features={[
-                'Até 3 Dentistas',
-                'Pacientes ilimitados',
-                'Agenda com confirmação (WhatsApp)',
-                'Controle Financeiro Completo',
-                'App Mobile (iOS/Android)',
-                'Suporte prioritário',
-              ]}
-            />
-            <PricingCard
-              name="Clínica"
-              description="Gestão avançada para clínicas com múltiplos profissionais."
-              price={billingPeriod === 'monthly' ? '249' : '199'}
-              period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-              buttonText="Falar com Consultor"
-              buttonVariant="outline"
-              features={[
-                'Dentistas ilimitados',
-                'Múltiplas Recepcionistas',
-                'Relatórios Avançados de BI',
-                'Emissão de NF-e',
-                'Backup em tempo real',
-                'Gerente de conta dedicado',
-              ]}
-            />
-          </div>
+          {loadingPlans ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-[#b94a48]" />
+            </div>
+          ) : plans.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-6">
+              {plans.map((plan, index) => (
+                <PricingCard
+                  key={plan.id}
+                  name={plan.name}
+                  description={plan.description || ''}
+                  price={billingPeriod === 'monthly'
+                    ? formatPrice(plan.price_monthly)
+                    : formatPrice(plan.price_monthly, true)}
+                  period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
+                  buttonText={index === 1 ? 'Testar Grátis' : index === 2 ? 'Falar com Consultor' : 'Começar Agora'}
+                  buttonVariant={index === 1 ? 'default' : 'outline'}
+                  highlighted={index === 1}
+                  features={getFeaturesList(plan)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6">
+              <PricingCard
+                name="Essencial"
+                description="Ideal para dentistas autônomos que estão começando."
+                price="97"
+                period="/mês"
+                buttonText="Começar Agora"
+                buttonVariant="outline"
+                features={[
+                  '1 Dentista',
+                  'Até 500 pacientes',
+                  'Agenda inteligente',
+                  'Prontuário completo',
+                  'Suporte por email',
+                ]}
+              />
+              <PricingCard
+                name="Profissional"
+                description="Para clínicas em crescimento que precisam de mais controle."
+                price="197"
+                period="/mês"
+                buttonText="Testar Grátis"
+                highlighted
+                features={[
+                  'Até 5 Dentistas',
+                  'Até 2.000 pacientes',
+                  'Lembretes via WhatsApp',
+                  'Controle Financeiro',
+                  'Relatórios de BI',
+                  'Suporte prioritário',
+                ]}
+              />
+              <PricingCard
+                name="Clínica"
+                description="Gestão avançada para clínicas com múltiplos profissionais."
+                price="347"
+                period="/mês"
+                buttonText="Falar com Consultor"
+                buttonVariant="outline"
+                features={[
+                  'Até 15 Dentistas',
+                  'Até 10.000 pacientes',
+                  'Até 3 unidades',
+                  'Financeiro Avançado',
+                  'Relatórios de BI',
+                  'Gerente de conta dedicado',
+                ]}
+              />
+            </div>
+          )}
         </div>
         </div>
       </section>
