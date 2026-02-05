@@ -390,7 +390,8 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                         <p className="font-medium text-foreground">{t.patients?.name || 'Não identificado'}</p>
                                         {(() => {
                                             // Parse procedure from description
-                                            const installmentMatch = t.description.match(/\(\d+\/\d+\)/);
+                                            const installmentMatch = t.description.match(/\((\d+\/\d+)\)/);
+                                            const installmentInfo = installmentMatch ? installmentMatch[1] : null;
                                             let workingDesc = t.description;
                                             if (installmentMatch) workingDesc = workingDesc.replace(installmentMatch[0], '');
                                             const methodMatch = workingDesc.match(/\((.*?)\)/);
@@ -418,7 +419,14 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
 
                                             return (
                                                 <>
-                                                    <p className="text-sm text-[#8b3634] font-medium line-clamp-1" title={procedure}>{procedure}</p>
+                                                    <p className="text-sm text-[#8b3634] font-medium line-clamp-1" title={procedure}>
+                                                        {procedure}
+                                                        {installmentInfo && (
+                                                            <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
+                                                                {installmentInfo}
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <p className="text-xs text-muted-foreground">Forma de Pagamento: {displayMethod}</p>
                                                     {t.location && (
                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
