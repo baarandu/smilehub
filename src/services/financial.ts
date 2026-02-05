@@ -193,7 +193,7 @@ export const financialService = {
         if (error) throw error;
     },
 
-    // Delete income and revert linked budget teeth to pending status
+    // Delete income and revert linked budget tooth to approved status
     async deleteIncomeAndRevertBudget(transactionId: string): Promise<void> {
         // 1. Get the transaction to find the linked budget
         const { data: transaction, error: fetchError } = await supabase
@@ -207,7 +207,7 @@ export const financialService = {
 
         const txn = transaction as any;
 
-        // 2. If there's a linked budget (related_entity_id), revert the teeth status
+        // 2. If there's a linked budget (related_entity_id), revert the specific tooth status
         if (txn.related_entity_id) {
             const budgetId = txn.related_entity_id;
 
@@ -224,24 +224,50 @@ export const financialService = {
                 try {
                     const parsed = JSON.parse(budgetData.notes);
                     if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                        // Find teeth that were marked as paid with this transaction
-                        // Revert them to pending
+                        // Extract tooth identifier from transaction description
+                        // Format: "Treatment1, Treatment2 (PaymentMethod) - Dente XX" or "... - Arcada Superior"
+                        const description = txn.description || '';
+
+                        // Helper to get display name for matching
+                        const getToothDisplayName = (tooth: string): string => {
+                            if (tooth === 'ARC_SUP') return 'Arcada Superior';
+                            if (tooth === 'ARC_INF') return 'Arcada Inferior';
+                            if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Arcada Inferior';
+                            if (tooth.includes('Arcada')) return tooth;
+                            return `Dente ${tooth}`;
+                        };
+
                         let changed = false;
                         parsed.teeth = parsed.teeth.map((tooth: any) => {
-                            // If the tooth is paid and matches the transaction amount or description
-                            // Or if it has a reference to this transaction
-                            if (tooth.status === 'paid' || tooth.status === 'completed') {
+                            // Only process paid/completed items
+                            if (tooth.status !== 'paid' && tooth.status !== 'completed') {
+                                return tooth;
+                            }
+
+                            // Check if this tooth matches the transaction description
+                            const toothName = getToothDisplayName(tooth.tooth);
+                            const treatments = tooth.treatments?.join(', ') || '';
+
+                            // Match by tooth name in description
+                            const toothMatches = description.includes(toothName);
+                            // Also verify treatments match (for cases with same tooth, different treatments)
+                            const treatmentsMatch = treatments && description.includes(treatments);
+
+                            if (toothMatches && treatmentsMatch) {
                                 changed = true;
+                                // Revert to 'pending'
                                 return { ...tooth, status: 'pending' };
                             }
                             return tooth;
                         });
 
                         if (changed) {
-                            // Update budget notes and status
-                            const hasPending = parsed.teeth.some((t: any) => t.status === 'pending');
+                            // Recalculate budget status
                             const allPaid = parsed.teeth.every((t: any) => t.status === 'paid' || t.status === 'completed');
-                            const newStatus = allPaid ? 'completed' : (hasPending ? 'pending' : 'approved');
+                            const hasApprovedOrPaid = parsed.teeth.some((t: any) =>
+                                t.status === 'approved' || t.status === 'paid' || t.status === 'completed'
+                            );
+                            const newStatus = allPaid ? 'completed' : (hasApprovedOrPaid ? 'approved' : 'pending');
 
                             await (supabase
                                 .from('budgets') as any)
