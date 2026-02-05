@@ -4,17 +4,15 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calendar, CheckCircle, Clock, X, Pencil, Trash2, Eye, CreditCard, Square, CheckSquare, Undo2 } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
-import { profileService } from '@/services/profile';
 import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry, calculateBudgetStatus } from '@/utils/budgetUtils';
-import { generateBudgetPDFPreview, downloadPDFFromBlob } from '@/utils/pdfGenerator';
 import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
-import { PaymentMethodDialog, type PayerData } from './PaymentMethodDialog';
-import { financialService } from '@/services/financial';
+import { PaymentMethodDialog } from './PaymentMethodDialog';
 import { getPatientById } from '@/services/patients';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { BudgetWithItems } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
 import { useToast } from '@/hooks/use-toast';
+import { useBudgetPayment, useBudgetPdf, PdfItemSelectionDialog } from './budget';
 
 interface BudgetViewDialogProps {
     budget: BudgetWithItems | null;
@@ -30,20 +28,6 @@ interface BudgetViewDialogProps {
 export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, patientName, patientId, onNavigateToPayments }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const [updating, setUpdating] = useState(false);
-
-    // PDF Preview state
-    const [showPdfPreview, setShowPdfPreview] = useState(false);
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
-    const [generatingPdf, setGeneratingPdf] = useState(false);
-
-    // PDF Item Selection state
-    const [showPdfItemSelection, setShowPdfItemSelection] = useState(false);
-    const [pdfSelectedItems, setPdfSelectedItems] = useState<Set<number>>(new Set());
-
-    // Payment modal state
-    const [paymentItem, setPaymentItem] = useState<{ index: number; tooth: ToothEntry } | null>(null);
-    const [paymentBatch, setPaymentBatch] = useState<{ indices: number[]; teeth: ToothEntry[]; totalValue: number } | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Patient and PJ data for payer selection
     const [patientData, setPatientData] = useState<{ name: string; cpf: string | null } | null>(null);
@@ -72,7 +56,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             };
             loadData();
         }
-        // Reset selection when dialog opens/closes
         setSelectedPendingItems(new Set());
         setSelectedApprovedItems(new Set());
     }, [open, patientId]);
@@ -87,11 +70,26 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     const approvedItems = teeth.filter(t => t.status === 'approved');
     const paidItems = teeth.filter(t => t.status === 'paid' || t.status === 'completed');
 
-    const getItemValue = (tooth: ToothEntry) => {
-        return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b) || 0) / 100, 0);
-    };
+    // Payment hook
+    const payment = useBudgetPayment({
+        budget,
+        patientId: patientId || '',
+        parsedNotes,
+        onSuccess: () => { onUpdate(); onClose(); },
+        toast,
+    });
 
-    const grandTotal = teeth.reduce((sum, t) => sum + getItemValue(t), 0);
+    // PDF hook
+    const pdf = useBudgetPdf({
+        budget,
+        parsedNotes,
+        teeth,
+        patientName: patientName || 'Paciente',
+        getItemValue: payment.getItemValue,
+        toast,
+    });
+
+    const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
     const handleDelete = async () => {
         if (!confirm('Tem certeza que deseja excluir este orçamento?')) return;
@@ -105,93 +103,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir orçamento" });
         } finally {
             setUpdating(false);
-        }
-    };
-
-    // Open PDF item selection modal
-    const handleOpenPdfSelection = () => {
-        // Initialize with all items selected
-        const allIndices = new Set(teeth.map((_, index) => index));
-        setPdfSelectedItems(allIndices);
-        setShowPdfItemSelection(true);
-    };
-
-    // Toggle PDF item selection
-    const togglePdfItemSelection = (index: number) => {
-        setPdfSelectedItems(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(index)) {
-                newSet.delete(index);
-            } else {
-                newSet.add(index);
-            }
-            return newSet;
-        });
-    };
-
-    // Select/Deselect all PDF items
-    const toggleAllPdfItems = () => {
-        if (pdfSelectedItems.size === teeth.length) {
-            setPdfSelectedItems(new Set());
-        } else {
-            setPdfSelectedItems(new Set(teeth.map((_, index) => index)));
-        }
-    };
-
-    const handleExportPDF = async () => {
-        if (pdfSelectedItems.size === 0) return;
-
-        setShowPdfItemSelection(false);
-
-        try {
-            setGeneratingPdf(true);
-            setShowPdfPreview(true);
-
-            const clinicInfo = await profileService.getClinicInfo();
-
-            // Filter teeth to only include selected items
-            const selectedTeeth = teeth.filter((_, index) => pdfSelectedItems.has(index));
-            const selectedTotal = selectedTeeth.reduce((sum, t) => sum + getItemValue(t), 0);
-
-            // Create a modified budget with only selected items
-            const filteredBudget = {
-                ...budget,
-                notes: JSON.stringify({ ...parsedNotes, teeth: selectedTeeth }),
-                value: selectedTotal
-            };
-
-            const blobUrl = await generateBudgetPDFPreview({
-                budget: filteredBudget,
-                patientName: patientName || 'Paciente',
-                clinicName: clinicInfo.clinicName,
-                dentistName: clinicInfo.dentistName,
-                logoUrl: clinicInfo.logoUrl,
-                letterheadUrl: clinicInfo.letterheadUrl,
-                isClinic: clinicInfo.isClinic,
-            });
-
-            setPdfPreviewUrl(blobUrl);
-        } catch (error) {
-            console.error('Erro ao gerar PDF:', error);
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao gerar PDF" });
-            setShowPdfPreview(false);
-        } finally {
-            setGeneratingPdf(false);
-        }
-    };
-
-    const handleDownloadPDF = () => {
-        if (pdfPreviewUrl) {
-            downloadPDFFromBlob(pdfPreviewUrl, patientName || 'Paciente');
-            toast({ title: "Sucesso", description: "PDF baixado com sucesso!" });
-        }
-    };
-
-    const handleClosePdfPreview = () => {
-        setShowPdfPreview(false);
-        if (pdfPreviewUrl) {
-            URL.revokeObjectURL(pdfPreviewUrl);
-            setPdfPreviewUrl(null);
         }
     };
 
@@ -228,7 +139,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
         const newStatus = item.status === 'pending' ? 'approved' : 'pending';
         const action = newStatus === 'approved' ? 'aprovar' : 'marcar como pendente';
         const itemName = getToothDisplayName(item.tooth);
-        const value = getItemValue(item);
+        const value = payment.getItemValue(item);
 
         if (!confirm(`Deseja ${action} o item "${itemName}"?\nValor: R$ ${formatMoney(value)}`)) return;
 
@@ -315,332 +226,24 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
         }
     };
 
-    // Pay single approved item
-    const handlePayItem = (index: number, tooth: ToothEntry) => {
-        setPaymentItem({ index, tooth });
-    };
-
     // Pay selected approved items
     const handlePaySelected = () => {
         if (selectedApprovedItems.size === 0) return;
-
-        const indices = Array.from(selectedApprovedItems);
-        const selectedTeeth = indices.map(idx => teeth[idx]);
-        const totalValue = selectedTeeth.reduce((sum, t) => sum + getItemValue(t), 0);
+        const totalValue = Array.from(selectedApprovedItems)
+            .map(idx => teeth[idx])
+            .reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
         if (!confirm(`Pagar ${selectedApprovedItems.size} item(ns) no valor total de R$ ${formatMoney(totalValue)}?`)) return;
 
-        setPaymentBatch({ indices, teeth: selectedTeeth, totalValue });
+        payment.handlePaySelected(selectedApprovedItems, teeth);
         setSelectedApprovedItems(new Set());
     };
 
     // Pay all approved items
     const handlePayAll = () => {
-        const indices = teeth.map((t, idx) => t.status === 'approved' ? idx : -1).filter(idx => idx !== -1);
-        const totalValue = approvedItems.reduce((sum, t) => sum + getItemValue(t), 0);
-
+        const totalValue = approvedItems.reduce((sum, t) => sum + payment.getItemValue(t), 0);
         if (!confirm(`Pagar todos os ${approvedItems.length} itens aprovados no valor total de R$ ${formatMoney(totalValue)}?`)) return;
-
-        setPaymentBatch({ indices, teeth: approvedItems, totalValue });
-    };
-
-    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
-        if (!paymentItem || isSubmitting || !patientId) return;
-
-        try {
-            setIsSubmitting(true);
-
-            const refreshedBudget = await budgetsService.getById(budget.id);
-            if (!refreshedBudget) return;
-
-            const parsed = JSON.parse(refreshedBudget.notes || '{}');
-            const currentTeeth = parsed.teeth as ToothEntry[];
-            if (!currentTeeth) return;
-
-            const selectedTooth = currentTeeth[paymentItem.index];
-            const totalAmount = getItemValue(selectedTooth);
-
-            // When anticipated, register as single transaction even if payment is installment-based
-            // The installment count is still used to calculate the correct fee rate
-            const isAnticipated = breakdown?.isAnticipated || false;
-            const numTransactions = isAnticipated ? 1 : (installments || 1);
-            const txAmount = totalAmount / numTransactions;
-
-            const targetLocationRate = (selectedTooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
-
-            let netAmountPerTx = txAmount;
-            let taxAmountPerTx = 0;
-            let cardFeeAmountPerTx = 0;
-            let anticipationAmountPerTx = 0;
-            let locationAmountPerTx = 0;
-
-            if (breakdown) {
-                netAmountPerTx = breakdown.netAmount / numTransactions;
-                taxAmountPerTx = breakdown.taxAmount / numTransactions;
-                cardFeeAmountPerTx = breakdown.cardFeeAmount / numTransactions;
-                anticipationAmountPerTx = breakdown.anticipationAmount ? (breakdown.anticipationAmount / numTransactions) : 0;
-
-                if (breakdown.locationAmount) {
-                    locationAmountPerTx = breakdown.locationAmount / numTransactions;
-                } else if (targetLocationRate > 0) {
-                    const baseForLocation = txAmount - cardFeeAmountPerTx;
-                    locationAmountPerTx = (baseForLocation * targetLocationRate) / 100;
-                    netAmountPerTx -= locationAmountPerTx;
-                }
-            } else {
-                if (targetLocationRate > 0) {
-                    locationAmountPerTx = (txAmount * targetLocationRate) / 100;
-                    netAmountPerTx = txAmount - locationAmountPerTx;
-                }
-            }
-
-            let budgetDateStr = refreshedBudget.date;
-            if (budgetDateStr && budgetDateStr.includes('/')) {
-                const [d, m, y] = budgetDateStr.split('/');
-                budgetDateStr = `${y}-${m}-${d}`;
-            }
-
-            const budgetDate = new Date(budgetDateStr + 'T12:00:00');
-            const startDate = isNaN(budgetDate.getTime()) ? new Date() : budgetDate;
-
-            const formatLocalDate = (d: Date) => {
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-
-            const budgetLocation = parsed.location || null;
-
-            const methodLabels: Record<string, string> = {
-                credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
-            };
-            const methodLabel = methodLabels[method] || method;
-
-            const isCard = method === 'credit' || method === 'debit';
-            const displayBrand = isCard && brand ? brand : null;
-            const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
-
-            for (let i = 0; i < numTransactions; i++) {
-                const date = new Date(startDate);
-                if (!isAnticipated) {
-                    date.setMonth(date.getMonth() + i);
-                }
-
-                await financialService.createTransaction({
-                    type: 'income',
-                    amount: txAmount,
-                    description: `${selectedTooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedTooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
-                    category: 'Tratamento',
-                    date: formatLocalDate(date),
-                    patient_id: patientId,
-                    related_entity_id: budget.id,
-                    location: budgetLocation,
-                    payment_method: method,
-                    net_amount: netAmountPerTx,
-                    tax_rate: breakdown?.taxRate,
-                    tax_amount: taxAmountPerTx,
-                    card_fee_rate: breakdown?.cardFeeRate,
-                    card_fee_amount: cardFeeAmountPerTx,
-                    anticipation_rate: breakdown?.anticipationRate,
-                    anticipation_amount: anticipationAmountPerTx,
-                    location_rate: targetLocationRate,
-                    location_amount: locationAmountPerTx,
-                    payer_is_patient: payerData?.payer_is_patient ?? true,
-                    payer_type: payerData?.payer_type || 'PF',
-                    payer_name: payerData?.payer_name || null,
-                    payer_cpf: payerData?.payer_cpf || null,
-                    pj_source_id: payerData?.pj_source_id || null,
-                } as any);
-            }
-
-            currentTeeth[paymentItem.index] = {
-                ...currentTeeth[paymentItem.index],
-                status: 'paid',
-                paymentMethod: method as any,
-                paymentInstallments: installments,
-                paymentDate: new Date().toISOString().split('T')[0],
-                financialBreakdown: breakdown
-            };
-
-            const newBudgetStatus = calculateBudgetStatus(currentTeeth);
-            const updatedNotes = JSON.stringify({ ...parsed, teeth: currentTeeth });
-
-            await budgetsService.update(budget.id, {
-                notes: updatedNotes,
-                status: newBudgetStatus
-            });
-
-            toast({ title: "Pagamento Registrado", description: "O item foi marcado como pago e lançado no financeiro." });
-            onUpdate();
-        } catch (error) {
-            console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
-        } finally {
-            setIsSubmitting(false);
-            setPaymentItem(null);
-        }
-    };
-
-    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
-        if (!paymentBatch || isSubmitting || !patientId) return;
-
-        try {
-            setIsSubmitting(true);
-
-            const refreshedBudget = await budgetsService.getById(budget.id);
-            if (!refreshedBudget) return;
-
-            const parsed = JSON.parse(refreshedBudget.notes || '{}');
-            const currentTeeth = parsed.teeth as ToothEntry[];
-            if (!currentTeeth) return;
-
-            const { indices } = paymentBatch;
-            const totalAmount = paymentBatch.totalValue;
-
-            // When anticipated, register as single transaction even if payment is installment-based
-            const isAnticipated = breakdown?.isAnticipated || false;
-            const numInstallments = isAnticipated ? 1 : (installments || 1);
-
-            let budgetDateStr = refreshedBudget.date;
-            if (budgetDateStr && budgetDateStr.includes('/')) {
-                const [d, m, y] = budgetDateStr.split('/');
-                budgetDateStr = `${y}-${m}-${d}`;
-            }
-
-            const budgetDate = new Date(budgetDateStr + 'T12:00:00');
-            const startDate = isNaN(budgetDate.getTime()) ? new Date() : budgetDate;
-
-            const formatLocalDate = (d: Date) => {
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-
-            const budgetLocation = parsed.location || null;
-
-            const methodLabels: Record<string, string> = {
-                credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro', transfer: 'Transf.'
-            };
-            const methodLabel = methodLabels[method] || method;
-
-            const isCard = method === 'credit' || method === 'debit';
-            const displayBrand = isCard && brand ? brand : null;
-            const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
-
-            // Taxa de cartão e imposto totais (se houver breakdown)
-            const totalCardFee = breakdown?.cardFeeAmount || 0;
-            const totalTaxAmount = breakdown?.taxAmount || 0;
-            const totalAnticipationAmount = breakdown?.anticipationAmount || 0;
-
-            // Criar uma transação separada para CADA ITEM do lote
-            for (const idx of indices) {
-                const tooth = currentTeeth[idx];
-                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
-                const ratio = itemValue / totalAmount;
-
-                // Taxa individual do item (fallback para taxa global se não definida ou for 0)
-                const toothRate = (tooth as any).locationRate;
-                const budgetRate = (refreshedBudget as any).location_rate;
-                const notesRate = parsed.locationRate ? parseFloat(parsed.locationRate) : 0;
-                const itemLocationRate = (toothRate && toothRate > 0) ? toothRate : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
-
-                // Taxas proporcionais para este item
-                const itemCardFee = totalCardFee * ratio;
-                const itemTaxAmount = totalTaxAmount * ratio;
-                const itemAnticipationAmount = totalAnticipationAmount * ratio;
-
-                // Taxa de localização: (valor - taxa cartão proporcional) * taxa individual
-                const baseForLocation = itemValue - itemCardFee;
-                const itemLocationAmount = (baseForLocation * itemLocationRate) / 100;
-
-                // Valor líquido do item
-                const itemNetAmount = itemValue - itemTaxAmount - itemCardFee - itemAnticipationAmount - itemLocationAmount;
-
-                // Valor por parcela
-                const amountPerInstallment = itemValue / numInstallments;
-                const cardFeePerInstallment = itemCardFee / numInstallments;
-                const taxPerInstallment = itemTaxAmount / numInstallments;
-                const anticipationPerInstallment = itemAnticipationAmount / numInstallments;
-                const locationPerInstallment = itemLocationAmount / numInstallments;
-                const netPerInstallment = itemNetAmount / numInstallments;
-
-                const itemDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
-
-                // Criar transações para cada parcela deste item
-                for (let i = 0; i < numInstallments; i++) {
-                    const date = new Date(startDate);
-                    if (!isAnticipated) {
-                        date.setMonth(date.getMonth() + i);
-                    }
-
-                    await financialService.createTransaction({
-                        type: 'income',
-                        amount: amountPerInstallment,
-                        description: `${itemDescription} ${paymentTag}${numInstallments > 1 ? ` (${i + 1}/${numInstallments})` : ''}`,
-                        category: 'Tratamento',
-                        date: formatLocalDate(date),
-                        patient_id: patientId,
-                        related_entity_id: budget.id,
-                        location: budgetLocation,
-                        payment_method: method,
-                        net_amount: netPerInstallment,
-                        tax_rate: breakdown?.taxRate,
-                        tax_amount: taxPerInstallment,
-                        card_fee_rate: breakdown?.cardFeeRate,
-                        card_fee_amount: cardFeePerInstallment,
-                        anticipation_rate: breakdown?.anticipationRate,
-                        anticipation_amount: anticipationPerInstallment,
-                        location_rate: itemLocationRate,
-                        location_amount: locationPerInstallment,
-                        payer_is_patient: payerData?.payer_is_patient ?? true,
-                        payer_type: payerData?.payer_type || 'PF',
-                        payer_name: payerData?.payer_name || null,
-                        payer_cpf: payerData?.payer_cpf || null,
-                        pj_source_id: payerData?.pj_source_id || null,
-                    } as any);
-                }
-
-                // Atualizar status do item
-                currentTeeth[idx] = {
-                    ...tooth,
-                    status: 'paid',
-                    paymentMethod: method as any,
-                    paymentInstallments: installments,
-                    paymentDate: new Date().toISOString().split('T')[0],
-                    financialBreakdown: {
-                        grossAmount: itemValue,
-                        netAmount: itemNetAmount,
-                        taxRate: breakdown?.taxRate || 0,
-                        taxAmount: itemTaxAmount,
-                        cardFeeRate: breakdown?.cardFeeRate || 0,
-                        cardFeeAmount: itemCardFee,
-                        anticipationRate: breakdown?.anticipationRate || 0,
-                        anticipationAmount: itemAnticipationAmount,
-                        locationRate: itemLocationRate,
-                        locationAmount: itemLocationAmount,
-                    }
-                };
-            }
-
-            const newBudgetStatus = calculateBudgetStatus(currentTeeth);
-            const updatedNotes = JSON.stringify({ ...parsed, teeth: currentTeeth });
-
-            await budgetsService.update(budget.id, {
-                notes: updatedNotes,
-                status: newBudgetStatus
-            });
-
-            toast({ title: "Pagamento Registrado", description: `${indices.length} item(ns) marcado(s) como pago(s) e lançado(s) no financeiro.` });
-            onUpdate();
-        } catch (error) {
-            console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
-        } finally {
-            setIsSubmitting(false);
-            setPaymentBatch(null);
-        }
+        payment.handlePayAll(teeth);
     };
 
     return (
@@ -692,22 +295,12 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     </div>
                                     <div className="flex gap-2">
                                         {selectedApprovedItems.size > 0 && (
-                                            <Button
-                                                size="sm"
-                                                onClick={handlePaySelected}
-                                                disabled={updating}
-                                                className="bg-[#b94a48] hover:bg-[#a03f3d] text-white"
-                                            >
+                                            <Button size="sm" onClick={handlePaySelected} disabled={updating} className="bg-[#b94a48] hover:bg-[#a03f3d] text-white">
                                                 Pagar ({selectedApprovedItems.size})
                                             </Button>
                                         )}
                                         {selectedApprovedItems.size === 0 && approvedItems.length > 1 && (
-                                            <Button
-                                                size="sm"
-                                                onClick={handlePayAll}
-                                                disabled={updating}
-                                                className="bg-[#b94a48] hover:bg-[#a03f3d] text-white"
-                                            >
+                                            <Button size="sm" onClick={handlePayAll} disabled={updating} className="bg-[#b94a48] hover:bg-[#a03f3d] text-white">
                                                 Pagar Todos ({approvedItems.length})
                                             </Button>
                                         )}
@@ -715,33 +308,17 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 </div>
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'approved') return null;
-                                    const total = getItemValue(item);
+                                    const total = payment.getItemValue(item);
                                     const isSelected = selectedApprovedItems.has(index);
                                     return (
                                         <div key={index} className="px-3 py-2 border-b border-gray-100 bg-green-50/30 flex items-center gap-2">
-                                            <button
-                                                onClick={() => toggleApprovedSelection(index)}
-                                                className="text-gray-400 hover:text-green-600 transition-colors"
-                                            >
-                                                {isSelected ? (
-                                                    <CheckSquare className="w-5 h-5 text-green-600" />
-                                                ) : (
-                                                    <Square className="w-5 h-5" />
-                                                )}
+                                            <button onClick={() => toggleApprovedSelection(index)} className="text-gray-400 hover:text-green-600 transition-colors">
+                                                {isSelected ? <CheckSquare className="w-5 h-5 text-green-600" /> : <Square className="w-5 h-5" />}
                                             </button>
-                                            <button
-                                                onClick={() => toggleItemStatus(index)}
-                                                disabled={updating}
-                                                className="bg-yellow-100 p-1.5 rounded-lg hover:bg-yellow-200 transition-colors"
-                                                title="Retornar para pendente"
-                                            >
+                                            <button onClick={() => toggleItemStatus(index)} disabled={updating} className="bg-yellow-100 p-1.5 rounded-lg hover:bg-yellow-200 transition-colors" title="Retornar para pendente">
                                                 <Undo2 className="w-3.5 h-3.5 text-yellow-600" />
                                             </button>
-                                            <button
-                                                onClick={() => handlePayItem(index, item)}
-                                                disabled={updating}
-                                                className="flex-1 flex items-center gap-2 text-left hover:bg-green-100/50 rounded-lg px-2 py-1 -mx-1 transition-colors"
-                                            >
+                                            <button onClick={() => payment.handlePayItem(index, item)} disabled={updating} className="flex-1 flex items-center gap-2 text-left hover:bg-green-100/50 rounded-lg px-2 py-1 -mx-1 transition-colors">
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
                                                     <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
@@ -767,22 +344,12 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     </div>
                                     <div className="flex gap-2">
                                         {selectedPendingItems.size > 0 && (
-                                            <Button
-                                                size="sm"
-                                                onClick={handleApproveSelected}
-                                                disabled={updating}
-                                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                                            >
+                                            <Button size="sm" onClick={handleApproveSelected} disabled={updating} className="bg-yellow-600 hover:bg-yellow-700 text-white">
                                                 Aprovar ({selectedPendingItems.size})
                                             </Button>
                                         )}
                                         {selectedPendingItems.size === 0 && pendingItems.length > 1 && (
-                                            <Button
-                                                size="sm"
-                                                onClick={handleApproveAll}
-                                                disabled={updating}
-                                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                                            >
+                                            <Button size="sm" onClick={handleApproveAll} disabled={updating} className="bg-yellow-600 hover:bg-yellow-700 text-white">
                                                 Aprovar Todos ({pendingItems.length})
                                             </Button>
                                         )}
@@ -790,25 +357,14 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 </div>
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'pending') return null;
-                                    const total = getItemValue(item);
+                                    const total = payment.getItemValue(item);
                                     const isSelected = selectedPendingItems.has(index);
                                     return (
                                         <div key={index} className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                                            <button
-                                                onClick={() => togglePendingSelection(index)}
-                                                className="text-gray-400 hover:text-yellow-600 transition-colors"
-                                            >
-                                                {isSelected ? (
-                                                    <CheckSquare className="w-5 h-5 text-yellow-600" />
-                                                ) : (
-                                                    <Square className="w-5 h-5" />
-                                                )}
+                                            <button onClick={() => togglePendingSelection(index)} className="text-gray-400 hover:text-yellow-600 transition-colors">
+                                                {isSelected ? <CheckSquare className="w-5 h-5 text-yellow-600" /> : <Square className="w-5 h-5" />}
                                             </button>
-                                            <button
-                                                onClick={() => toggleItemStatus(index)}
-                                                disabled={updating}
-                                                className="flex-1 flex items-center gap-2 text-left hover:bg-yellow-50 rounded-lg px-2 py-1 -mx-1 transition-colors"
-                                            >
+                                            <button onClick={() => toggleItemStatus(index)} disabled={updating} className="flex-1 flex items-center gap-2 text-left hover:bg-yellow-50 rounded-lg px-2 py-1 -mx-1 transition-colors">
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
                                                     <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
@@ -833,7 +389,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 </div>
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'paid' && item.status !== 'completed') return null;
-                                    const total = getItemValue(item);
+                                    const total = payment.getItemValue(item);
                                     return (
                                         <div key={index} className="px-3 py-2 border-b border-gray-100 bg-blue-50/30 flex items-center gap-2">
                                             <div className="flex-1 min-w-0">
@@ -851,33 +407,17 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
                 {/* Footer Actions */}
                 <div className="p-3 border-t bg-gray-50 flex gap-2 flex-shrink-0">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleOpenPdfSelection}
-                        disabled={generatingPdf}
-                        className="flex-1"
-                    >
+                    <Button variant="outline" size="sm" onClick={pdf.handleOpenPdfSelection} disabled={pdf.generatingPdf} className="flex-1">
                         <Eye className="w-4 h-4 mr-1" />
                         PDF
                     </Button>
                     {onEdit && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => { onClose(); onEdit(budget); }}
-                        >
+                        <Button variant="outline" size="sm" className="flex-1" onClick={() => { onClose(); onEdit(budget); }}>
                             <Pencil className="w-4 h-4 mr-1" />
                             Editar
                         </Button>
                     )}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                        onClick={handleDelete}
-                    >
+                    <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={handleDelete}>
                         <Trash2 className="w-4 h-4 mr-1" />
                         Excluir
                     </Button>
@@ -886,24 +426,24 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
             {/* PDF Preview Dialog */}
             <PdfPreviewDialog
-                open={showPdfPreview}
-                onClose={handleClosePdfPreview}
-                pdfUrl={pdfPreviewUrl}
-                onDownload={handleDownloadPDF}
-                loading={generatingPdf}
+                open={pdf.showPdfPreview}
+                onClose={pdf.handleClosePdfPreview}
+                pdfUrl={pdf.pdfPreviewUrl}
+                onDownload={pdf.handleDownloadPDF}
+                loading={pdf.generatingPdf}
                 title="Pré-visualização do Orçamento"
             />
 
             {/* Payment Method Dialog - Single Item */}
-            {paymentItem && (
+            {payment.paymentItem && (
                 <PaymentMethodDialog
-                    open={!!paymentItem}
-                    onClose={() => setPaymentItem(null)}
-                    onConfirm={handleConfirmPayment}
-                    itemName={getToothDisplayName(paymentItem.tooth.tooth)}
-                    value={getItemValue(paymentItem.tooth)}
-                    locationRate={(paymentItem.tooth as any).locationRate || (parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0)}
-                    loading={isSubmitting}
+                    open={!!payment.paymentItem}
+                    onClose={() => payment.setPaymentItem(null)}
+                    onConfirm={payment.handleConfirmPayment}
+                    itemName={getToothDisplayName(payment.paymentItem.tooth.tooth)}
+                    value={payment.getItemValue(payment.paymentItem.tooth)}
+                    locationRate={(payment.paymentItem.tooth as any).locationRate || (parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0)}
+                    loading={payment.isSubmitting}
                     patientName={patientData?.name || patientName}
                     patientCpf={patientData?.cpf || undefined}
                     pjSources={pjSources}
@@ -911,15 +451,15 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             )}
 
             {/* Payment Method Dialog - Batch Payment */}
-            {paymentBatch && (
+            {payment.paymentBatch && (
                 <PaymentMethodDialog
-                    open={!!paymentBatch}
-                    onClose={() => setPaymentBatch(null)}
-                    onConfirm={handleConfirmBatchPayment}
-                    itemName={`${paymentBatch.indices.length} itens selecionados`}
-                    value={paymentBatch.totalValue}
+                    open={!!payment.paymentBatch}
+                    onClose={() => payment.setPaymentBatch(null)}
+                    onConfirm={payment.handleConfirmBatchPayment}
+                    itemName={`${payment.paymentBatch.indices.length} itens selecionados`}
+                    value={payment.paymentBatch.totalValue}
                     locationRate={parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0}
-                    loading={isSubmitting}
+                    loading={payment.isSubmitting}
                     patientName={patientData?.name || patientName}
                     patientCpf={patientData?.cpf || undefined}
                     pjSources={pjSources}
@@ -927,107 +467,17 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             )}
 
             {/* PDF Item Selection Dialog */}
-            <Dialog open={showPdfItemSelection} onOpenChange={setShowPdfItemSelection}>
-                <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">Selecionar Itens</h2>
-                            <p className="text-gray-500 text-sm mt-1">Escolha os itens para incluir no PDF</p>
-                        </div>
-                        <button onClick={() => setShowPdfItemSelection(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
-                            <X className="w-5 h-5 text-gray-600" />
-                        </button>
-                    </div>
-
-                    <ScrollArea className="flex-1 overflow-auto">
-                        <div className="p-4">
-                            {/* Select All / Deselect All */}
-                            <button
-                                onClick={toggleAllPdfItems}
-                                className="w-full bg-white rounded-xl p-4 mb-4 flex items-center border border-gray-200 hover:bg-gray-50 transition-colors"
-                            >
-                                {pdfSelectedItems.size === teeth.length ? (
-                                    <CheckSquare className="w-6 h-6 text-[#b94a48]" />
-                                ) : (
-                                    <Square className="w-6 h-6 text-gray-400" />
-                                )}
-                                <span className="ml-3 font-medium text-gray-900">
-                                    {pdfSelectedItems.size === teeth.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                                </span>
-                                <span className="ml-auto text-gray-500">
-                                    {pdfSelectedItems.size} de {teeth.length}
-                                </span>
-                            </button>
-
-                            {/* Items List */}
-                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                                {teeth.map((item, index) => {
-                                    const total = getItemValue(item);
-                                    const isSelected = pdfSelectedItems.has(index);
-                                    const statusColor = (item.status === 'paid' || item.status === 'completed') ? 'text-blue-700 bg-blue-50' : item.status === 'approved' ? 'text-green-700 bg-green-50' : 'text-yellow-700 bg-yellow-50';
-                                    const statusLabel = (item.status === 'paid' || item.status === 'completed') ? 'Pago' : item.status === 'approved' ? 'Confirmado' : 'Pendente';
-
-                                    return (
-                                        <button
-                                            key={index}
-                                            onClick={() => togglePdfItemSelection(index)}
-                                            className={`w-full p-4 flex items-center text-left hover:bg-gray-50 transition-colors ${index !== teeth.length - 1 ? 'border-b border-gray-100' : ''}`}
-                                        >
-                                            {isSelected ? (
-                                                <CheckSquare className="w-6 h-6 text-[#b94a48] flex-shrink-0" />
-                                            ) : (
-                                                <Square className="w-6 h-6 text-gray-400 flex-shrink-0" />
-                                            )}
-                                            <div className="flex-1 ml-3 min-w-0">
-                                                <p className="font-medium text-gray-900">{getToothDisplayName(item.tooth)}</p>
-                                                <p className="text-gray-500 text-sm truncate">{item.treatments.join(', ')}</p>
-                                                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-semibold ${statusColor}`}>
-                                                    {statusLabel}
-                                                </span>
-                                            </div>
-                                            <span className="font-semibold text-gray-900 ml-2">
-                                                R$ {formatMoney(total)}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Selected Total */}
-                            {pdfSelectedItems.size > 0 && (
-                                <div className="mt-4 bg-[#fef2f2] rounded-xl p-4 border border-[#fecaca]">
-                                    <p className="text-[#a03f3d] text-sm">Total Selecionado</p>
-                                    <p className="text-[#b94a48] font-bold text-xl">
-                                        R$ {formatMoney(teeth
-                                            .filter((_, index) => pdfSelectedItems.has(index))
-                                            .reduce((sum, t) => sum + getItemValue(t), 0))}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-
-                    {/* Footer Buttons */}
-                    <div className="p-4 border-t bg-gray-50 flex gap-3 flex-shrink-0">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => setShowPdfItemSelection(false)}
-                        >
-                            Cancelar
-                        </Button>
-                        <Button
-                            className="flex-1 bg-[#b94a48] hover:bg-[#a03f3d]"
-                            onClick={handleExportPDF}
-                            disabled={pdfSelectedItems.size === 0}
-                        >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Gerar PDF
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <PdfItemSelectionDialog
+                open={pdf.showPdfItemSelection}
+                onClose={() => pdf.setShowPdfItemSelection(false)}
+                teeth={teeth}
+                pdfSelectedItems={pdf.pdfSelectedItems}
+                onToggleItem={pdf.togglePdfItemSelection}
+                onToggleAll={pdf.toggleAllPdfItems}
+                onExport={pdf.handleExportPDF}
+                getItemValue={payment.getItemValue}
+                getSelectedTotal={pdf.getSelectedTotal}
+            />
         </Dialog>
     );
 }
