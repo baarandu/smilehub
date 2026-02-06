@@ -35,7 +35,7 @@ export const generatePatientReport = async ({
     reportNumber
 }: ReportOptions) => {
 
-    const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
+    const formatDate = (date: string) => new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
 
     // Helper to sanitize description removing values
     const sanitizeDescription = (description: string) => {
@@ -532,7 +532,12 @@ export const generatePatientReport = async ({
                             // Split potential Obs part
                             const parts = description.split('\n\nObs: ');
                             const itemsPart = parts[0];
-                            const obsPart = parts.length > 1 ? parts[1] : '';
+                            let obsPart = parts.length > 1 ? parts[1] : '';
+
+                            // Handle descriptions that are purely observational (start with "Obs:")
+                            if (!obsPart && itemsPart.startsWith('Obs: ')) {
+                                obsPart = itemsPart.substring(5);
+                            }
 
                             // Process procedure lines
                             const lines = itemsPart.split('\n');

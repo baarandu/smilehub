@@ -143,6 +143,7 @@ export function ReportGenerationModal({
         // Split potential Obs part
         const parts = description.split('\n\nObs: ');
         const itemsPart = parts[0];
+        const obsPart = parts.length > 1 ? parts[1] : null;
 
         const lines = itemsPart.split('\n');
         const sanitizedLines: string[] = [];
@@ -164,7 +165,13 @@ export function ReportGenerationModal({
             }
         });
 
-        return sanitizedLines.join('\n');
+        // If description is purely observational (starts with "Obs:"), show it
+        if (sanitizedLines.length === 0) {
+            const obsText = itemsPart.startsWith('Obs: ') ? itemsPart.substring(5) : (obsPart || itemsPart);
+            return obsText ? `Obs: ${obsText}` : '';
+        }
+
+        return obsPart ? `${sanitizedLines.join('\n')}\n\nObs: ${obsPart}` : sanitizedLines.join('\n');
     };
 
     const isLoading = loadingProcedures || loadingExams;
@@ -226,7 +233,7 @@ export function ReportGenerationModal({
                                                     <div className="flex items-center gap-3 text-xs text-slate-500">
                                                         <span className="flex items-center gap-1">
                                                             <Calendar className="w-3 h-3" />
-                                                            {format(new Date(proc.date), 'dd/MM/yyyy')}
+                                                            {format(new Date(proc.date + 'T00:00:00'), 'dd/MM/yyyy')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -283,7 +290,7 @@ export function ReportGenerationModal({
                                                         {exam.name}
                                                     </p>
                                                     <p className="text-xs text-slate-500 mt-1">
-                                                        {format(new Date(exam.order_date), 'dd/MM/yyyy')}
+                                                        {format(new Date(exam.order_date + 'T00:00:00'), 'dd/MM/yyyy')}
                                                     </p>
                                                 </div>
                                             </div>
