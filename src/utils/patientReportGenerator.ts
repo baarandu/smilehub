@@ -458,14 +458,7 @@ export const generatePatientReport = async ({
         ${includeHeader ? `
         <div class="header">
             <div class="header-left">
-                ${clinicLogo ? `<img src="${clinicLogo}" class="logo-img" />` : `
-                <div class="avatar-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C8.5 2 6 5 6 9c0 2 1 4 2 5.5V22h8v-7.5c1-1.5 2-3.5 2-5.5 0-4-2.5-7-6-7z"/>
-                        <path d="M9 22v-3M15 22v-3M12 2v4"/>
-                    </svg>
-                </div>
-                `}
+                ${clinicLogo ? `<img src="${clinicLogo}" class="logo-img" />` : ''}
                 <div class="dentist-info">
                     <h1>${dentistTitle} ${dentistName || 'Dentista'}</h1>
                     <div class="dentist-specialty">Cirurgião(ã) Dentista</div>
@@ -473,8 +466,7 @@ export const generatePatientReport = async ({
                 </div>
             </div>
             <div class="header-right">
-                <div class="report-badge">Relatório Oficial ${currentReportNumber}</div>
-                <div class="report-date">${formatDateFull(new Date())}</div>
+                <div class="report-date"><svg style="display:inline-block;vertical-align:middle;margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${formatDateFull(new Date())}</div>
             </div>
         </div>
         ` : ''}
