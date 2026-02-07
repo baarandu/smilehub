@@ -14,75 +14,31 @@ import {
   Star,
   Play,
   Loader2,
+  MessageCircle,
 } from 'lucide-react';
 import { plansService } from '@/services/admin/plans';
 import { appSettingsService } from '@/services/admin/appSettings';
 import { SubscriptionPlan } from '@/types/database';
 
-// Map database features to user-friendly display text
+// Parse features from database (same approach as Pricing.tsx)
 const getFeaturesList = (plan: SubscriptionPlan): string[] => {
-  const features: string[] = [];
-  const f = plan.features as Record<string, boolean> | null;
-
-  // Add user/patient limits first
-  if (plan.max_users === 1) {
-    features.push('1 Dentista');
-  } else if (plan.max_users <= 5) {
-    features.push(`Até ${plan.max_users} Dentistas`);
-  } else {
-    features.push('Dentistas ilimitados');
+  const featuresJson = plan.features;
+  try {
+    if (Array.isArray(featuresJson)) return featuresJson;
+    if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
+    return [];
+  } catch {
+    return [];
   }
-
-  if (plan.max_patients) {
-    if (plan.max_patients >= 10000) {
-      features.push('Pacientes ilimitados');
-    } else {
-      features.push(`Até ${plan.max_patients.toLocaleString('pt-BR')} pacientes`);
-    }
-  } else {
-    features.push('Pacientes ilimitados');
-  }
-
-  // Map features to display text
-  if (f) {
-    // Core features
-    if (f.agenda) features.push('Agenda inteligente');
-    if (f.prontuario) features.push('Prontuário digital');
-    if (f.orcamentos) features.push('Orçamentos');
-    if (f.alertas) features.push('Lembretes via WhatsApp');
-
-    // Financial features
-    if (f.financeiro_avancado) {
-      features.push('Financeiro completo');
-    } else if (f.financeiro_basico) {
-      features.push('Controle financeiro básico');
-    }
-
-    if (f.estoque) features.push('Controle de estoque');
-    if (f.comissoes) features.push('Gestão de comissões');
-    if (f.imposto_renda) features.push('Imposto de renda');
-    if (f.relatorios_avancados) features.push('Relatórios avançados');
-
-    // Advanced features
-    if (f.multi_unidades && plan.max_locations && plan.max_locations > 1) {
-      features.push(`Até ${plan.max_locations} unidades`);
-    }
-    if (f.api) features.push('API personalizada');
-    if (f.secretaria_ia) features.push('Secretária IA');
-    if (f.whitelabel) features.push('White-label');
-
-    // Support
-    if (f.gerente_dedicado || f.suporte_telefone) {
-      features.push('Gerente de conta dedicado');
-    } else if (f.suporte_chat) {
-      features.push('Suporte prioritário');
-    } else if (f.suporte_email) {
-      features.push('Suporte por email');
-    }
-  }
-
-  return features;
 };
+
+// Hero carousel images
+const heroImages = [
+  'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&h=600&fit=crop',
+  'https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=800&h=600&fit=crop',
+];
 
 export default function Landing() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
@@ -90,6 +46,15 @@ export default function Landing() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [annualDiscount, setAnnualDiscount] = useState<number>(17);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Auto-rotate hero images every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const loadPlansAndSettings = async () => {
@@ -128,6 +93,16 @@ export default function Landing() {
       return priceInReais.toFixed(0);
     }
     return priceInReais.toFixed(2).replace('.', ',');
+  };
+
+  // Helper to calculate annual savings
+  const calculateSavings = (priceInCents: number): string => {
+    const savingsInCents = priceInCents * 12 * (annualDiscount / 100);
+    const savingsInReais = savingsInCents / 100;
+    if (savingsInReais % 1 === 0) {
+      return savingsInReais.toFixed(0);
+    }
+    return savingsInReais.toFixed(2).replace('.', ',');
   };
 
   const scrollToSection = (id: string) => {
@@ -191,22 +166,27 @@ export default function Landing() {
               </div>
 
               <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 leading-[1.1] mb-8">
-                Sua clínica odontológica{' '}
-                <span className="text-[#b94a48]">organizada</span> e eficiente.
+                Seu consultório odontológico{' '}
+                <span className="text-[#b94a48]">organizado</span> e eficiente.
               </h1>
 
               <p className="text-lg lg:text-xl text-gray-600 mb-10 max-w-2xl leading-relaxed">
-                Sistema completo para gestão de pacientes, orçamentos, financeiro e agenda. Simples, rápido e acessível para dentistas modernos.
+                Sistema completo para gestão de pacientes, orçamentos, financeiro e agenda. Ideal para dentistas autônomos e clínicas odontológicas.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
                 <Link to="/signup">
                   <Button size="lg" className="bg-[#b94a48] hover:bg-[#a03f3d] rounded-full text-base lg:text-lg px-10 h-14 lg:h-16">
-                    Testar grátis por 14 dias
+                    Testar grátis por 30 dias
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Button size="lg" variant="outline" className="rounded-full text-base lg:text-lg px-10 h-14 lg:h-16 border-gray-300">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-full text-base lg:text-lg px-10 h-14 lg:h-16 border-gray-300"
+                  onClick={() => scrollToSection('demo')}
+                >
                   Ver demonstração
                 </Button>
               </div>
@@ -223,18 +203,23 @@ export default function Landing() {
                       <Star key={i} className="w-5 h-5 fill-current" />
                     ))}
                   </div>
-                  <p className="text-sm lg:text-base text-gray-600">Mais de 500 clínicas organizadas</p>
+                  <p className="text-sm lg:text-base text-gray-600">Mais de 500 dentistas organizados</p>
                 </div>
               </div>
             </div>
 
             <div className="relative lg:pl-8">
-              <div className="rounded-3xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&h=600&fit=crop"
-                  alt="Clínica odontológica moderna"
-                  className="w-full h-auto object-cover"
-                />
+              <div className="rounded-3xl overflow-hidden shadow-2xl relative">
+                {heroImages.map((src, index) => (
+                  <img
+                    key={src}
+                    src={src}
+                    alt="Clínica odontológica moderna"
+                    className={`w-full h-auto object-cover transition-opacity duration-1000 ${
+                      index === currentImageIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
+                    }`}
+                  />
+                ))}
               </div>
 
               <div className="absolute bottom-8 left-4 right-4 lg:left-12 lg:right-4 bg-white rounded-2xl shadow-xl p-5 flex items-center justify-between">
@@ -258,14 +243,14 @@ export default function Landing() {
       </section>
 
       {/* Video Demo */}
-      <section className="min-h-screen flex items-center px-4 bg-white">
+      <section id="demo" className="min-h-screen flex items-center px-4 bg-white">
         <div className="max-w-5xl mx-auto w-full py-12">
           <div className="text-center mb-12">
             <span className="text-[#b94a48] font-semibold text-sm uppercase tracking-wide">
               Veja na prática
             </span>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
-              Como o Organiza Odonto funciona
+              Como o <span className="text-[#b94a48]">Organiza</span> Odonto funciona
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
               Assista a uma demonstração completa e descubra como simplificar a gestão da sua clínica em poucos minutos.
@@ -398,9 +383,34 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Preços simples e transparentes
             </h2>
-            <p className="text-gray-600 mb-8">
+            <p className="text-gray-600 mb-6">
               Escolha o plano ideal para o momento da sua clínica. Mude quando quiser.
             </p>
+
+            {/* Benefits Bar */}
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+                <Shield className="w-5 h-5 text-[#b94a48]" />
+                <div className="text-left">
+                  <p className="text-xs text-gray-500">Segurança</p>
+                  <p className="font-semibold text-gray-900 text-sm">Dados criptografados</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+                <CheckCircle className="w-5 h-5 text-[#b94a48]" />
+                <div className="text-left">
+                  <p className="text-xs text-gray-500">Flexibilidade</p>
+                  <p className="font-semibold text-gray-900 text-sm">Cancele quando quiser</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+                <MessageCircle className="w-5 h-5 text-[#b94a48]" />
+                <div className="text-left">
+                  <p className="text-xs text-gray-500">Suporte</p>
+                  <p className="font-semibold text-gray-900 text-sm">Via WhatsApp</p>
+                </div>
+              </div>
+            </div>
 
             <div className="inline-flex items-center gap-3 bg-gray-100 p-1 rounded-full">
               <button
@@ -444,10 +454,11 @@ export default function Landing() {
                     ? formatPrice(plan.price_monthly)
                     : formatPrice(plan.price_monthly, true)}
                   period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-                  buttonText={index === 1 ? 'Testar Grátis' : index === 2 ? 'Falar com Consultor' : 'Começar Agora'}
+                  buttonText="Começar grátis"
                   buttonVariant={index === 1 ? 'default' : 'outline'}
                   highlighted={index === 1}
                   features={getFeaturesList(plan)}
+                  savings={billingPeriod === 'yearly' ? calculateSavings(plan.price_monthly) : undefined}
                 />
               ))}
             </div>
@@ -456,9 +467,9 @@ export default function Landing() {
               <PricingCard
                 name="Essencial"
                 description="Ideal para dentistas autônomos que estão começando."
-                price="97"
-                period="/mês"
-                buttonText="Começar Agora"
+                price={billingPeriod === 'yearly' ? formatPrice(9700, true) : "97"}
+                period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
+                buttonText="Começar grátis"
                 buttonVariant="outline"
                 features={[
                   '1 Dentista',
@@ -467,13 +478,14 @@ export default function Landing() {
                   'Prontuário completo',
                   'Suporte por email',
                 ]}
+                savings={billingPeriod === 'yearly' ? calculateSavings(9700) : undefined}
               />
               <PricingCard
                 name="Profissional"
                 description="Para clínicas em crescimento que precisam de mais controle."
-                price="197"
-                period="/mês"
-                buttonText="Testar Grátis"
+                price={billingPeriod === 'yearly' ? formatPrice(19700, true) : "197"}
+                period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
+                buttonText="Começar grátis"
                 highlighted
                 features={[
                   'Até 5 Dentistas',
@@ -483,13 +495,14 @@ export default function Landing() {
                   'Relatórios de BI',
                   'Suporte prioritário',
                 ]}
+                savings={billingPeriod === 'yearly' ? calculateSavings(19700) : undefined}
               />
               <PricingCard
                 name="Clínica"
                 description="Gestão avançada para clínicas com múltiplos profissionais."
-                price="347"
-                period="/mês"
-                buttonText="Falar com Consultor"
+                price={billingPeriod === 'yearly' ? formatPrice(34700, true) : "347"}
+                period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
+                buttonText="Começar grátis"
                 buttonVariant="outline"
                 features={[
                   'Até 15 Dentistas',
@@ -499,6 +512,7 @@ export default function Landing() {
                   'Relatórios de BI',
                   'Gerente de conta dedicado',
                 ]}
+                savings={billingPeriod === 'yearly' ? calculateSavings(34700) : undefined}
               />
             </div>
           )}
@@ -740,6 +754,7 @@ function PricingCard({
   buttonVariant = 'default',
   features,
   highlighted = false,
+  savings,
 }: {
   name: string;
   description: string;
@@ -749,14 +764,22 @@ function PricingCard({
   buttonVariant?: 'default' | 'outline';
   features: string[];
   highlighted?: boolean;
+  savings?: string;
 }) {
   return (
-    <div className={`rounded-2xl p-8 ${
+    <div className={`rounded-2xl p-8 relative ${
       highlighted
-        ? 'bg-white border-2 border-[#b94a48] relative'
+        ? 'bg-white border-2 border-[#b94a48]'
         : 'bg-white border border-gray-200'
     }`}>
-      {highlighted && (
+      {savings && (
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+          <span className="bg-emerald-500 text-white text-xs font-semibold px-4 py-1 rounded-full">
+            Economize R$ {savings}
+          </span>
+        </div>
+      )}
+      {highlighted && !savings && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2">
           <span className="bg-[#b94a48] text-white text-xs font-semibold px-4 py-1 rounded-full uppercase">
             Mais Popular
@@ -776,7 +799,7 @@ function PricingCard({
 
       <Link to="/signup">
         <Button
-          className={`w-full mb-6 ${
+          className={`w-full ${
             highlighted
               ? 'bg-[#b94a48] hover:bg-[#a03f3d] text-white'
               : buttonVariant === 'outline'
@@ -787,11 +810,14 @@ function PricingCard({
           {buttonText}
         </Button>
       </Link>
+      <p className="text-xs text-gray-400 text-center mt-2 mb-6">Sem cartão • Cancele quando quiser</p>
 
       <ul className="space-y-3">
         {features.map((feature, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-[#b94a48] flex-shrink-0 mt-0.5" />
+          <li key={i} className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-[#fef2f2]">
+              <CheckCircle className="w-4 h-4 text-[#b94a48]" />
+            </div>
             <span className="text-gray-600 text-sm">{feature}</span>
           </li>
         ))}

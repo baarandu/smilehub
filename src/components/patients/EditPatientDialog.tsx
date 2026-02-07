@@ -63,6 +63,7 @@ export function EditPatientDialog({ patient, open, onClose, onSuccess }: EditPat
           onCancel={onClose}
           isLoading={updatePatient.isPending}
           submitLabel="Salvar Alterações"
+          isEditing
         />
       </DialogContent>
     </Dialog>

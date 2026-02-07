@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PatientFormData } from '@/types/database';
+import { usePatientSearch } from '@/hooks/usePatients';
 
 interface PatientFormProps {
   initialData?: Partial<PatientFormData>;
@@ -13,6 +14,7 @@ interface PatientFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   submitLabel?: string;
+  isEditing?: boolean;
 }
 
 const emptyForm: PatientFormData = {
@@ -43,8 +45,13 @@ export function PatientForm({
   onCancel,
   isLoading,
   submitLabel = 'Salvar',
+  isEditing = false,
 }: PatientFormProps) {
   const [form, setForm] = useState<PatientFormData>({ ...emptyForm, ...initialData });
+
+  // Busca pacientes existentes pelo nome (apenas no cadastro, não na edição)
+  const { data: existingPatients } = usePatientSearch(isEditing ? '' : form.name);
+  const showDuplicateWarning = !isEditing && existingPatients && existingPatients.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +112,34 @@ export function PatientForm({
                 placeholder="Maria da Silva"
                 required
               />
+              {showDuplicateWarning && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-amber-800">
+                        Paciente(s) com nome parecido encontrado(s):
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {existingPatients.slice(0, 5).map((patient) => (
+                          <li key={patient.id} className="text-amber-700">
+                            <span className="font-medium">{patient.name}</span>
+                            {patient.phone && (
+                              <span className="text-amber-600"> - Tel: {patient.phone}</span>
+                            )}
+                            {patient.cpf && (
+                              <span className="text-amber-600"> - CPF: {patient.cpf}</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-amber-600 mt-2 text-xs">
+                        Verifique se não é o mesmo paciente antes de continuar.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="birthDate">Data de Nascimento</Label>

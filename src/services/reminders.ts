@@ -6,8 +6,7 @@ export type Reminder = {
     title: string;
     description?: string;
     is_active: boolean;
-    due_date?: string;
-    scheduled_date?: string | null;
+    due_date?: string | null;
     created_at: string;
     updated_at: string;
     user_id: string;

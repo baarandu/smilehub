@@ -6,7 +6,6 @@ import {
     Loader2,
     Shield,
     Users,
-    Headphones,
     Calendar,
     FileText,
     Bell,
@@ -376,21 +375,21 @@ export default function Pricing() {
                         <Shield className="w-5 h-5 text-[#a03f3d]" />
                         <div>
                             <p className="text-xs text-gray-500">Segurança</p>
-                            <p className="font-semibold text-gray-900">Pagamento protegido</p>
+                            <p className="font-semibold text-gray-900">Dados criptografados</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
-                        <Users className="w-5 h-5 text-[#a03f3d]" />
+                        <CheckCircle className="w-5 h-5 text-[#a03f3d]" />
                         <div>
-                            <p className="text-xs text-gray-500">Escala</p>
-                            <p className="font-semibold text-gray-900">Adicione usuários</p>
+                            <p className="text-xs text-gray-500">Flexibilidade</p>
+                            <p className="font-semibold text-gray-900">Cancele quando quiser</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
-                        <Headphones className="w-5 h-5 text-[#a03f3d]" />
+                        <MessageCircle className="w-5 h-5 text-[#a03f3d]" />
                         <div>
                             <p className="text-xs text-gray-500">Suporte</p>
-                            <p className="font-semibold text-gray-900">Ajuda rápida</p>
+                            <p className="font-semibold text-gray-900">Via WhatsApp</p>
                         </div>
                     </div>
                 </div>
@@ -495,15 +494,11 @@ export default function Pricing() {
                                 <div className="space-y-3 mb-6">
                                     {features.slice(0, 4).map((feature, i) => {
                                         const IconComponent = featureIcons[feature] || CheckCircle;
-                                        const isHighlight = feature.startsWith('Tudo do');
 
                                         return (
                                             <div key={i} className="flex items-center gap-3">
-                                                <div className={`
-                                                    w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0
-                                                    ${isHighlight || isEnterprise ? 'bg-[#fef2f2]' : 'bg-gray-100'}
-                                                `}>
-                                                    <IconComponent className={`w-4 h-4 ${isHighlight || isEnterprise ? 'text-[#a03f3d]' : 'text-gray-600'}`} />
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-[#fef2f2]">
+                                                    <IconComponent className="w-4 h-4 text-[#a03f3d]" />
                                                 </div>
                                                 <span className="text-sm text-gray-700">{feature}</span>
                                             </div>

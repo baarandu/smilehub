@@ -184,7 +184,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
+            <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="p-6 border-b shrink-0">
                     <DialogTitle>{isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
                 </DialogHeader>

@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { de } from "date-fns/locale";
 
 // FAQ Data
 const faqCategories = [
@@ -39,19 +40,19 @@ const faqCategories = [
     questions: [
       {
         q: "O que é o Organiza Odonto?",
-        a: "O Organiza Odonto é um sistema completo de gestão para clínicas odontológicas. Ele permite gerenciar pacientes, agendamentos, orçamentos, financeiro, estoque de materiais e muito mais, tudo em uma única plataforma."
+        a: "O Organiza Odonto é um aplicativo criado para facilitar a rotina do dentista e da clínica. Com ele, você organiza agenda pacientes, materiais, atendimentos, procedimentos, exames e todo o financeiro em um só lugar, de forma simples e prática — seja atendendo sozinho ou em mais de uma clínica."
       },
       {
         q: "Posso usar em mais de um computador?",
-        a: "Sim! O Organiza Odonto é 100% online (na nuvem). Você pode acessar de qualquer computador, tablet ou celular com internet. Seus dados ficam sincronizados automaticamente."
+        a: "Sim! Você pode acessar o Organiza Odonto em quantos dispositivos precisar. Basta fazer login com sua conta e seus dados estarão sempre atualizados, seja no computador, tablet ou celular."
       },
       {
         q: "Meus dados estão seguros?",
-        a: "Sim. Utilizamos criptografia de ponta a ponta, servidores seguros e seguimos as melhores práticas de segurança. Seus dados são protegidos e apenas você tem acesso a eles."
+        a: "Sim. A segurança dos seus dados é uma prioridade no Organiza Odonto. Utilizamos servidores seguros, criptografia e boas práticas de proteção da informação, além de seguir a LGPD (Lei Geral de Proteção de Dados). Seus dados são acessados apenas por usuários autorizados da sua conta."
       },
       {
         q: "Existe aplicativo para celular?",
-        a: "Sim! Temos um aplicativo disponível para Android e iOS. Você pode baixar na Play Store ou App Store buscando por 'Organiza Odonto'."
+        a: "Sim! O Organiza Odonto possui aplicativo para Android e iOS. Basta baixar na Play Store ou App Store, fazer login com sua conta e acessar os mesmos dados do sistema."
       }
     ]
   },
@@ -62,15 +63,15 @@ const faqCategories = [
     questions: [
       {
         q: "Como cadastro um novo paciente?",
-        a: "Vá em 'Pacientes' no menu lateral, clique em 'Novo Paciente' e preencha os dados. Os campos obrigatórios são nome e telefone. Você pode adicionar anamnese, documentos e fotos depois."
+        a: "Acesse Pacientes, toque em Novo Paciente e preencha os dados básicos. Apenas nome e telefone são obrigatórios. Informações como anamnese, documentos e fotos podem ser adicionadas depois, com calma."
       },
       {
         q: "Como faço a anamnese do paciente?",
-        a: "Acesse a ficha do paciente e clique na aba 'Anamnese'. Lá você encontra um formulário completo com histórico médico, alergias, medicamentos e outras informações importantes."
+        a: "Acesse a ficha do paciente e vá até a aba Anamnese. Nela, você encontra um formulário completo para registrar histórico médico, alergias, uso de medicamentos e outras informações importantes para um atendimento seguro."
       },
       {
         q: "Posso anexar documentos e exames?",
-        a: "Sim! Na ficha do paciente, vá na aba 'Documentos' ou 'Exames'. Você pode fazer upload de radiografias, fotos, PDFs e outros arquivos."
+        a: "Sim. Na ficha do paciente, acesse a aba Documentos ou Exames e anexe arquivos como radiografias, fotos, PDFs e outros documentos. Todos os arquivos ficam salvos e vinculados ao histórico do paciente."
       }
     ]
   },

@@ -1,10 +1,21 @@
-// Lista de dentes
+// Lista de dentes permanentes
 export const TEETH = [
     '11', '12', '13', '14', '15', '16', '17', '18',
     '21', '22', '23', '24', '25', '26', '27', '28',
     '31', '32', '33', '34', '35', '36', '37', '38',
     '41', '42', '43', '44', '45', '46', '47', '48',
 ];
+
+// Lista de dentes decíduos
+export const DECIDUOUS_TEETH = [
+    '51', '52', '53', '54', '55',
+    '61', '62', '63', '64', '65',
+    '71', '72', '73', '74', '75',
+    '81', '82', '83', '84', '85',
+];
+
+// Todos os dentes
+export const ALL_TEETH = [...TEETH, ...DECIDUOUS_TEETH];
 
 // Faces para restauração
 export const FACES = [
@@ -121,6 +132,13 @@ export const getToothDisplayName = (tooth: string, includePrefix = true): string
     if (tooth.includes('Arcada')) {
         return tooth;
     }
+
+    // Check if deciduous tooth (quadrants 5-8)
+    const quadrant = parseInt(tooth.charAt(0), 10);
+    if (quadrant >= 5 && quadrant <= 8) {
+        return includePrefix ? `Dente ${tooth} (decíduo)` : `${tooth} (decíduo)`;
+    }
+
     return includePrefix ? `Dente ${tooth}` : tooth;
 };
 

@@ -173,9 +173,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="h-20 flex items-center gap-3 px-6 border-b border-border shrink-0">
           <img src="/logo-login.png" alt="Logo" className="w-11 h-11 rounded-xl object-contain" />
           <div>
-            <h1 className="font-bold text-lg text-foreground">Organiza Odonto</h1>
+            <h1 className="font-bold text-lg"><span className="text-[#b94a48]">Organiza</span> <span className="text-foreground">Odonto</span></h1>
             <p className="text-xs text-muted-foreground">
-              Prontuário Digital {isSuperAdmin && <span className="text-primary">(Admin)</span>}
+              Gestão Odontológica {isSuperAdmin && <span className="text-primary">(Admin)</span>}
             </p>
           </div>
         </div>

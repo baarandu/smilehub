@@ -38,60 +38,25 @@ interface UserWithSubscription {
 type StatusFilter = 'all' | 'active' | 'trialing' | 'canceled' | 'no_subscription';
 
 async function fetchUsersWithSubscriptions(): Promise<UserWithSubscription[]> {
-    // Get all profiles
-    const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, created_at')
-        .order('created_at', { ascending: false });
+    // Use RPC function that bypasses RLS for super admins
+    const { data, error } = await supabase.rpc('admin_get_all_users_with_subscriptions');
 
-    if (profilesError) throw profilesError;
+    if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+    }
 
-    // Get clinic_users to map users to clinics
-    const { data: clinicUsers } = await supabase
-        .from('clinic_users')
-        .select('user_id, clinic_id, clinics(name)');
-
-    // Get subscriptions with plans
-    const { data: subscriptions } = await supabase
-        .from('subscriptions')
-        .select('clinic_id, status, trial_ends_at, subscription_plans(name)');
-
-    // Build user map
-    const clinicUserMap: Record<string, { clinic_id: string; clinic_name: string }> = {};
-    clinicUsers?.forEach((cu: any) => {
-        clinicUserMap[cu.user_id] = {
-            clinic_id: cu.clinic_id,
-            clinic_name: cu.clinics?.name || null
-        };
-    });
-
-    // Build subscription map by clinic_id
-    const subscriptionMap: Record<string, { status: string; plan_name: string; trial_ends_at: string | null }> = {};
-    subscriptions?.forEach((sub: any) => {
-        subscriptionMap[sub.clinic_id] = {
-            status: sub.status,
-            plan_name: sub.subscription_plans?.name || null,
-            trial_ends_at: sub.trial_ends_at
-        };
-    });
-
-    // Combine data
-    return (profiles || []).map(profile => {
-        const clinicInfo = clinicUserMap[profile.id];
-        const subInfo = clinicInfo ? subscriptionMap[clinicInfo.clinic_id] : null;
-
-        return {
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            created_at: profile.created_at,
-            clinic_name: clinicInfo?.clinic_name || null,
-            clinic_id: clinicInfo?.clinic_id || null,
-            subscription_status: subInfo?.status || null,
-            plan_name: subInfo?.plan_name || null,
-            trial_ends_at: subInfo?.trial_ends_at || null
-        };
-    });
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        email: row.email,
+        full_name: row.full_name,
+        created_at: row.created_at,
+        clinic_name: row.clinic_name,
+        clinic_id: row.clinic_id,
+        subscription_status: row.subscription_status,
+        plan_name: row.plan_name,
+        trial_ends_at: row.trial_ends_at,
+    }));
 }
 
 function formatDate(dateStr: string): string {

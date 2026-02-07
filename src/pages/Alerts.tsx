@@ -317,8 +317,8 @@ export default function Alerts() {
                   <Label>Data (Opcional)</Label>
                   <Input
                     type="date"
-                    value={reminders.reminderForm.scheduled_date}
-                    onChange={e => reminders.setReminderForm({ ...reminders.reminderForm, scheduled_date: e.target.value })}
+                    value={reminders.reminderForm.due_date}
+                    onChange={e => reminders.setReminderForm({ ...reminders.reminderForm, due_date: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">Defina uma data para o lembrete aparecer</p>
                 </div>
@@ -520,7 +520,7 @@ export default function Alerts() {
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="w-3.5 h-3.5" />
-                        <span>{reminders.formatReminderDate(reminder.scheduled_date, reminder.created_at)}</span>
+                        <span>{reminders.formatReminderDate(reminder.due_date, reminder.created_at)}</span>
                       </div>
                     </div>
 

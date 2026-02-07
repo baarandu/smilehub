@@ -7,7 +7,7 @@ export type ReminderFilter = 'all' | 'active' | 'paused';
 interface ReminderForm {
     title: string;
     description: string;
-    scheduled_date: string;
+    due_date: string;
 }
 
 export function useReminders() {
@@ -15,7 +15,7 @@ export function useReminders() {
     const [loadingReminders, setLoadingReminders] = useState(true);
     const [showReminderDialog, setShowReminderDialog] = useState(false);
     const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
-    const [reminderForm, setReminderForm] = useState<ReminderForm>({ title: '', description: '', scheduled_date: '' });
+    const [reminderForm, setReminderForm] = useState<ReminderForm>({ title: '', description: '', due_date: '' });
     const [reminderSearch, setReminderSearch] = useState('');
     const [reminderFilter, setReminderFilter] = useState<ReminderFilter>('all');
 
@@ -39,29 +39,29 @@ export function useReminders() {
         }
 
         try {
+            const reminderData = {
+                title: reminderForm.title,
+                description: reminderForm.description,
+                due_date: reminderForm.due_date || null,
+                is_active: true
+            };
+            console.log('Saving reminder:', reminderData);
+
             if (editingReminder) {
-                await remindersService.update(editingReminder.id, {
-                    title: reminderForm.title,
-                    description: reminderForm.description,
-                    scheduled_date: reminderForm.scheduled_date || null
-                });
+                await remindersService.update(editingReminder.id, reminderData);
                 toast.success('Lembrete atualizado!');
             } else {
-                await remindersService.create({
-                    title: reminderForm.title,
-                    description: reminderForm.description,
-                    scheduled_date: reminderForm.scheduled_date || null,
-                    is_active: true
-                });
+                await remindersService.create(reminderData);
                 toast.success('Lembrete criado!');
             }
             setShowReminderDialog(false);
-            setReminderForm({ title: '', description: '', scheduled_date: '' });
+            setReminderForm({ title: '', description: '', due_date: '' });
             setEditingReminder(null);
-            loadReminders();
-        } catch (error) {
-            console.error(error);
-            toast.error('Houve um erro ao salvar o lembrete');
+            await loadReminders();
+        } catch (error: any) {
+            console.error('Error saving reminder:', error);
+            const errorMessage = error?.message || error?.toString() || 'Erro desconhecido';
+            toast.error(`Erro ao salvar: ${errorMessage}`);
         }
     };
 
@@ -79,7 +79,7 @@ export function useReminders() {
 
     const handleToggleActive = async (id: string, currentStatus: boolean) => {
         try {
-            setReminders(reminders.map(r => r.id === id ? { ...r, is_active: !currentStatus } : r));
+            setReminders(prev => prev.map(r => r.id === id ? { ...r, is_active: !currentStatus } : r));
             await remindersService.update(id, { is_active: !currentStatus });
         } catch (error) {
             loadReminders();
@@ -92,7 +92,7 @@ export function useReminders() {
         setReminderForm({
             title: reminder.title,
             description: reminder.description || '',
-            scheduled_date: reminder.scheduled_date || ''
+            due_date: reminder.due_date || ''
         });
         setShowReminderDialog(true);
     };
@@ -100,7 +100,7 @@ export function useReminders() {
     const closeDialog = () => {
         setShowReminderDialog(false);
         setEditingReminder(null);
-        setReminderForm({ title: '', description: '', scheduled_date: '' });
+        setReminderForm({ title: '', description: '', due_date: '' });
     };
 
     const filteredReminders = useMemo(() => {
@@ -118,9 +118,10 @@ export function useReminders() {
         });
     }, [reminders, reminderSearch, reminderFilter]);
 
-    const formatReminderDate = (dateStr: string | null, createdAt: string) => {
+    const formatReminderDate = (dateStr: string | null | undefined, createdAt: string) => {
         if (dateStr) {
-            const date = new Date(dateStr + 'T00:00:00');
+            // Handle both date strings (YYYY-MM-DD) and timestamps
+            const date = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00');
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today);

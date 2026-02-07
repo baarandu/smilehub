@@ -63,76 +63,37 @@ function getPeriodRange(period: PeriodValue): { startDate: Date; endDate: Date }
 
 export const analyticsService = {
     /**
-     * Get overview metrics (totals)
+     * Get overview metrics (totals) - uses RPC to bypass RLS
      */
     async getOverviewMetrics(period: PeriodValue): Promise<OverviewMetrics> {
         const { startDate, endDate } = getPeriodRange(period);
 
-        // Total clinics
-        const { count: totalClinics } = await supabase
-            .from('clinics')
-            .select('*', { count: 'exact', head: true });
+        const { data, error } = await supabase.rpc('admin_get_overview_metrics', {
+            p_start_date: startDate.toISOString(),
+            p_end_date: endDate.toISOString(),
+        });
 
-        // Total users
-        const { count: totalUsers } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
-
-        // New users in period
-        const { count: newUsersInPeriod } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', startDate.toISOString())
-            .lte('created_at', endDate.toISOString());
-
-        // Active subscriptions
-        const { count: activeSubscriptions } = await supabase
-            .from('subscriptions')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'active');
-
-        // Trialing subscriptions
-        const { count: trialingSubscriptions } = await supabase
-            .from('subscriptions')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'trialing');
-
-        // Cancelled subscriptions for churn calculation
-        const { count: cancelledInPeriod } = await supabase
-            .from('subscriptions')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'canceled')
-            .gte('updated_at', startDate.toISOString())
-            .lte('updated_at', endDate.toISOString());
-
-        // Calculate conversion rate (active / (active + cancelled))
-        const { count: totalCancelled } = await supabase
-            .from('subscriptions')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'canceled');
-
-        const active = activeSubscriptions || 0;
-        const cancelled = totalCancelled || 0;
-        const trialing = trialingSubscriptions || 0;
-
-        const conversionRate = (active + cancelled) > 0
-            ? (active / (active + cancelled)) * 100
-            : 0;
-
-        // Churn rate: cancelled in period / active at start of period (approximated)
-        const activeAtStart = active + (cancelledInPeriod || 0);
-        const churnRate = activeAtStart > 0
-            ? ((cancelledInPeriod || 0) / activeAtStart) * 100
-            : 0;
+        if (error) {
+            console.error('Error fetching overview metrics:', error);
+            return {
+                totalClinics: 0,
+                totalUsers: 0,
+                newUsersInPeriod: 0,
+                activeSubscriptions: 0,
+                trialingSubscriptions: 0,
+                conversionRate: 0,
+                churnRate: 0,
+            };
+        }
 
         return {
-            totalClinics: totalClinics || 0,
-            totalUsers: totalUsers || 0,
-            newUsersInPeriod: newUsersInPeriod || 0,
-            activeSubscriptions: active,
-            trialingSubscriptions: trialing,
-            conversionRate: Math.round(conversionRate * 10) / 10,
-            churnRate: Math.round(churnRate * 10) / 10,
+            totalClinics: data?.totalClinics || 0,
+            totalUsers: data?.totalUsers || 0,
+            newUsersInPeriod: data?.newUsersInPeriod || 0,
+            activeSubscriptions: data?.activeSubscriptions || 0,
+            trialingSubscriptions: data?.trialingSubscriptions || 0,
+            conversionRate: data?.conversionRate || 0,
+            churnRate: data?.churnRate || 0,
         };
     },
 
@@ -266,61 +227,26 @@ export const analyticsService = {
     },
 
     /**
-     * Get recent clinics with details
+     * Get recent clinics with details - uses RPC to bypass RLS
      */
     async getRecentClinics(limit: number = 10): Promise<ClinicInfo[]> {
-        const { data: clinics, error } = await supabase
-            .from('clinics')
-            .select(`
-                id,
-                name,
-                created_at,
-                subscriptions (
-                    status,
-                    plan_id
-                )
-            `)
-            .order('created_at', { ascending: false })
-            .limit(limit);
-
-        if (error || !clinics) return [];
-
-        // Get plan names
-        const { data: plans } = await supabase
-            .from('subscription_plans')
-            .select('id, name');
-
-        const planNameMap: Record<string, string> = {};
-        plans?.forEach(plan => {
-            planNameMap[plan.id] = plan.name;
+        const { data, error } = await supabase.rpc('admin_get_recent_clinics', {
+            p_limit: limit,
         });
 
-        // Get user counts per clinic
-        const clinicIds = clinics.map(c => c.id);
-        const { data: clinicUsers } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .in('clinic_id', clinicIds);
+        if (error) {
+            console.error('Error fetching recent clinics:', error);
+            return [];
+        }
 
-        const userCountMap: Record<string, number> = {};
-        clinicUsers?.forEach(cu => {
-            userCountMap[cu.clinic_id] = (userCountMap[cu.clinic_id] || 0) + 1;
-        });
-
-        return clinics.map(clinic => {
-            const subscription = Array.isArray(clinic.subscriptions)
-                ? clinic.subscriptions[0]
-                : clinic.subscriptions;
-
-            return {
-                id: clinic.id,
-                name: clinic.name,
-                planName: subscription?.plan_id ? planNameMap[subscription.plan_id] || null : null,
-                subscriptionStatus: subscription?.status || null,
-                usersCount: userCountMap[clinic.id] || 0,
-                createdAt: clinic.created_at
-            };
-        });
+        return (data || []).map((clinic: any) => ({
+            id: clinic.id,
+            name: clinic.name,
+            planName: clinic.planName,
+            subscriptionStatus: clinic.subscriptionStatus,
+            usersCount: clinic.usersCount || 0,
+            createdAt: clinic.createdAt,
+        }));
     },
 
     /**

@@ -8,13 +8,12 @@ DECLARE
   new_clinic_id uuid;
   invite_record record;
 BEGIN
-  -- 1. Create Profile
-  INSERT INTO public.profiles (id, full_name, gender, email)
+  -- 1. Create Profile (email is stored in auth.users, not here)
+  INSERT INTO public.profiles (id, full_name, gender)
   VALUES (
-    new.id, 
-    new.raw_user_meta_data->>'full_name', 
-    new.raw_user_meta_data->>'gender',
-    new.email
+    new.id,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'gender'
   );
 
   -- 2. Check for Pending Invites

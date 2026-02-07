@@ -13,13 +13,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import {
-    TEETH,
     TREATMENTS,
     FACES,
     TREATMENTS_WITH_MATERIAL,
     TREATMENTS_WITH_DESCRIPTION,
     type ToothEntry
 } from '@/utils/budgetUtils';
+import { Odontogram } from './odontogram';
 
 interface BudgetFormProps {
     date: string;
@@ -222,19 +222,10 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                 {/* Tooth Selection */}
                 <div className="space-y-2">
                     <Label className="text-base font-semibold">1. Selecionar Dente ou Arcada</Label>
-                    <Select value={selectedTooth} onValueChange={setSelectedTooth}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                            <SelectItem value="Arcada Superior">Arcada Superior</SelectItem>
-                            <SelectItem value="Arcada Inferior">Arcada Inferior</SelectItem>
-                            <SelectItem value="Arcada Superior + Arcada Inferior">Ambas Arcadas</SelectItem>
-                            {TEETH.map(tooth => (
-                                <SelectItem key={tooth} value={tooth}>Dente {tooth}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Odontogram
+                        selectedTooth={selectedTooth}
+                        onSelectTooth={setSelectedTooth}
+                    />
                 </div>
 
                 {/* Treatments */}
