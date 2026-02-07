@@ -11,6 +11,7 @@ interface OdontogramProps {
     selectedTooth: string;
     onSelectTooth: (tooth: string) => void;
     toothFaces?: Record<string, string[]>;
+    onToggleFace?: (faceId: string) => void;
 }
 
 type ArcadaValue = '' | 'Arcada Superior' | 'Arcada Inferior' | 'Arcada Superior + Arcada Inferior';
@@ -25,7 +26,7 @@ function isArcadaValue(v: string): v is ArcadaValue {
     return v === 'Arcada Superior' || v === 'Arcada Inferior' || v === 'Arcada Superior + Arcada Inferior';
 }
 
-export function Odontogram({ selectedTooth, onSelectTooth, toothFaces }: OdontogramProps) {
+export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleFace }: OdontogramProps) {
     const [tab, setTab] = useState<'permanent' | 'deciduous'>('permanent');
 
     const arcadaSelected: ArcadaValue = isArcadaValue(selectedTooth) ? selectedTooth : '';
@@ -89,6 +90,7 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces }: Odontog
                         selectedTooth={isToothSelected ? selectedTooth : ''}
                         onToothClick={handleToothClick}
                         toothFaces={toothFaces}
+                        onToggleFace={onToggleFace}
                     />
                 </TabsContent>
 
@@ -101,6 +103,7 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces }: Odontog
                         selectedTooth={isToothSelected ? selectedTooth : ''}
                         onToothClick={handleToothClick}
                         toothFaces={toothFaces}
+                        onToggleFace={onToggleFace}
                     />
                 </TabsContent>
             </Tabs>
@@ -133,6 +136,7 @@ function ToothGrid({
     selectedTooth,
     onToothClick,
     toothFaces,
+    onToggleFace,
 }: {
     upperRight: number[];
     upperLeft: number[];
@@ -141,6 +145,7 @@ function ToothGrid({
     selectedTooth: string;
     onToothClick: (tooth: number) => void;
     toothFaces?: Record<string, string[]>;
+    onToggleFace?: (faceId: string) => void;
 }) {
     return (
         <div className="border rounded-lg p-2 bg-white overflow-x-auto">
@@ -154,6 +159,7 @@ function ToothGrid({
                             isSelected={selectedTooth === t.toString()}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
+                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -166,6 +172,7 @@ function ToothGrid({
                             isSelected={selectedTooth === t.toString()}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
+                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -184,6 +191,7 @@ function ToothGrid({
                             isSelected={selectedTooth === t.toString()}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
+                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -196,6 +204,7 @@ function ToothGrid({
                             isSelected={selectedTooth === t.toString()}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
+                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
                         />
                     ))}
                 </div>

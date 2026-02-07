@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { getToothType, isUpperTooth, isRightSide, getFaceRegion } from './odontogramData';
+import { getToothType, isUpperTooth, isRightSide, getFaceRegion, getRegionFace, type FaceRegion } from './odontogramData';
 import {
     getLateralPaths,
     getOcclusalPaths,
@@ -13,14 +13,26 @@ interface ToothButtonProps {
     isSelected: boolean;
     onClick: () => void;
     faces?: string[];
+    onToggleFace?: (faceId: string) => void;
 }
+
+const FACE_LABELS: Record<string, string> = {
+    M: 'Mesial',
+    D: 'Distal',
+    O: 'Oclusal',
+    V: 'Vestibular',
+    L: 'Lingual',
+    P: 'Palatina',
+};
 
 const STROKE = '#c4c9d0';
 const STROKE_SEL = '#3b82f6';
 const DETAIL = '#d4d8de';
 const DETAIL_SEL = '#93c5fd';
 
-export function ToothButton({ tooth, isSelected, onClick, faces }: ToothButtonProps) {
+const ALL_REGIONS: FaceRegion[] = ['top', 'bottom', 'left', 'right', 'center'];
+
+export function ToothButton({ tooth, isSelected, onClick, faces, onToggleFace }: ToothButtonProps) {
     const unit = tooth % 10;
     const upper = isUpperTooth(tooth);
     const right = isRightSide(tooth);
@@ -46,17 +58,43 @@ export function ToothButton({ tooth, isSelected, onClick, faces }: ToothButtonPr
     );
 
     const faceRegions = getOcclusalFaceRegions(type);
-    const activeFaceRegions = (faces || [])
-        .map(f => getFaceRegion(tooth, f))
-        .filter((r): r is NonNullable<typeof r> => r !== null);
+    const activeSet = new Set(
+        (faces || [])
+            .map(f => getFaceRegion(tooth, f))
+            .filter((r): r is FaceRegion => r !== null)
+    );
+
+    const handleRegionClick = onToggleFace
+        ? (region: FaceRegion, e: React.MouseEvent) => {
+            e.stopPropagation();
+            onToggleFace(getRegionFace(tooth, region));
+        }
+        : undefined;
 
     const occlusalSvg = (
         <svg width={24} height={24} viewBox={OCCLUSAL_VIEWBOX} className="shrink-0">
             <path d={occlusal.outline} fill={fill} stroke={s} strokeWidth={1.2} strokeLinejoin="round" />
-            {activeFaceRegions.map(region => (
-                <path key={region} d={faceRegions[region]} fill="#3b82f6" opacity={0.85} />
-            ))}
-            <path d={occlusal.detail} fill="none" stroke={d} strokeWidth={0.7} />
+            {ALL_REGIONS.map(region => {
+                const isActive = activeSet.has(region);
+                const faceId = getRegionFace(tooth, region);
+                if (!isActive && !handleRegionClick) return null;
+                return (
+                    <path
+                        key={region}
+                        d={faceRegions[region]}
+                        fill="#3b82f6"
+                        className={cn(
+                            isActive ? 'opacity-[0.85]' : 'opacity-0',
+                            handleRegionClick && 'cursor-pointer hover:opacity-30',
+                        )}
+                        style={{ pointerEvents: handleRegionClick ? 'all' : 'none' }}
+                        onClick={handleRegionClick ? (e) => handleRegionClick(region, e) : undefined}
+                    >
+                        <title>{FACE_LABELS[faceId] || faceId}</title>
+                    </path>
+                );
+            })}
+            <path d={occlusal.detail} fill="none" stroke={d} strokeWidth={0.7} style={{ pointerEvents: 'none' }} />
         </svg>
     );
 

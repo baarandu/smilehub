@@ -60,3 +60,16 @@ export function getFaceRegion(tooth: number, faceId: string): FaceRegion | null 
         default: return null;
     }
 }
+
+/** Reverse mapping: given a region on the occlusal SVG, return the face ID. */
+export function getRegionFace(tooth: number, region: FaceRegion): string {
+    const right = isRightSide(tooth);
+    const upper = isUpperTooth(tooth);
+    switch (region) {
+        case 'center': return 'O';
+        case 'bottom': return 'V';
+        case 'top': return upper ? 'P' : 'L';
+        case 'right': return right ? 'M' : 'D';
+        case 'left': return right ? 'D' : 'M';
+    }
+}

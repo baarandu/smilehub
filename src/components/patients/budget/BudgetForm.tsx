@@ -20,6 +20,7 @@ import {
     type ToothEntry
 } from '@/utils/budgetUtils';
 import { Odontogram } from './odontogram';
+import { isUpperTooth } from './odontogram/odontogramData';
 
 interface BudgetFormProps {
     date: string;
@@ -245,6 +246,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         selectedTooth={selectedTooth}
                         onSelectTooth={setSelectedTooth}
                         toothFaces={toothFacesMap}
+                        onToggleFace={showFaces ? toggleFace : undefined}
                     />
                 </div>
 
@@ -272,7 +274,16 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                     <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
                         <Label className="text-base font-semibold">3. Faces</Label>
                         <div className="flex flex-wrap gap-2">
-                            {FACES.map(face => (
+                            {FACES
+                                .filter(face => {
+                                    const toothNum = parseInt(selectedTooth, 10);
+                                    if (isNaN(toothNum)) return face.id !== 'L' && face.id !== 'P';
+                                    const upper = isUpperTooth(toothNum);
+                                    if (face.id === 'L') return !upper;
+                                    if (face.id === 'P') return upper;
+                                    return true;
+                                })
+                                .map(face => (
                                 <Button
                                     key={face.id}
                                     variant={selectedFaces.includes(face.id) ? "default" : "outline"}
