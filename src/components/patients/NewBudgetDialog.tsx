@@ -204,6 +204,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                         editingItem={editingItem}
                         editingIndex={editingItemIndex}
                         onCancelEdit={handleCancelEdit}
+                        toothEntries={teethList}
                     />
 
                     {/* Right Column: Summary */}

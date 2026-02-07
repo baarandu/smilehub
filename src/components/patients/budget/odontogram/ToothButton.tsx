@@ -1,8 +1,9 @@
 import { cn } from '@/lib/utils';
-import { getToothType, isUpperTooth, isRightSide } from './odontogramData';
+import { getToothType, isUpperTooth, isRightSide, getFaceRegion } from './odontogramData';
 import {
     getLateralPaths,
     getOcclusalPaths,
+    getOcclusalFaceRegions,
     LATERAL_VIEWBOX,
     OCCLUSAL_VIEWBOX,
 } from './toothPathsSimple';
@@ -11,6 +12,7 @@ interface ToothButtonProps {
     tooth: number;
     isSelected: boolean;
     onClick: () => void;
+    faces?: string[];
 }
 
 const STROKE = '#c4c9d0';
@@ -18,7 +20,7 @@ const STROKE_SEL = '#3b82f6';
 const DETAIL = '#d4d8de';
 const DETAIL_SEL = '#93c5fd';
 
-export function ToothButton({ tooth, isSelected, onClick }: ToothButtonProps) {
+export function ToothButton({ tooth, isSelected, onClick, faces }: ToothButtonProps) {
     const unit = tooth % 10;
     const upper = isUpperTooth(tooth);
     const right = isRightSide(tooth);
@@ -43,9 +45,17 @@ export function ToothButton({ tooth, isSelected, onClick }: ToothButtonProps) {
         </svg>
     );
 
+    const faceRegions = getOcclusalFaceRegions(type);
+    const activeFaceRegions = (faces || [])
+        .map(f => getFaceRegion(tooth, f))
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
     const occlusalSvg = (
         <svg width={24} height={24} viewBox={OCCLUSAL_VIEWBOX} className="shrink-0">
             <path d={occlusal.outline} fill={fill} stroke={s} strokeWidth={1.2} strokeLinejoin="round" />
+            {activeFaceRegions.map(region => (
+                <path key={region} d={faceRegions[region]} fill="#3b82f6" opacity={0.85} />
+            ))}
             <path d={occlusal.detail} fill="none" stroke={d} strokeWidth={0.7} />
         </svg>
     );

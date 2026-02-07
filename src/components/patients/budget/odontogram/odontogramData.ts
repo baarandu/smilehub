@@ -38,3 +38,25 @@ export function isRightSide(toothNumber: number): boolean {
     const quadrant = Math.floor(toothNumber / 10);
     return quadrant === 1 || quadrant === 4 || quadrant === 5 || quadrant === 8;
 }
+
+export type FaceRegion = 'center' | 'top' | 'bottom' | 'left' | 'right';
+
+/**
+ * Maps a face ID (M, D, O, V, L, P) to the corresponding SVG region
+ * in the occlusal view, taking into account the tooth's quadrant.
+ *
+ * Right-side teeth (Q1, Q4, Q5, Q8): Mesial faces the midline → right region
+ * Left-side teeth (Q2, Q3, Q6, Q7): Mesial faces the midline → left region
+ */
+export function getFaceRegion(tooth: number, faceId: string): FaceRegion | null {
+    const right = isRightSide(tooth);
+    switch (faceId) {
+        case 'O': return 'center';
+        case 'V': return 'bottom';
+        case 'L': return 'top';
+        case 'P': return 'top';
+        case 'M': return right ? 'right' : 'left';
+        case 'D': return right ? 'left' : 'right';
+        default: return null;
+    }
+}

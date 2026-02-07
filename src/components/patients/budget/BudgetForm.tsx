@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,9 +34,10 @@ interface BudgetFormProps {
     editingItem?: ToothEntry | null;
     editingIndex?: number | null;
     onCancelEdit?: () => void;
+    toothEntries?: ToothEntry[];
 }
 
-export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit, toothEntries }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -158,6 +159,24 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
 
     const showFaces = selectedTreatments.includes('Restauração');
 
+    const toothFacesMap = useMemo(() => {
+        const map: Record<string, string[]> = {};
+        // Faces from already-added items
+        for (const entry of toothEntries || []) {
+            if (entry.faces && entry.faces.length > 0) {
+                const key = entry.tooth;
+                const existing = map[key] || [];
+                map[key] = [...new Set([...existing, ...entry.faces])];
+            }
+        }
+        // Faces from the item currently being edited in the form
+        if (showFaces && selectedTooth && selectedFaces.length > 0) {
+            const existing = map[selectedTooth] || [];
+            map[selectedTooth] = [...new Set([...existing, ...selectedFaces])];
+        }
+        return map;
+    }, [toothEntries, showFaces, selectedTooth, selectedFaces]);
+
     return (
         <ScrollArea className="flex-1 p-6 border-r">
             <div className="space-y-6">
@@ -225,6 +244,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                     <Odontogram
                         selectedTooth={selectedTooth}
                         onSelectTooth={setSelectedTooth}
+                        toothFaces={toothFacesMap}
                     />
                 </div>
 

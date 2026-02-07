@@ -131,6 +131,51 @@ export function getCrownPaths(type: ToothType): ViewPaths {
     return crownFrontal[type];
 }
 
+export type FaceRegionPaths = {
+    center: string;
+    top: string;
+    bottom: string;
+    left: string;
+    right: string;
+};
+
+/*
+ * Occlusal face regions for restoration visualization.
+ *
+ * The 4 detail curves divide the occlusal view into 5 zones:
+ *   top horizontal:  M2,11 Q16,7 30,11
+ *   bottom horizontal: M2,21 Q16,25 30,21
+ *   left vertical:   M11,2 Q7,16 11,30
+ *   right vertical:  M21,2 Q25,16 21,30
+ *
+ * Approximate curve intersections: (9.4,9.4) (22.6,9.4) (22.6,22.6) (9.4,22.6)
+ */
+
+const molarFaceRegions: FaceRegionPaths = {
+    // Diamond between the 4 curves
+    center: 'M16,7 Q22.6,9.4 25,16 Q22.6,22.6 16,25 Q9.4,22.6 7,16 Q9.4,9.4 16,7 Z',
+    // Between top outline and top horizontal curve
+    top: 'M4,2 C12,1 20,1 28,2 C30,3 30,5 30,8 L30,11 Q16,7 2,11 L2,8 C2,5 2,3 4,2 Z',
+    // Between bottom horizontal curve and bottom outline
+    bottom: 'M2,21 Q16,25 30,21 L30,24 C30,27 30,29 28,30 C20,31 12,31 4,30 C2,29 2,27 2,24 Z',
+    // Between left outline and left vertical curve (between horizontal curves)
+    left: 'M2,11 Q9.4,9.4 11,2 Q7,16 11,30 Q9.4,22.6 2,21 Z',
+    // Between right vertical curve and right outline (between horizontal curves)
+    right: 'M30,11 Q22.6,9.4 21,2 Q25,16 21,30 Q22.6,22.6 30,21 Z',
+};
+
+const otherFaceRegions: FaceRegionPaths = {
+    center: 'M16,7 Q22.6,9.4 25,16 Q22.6,22.6 16,25 Q9.4,22.6 7,16 Q9.4,9.4 16,7 Z',
+    top: 'M6,2 C12,1 20,1 26,2 C29,3 30,6 30,8 L30,11 Q16,7 2,11 L2,8 C2,6 3,3 6,2 Z',
+    bottom: 'M2,21 Q16,25 30,21 L30,24 C30,26 29,29 26,30 C20,31 12,31 6,30 C3,29 2,26 2,24 Z',
+    left: 'M2,11 Q9.4,9.4 11,2 Q7,16 11,30 Q9.4,22.6 2,21 Z',
+    right: 'M30,11 Q22.6,9.4 21,2 Q25,16 21,30 Q22.6,22.6 30,21 Z',
+};
+
+export function getOcclusalFaceRegions(type: ToothType): FaceRegionPaths {
+    return type === 'molar' ? molarFaceRegions : otherFaceRegions;
+}
+
 export function getOcclusalPaths(type: ToothType): ViewPaths {
     return occlusalView[type];
 }
