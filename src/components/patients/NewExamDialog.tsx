@@ -60,7 +60,7 @@ export function NewExamDialog({
           orderDate: exam.order_date,
           examDate: exam.exam_date || '',
         });
-        setFileType(exam.file_type);
+        setFileType(exam.file_type as 'document' | 'photo' | null);
         if (exam.file_url) {
           setPreviewUrl(exam.file_url);
         }
@@ -171,8 +171,10 @@ export function NewExamDialog({
       } else {
         await createExam.mutateAsync({
           patient_id: patientId,
+          date: form.orderDate,
+          title: form.name,
           ...examData,
-        });
+        } as any);
         toast.success('Exame registrado com sucesso!');
       }
 

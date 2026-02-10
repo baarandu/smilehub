@@ -236,7 +236,6 @@ export function mapTransactionType(value: string | null | undefined): 'income' |
     'income': 'income',
     'entrada': 'income',
     'credito': 'income',
-    'credito': 'income',
     'recebimento': 'income',
     'despesa': 'expense',
     'expense': 'expense',

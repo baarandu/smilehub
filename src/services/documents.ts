@@ -87,7 +87,7 @@ export async function getPatientDocuments(patientId: string): Promise<PatientDoc
     .order('uploaded_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as PatientDocument[];
 }
 
 // Create document record

@@ -363,12 +363,12 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
             // Try Web Share API first (works on mobile browsers and some desktop)
             if (navigator.share && navigator.canShare) {
-                const file = new File([content], zipName, { type: 'application/zip' });
-                const shareData = { files: [file] };
+                const shareFile = new (File as any)([content], zipName, { type: 'application/zip' }) as File;
+                const shareData = { files: [shareFile] };
 
                 if (navigator.canShare(shareData)) {
                     await navigator.share({
-                        files: [file],
+                        files: [shareFile],
                         title: `Documentos Fiscais ${year}`,
                         text: `Documentos fiscais organizados por categoria - ${TAX_REGIME_LABELS[taxRegime]}`,
                     });

@@ -86,14 +86,15 @@ export const analyticsService = {
             };
         }
 
+        const result = data as any;
         return {
-            totalClinics: data?.totalClinics || 0,
-            totalUsers: data?.totalUsers || 0,
-            newUsersInPeriod: data?.newUsersInPeriod || 0,
-            activeSubscriptions: data?.activeSubscriptions || 0,
-            trialingSubscriptions: data?.trialingSubscriptions || 0,
-            conversionRate: data?.conversionRate || 0,
-            churnRate: data?.churnRate || 0,
+            totalClinics: result?.totalClinics || 0,
+            totalUsers: result?.totalUsers || 0,
+            newUsersInPeriod: result?.newUsersInPeriod || 0,
+            activeSubscriptions: result?.activeSubscriptions || 0,
+            trialingSubscriptions: result?.trialingSubscriptions || 0,
+            conversionRate: result?.conversionRate || 0,
+            churnRate: result?.churnRate || 0,
         };
     },
 
@@ -239,7 +240,7 @@ export const analyticsService = {
             return [];
         }
 
-        return (data || []).map((clinic: any) => ({
+        return ((data || []) as any[]).map((clinic: any) => ({
             id: clinic.id,
             name: clinic.name,
             planName: clinic.planName,

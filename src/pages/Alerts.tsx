@@ -104,7 +104,7 @@ export default function Alerts() {
           .select('is_super_admin')
           .eq('id', user.id)
           .single();
-        setIsSuperAdmin(profile?.is_super_admin || false);
+        setIsSuperAdmin((profile as any)?.is_super_admin || false);
       }
     };
     checkUserAccess();

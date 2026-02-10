@@ -348,7 +348,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                     </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="clinic" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs defaultValue="clinic" value={activeTab} onValueChange={setActiveTab as (value: string) => void} className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="clinic">Dados</TabsTrigger>
                         <TabsTrigger value="team">Equipe</TabsTrigger>
@@ -632,7 +632,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                                                         <span className="font-medium text-[#8b3634] uppercase text-xs mr-2 px-1.5 py-0.5 bg-red-50 rounded">
                                                             {log.action}
                                                         </span>
-                                                        {(log.details as any)?.description || 'Ação registrada'}
+                                                        {((log as any).details as any)?.description || 'Ação registrada'}
                                                     </p>
                                                 </div>
                                             ))}

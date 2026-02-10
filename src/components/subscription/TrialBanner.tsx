@@ -25,9 +25,9 @@ export function TrialBanner() {
                     .from('profiles')
                     .select('is_super_admin')
                     .eq('id', user.id)
-                    .single();
+                    .single<{ is_super_admin: boolean | null }>();
 
-                if (profile?.is_super_admin) {
+                if (profile && profile.is_super_admin) {
                     setLoading(false);
                     return;
                 }
@@ -37,7 +37,7 @@ export function TrialBanner() {
                     .from('clinic_users')
                     .select('clinic_id')
                     .eq('user_id', user.id)
-                    .single();
+                    .single<{ clinic_id: string }>();
 
                 if (!clinicUser) {
                     setLoading(false);
@@ -51,7 +51,8 @@ export function TrialBanner() {
                     .eq('clinic_id', clinicUser.clinic_id)
                     .in('status', ['active', 'trialing'])
                     .order('created_at', { ascending: false })
-                    .limit(1);
+                    .limit(1)
+                    .returns<{ status: string; current_period_end: string }[]>();
 
                 const subscription = subscriptions?.[0];
 

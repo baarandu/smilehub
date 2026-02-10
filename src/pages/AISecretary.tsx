@@ -655,13 +655,11 @@ export default function AISecretary() {
       updatedKeywords = [...currentKeywords, newKeyword.trim().toLowerCase()];
     }
 
-    const success = await updateSetting('human_keywords', updatedKeywords);
-    if (success) {
-      setShowKeywordModal(false);
-      setEditingKeywordIndex(null);
-      setNewKeyword('');
-      toast({ title: 'Palavra-chave salva' });
-    }
+    await updateSetting('human_keywords', updatedKeywords);
+    setShowKeywordModal(false);
+    setEditingKeywordIndex(null);
+    setNewKeyword('');
+    toast({ title: 'Palavra-chave salva' });
   };
 
   const handleDeleteKeyword = async (index: number) => {
@@ -679,15 +677,11 @@ export default function AISecretary() {
     const minHours = parseInt(localMinAdvanceHours) || 2;
     const interval = parseInt(localIntervalMinutes) || 30;
 
-    const success1 = await updateSetting('min_advance_hours', minHours);
-    const success2 = await updateSetting('interval_minutes', interval);
+    await updateSetting('min_advance_hours', minHours);
+    await updateSetting('interval_minutes', interval);
 
-    if (success1 && success2) {
-      setRulesChanged(false);
-      toast({ title: 'Regras de agendamento salvas' });
-    } else {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar as regras.' });
-    }
+    setRulesChanged(false);
+    toast({ title: 'Regras de agendamento salvas' });
   };
 
   if (isLoading) {

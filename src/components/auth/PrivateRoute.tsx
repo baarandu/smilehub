@@ -34,9 +34,9 @@ export function PrivateRoute() {
                 .from('profiles')
                 .select('is_super_admin')
                 .eq('id', session.user.id)
-                .single();
+                .single<{ is_super_admin: boolean | null }>();
 
-            if (profile?.is_super_admin) {
+            if (profile && profile.is_super_admin) {
                 if (mounted) {
                     setIsAllowed(true);
                     setIsTrialExpired(false);
@@ -51,7 +51,7 @@ export function PrivateRoute() {
                 .from('clinic_users')
                 .select('clinic_id, role')
                 .eq('user_id', session.user.id)
-                .single();
+                .single<{ clinic_id: string; role: string }>();
 
             if (clinicUser) {
                 // Fetch subscription with current_period_end to check expiration
@@ -61,7 +61,8 @@ export function PrivateRoute() {
                     .eq('clinic_id', clinicUser.clinic_id)
                     .in('status', ['active', 'trialing'])
                     .order('created_at', { ascending: false })
-                    .limit(1);
+                    .limit(1)
+                    .returns<{ status: string; plan_id: string; current_period_end: string }[]>();
 
                 const subscription = subscriptions?.[0];
 

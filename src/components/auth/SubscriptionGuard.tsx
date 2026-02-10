@@ -31,7 +31,7 @@ export function SubscriptionGuard({ children, fallback, feature, currentUsage }:
                 .from('clinic_users')
                 .select('clinic_id')
                 .eq('user_id', user.id)
-                .single();
+                .single<{ clinic_id: string }>();
 
             if (!clinicUser) {
                 setAllowed(false);

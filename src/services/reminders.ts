@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/supabase';
+import { Database } from '@/types/database';
 
 export type Reminder = {
     id: string;

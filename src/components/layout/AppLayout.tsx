@@ -16,7 +16,8 @@ import {
   FileText,
   ShieldCheck,
   HelpCircle,
-  Settings
+  Settings,
+  Calculator
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,6 +47,7 @@ const navItems = [
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
+  { to: '/contabilidade-ia', icon: Calculator, label: 'Contabilidade IA', adminOnly: true },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Planos e Assinatura' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
@@ -61,11 +63,13 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { role, clinicId, isAdmin } = useClinic();
 
   // Filter nav items based on role
-  // Only admin can access Financeiro and Imposto de Renda
+  // Only admin can access Financeiro, Imposto de Renda, and Contabilidade IA
   const filteredNavItems = useMemo(() => {
     if (!isAdmin) {
       return navItems.filter(item =>
-        item.to !== '/financeiro' && item.to !== '/imposto-de-renda'
+        item.to !== '/financeiro' &&
+        item.to !== '/imposto-de-renda' &&
+        item.to !== '/contabilidade-ia'
       );
     }
     return navItems;

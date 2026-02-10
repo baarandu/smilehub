@@ -47,6 +47,8 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
             status: item.status,
             created_at: item.created_at,
             updated_at: item.updated_at,
+            clinic_id: item.clinic_id,
+            created_by: item.created_by,
         },
         patient: item.patients,
         daysSinceUpdate: Math.floor(

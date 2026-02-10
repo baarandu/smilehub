@@ -24,7 +24,7 @@ import { SubscriptionPlan } from '@/types/database';
 const getFeaturesList = (plan: SubscriptionPlan): string[] => {
   const featuresJson = plan.features;
   try {
-    if (Array.isArray(featuresJson)) return featuresJson;
+    if (Array.isArray(featuresJson)) return featuresJson as string[];
     if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
     return [];
   } catch {

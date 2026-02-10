@@ -86,7 +86,7 @@ export function NewProcedureDialog({
           value: procedure.value ? procedure.value.toFixed(2).replace('.', ',') : '',
           paymentMethod: procedure.payment_method || '',
           installments: procedure.installments?.toString() || '1',
-          status: procedure.status || 'in_progress',
+          status: (procedure.status as ProcedureFormState['status']) || 'in_progress',
         });
         setObservations(procedure.description || '');
         setSelectedItemIds([]);

@@ -697,13 +697,13 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 </div>
                                 {(selectedTransaction.tax_amount !== undefined && selectedTransaction.tax_amount !== null && selectedTransaction.tax_amount > 0) && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Imposto ({selectedTransaction.tax_rate || 0}%)</span>
+                                        <span className="text-muted-foreground">Imposto ({(selectedTransaction as any).tax_rate || 0}%)</span>
                                         <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.tax_amount)}</span>
                                     </div>
                                 )}
                                 {selectedTransaction.card_fee_amount !== null && selectedTransaction.card_fee_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa de Cartão ({selectedTransaction.card_fee_rate || 0}%)</span>
+                                        <span className="text-muted-foreground">Taxa de Cartão ({(selectedTransaction as any).card_fee_rate || 0}%)</span>
                                         <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.card_fee_amount)}</span>
                                     </div>
                                 )}

@@ -82,15 +82,15 @@ const faqCategories = [
     questions: [
       {
         q: "Como agendar uma consulta?",
-        a: "Vá em 'Agenda', clique no horário desejado ou no botão 'Nova Consulta'. Selecione o paciente, procedimento, data e horário. O sistema evita conflitos automaticamente."
+        a: "Acesse a Agenda e toque no horário desejado ou em Nova Consulta. Selecione o paciente, o procedimento, a data e o horário. O sistema organiza a agenda automaticamente e evita conflitos."
       },
       {
         q: "Como configurar os horários de atendimento?",
-        a: "Acesse 'Configurações' > 'Horários'. Lá você define os dias e horários de funcionamento da clínica, intervalos e bloqueios."
+        a: "Vá em Configurações > Horários. Nessa área, você define os dias e horários de atendimento, além de intervalos, folgas e bloqueios. As alterações se refletem automaticamente na agenda."
       },
       {
         q: "O sistema envia lembretes aos pacientes?",
-        a: "Sim! Com a Secretária IA ativada, o sistema envia lembretes automáticos por WhatsApp antes das consultas. Você pode configurar quando os lembretes são enviados."
+        a: "Sim. O Organiza Odonto gera automaticamente um alerta 24 horas antes das consultas do dia seguinte, com lembretes para confirmação via WhatsApp. Esses lembretes ajudam a reduzir faltas e organizar melhor a agenda."
       }
     ]
   },

@@ -22,7 +22,7 @@ export async function getSecretarySettings(clinicId: string): Promise<AISecretar
             return null;
         }
 
-        return data as AISecretarySettings;
+        return data as unknown as AISecretarySettings;
     } catch (error) {
         console.warn('Error in getSecretarySettings:', error);
         return null;

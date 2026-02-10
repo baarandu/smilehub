@@ -115,7 +115,7 @@ export const fiscalDocumentsService = {
 
         const { data, error } = await query;
         if (error) throw error;
-        return data || [];
+        return (data || []) as FiscalDocument[];
     },
 
     // Get documents by category
@@ -133,7 +133,7 @@ export const fiscalDocumentsService = {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data || [];
+        return (data || []) as FiscalDocument[];
     },
 
     // Get documents by regime
@@ -151,7 +151,7 @@ export const fiscalDocumentsService = {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data || [];
+        return (data || []) as FiscalDocument[];
     },
 
     // Get documents by month
@@ -169,7 +169,7 @@ export const fiscalDocumentsService = {
             .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data || [];
+        return (data || []) as FiscalDocument[];
     },
 
     // Get a single document
@@ -184,7 +184,7 @@ export const fiscalDocumentsService = {
             if (error.code === 'PGRST116') return null;
             throw error;
         }
-        return data;
+        return data as FiscalDocument;
     },
 
     // Upload and create a fiscal document
@@ -220,7 +220,7 @@ export const fiscalDocumentsService = {
                 : 'document';
 
         // Create document record (uploaded_by is optional to avoid FK constraint issues)
-        const documentData: FiscalDocumentInsert = {
+        const documentData: FiscalDocumentInsert & { expiration_date?: string | null } = {
             clinic_id: clinicId,
             name: metadata.name || file.name,
             description: metadata.description,
