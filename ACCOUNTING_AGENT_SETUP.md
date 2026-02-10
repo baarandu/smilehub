@@ -1,267 +1,271 @@
-# Configuração do Agente de Contabilidade IA
-
-Este documento explica como configurar o Agente de Contabilidade IA no Smile Care Hub.
-
-## 📋 Requisitos
-
-- Conta no [Google AI Studio](https://aistudio.google.com) (gratuito)
-- Projeto Supabase configurado
-- Permissões de admin no Supabase
-
-## 🚀 Passo a Passo
-
-### 1. Obter API Key do Google Gemini
-
-1. Acesse [Google AI Studio](https://aistudio.google.com)
-2. Faça login com sua conta Google
-3. Clique em "Get API Key"
-4. Crie uma nova API key
-5. Copie a chave (formato: `AIza...`)
-
-> **💰 Custo:** O Gemini 1.5 Pro tem tier gratuito generoso (50 requests/dia). Para produção, o custo é ~$0.004 por mensagem (~$1-4/mês por clínica ativa).
-
-### 2. Aplicar Migration SQL
-
-#### Opção A: Via Supabase Dashboard (Recomendado)
-
-1. Acesse seu projeto no [Supabase Dashboard](https://supabase.com/dashboard)
-2. Vá em **SQL Editor** (sidebar esquerda)
-3. Clique em **New Query**
-4. Cole o conteúdo do arquivo:
-   ```
-   supabase/migrations/20260210_create_accounting_agent_tables.sql
-   ```
-5. Clique em **Run** (ou pressione Ctrl+Enter)
-6. Verifique se apareceu "Success. No rows returned"
-
-#### Opção B: Via CLI do Supabase
-
-```bash
-# Certifique-se de estar no diretório do projeto
-cd smile-care-hub-main
-
-# Aplique a migration
-npx supabase db push
-
-# Ou se preferir migration específica
-npx supabase migration up --file 20260210_create_accounting_agent_tables.sql
-```
-
-### 3. Configurar API Key no Supabase
-
-1. No Supabase Dashboard, vá em **Project Settings** → **Edge Functions**
-2. Clique em **Secrets** (ou **Environment Variables**)
-3. Adicione uma nova secret:
-   - **Name:** `GEMINI_API_KEY`
-   - **Value:** Cole sua API key do Google AI Studio (ex: `AIzaSyAbc123...`)
-4. Clique em **Add Secret**
-
-> **⚠️ Importante:** A API key fica segura no servidor e nunca é exposta ao frontend.
-
-### 4. Deploy da Edge Function
-
-```bash
-# Deploy da função accounting-agent
-npx supabase functions deploy accounting-agent
-
-# Ou deploy de todas as funções
-npx supabase functions deploy
-```
-
-### 5. Testar a Integração
-
-1. Faça login no sistema como **admin**
-2. Vá em **Contabilidade IA** (sidebar)
-3. Digite uma mensagem de teste: "Olá"
-4. Você deve receber uma resposta do agente
-
-#### Testes Recomendados (MVP)
-
-**Teste 1: Classificação**
-```
-"Classifique: Mercado Livre - Material odontológico, R$ 450"
-```
-Esperado: Sugestão de categoria + confiança + justificativa
-
-**Teste 2: Auditoria**
-```
-"Audite o mês atual"
-```
-Esperado: Lista de problemas (duplicidades, sem categoria, sem documento)
-
-**Teste 3: Fechamento**
-```
-"Feche o mês anterior"
-```
-Esperado: DRE + DAS calculado (se Simples) + alertas
-
-**Teste 4: Checklist**
-```
-"Mostre o checklist fiscal"
-```
-Esperado: Lista de documentos obrigatórios com status
-
-## 🔍 Troubleshooting
-
-### Erro: "GEMINI_API_KEY not configured"
-
-**Causa:** API key não foi configurada ou não foi atualizada após deployment.
-
-**Solução:**
-1. Verifique se a secret foi adicionada corretamente
-2. Re-deploy a Edge Function: `npx supabase functions deploy accounting-agent`
-3. Aguarde ~1 minuto para propagação
-
-### Erro: "Only admins can use the accounting agent"
-
-**Causa:** Usuário não tem role de admin na clínica.
-
-**Solução:**
-1. Vá no Supabase Dashboard → Table Editor → `clinic_users`
-2. Encontre o registro do usuário
-3. Altere `role` para `'admin'`
-
-### Erro: "Missing authorization header"
-
-**Causa:** Problema de autenticação.
-
-**Solução:**
-1. Faça logout e login novamente
-2. Limpe cache do navegador (Ctrl+Shift+Delete)
-3. Verifique se o token JWT não expirou
-
-### Erro: "Gemini API error: 429"
-
-**Causa:** Limite de rate (50 requests/dia no tier gratuito).
-
-**Solução:**
-1. Aguarde 24h para reset
-2. Ou upgrade para tier pago (opcional)
-
-### Erro: SQL function not found (calculate_factor_r, etc.)
-
-**Causa:** Migration não foi aplicada corretamente.
-
-**Solução:**
-1. Verifique no Supabase SQL Editor se as funções existem:
-   ```sql
-   SELECT routine_name
-   FROM information_schema.routines
-   WHERE routine_name LIKE '%accounting%' OR routine_name LIKE '%factor%';
-   ```
-2. Se não existir, re-aplique a migration (Passo 2)
-
-## 📊 Verificar se está Funcionando
-
-### 1. Verificar Tabelas Criadas
-
-No Supabase SQL Editor:
-```sql
-SELECT table_name
-FROM information_schema.tables
-WHERE table_name LIKE 'accounting_agent%';
-
--- Deve retornar:
--- accounting_agent_conversations
--- accounting_agent_messages
-```
-
-### 2. Verificar Funções SQL Criadas
-
-```sql
-SELECT routine_name
-FROM information_schema.routines
-WHERE routine_name IN (
-  'calculate_factor_r',
-  'calculate_simples_tax',
-  'validate_bookkeeping',
-  'get_monthly_summary'
-);
-
--- Deve retornar as 4 funções
-```
-
-### 3. Verificar RLS (Row Level Security)
-
-```sql
-SELECT tablename, policyname
-FROM pg_policies
-WHERE tablename LIKE 'accounting_agent%';
-
--- Deve retornar várias policies de RLS
-```
-
-### 4. Testar Função SQL Diretamente
-
-```sql
--- Teste a função de resumo mensal (substitua o clinic_id)
-SELECT get_monthly_summary(
-  'YOUR_CLINIC_ID_HERE'::uuid,
-  '2024-01-01'::date
-);
-```
-
-## 🎯 Funcionalidades MVP
-
-Uma vez configurado, o agente pode:
-
-1. ✅ **Classificar transações** - Sugere categoria baseado em histórico
-2. ✅ **Auditar mês** - Detecta duplicidades, sem documento, sem categoria
-3. ✅ **Fechar mês** - DRE + DAS do Simples Nacional calculado
-4. ✅ **Checklist fiscal** - Documentos obrigatórios por regime
-
-## 🔐 Segurança
-
-- ✅ API key do Gemini fica no servidor (Edge Function)
-- ✅ RLS garante isolamento por clínica
-- ✅ Apenas admins podem acessar
-- ✅ Todas as conversas são logadas para auditoria
-- ✅ Funções SQL são determinísticas (não alucina valores)
-
-## 💰 Custos Estimados
-
-**Gemini 1.5 Pro:**
-- Tier gratuito: 50 requests/dia
-- Tier pago: $0.004 por mensagem
-
-**Por clínica ativa (mensal):**
-- 100 mensagens: $0.40
-- 500 mensagens: $2.00
-- 1000 mensagens: $4.00
-
-**Infraestrutura:**
-- Supabase: $0 adicional (já incluso no plano atual)
-- Edge Functions: $0 (incluído no tier free/pro do Supabase)
-
-## 📚 Recursos Adicionais
-
-- [Documentação do Gemini API](https://ai.google.dev/docs)
-- [Supabase Edge Functions](https://supabase.com/docs/guides/functions)
-- [Plano de Implementação Completo](/Users/vitor/.claude/plans/noble-soaring-abelson-agent-af0dfd5.md)
-
-## 🐛 Reportar Problemas
-
-Se encontrar bugs ou tiver sugestões:
-1. Verifique os logs da Edge Function no Supabase Dashboard
-2. Verifique o console do navegador (F12)
-3. Documente o erro completo
-4. Descreva os passos para reproduzir
-
-## 📝 Próximas Fases (Roadmap)
-
-Após o MVP funcional, as próximas features planejadas são:
-
-**Fase 2 (3-6 semanas):**
-- 📚 RAG legislação (busca semântica em docs fiscais)
-- 🏦 Conciliação bancária (parser OFX/PDF)
-- 📊 Gráficos interativos (code execution)
-
-**Fase 3 (2-3 meses):**
-- 📸 Multimodal (foto de nota → lançamento)
-- 🤖 LangGraph workflows complexos
-- 🚀 Executar ações (gerar NF-e, emitir boletos)
+# Agente de Contabilidade IA — Smile Care Hub
+
+## Status Geral
+
+| Etapa | Status |
+|---|---|
+| Migration SQL (tabelas + funções) | Concluido |
+| Edge Function (OpenAI GPT-4o-mini) | Concluido |
+| Frontend (chat + sidebar + quick actions) | Concluido |
+| Auth (JWT + RLS + admin check) | Concluido |
+| System Prompt (identidade + conhecimento) | Concluido |
+| 12 Ferramentas (tools + executors) | Concluido |
+| Base de conhecimento tributario | Concluido |
+| Analise proativa (otimizacao fiscal) | Concluido |
+| Diagnostico Tributario (modo 5) | Concluido |
+| Quick Actions (6 botoes) | Concluido |
+| Data atual no prompt | Concluido |
+| Timeout + logs de timing | Concluido |
+| RAG legislacao | Pendente |
+| Conciliacao bancaria (OFX/PDF) | Pendente |
+| Graficos interativos | Pendente |
+| Multimodal (foto de nota) | Pendente |
+| Executar acoes (gerar NF-e) | Pendente |
 
 ---
 
-**Status:** ✅ MVP Pronto para Uso
-**Última Atualização:** 2026-02-10
+## Arquitetura
+
+```
+Frontend (React)
+  |
+  | POST /functions/v1/accounting-agent
+  | Authorization: Bearer <JWT>
+  |
+  v
+Edge Function (Deno)
+  |
+  |-- Supabase Auth (getUser com JWT)
+  |-- Supabase DB (service role, bypass RLS)
+  |-- OpenAI API (GPT-4o-mini com function calling)
+  |
+  v
+12 Ferramentas (tools)
+  |-- 4 RPCs SQL (get_monthly_summary, validate_bookkeeping, calculate_factor_r, calculate_simples_tax)
+  |-- 8 queries diretas (search_transactions, compare_months, get_pending_transactions, etc.)
+```
+
+### Arquivos Principais
+
+| Arquivo | Funcao |
+|---|---|
+| `supabase/functions/accounting-agent/index.ts` | Entry point — auth, historico, chamadas OpenAI, orquestracao |
+| `supabase/functions/accounting-agent/systemPrompt.ts` | Personalidade, conhecimento, regras, modos de operacao |
+| `supabase/functions/accounting-agent/tools.ts` | Definicao das 12 ferramentas (schema OpenAI) |
+| `supabase/functions/accounting-agent/toolExecutors.ts` | Implementacao de cada ferramenta (queries SQL) |
+| `src/pages/AccountingAgent.tsx` | Pagina principal do chat |
+| `src/components/accounting/` | Componentes: ChatInterface, ChatInput, ChatMessage, ConversationSidebar, QuickActions |
+| `src/hooks/useAccountingChat.ts` | Hook de envio de mensagens com optimistic updates |
+| `src/hooks/useAccountingConversations.ts` | Hook de listagem de conversas |
+| `src/services/accountingAgent.ts` | Service layer (fetch para Edge Function + queries Supabase) |
+| `src/types/accountingAgent.ts` | Tipos TypeScript |
+| `supabase/migrations/20260210_create_accounting_agent_tables_fixed.sql` | Migration SQL (tabelas, RPCs, RLS, triggers) |
+
+---
+
+## Configuracao
+
+### Requisitos
+
+- Conta OpenAI com creditos (API key)
+- Projeto Supabase configurado
+- Admin da clinica no sistema
+
+### 1. Secrets do Supabase
+
+Ja configurados:
+
+| Secret | Status |
+|---|---|
+| `OPENAI_API_KEY` | Configurado |
+| `SUPABASE_SERVICE_ROLE_KEY` | Configurado |
+| `SUPABASE_URL` | Configurado |
+
+Para alterar:
+```bash
+npx supabase secrets set OPENAI_API_KEY=sk-proj-xxx
+```
+
+### 2. Migration SQL
+
+Ja aplicada via Supabase Dashboard. Arquivo: `supabase/migrations/20260210_create_accounting_agent_tables_fixed.sql`
+
+Cria:
+- Tabelas: `accounting_agent_conversations`, `accounting_agent_messages`
+- RPCs: `calculate_factor_r`, `calculate_simples_tax`, `validate_bookkeeping`, `get_monthly_summary`
+- RLS policies, triggers, indexes
+
+### 3. Deploy da Edge Function
+
+```bash
+npx supabase functions deploy accounting-agent --no-verify-jwt
+```
+
+---
+
+## 12 Ferramentas Disponiveis
+
+### Consulta de Dados
+| # | Ferramenta | Descricao | Fonte |
+|---|---|---|---|
+| 1 | `get_monthly_summary` | DRE simplificada do mes | RPC SQL |
+| 2 | `validate_bookkeeping` | Auditoria de lancamentos | RPC SQL |
+| 3 | `classify_transaction` | Sugerir categoria para transacao | Keywords + historico |
+| 4 | `search_transactions` | Buscar transacoes com filtros | Query direta |
+| 5 | `get_pending_transactions` | Transacoes sem categoria/comprovante | Query direta |
+
+### Analise e Comparacao
+| # | Ferramenta | Descricao | Fonte |
+|---|---|---|---|
+| 6 | `compare_months` | Comparar 2 meses lado a lado | Query direta |
+| 7 | `get_top_expenses` | Ranking de despesas | Query direta |
+| 8 | `get_revenue_by_payment_method` | Receitas por PIX/cartao/dinheiro | Query direta |
+
+### Calculos (deterministicos — nunca alucina)
+| # | Ferramenta | Descricao | Fonte |
+|---|---|---|---|
+| 9 | `calculate_factor_r` | Fator R para Simples Nacional | RPC SQL |
+| 10 | `calculate_simples_tax` | DAS do Simples Nacional | RPC SQL |
+
+### Documentos e Prazos
+| # | Ferramenta | Descricao | Fonte |
+|---|---|---|---|
+| 11 | `get_fiscal_checklist` | Checklist de documentos por regime | Hardcoded + DB |
+| 12 | `get_fiscal_deadlines` | Proximos vencimentos fiscais | Query direta |
+
+---
+
+## 6 Modos de Operacao
+
+| Modo | Gatilho | Ferramentas | Formato |
+|---|---|---|---|
+| Classificar | "classifique", "categorize" | classify_transaction | Categoria + confianca + acao |
+| Auditar | "audite", "problemas", "organizar" | validate_bookkeeping, get_pending_transactions | OK / Atencao / Pendencia |
+| Fechar Mes | "feche", "fechamento", "DRE" | get_monthly_summary + calculate_simples_tax | DRE + impostos + diagnostico |
+| Checklist | "checklist", "documentos", "contador" | get_fiscal_checklist | Lista com status + risco |
+| Diagnostico Tributario | "pagar menos", "otimizar", "economizar" | calculate_factor_r + calculate_simples_tax (2x) | Simulacao Anexo III vs V + plano de acao |
+| Pergunta Geral | Qualquer outra duvida contabil | Base de conhecimento | Resposta didatica |
+
+---
+
+## Base de Conhecimento
+
+O system prompt inclui:
+
+- **Regimes tributarios:** Simples Nacional (Anexo III e V com faixas completas), Lucro Presumido, Lucro Real, PF
+- **Tabela comparativa** de regimes para clinicas
+- **Glossario:** DAS, Fator R, Pro-labore, DRE, DEFIS, ECF, ISS, NFS-e, RPA, etc.
+- **Prazos fiscais:** todos os vencimentos do ano
+- **CNAE** principal para odontologia (8630-5/04)
+- **NFS-e:** regras de emissao, codigo de servico, convenios
+- **17 categorias** de despesas tipicas com exemplos
+- **Despesas dedutiveis:** lista completa para clinicas
+- **Pro-labore:** estrategias legais, relacao com Fator R
+- **Livro-caixa:** regras para PF
+- **10 erros contabeis comuns** em clinicas
+- **Convenios:** como registrar, ISS retido, glosas
+
+---
+
+## Analise Proativa
+
+O agente nao e passivo. Sempre que apresentar dados:
+
+- **DAS/Fator R:** alerta se Anexo V, calcula economia potencial no Anexo III, sugere pro-labore minimo
+- **Fechamento:** inclui diagnostico tributario automaticamente, compara com mes anterior
+- **Classificacao:** alerta se confianca baixa ou transacao pessoal em conta PJ
+- **Checklist:** destaca itens vencidos com risco de multa
+- **Regra geral:** se detectar algo que custa dinheiro, avisa mesmo sem ser perguntado
+
+---
+
+## Quick Actions (6 Botoes)
+
+| Botao | Prompt Enviado |
+|---|---|
+| Como pagar menos imposto? | Diagnostico tributario completo com simulacoes |
+| Fechar mes | DRE + impostos + oportunidades de economia |
+| O que falta organizar? | Transacoes pendentes (sem categoria, sem comprovante) |
+| Onde estou gastando mais? | Ranking de despesas ultimos 3 meses |
+| Proximos prazos fiscais | Vencimentos 30 dias + checklist pendente |
+| Quanto recebi por forma de pagamento? | Receitas por PIX/cartao/dinheiro com taxas |
+
+---
+
+## Seguranca
+
+- API key OpenAI fica no servidor (Edge Function secret)
+- JWT extraido do header, validado com `getUser(token)`
+- Service Role Key para bypass de RLS (necessario para ler clinic_users)
+- Apenas admins podem acessar
+- Historico limitado a 10 mensagens por request
+- Timeout de 25s em cada chamada OpenAI
+- Todas as conversas sao logadas no banco
+
+---
+
+## Custos
+
+**OpenAI GPT-4o-mini:**
+- ~$0.15 por 1M input tokens
+- ~$0.60 por 1M output tokens
+- Custo medio por mensagem: ~$0.002-0.005
+
+**Por clinica ativa (mensal):**
+- 100 mensagens: ~$0.30
+- 500 mensagens: ~$1.50
+- 1000 mensagens: ~$3.00
+
+---
+
+## Troubleshooting
+
+### Erro: "OpenAI API error: 400"
+Causa: Historico corrompido (tool_call_id mismatch).
+Solucao: Iniciar nova conversa.
+
+### Erro: "OpenAI API error: 429"
+Causa: Creditos OpenAI esgotados.
+Solucao: Adicionar creditos em platform.openai.com.
+
+### Erro: "Only admins can use the accounting agent"
+Causa: Usuario nao e admin da clinica.
+Solucao: Verificar `clinic_users` no banco.
+
+### Erro: "Unauthorized"
+Causa: Token JWT expirado.
+Solucao: Logout + login.
+
+### Agente nao responde (loading infinito)
+Causa: Timeout na Edge Function.
+Solucao: Verificar logs no Dashboard > Edge Functions > accounting-agent > Logs.
+
+### Agente usa ano 2024
+Causa: Versao antiga do prompt sem data atual.
+Solucao: Redeploy da Edge Function.
+
+---
+
+## Roadmap — Proximas Fases
+
+### Fase 2 — Integracao de Dados
+- [ ] RAG com legislacao fiscal (busca semantica em documentos)
+- [ ] Conciliacao bancaria (parser OFX/PDF de extratos)
+- [ ] Graficos interativos nas respostas
+- [ ] Streaming de respostas (palavra por palavra)
+
+### Fase 3 — Acoes
+- [ ] Multimodal: foto de nota fiscal → lancamento automatico
+- [ ] Gerar NFS-e automaticamente
+- [ ] Emitir guia DAS
+- [ ] Alertas automaticos por WhatsApp (prazo vencendo)
+
+### Fase 4 — Inteligencia
+- [ ] Previsao de faturamento (ML)
+- [ ] Deteccao de anomalias em despesas
+- [ ] Sugestao automatica de regime tributario com simulacao completa
+- [ ] Benchmark: comparar metricas com media de clinicas do mesmo porte
+
+---
+
+**Ultima Atualizacao:** 2026-02-10
