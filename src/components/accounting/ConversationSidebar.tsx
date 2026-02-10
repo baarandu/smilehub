@@ -20,6 +20,7 @@ interface ConversationSidebarProps {
   onDeleteConversation: (id: string) => void;
   onUpdateTitle: (id: string, title: string) => void;
   isLoading?: boolean;
+  embedded?: boolean;
 }
 
 export function ConversationSidebar({
@@ -29,6 +30,7 @@ export function ConversationSidebar({
   onDeleteConversation,
   onUpdateTitle,
   isLoading,
+  embedded,
 }: ConversationSidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -51,25 +53,42 @@ export function ConversationSidebar({
     setEditTitle("");
   };
 
-  return (
-    <Card className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Conversas
-          </h2>
+  const content = (
+    <>
+      {/* Header - only when not embedded */}
+      {!embedded && (
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Conversas
+            </h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSelectConversation(null)}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Nova
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* New conversation button when embedded */}
+      {embedded && (
+        <div className="p-3 border-b">
           <Button
             size="sm"
             variant="outline"
+            className="w-full"
             onClick={() => onSelectConversation(null)}
           >
             <Plus className="w-4 h-4 mr-1" />
-            Nova
+            Nova conversa
           </Button>
         </div>
-      </div>
+      )}
 
       {/* Conversations list */}
       <ScrollArea className="flex-1">
@@ -149,7 +168,7 @@ export function ConversationSidebar({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                          className="h-8 w-8 opacity-50 hover:opacity-100"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreVertical className="w-4 h-4" />
@@ -190,6 +209,12 @@ export function ConversationSidebar({
           </div>
         )}
       </ScrollArea>
-    </Card>
+    </>
   );
+
+  if (embedded) {
+    return <div className="h-full flex flex-col">{content}</div>;
+  }
+
+  return <Card className="h-full flex flex-col">{content}</Card>;
 }

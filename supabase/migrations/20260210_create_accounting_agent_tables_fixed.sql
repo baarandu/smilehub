@@ -53,6 +53,7 @@ ALTER TABLE accounting_agent_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admins can view their clinic's conversations" ON accounting_agent_conversations;
 DROP POLICY IF EXISTS "Admins can create conversations for their clinic" ON accounting_agent_conversations;
 DROP POLICY IF EXISTS "Admins can update their clinic's conversations" ON accounting_agent_conversations;
+DROP POLICY IF EXISTS "Admins can delete their clinic's conversations" ON accounting_agent_conversations;
 DROP POLICY IF EXISTS "Admins can view messages from their clinic's conversations" ON accounting_agent_messages;
 DROP POLICY IF EXISTS "Admins can create messages in their clinic's conversations" ON accounting_agent_messages;
 
@@ -78,6 +79,15 @@ CREATE POLICY "Admins can create conversations for their clinic"
 
 CREATE POLICY "Admins can update their clinic's conversations"
     ON accounting_agent_conversations FOR UPDATE
+    USING (
+        clinic_id IN (
+            SELECT clinic_id FROM clinic_users
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );
+
+CREATE POLICY "Admins can delete their clinic's conversations"
+    ON accounting_agent_conversations FOR DELETE
     USING (
         clinic_id IN (
             SELECT clinic_id FROM clinic_users

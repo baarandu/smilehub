@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { subscriptionService } from '../../services/subscription';
 
@@ -208,6 +208,19 @@ export function ProfileModal({
                                 >
                                     <FileText size={20} color="#6B7280" />
                                     <Text className="text-gray-700 font-medium">Imposto de Renda</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {isAdmin && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/accounting-agent');
+                                    }}
+                                >
+                                    <Calculator size={20} color="#6B7280" />
+                                    <Text className="text-gray-700 font-medium">Contabilidade IA</Text>
                                 </TouchableOpacity>
                             )}
 

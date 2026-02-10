@@ -52,7 +52,7 @@ export default function Dashboard() {
     const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     const { session, signOut } = useAuth();
-    const { role: clinicRole, clinicId } = useClinic();
+    const { role: clinicRole, clinicId, isAdmin: clinicIsAdmin } = useClinic();
 
     useEffect(() => {
         if (session?.user) loadProfile();
@@ -90,7 +90,7 @@ export default function Dashboard() {
                 setDisplayName('Usuário');
             }
 
-            setIsAdmin(userRole === 'admin' || userRole === 'owner');
+            setIsAdmin(clinicIsAdmin || userRole === 'admin' || userRole === 'owner');
             setIsSuperAdmin(!!p.is_super_admin);
             const clinicInfo = await profileService.getClinicInfo();
             setClinicName(clinicInfo.clinicName || 'Minha Clínica');
