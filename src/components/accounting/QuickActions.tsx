@@ -1,44 +1,68 @@
-import { Tag, AlertCircle, Calendar, FileText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  TrendingDown,
+  AlertCircle,
+  Calendar,
+  FileText,
+  Search,
+  Clock,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
-import type { QuickAction, ConversationMode } from "@/types/accountingAgent";
+import type { QuickAction } from "@/types/accountingAgent";
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    icon: Tag,
-    label: "Classificar Transações",
-    description: "Sugerir categorias para lançamentos",
+    icon: TrendingDown,
+    label: "Como pagar menos imposto?",
+    description: "Diagnóstico tributário completo com simulações",
     prompt:
-      "Vamos classificar as transações sem categoria do mês atual. Comece listando quantas são.",
-    color: "text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200",
-    mode: "classify",
-  },
-  {
-    icon: AlertCircle,
-    label: "Auditar Mês",
-    description: "Verificar problemas nos lançamentos",
-    prompt:
-      "Faça uma auditoria completa do mês atual. Liste duplicidades, lançamentos sem documento e sem categoria.",
-    color: "text-orange-600 bg-orange-50 hover:bg-orange-100 border-orange-200",
-    mode: "audit",
+      "Faça um diagnóstico tributário completo da minha clínica. Quero saber: situação atual do Fator R, quanto estou pagando de DAS, quanto poderia pagar no melhor cenário, e um plano de ação detalhado para pagar o mínimo de imposto possível. Simule Anexo III vs Anexo V.",
+    color: "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-300",
+    mode: "diagnostic",
   },
   {
     icon: Calendar,
-    label: "Fechar Mês",
-    description: "Resumo financeiro + DAS",
+    label: "Fechar mês",
+    description: "DRE + impostos + oportunidades de economia",
     prompt:
-      "Feche o mês anterior. Quero ver a DRE, impostos calculados e alertas importantes.",
-    color: "text-green-600 bg-green-50 hover:bg-green-100 border-green-200",
+      "Feche o mês anterior. Quero ver a DRE completa, impostos calculados, e principalmente: oportunidades para pagar menos imposto. Inclua o diagnóstico tributário.",
+    color: "text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-300",
     mode: "close",
   },
   {
-    icon: FileText,
-    label: "Checklist Contador",
-    description: "Documentos para enviar",
+    icon: AlertCircle,
+    label: "O que falta organizar?",
+    description: "Transações sem categoria, sem comprovante",
     prompt:
-      "Mostre o checklist fiscal completo. Quais documentos estão pendentes para o contador?",
-    color: "text-purple-600 bg-purple-50 hover:bg-purple-100 border-purple-200",
-    mode: "checklist",
+      "Quais transações estão pendentes de organização? Liste as sem categoria, sem comprovante e sem descrição. Quero deixar tudo em dia.",
+    color: "text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-300",
+    mode: "audit",
+  },
+  {
+    icon: Search,
+    label: "Onde estou gastando mais?",
+    description: "Ranking de despesas por categoria e fornecedor",
+    prompt:
+      "Analise minhas despesas dos últimos 3 meses. Quero ver o ranking por categoria e por fornecedor. Onde posso reduzir custos?",
+    color: "text-red-700 bg-red-50 hover:bg-red-100 border-red-300",
+    mode: "expenses",
+  },
+  {
+    icon: Clock,
+    label: "Próximos prazos fiscais",
+    description: "Vencimentos e documentos urgentes",
+    prompt:
+      "Quais são meus próximos prazos fiscais? Mostre tudo que vence nos próximos 30 dias e o checklist de documentos pendentes para o contador.",
+    color: "text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-300",
+    mode: "deadlines",
+  },
+  {
+    icon: FileText,
+    label: "Quanto recebi por forma de pagamento?",
+    description: "PIX, cartão, dinheiro — com taxas",
+    prompt:
+      "Mostre minhas receitas do mês passado agrupadas por forma de pagamento. Quero ver quanto recebi por PIX, cartão, dinheiro, e quanto paguei de taxa de cartão.",
+    color: "text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border-cyan-300",
+    mode: "general",
   },
 ];
 
@@ -54,7 +78,7 @@ export function QuickActions({ onSelectAction, disabled }: QuickActionsProps) {
         const Icon = action.icon;
         return (
           <Card
-            key={action.mode}
+            key={action.label}
             className={`p-4 border-2 ${action.color} cursor-pointer transition-all hover:shadow-md ${
               disabled ? "opacity-50 cursor-not-allowed" : ""
             }`}

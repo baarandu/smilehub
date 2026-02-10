@@ -44,6 +44,9 @@ export type ConversationMode =
   | "audit"
   | "close"
   | "checklist"
+  | "diagnostic"
+  | "expenses"
+  | "deadlines"
   | "general";
 
 export interface QuickAction {
