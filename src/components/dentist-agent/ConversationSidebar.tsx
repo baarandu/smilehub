@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { MessageSquare, Plus, Trash2, MoreVertical, Edit2, Check, X } from "lucide-react";
+import {
+  MessageSquare,
+  Plus,
+  Trash2,
+  MoreVertical,
+  Edit2,
+  Check,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,10 +28,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { AccountingConversation } from "@/types/accountingAgent";
+import type { DentistConversation } from "@/types/dentistAgent";
 
 interface ConversationSidebarProps {
-  conversations: AccountingConversation[];
+  conversations: DentistConversation[];
   currentConversationId: string | null;
   onSelectConversation: (id: string | null) => void;
   onDeleteConversation: (id: string) => void;
@@ -45,7 +53,7 @@ export function ConversationSidebar({
   const [editTitle, setEditTitle] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const startEditing = (conversation: AccountingConversation) => {
+  const startEditing = (conversation: DentistConversation) => {
     setEditingId(conversation.id);
     setEditTitle(conversation.title);
   };
@@ -132,7 +140,6 @@ export function ConversationSidebar({
                 )}
               >
                 {editingId === conversation.id ? (
-                  // Editing mode
                   <div className="p-3 flex items-center gap-2">
                     <Input
                       value={editTitle}
@@ -162,7 +169,6 @@ export function ConversationSidebar({
                     </Button>
                   </div>
                 ) : (
-                  // Normal mode
                   <div
                     className="p-3 cursor-pointer flex items-start justify-between gap-2"
                     onClick={() => onSelectConversation(conversation.id)}
@@ -173,13 +179,12 @@ export function ConversationSidebar({
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {conversation.message_count} mensagens •{" "}
-                        {new Date(conversation.last_message_at).toLocaleDateString(
-                          "pt-BR"
-                        )}
+                        {new Date(
+                          conversation.last_message_at
+                        ).toLocaleDateString("pt-BR")}
                       </p>
                     </div>
 
-                    {/* Actions menu */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -222,12 +227,16 @@ export function ConversationSidebar({
       </div>
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir conversa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta conversa? Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir esta conversa? Esta ação não pode
+              ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,8 +254,12 @@ export function ConversationSidebar({
   );
 
   if (embedded) {
-    return <div className="h-full flex flex-col overflow-hidden">{content}</div>;
+    return (
+      <div className="h-full flex flex-col overflow-hidden">{content}</div>
+    );
   }
 
-  return <Card className="h-full flex flex-col overflow-hidden">{content}</Card>;
+  return (
+    <Card className="h-full flex flex-col overflow-hidden">{content}</Card>
+  );
 }

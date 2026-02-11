@@ -5,7 +5,6 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 Deno.serve(async (req) => {
     const corsHeaders = getCorsHeaders(req);
 
-    // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
         return handleCorsOptions(req);
     }
@@ -13,14 +12,11 @@ Deno.serve(async (req) => {
     try {
         const { message, history } = await req.json();
 
-        // 1. Check for Gemini Key
-        const geminiKey = Deno.env.get('GEMINI_API_KEY');
-
-        if (!geminiKey) {
-            console.log('No Gemini Key found. Returning mock response.');
+        const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!openaiApiKey) {
             return new Response(
                 JSON.stringify({
-                    message: "Olá! Sou a Secretária IA (agora com Google Gemini). 🧠✨\n\nEstou funcionando, mas preciso da minha chave de API. Por favor, adicione a chave 'GEMINI_API_KEY' nos Secrets do Supabase (pegue no Google AI Studio)!",
+                    message: "Secretária IA indisponível. A chave OPENAI_API_KEY não está configurada nos Secrets do Supabase.",
                 }),
                 {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -29,50 +25,43 @@ Deno.serve(async (req) => {
             );
         }
 
-        // 2. Simple System Prompt Context
         const systemPrompt = `Você é uma secretária virtual eficiente e amigável da clínica "Organiza Odonto". Ajude o dentista com informações rápidas. Responda em português do Brasil de forma concisa.`;
 
-        // Construct message history for Gemini (checking if it accepts specific role structure or just text)
-        // Gemini 1.5 API structure usually: contents: [{ role: "user" | "model", parts: [{ text: "..." }] }]
-
-        const contents = [];
-
-        // Add system instruction as first user message or proper system instruction if supported by the specific endpoint version
-        // For simplicity in REST, often context is passed in the first message
-
-        let contextMessage = systemPrompt;
+        const messages: any[] = [
+            { role: "system", content: systemPrompt },
+        ];
 
         if (history && history.length > 0) {
             history.forEach((msg: any) => {
-                const role = msg.sender === 'user' ? 'user' : 'model';
-                contents.push({
-                    role: role,
-                    parts: [{ text: msg.text }]
-                });
+                const role = msg.sender === 'user' ? 'user' : 'assistant';
+                messages.push({ role, content: msg.text });
             });
         }
 
-        // Add current message
-        contents.push({
-            role: "user",
-            parts: [{ text: `${systemPrompt}\n\nMensagem do usuário: ${message}` }]
-        });
+        messages.push({ role: "user", content: message });
 
-        // 3. Call Google Gemini API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openaiApiKey}`,
             },
             body: JSON.stringify({
-                contents: contents
+                model: "gpt-4o-mini",
+                messages,
+                temperature: 0.7,
+                max_tokens: 1024,
             }),
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("OpenAI API error:", errorText);
+            throw new Error(`Erro no serviço de IA (código: ${response.status})`);
+        }
 
-        // Extract text from Gemini response
-        const aiMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não entendi.";
+        const data = await response.json();
+        const aiMessage = data.choices?.[0]?.message?.content || "Desculpe, não entendi.";
 
         return new Response(
             JSON.stringify({ message: aiMessage }),

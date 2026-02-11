@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   HelpCircle,
   Settings,
-  Calculator
+  Calculator,
+  Mic
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,9 +45,11 @@ const navItems = [
   { to: '/inicio', icon: LayoutDashboard, label: 'Início' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
+  { to: '/consulta-voz', icon: Mic, label: 'Consulta por Voz' },
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
+  { to: '/dentista-ia', icon: Stethoscope, label: 'Dentista IA', dentistOnly: true },
   { to: '/contabilidade-ia', icon: Calculator, label: 'Contabilidade IA', adminOnly: true },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Planos e Assinatura' },
@@ -60,20 +63,23 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [planSlug, setPlanSlug] = useState<string | null>(null);
-  const { role, clinicId, isAdmin } = useClinic();
+  const { role, clinicId, isAdmin, isDentist } = useClinic();
 
   // Filter nav items based on role
-  // Only admin can access Financeiro, Imposto de Renda, and Contabilidade IA
+  // Admin: sees everything. Dentist: sees dentist-ia but not financial. Others: limited.
   const filteredNavItems = useMemo(() => {
-    if (!isAdmin) {
-      return navItems.filter(item =>
-        item.to !== '/financeiro' &&
-        item.to !== '/imposto-de-renda' &&
-        item.to !== '/contabilidade-ia'
-      );
-    }
-    return navItems;
-  }, [isAdmin]);
+    return navItems.filter(item => {
+      // Admin-only items (financial, contabilidade)
+      if (item.to === '/financeiro' || item.to === '/imposto-de-renda' || item.to === '/contabilidade-ia') {
+        return isAdmin;
+      }
+      // Dentist-only items (dentista-ia) — visible to dentists AND admins
+      if ((item as any).dentistOnly) {
+        return isDentist;
+      }
+      return true;
+    });
+  }, [isAdmin, isDentist]);
 
   // Check if user has access to AI Secretary:
   // 1. Has enterprise plan, OR

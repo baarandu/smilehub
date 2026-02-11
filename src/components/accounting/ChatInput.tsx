@@ -33,33 +33,33 @@ export function ChatInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 items-end">
-      <div className="flex-1">
+    <form onSubmit={handleSubmit}>
+      <div className="flex gap-2 items-center">
         <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="min-h-[60px] resize-none"
+          className="flex-1 min-h-[60px] resize-none"
           rows={2}
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          Pressione Ctrl+Enter para enviar
-        </p>
+        <Button
+          type="submit"
+          size="icon"
+          disabled={disabled || !message.trim()}
+          className="h-[60px] w-[60px] flex-shrink-0"
+        >
+          {disabled ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <Send className="w-5 h-5" />
+          )}
+        </Button>
       </div>
-      <Button
-        type="submit"
-        size="icon"
-        disabled={disabled || !message.trim()}
-        className="h-[60px] w-[60px]"
-      >
-        {disabled ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Send className="w-5 h-5" />
-        )}
-      </Button>
+      <p className="text-xs text-muted-foreground mt-1">
+        Pressione Ctrl+Enter para enviar
+      </p>
     </form>
   );
 }

@@ -25,6 +25,8 @@ const Financial = lazy(() => import("./pages/Financial"));
 const FinancialSettings = lazy(() => import("./pages/FinancialSettings"));
 const IncomeTax = lazy(() => import("./pages/IncomeTax"));
 const AccountingAgent = lazy(() => import("./pages/AccountingAgent"));
+const VoiceConsultation = lazy(() => import("./pages/VoiceConsultation"));
+const DentistAgent = lazy(() => import("./pages/DentistAgent"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -98,6 +100,9 @@ const AppContent = () => (
         <Route path="/financeiro/configuracoes" element={<AppLayout><FinancialSettings /></AppLayout>} />
         <Route path="/imposto-de-renda" element={<AppLayout><IncomeTax /></AppLayout>} />
         <Route path="/contabilidade-ia" element={<AppLayout><AccountingAgent /></AppLayout>} />
+        <Route path="/dentista-ia" element={<AppLayout><DentistAgent /></AppLayout>} />
+        <Route path="/consulta-voz" element={<AppLayout><VoiceConsultation /></AppLayout>} />
+        <Route path="/consulta-voz/:appointmentId" element={<AppLayout><VoiceConsultation /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>

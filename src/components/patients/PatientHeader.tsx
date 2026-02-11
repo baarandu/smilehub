@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Mic, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,7 @@ interface PatientHeaderProps {
 }
 
 export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientHeaderProps) {
+  const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAlertConfirm, setShowAlertConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -193,6 +195,24 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   </Tooltip>
                 </TooltipProvider>
 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => navigate(`/consulta-voz?patientId=${patient.id}`)}
+                >
+                  <Mic className="w-4 h-4" />
+                  <span className="hidden sm:inline">Consulta Voz</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => navigate(`/dentista-ia?patient_id=${patient.id}`)}
+                >
+                  <Stethoscope className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dentista IA</span>
+                </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowReportModal(true)}>
                   <FileText className="w-4 h-4" />
                   Relatório

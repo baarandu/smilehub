@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Calculator, Info, MessageSquare } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useSearchParams, Navigate } from "react-router-dom";
+import { Stethoscope, Info, MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,39 +10,94 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { ChatInterface } from "@/components/accounting/ChatInterface";
-import { ConversationSidebar } from "@/components/accounting/ConversationSidebar";
-import { useAccountingConversations } from "@/hooks/useAccountingConversations";
-import { useAccountingChat } from "@/hooks/useAccountingChat";
+import { ChatInterface } from "@/components/dentist-agent/ChatInterface";
+import { ConversationSidebar } from "@/components/dentist-agent/ConversationSidebar";
+import { useDentistConversations } from "@/hooks/useDentistConversations";
+import { useDentistChat } from "@/hooks/useDentistChat";
 import { useCurrentClinic } from "@/hooks/useCurrentClinic";
+import { useClinic } from "@/contexts/ClinicContext";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-export default function AccountingAgent() {
+export default function DentistAgent() {
   const { currentClinic } = useCurrentClinic();
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(
-    null
-  );
+  const { isDentist } = useClinic();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+
+  // Patient context from URL param
+  const urlPatientId = searchParams.get("patient_id");
+  const [patientId, setPatientId] = useState<string | null>(
+    urlPatientId
+  );
+  const [patientName, setPatientName] = useState<string | null>(null);
+  const [patientAge, setPatientAge] = useState<number | null>(null);
+
+  // Load patient info when patientId changes
+  useEffect(() => {
+    if (!patientId || !currentClinic?.id) {
+      setPatientName(null);
+      setPatientAge(null);
+      return;
+    }
+
+    const loadPatient = async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("name, birth_date")
+        .eq("id", patientId)
+        .eq("clinic_id", currentClinic.id)
+        .single();
+
+      if (data) {
+        setPatientName(data.name);
+        if (data.birth_date) {
+          const today = new Date();
+          const birth = new Date(data.birth_date);
+          let age = today.getFullYear() - birth.getFullYear();
+          const m = today.getMonth() - birth.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+          setPatientAge(age);
+        }
+      }
+    };
+
+    loadPatient();
+  }, [patientId, currentClinic?.id]);
 
   const {
     conversations,
     isLoading: isLoadingConversations,
     deleteConversation,
     updateTitle,
-  } = useAccountingConversations(currentClinic?.id || "");
+  } = useDentistConversations(currentClinic?.id || "");
 
   const {
     messages,
     isLoading: isLoadingMessages,
     isSending,
     sendMessage,
-  } = useAccountingChat(currentConversationId, currentClinic?.id || "");
+  } = useDentistChat(
+    currentConversationId,
+    currentClinic?.id || "",
+    patientId
+  );
 
-  const handleSendMessage = async (message: string) => {
+  // Guard: only dentists/admins
+  if (!isDentist) {
+    return <Navigate to="/inicio" replace />;
+  }
+
+  const handleSendMessage = async (
+    message: string,
+    imageUrls?: string[]
+  ) => {
     try {
-      const response = await sendMessage(message);
+      const response = await sendMessage({ message, imageUrls });
 
-      // If new conversation was created, set it as current
       if (!currentConversationId && response.conversation_id) {
         setCurrentConversationId(response.conversation_id);
       }
@@ -67,19 +123,29 @@ export default function AccountingAgent() {
     updateTitle({ conversationId: id, title });
   };
 
+  const handleClearPatient = () => {
+    setPatientId(null);
+    setPatientName(null);
+    setPatientAge(null);
+    // Remove from URL
+    searchParams.delete("patient_id");
+    setSearchParams(searchParams);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-7rem)] lg:h-[calc(100vh-5rem)]">
       {/* Header */}
       <div className="mb-4 lg:mb-6 flex-shrink-0">
         <div className="flex items-center justify-between gap-3 mb-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Calculator className="w-6 h-6 text-primary" />
+            <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+              <Stethoscope className="w-6 h-6 text-teal-600" />
             </div>
             <div>
-              <h1 className="text-2xl lg:text-3xl font-bold">Contabilidade IA</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold">Dentista IA</h1>
               <p className="text-sm text-muted-foreground hidden sm:block">
-                Assistente inteligente para classificação, auditoria e fechamento contábil
+                Segunda opinião clínica para auxiliar no raciocínio diagnóstico e
+                terapêutico
               </p>
             </div>
           </div>
@@ -119,9 +185,10 @@ export default function AccountingAgent() {
         <Alert className="mt-3">
           <Info className="h-4 w-4" />
           <AlertDescription className="text-xs sm:text-sm">
-            <strong>Importante:</strong> Este assistente fornece orientações gerais
-            baseadas nos seus dados financeiros. Confirme decisões importantes
-            com seu contador.
+            <strong>Importante:</strong> Este assistente fornece orientações de
+            apoio ao raciocínio clínico. As recomendações{" "}
+            <strong>não substituem</strong> a avaliação clínica presencial e o
+            exame físico.
           </AlertDescription>
         </Alert>
       </div>
@@ -148,6 +215,11 @@ export default function AccountingAgent() {
             isSending={isSending}
             onSendMessage={handleSendMessage}
             showQuickActions={!currentConversationId}
+            hasPatient={!!patientId}
+            patientName={patientName}
+            patientAge={patientAge}
+            onClearPatient={handleClearPatient}
+            clinicId={currentClinic?.id || ""}
           />
         </div>
       </div>
