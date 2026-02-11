@@ -123,6 +123,15 @@ export default function DentistAgent() {
     updateTitle({ conversationId: id, title });
   };
 
+  const handleSelectPatient = (id: string, name: string, age: number | null) => {
+    setPatientId(id);
+    setPatientName(name);
+    setPatientAge(age);
+    const params = new URLSearchParams(searchParams);
+    params.set("patient_id", id);
+    setSearchParams(params);
+  };
+
   const handleClearPatient = () => {
     setPatientId(null);
     setPatientName(null);
@@ -138,8 +147,8 @@ export default function DentistAgent() {
       <div className="mb-4 lg:mb-6 flex-shrink-0">
         <div className="flex items-center justify-between gap-3 mb-2">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-              <Stethoscope className="w-6 h-6 text-teal-600" />
+            <div className="p-2 bg-[#fef2f2] dark:bg-red-900/30 rounded-lg">
+              <Stethoscope className="w-6 h-6 text-[#a03f3d]" />
             </div>
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold">Dentista IA</h1>
@@ -216,9 +225,11 @@ export default function DentistAgent() {
             onSendMessage={handleSendMessage}
             showQuickActions={!currentConversationId}
             hasPatient={!!patientId}
+            patientId={patientId}
             patientName={patientName}
             patientAge={patientAge}
             onClearPatient={handleClearPatient}
+            onSelectPatient={handleSelectPatient}
             clinicId={currentClinic?.id || ""}
           />
         </div>

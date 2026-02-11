@@ -15,9 +15,11 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string, imageUrls?: string[]) => void;
   showQuickActions?: boolean;
   hasPatient?: boolean;
+  patientId?: string | null;
   patientName: string | null;
   patientAge: number | null;
   onClearPatient: () => void;
+  onSelectPatient?: (id: string, name: string, age: number | null) => void;
   clinicId: string;
 }
 
@@ -28,9 +30,11 @@ export function ChatInterface({
   onSendMessage,
   showQuickActions = true,
   hasPatient,
+  patientId,
   patientName,
   patientAge,
   onClearPatient,
+  onSelectPatient,
   clinicId,
 }: ChatInterfaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,9 +50,11 @@ export function ChatInterface({
     <Card className="h-full flex flex-col overflow-hidden">
       {/* Patient context header */}
       <PatientContextHeader
+        patientId={patientId}
         patientName={patientName}
         patientAge={patientAge}
         onClearPatient={onClearPatient}
+        onSelectPatient={onSelectPatient}
       />
 
       {/* Messages area */}
@@ -61,8 +67,8 @@ export function ChatInterface({
           // Empty state
           <div className="flex flex-col items-center justify-center h-full p-8">
             <div className="text-center mb-8">
-              <div className="mx-auto w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-4">
-                <Stethoscope className="w-6 h-6 text-teal-600" />
+              <div className="mx-auto w-12 h-12 rounded-full bg-[#fef2f2] dark:bg-red-900/30 flex items-center justify-center mb-4">
+                <Stethoscope className="w-6 h-6 text-[#a03f3d]" />
               </div>
               <h3 className="text-xl font-semibold mb-2">
                 Olá! Sou seu consultor odontológico senior
@@ -101,7 +107,7 @@ export function ChatInterface({
             {/* Loading indicator */}
             {isSending && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#a03f3d] text-white flex items-center justify-center flex-shrink-0">
                   <Loader2 className="w-4 h-4 animate-spin" />
                 </div>
                 <Card className="p-4 bg-muted">

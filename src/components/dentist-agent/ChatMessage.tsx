@@ -29,7 +29,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
             isUser
               ? "bg-primary text-primary-foreground"
-              : "bg-teal-600 text-white"
+              : "bg-[#a03f3d] text-white"
           )}
         >
           {isUser ? (

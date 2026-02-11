@@ -172,7 +172,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   <p className="text-muted-foreground mt-1">{patient.occupation}</p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -215,11 +215,11 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                 </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowReportModal(true)}>
                   <FileText className="w-4 h-4" />
-                  Relatório
+                  <span className="hidden sm:inline">Relatório</span>
                 </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
                   <Edit className="w-4 h-4" />
-                  Editar
+                  <span className="hidden sm:inline">Editar</span>
                 </Button>
                 {onDelete && (
                   <Button
@@ -229,7 +229,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                     onClick={() => setShowDeleteDialog(true)}
                   >
                     <Trash2 className="w-4 h-4" />
-                    Excluir
+                    <span className="hidden sm:inline">Excluir</span>
                   </Button>
                 )}
               </div>

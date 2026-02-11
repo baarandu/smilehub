@@ -17,7 +17,14 @@ import {
     Briefcase,
     MessageCircle,
     XCircle,
-    AlertTriangle
+    AlertTriangle,
+    Mic,
+    Stethoscope,
+    Calculator,
+    Package,
+    DollarSign,
+    Award,
+    Headphones
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -42,18 +49,30 @@ type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 const featureIcons: Record<string, any> = {
     'Agenda inteligente': Calendar,
     'Prontuário digital': FileText,
-    'Lembretes automáticos': Bell,
-    'Tudo do Essencial': CheckCircle,
-    'Usuários ilimitados': Users,
-    'Relatórios avançados': BarChart3,
+    'Anamnese completa': FileText,
+    'Orçamentos': DollarSign,
+    'Alertas e lembretes': Bell,
+    'Suporte por e-mail': MessageCircle,
+    'Tudo do Básico': CheckCircle,
+    'Financeiro completo': DollarSign,
+    'Estoque e materiais': Package,
+    'Imposto de Renda': FileText,
+    'Comissões de dentistas': Award,
+    'Até 3 usuários': Users,
     'Tudo do Profissional': CheckCircle,
-    'API personalizada': Sparkles,
-    'Gestor dedicado': UserCog,
-    'Treinamento presencial': Briefcase,
-    'Tudo do Enterprise': CheckCircle,
-    'CRM': Users,
+    'Consulta por Voz (IA)': Mic,
+    'Dentista IA': Stethoscope,
+    'Contabilidade IA': Calculator,
+    'Confirmação WhatsApp': MessageCircle,
+    'Até 3 unidades': BarChart3,
+    'Tudo do Premium': CheckCircle,
     'Secretária IA': Bot,
-    'Gestão de equipe': Users,
+    'Usuários ilimitados': Users,
+    'Migração assistida': Briefcase,
+    'API personalizada': Sparkles,
+    'Suporte prioritário': Headphones,
+    'Relatórios avançados': BarChart3,
+    'Gestor dedicado': UserCog,
 };
 
 export default function Pricing() {
@@ -492,7 +511,7 @@ export default function Pricing() {
 
                                 {/* Features */}
                                 <div className="space-y-3 mb-6">
-                                    {features.slice(0, 4).map((feature, i) => {
+                                    {features.slice(0, 6).map((feature, i) => {
                                         const IconComponent = featureIcons[feature] || CheckCircle;
 
                                         return (

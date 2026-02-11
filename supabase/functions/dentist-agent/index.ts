@@ -22,6 +22,52 @@ function getOpenAITools() {
   }));
 }
 
+// Sanitize message history to ensure no incomplete tool call sequences
+// OpenAI requires: assistant(tool_calls) → tool(results for each call)
+// If truncation breaks this sequence, we get a 400 error
+function sanitizeHistory(messages: any[]): any[] {
+  if (messages.length === 0) return messages;
+
+  // Walk backwards to find if we're in the middle of a tool sequence
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+
+    if (msg.role === "tool") {
+      // We're inside a tool result sequence, keep scanning back
+      continue;
+    }
+
+    if (msg.role === "assistant" && msg.tool_calls?.length > 0) {
+      // Found the assistant that initiated tool calls
+      // Check if ALL tool results are present after it
+      const expectedCount = msg.tool_calls.length;
+      let foundCount = 0;
+      for (let j = i + 1; j < messages.length; j++) {
+        if (messages[j].role === "tool") {
+          foundCount++;
+        } else {
+          break;
+        }
+      }
+
+      if (foundCount < expectedCount) {
+        // Incomplete sequence — truncate to before this assistant message
+        console.warn(
+          `[sanitize] Removing incomplete tool sequence at index ${i}: expected ${expectedCount} tool results, found ${foundCount}`
+        );
+        return messages.slice(0, i);
+      }
+      // Complete sequence, history is valid
+      break;
+    }
+
+    // Regular assistant or user message — sequence is clean
+    break;
+  }
+
+  return messages;
+}
+
 // Fetch with timeout
 async function fetchWithTimeout(
   url: string,
@@ -171,13 +217,13 @@ serve(async (req) => {
       conversationId = newConv.id;
     }
 
-    // Get conversation history (last 10 messages)
+    // Get conversation history (last 50 messages — enough for several tool rounds)
     const { data: history, error: historyError } = await supabase
       .from("dentist_agent_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
-      .limit(10);
+      .limit(50);
 
     if (historyError) throw historyError;
 
@@ -250,6 +296,12 @@ serve(async (req) => {
       }
     }
 
+    // Sanitize history to ensure no broken tool call sequences
+    const systemMsg = openaiMessages[0]; // preserve system message
+    const historyMsgs = sanitizeHistory(openaiMessages.slice(1));
+    openaiMessages.length = 0;
+    openaiMessages.push(systemMsg, ...historyMsgs);
+
     // Add current user message (with images if present)
     if (image_urls?.length) {
       openaiMessages.push({
@@ -272,7 +324,7 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    console.log(`[timing] Pre-OpenAI: ${Date.now() - t0}ms`);
+    console.log(`[timing] Pre-OpenAI: ${Date.now() - t0}ms, messages: ${openaiMessages.length}`);
 
     const openaiResponse = await fetchWithTimeout(
       "https://api.openai.com/v1/chat/completions",

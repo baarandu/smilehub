@@ -26,6 +26,7 @@ import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
 import { subscriptionService } from '@/services/subscription';
+import { planHasFeature } from '@/lib/planFeatures';
 
 // Beta testers emails loaded from environment variable (comma-separated)
 // Example: VITE_AI_SECRETARY_BETA_EMAILS=email1@test.com,email2@test.com
@@ -65,21 +66,32 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [planSlug, setPlanSlug] = useState<string | null>(null);
   const { role, clinicId, isAdmin, isDentist } = useClinic();
 
-  // Filter nav items based on role
-  // Admin: sees everything. Dentist: sees dentist-ia but not financial. Others: limited.
+  // Filter nav items based on role AND subscription plan
   const filteredNavItems = useMemo(() => {
     return navItems.filter(item => {
-      // Admin-only items (financial, contabilidade)
-      if (item.to === '/financeiro' || item.to === '/imposto-de-renda' || item.to === '/contabilidade-ia') {
-        return isAdmin;
+      // Financeiro / IR: admin role + profissional+ plan
+      if (item.to === '/financeiro' || item.to === '/imposto-de-renda') {
+        return isAdmin && planHasFeature(planSlug, 'financeiro');
       }
-      // Dentist-only items (dentista-ia) — visible to dentists AND admins
+      // Contabilidade IA: admin role + premium+ plan
+      if (item.to === '/contabilidade-ia') {
+        return isAdmin && planHasFeature(planSlug, 'contabilidade_ia');
+      }
+      // Dentista IA: dentist role + premium+ plan
       if ((item as any).dentistOnly) {
-        return isDentist;
+        return isDentist && planHasFeature(planSlug, 'dentista_ia');
+      }
+      // Consulta por Voz: premium+ plan
+      if (item.to === '/consulta-voz') {
+        return planHasFeature(planSlug, 'consulta_voz');
+      }
+      // Materiais: profissional+ plan
+      if (item.to === '/materiais') {
+        return planHasFeature(planSlug, 'estoque');
       }
       return true;
     });
-  }, [isAdmin, isDentist]);
+  }, [isAdmin, isDentist, planSlug]);
 
   // Check if user has access to AI Secretary:
   // 1. Has enterprise plan, OR

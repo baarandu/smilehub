@@ -52,7 +52,7 @@ export default function Dashboard() {
     const [loadingPendingBudgets, setLoadingPendingBudgets] = useState(false);
 
     const { session, signOut } = useAuth();
-    const { role: clinicRole, clinicId, isAdmin: clinicIsAdmin } = useClinic();
+    const { role: clinicRole, clinicId, isAdmin: clinicIsAdmin, isDentist: clinicIsDentist } = useClinic();
 
     useEffect(() => {
         if (session?.user) loadProfile();
@@ -320,6 +320,7 @@ export default function Dashboard() {
                 clinicName={clinicName}
                 clinicId={clinicId || undefined}
                 isAdmin={isAdmin}
+                isDentist={clinicIsDentist}
                 isSuperAdmin={isSuperAdmin}
                 userEmail={session?.user?.email || ''}
                 userRole={clinicRole || ''}

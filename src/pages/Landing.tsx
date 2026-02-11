@@ -465,54 +465,55 @@ export default function Landing() {
           ) : (
             <div className="grid md:grid-cols-3 gap-6">
               <PricingCard
-                name="Essencial"
-                description="Ideal para dentistas autônomos que estão começando."
+                name="Básico"
+                description="Para dentistas autônomos que estão começando."
                 price={billingPeriod === 'yearly' ? formatPrice(9700, true) : "97"}
                 period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
                 buttonText="Começar grátis"
                 buttonVariant="outline"
                 features={[
                   '1 Dentista',
-                  'Até 500 pacientes',
+                  'Até 300 pacientes',
                   'Agenda inteligente',
-                  'Prontuário completo',
-                  'Suporte por email',
+                  'Prontuário e anamnese',
+                  'Orçamentos',
+                  'Suporte por e-mail',
                 ]}
                 savings={billingPeriod === 'yearly' ? calculateSavings(9700) : undefined}
               />
               <PricingCard
                 name="Profissional"
-                description="Para clínicas em crescimento que precisam de mais controle."
+                description="Para clínicas pequenas com equipe."
                 price={billingPeriod === 'yearly' ? formatPrice(19700, true) : "197"}
                 period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
                 buttonText="Começar grátis"
                 highlighted
                 features={[
-                  'Até 5 Dentistas',
-                  'Até 2.000 pacientes',
-                  'Lembretes via WhatsApp',
-                  'Controle Financeiro',
-                  'Relatórios de BI',
-                  'Suporte prioritário',
+                  'Tudo do Básico',
+                  'Até 3 usuários',
+                  'Financeiro completo',
+                  'Estoque e materiais',
+                  'Imposto de Renda',
+                  'Suporte por chat',
                 ]}
                 savings={billingPeriod === 'yearly' ? calculateSavings(19700) : undefined}
               />
               <PricingCard
-                name="Clínica"
-                description="Gestão avançada para clínicas com múltiplos profissionais."
-                price={billingPeriod === 'yearly' ? formatPrice(34700, true) : "347"}
+                name="Premium"
+                description="Para clínicas com múltiplos profissionais e IA."
+                price={billingPeriod === 'yearly' ? formatPrice(29700, true) : "297"}
                 period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
                 buttonText="Começar grátis"
                 buttonVariant="outline"
                 features={[
-                  'Até 15 Dentistas',
-                  'Até 10.000 pacientes',
+                  'Tudo do Profissional',
+                  'Consulta por Voz (IA)',
+                  'Dentista IA',
+                  'Contabilidade IA',
+                  'Confirmação WhatsApp',
                   'Até 3 unidades',
-                  'Financeiro Avançado',
-                  'Relatórios de BI',
-                  'Gerente de conta dedicado',
                 ]}
-                savings={billingPeriod === 'yearly' ? calculateSavings(34700) : undefined}
+                savings={billingPeriod === 'yearly' ? calculateSavings(29700) : undefined}
               />
             </div>
           )}
@@ -704,7 +705,7 @@ const faqItems = [
   },
   {
     question: 'O sistema emite Nota Fiscal?',
-    answer: 'Sim, no plano Clínica você pode emitir NF-e diretamente pelo sistema, integrado com a prefeitura da sua cidade.',
+    answer: 'Sim, no plano Premium você pode emitir NF-e diretamente pelo sistema, integrado com a prefeitura da sua cidade.',
   },
   {
     question: 'Tem fidelidade no contrato?',

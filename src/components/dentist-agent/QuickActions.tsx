@@ -19,7 +19,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Ajuda com hipóteses diagnósticas e raciocínio clínico",
     prompt:
       "Preciso de ajuda com diagnóstico diferencial. Vou descrever os sinais e sintomas.",
-    color: "text-blue-700 bg-blue-50 hover:bg-blue-100 border-blue-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
   },
   {
     icon: ShieldAlert,
@@ -27,7 +27,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Red flags, contraindicações e alertas clínicos",
     prompt:
       "Revise a anamnese deste paciente. Identifique red flags, contraindicações e alertas importantes para o planejamento do tratamento.",
-    color: "text-red-700 bg-red-50 hover:bg-red-100 border-red-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
     requiresPatient: true,
   },
   {
@@ -36,7 +36,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Opções A/B/C com sequência e sessões estimadas",
     prompt:
       "Elabore um plano de tratamento com opções A/B/C (conservador, intermediário, definitivo), sequência lógica, prioridades e sessões estimadas.",
-    color: "text-green-700 bg-green-50 hover:bg-green-100 border-green-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
     requiresPatient: true,
   },
   {
@@ -45,7 +45,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Orientação imediata para dor aguda ou emergência",
     prompt:
       "Paciente com dor aguda. Vou descrever o caso para orientação de conduta imediata.",
-    color: "text-orange-700 bg-orange-50 hover:bg-orange-100 border-orange-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
   },
   {
     icon: Pill,
@@ -53,7 +53,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Análise de medicações vs anestésicos e anti-inflamatórios",
     prompt:
       "Verifique as medicações em uso deste paciente e analise possíveis interações com anestésicos locais, anti-inflamatórios e antibióticos comuns em odontologia.",
-    color: "text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
     requiresPatient: true,
   },
   {
@@ -62,7 +62,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Análise assistiva de radiografia ou foto clínica",
     prompt:
       "Vou enviar uma imagem clínica/radiográfica para análise. Descreva os achados objetivamente e liste hipóteses diagnósticas.",
-    color: "text-purple-700 bg-purple-50 hover:bg-purple-100 border-purple-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
   },
   {
     icon: FileText,
@@ -70,7 +70,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Documentação clínica para o prontuário",
     prompt:
       "Gere documentação SOAP (Subjetivo, Objetivo, Avaliação, Plano) deste atendimento para o prontuário eletrônico.",
-    color: "text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border-cyan-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
     requiresPatient: true,
   },
   {
@@ -79,7 +79,7 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     description: "Linguagem simples e acessível para o paciente",
     prompt:
       "Preciso explicar um procedimento/diagnóstico ao paciente em linguagem simples, acessível e sem termos técnicos.",
-    color: "text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-300",
+    color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
   },
 ];
 
@@ -123,7 +123,7 @@ export function QuickActions({
                   {action.description}
                 </p>
                 {action.requiresPatient && !hasPatient && (
-                  <p className="text-xs text-orange-600 mt-1">
+                  <p className="text-xs text-[#a03f3d] mt-1">
                     Requer paciente selecionado
                   </p>
                 )}
