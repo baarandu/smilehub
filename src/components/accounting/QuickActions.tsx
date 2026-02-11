@@ -57,12 +57,12 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     icon: FileText,
-    label: "Quanto recebi por forma de pagamento?",
-    description: "PIX, cartão, dinheiro — com taxas",
+    label: "Resumo do Imposto de Renda",
+    description: "Receitas, IRRF, documentos faltantes e pendências",
     prompt:
-      "Mostre minhas receitas do mês passado agrupadas por forma de pagamento. Quero ver quanto recebi por PIX, cartão, dinheiro, e quanto paguei de taxa de cartão.",
+      "Faça um resumo completo do meu Imposto de Renda do ano passado. Quero ver: perfil fiscal, receita total (PF e PJ separado), IRRF retido, despesas dedutíveis, documentos faltantes e quaisquer dados incompletos que preciso corrigir para a declaração.",
     color: "text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border-cyan-300",
-    mode: "general",
+    mode: "ir",
   },
 ];
 
