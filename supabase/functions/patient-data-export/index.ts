@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { extractBearerToken, validateUUID } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 /**
  * Patient Data Export — LGPD Art. 18
@@ -19,6 +20,8 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
+  const log = createLogger("patient-data-export");
+
   try {
     // Auth
     const token = extractBearerToken(req.headers.get("Authorization"));
@@ -31,6 +34,7 @@ serve(async (req) => {
 
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
       throw new Error("Unauthorized");
     }
 
@@ -180,21 +184,12 @@ serve(async (req) => {
       })),
     };
 
-    // Log the export in audit
-    try {
-      await supabase
-        .from("audit_logs")
-        .insert({
-          action: "EXPORT",
-          entity_type: "Patient",
-          entity_id: patientId,
-          user_id: user.id,
-          clinic_id: clinicId,
-          details: { reason: "LGPD data export request" },
-        });
-    } catch (auditErr) {
-      logError("patient-data-export", "Audit log insert failed (non-fatal)", auditErr);
-    }
+    // Log the export in audit (fire-and-forget via structured logger)
+    log.audit(supabase, {
+      action: "EXPORT", table_name: "Patient", record_id: patientId,
+      user_id: user.id, clinic_id: clinicId,
+      details: { reason: "LGPD data export request" },
+    });
 
     return new Response(
       JSON.stringify(exportData),

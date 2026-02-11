@@ -5,6 +5,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { extractBearerToken } from "../_shared/validation.ts"
 import { createErrorResponse } from "../_shared/errorHandler.ts"
 import { checkRateLimit } from "../_shared/rateLimit.ts"
+import { createLogger } from "../_shared/logger.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -20,6 +21,8 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
+    const log = createLogger("get-stripe-metrics");
+
     try {
         // Auth
         const token = extractBearerToken(req.headers.get("Authorization"));
@@ -32,6 +35,7 @@ serve(async (req) => {
 
         const { data: { user }, error: userError } = await supabase.auth.getUser(token);
         if (userError || !user) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
             throw new Error("Unauthorized");
         }
 
@@ -134,6 +138,12 @@ serve(async (req) => {
             status: 'canceled',
             created: { gte: thirtyDaysAgo },
             limit: 100
+        });
+
+        // Audit: read Stripe metrics
+        log.audit(supabase, {
+            action: "READ", table_name: "StripeMetrics",
+            user_id: user.id, details: { active_count: activeSubscriptions.data.length },
         });
 
         return new Response(

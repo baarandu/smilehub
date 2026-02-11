@@ -15,6 +15,7 @@ import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkForInjection } from "../_shared/aiSanitizer.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -58,9 +59,7 @@ function sanitizeHistory(messages: any[]): any[] {
 
       if (foundCount < expectedCount) {
         // Incomplete sequence — truncate to before this assistant message
-        console.warn(
-          `[sanitize] Removing incomplete tool sequence at index ${i}: expected ${expectedCount} tool results, found ${foundCount}`
-        );
+        console.warn(`[sanitize] Removing incomplete tool sequence at index ${i}: expected ${expectedCount} tool results, found ${foundCount}`);
         return messages.slice(0, i);
       }
       // Complete sequence, history is valid
@@ -116,6 +115,8 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
+  const log = createLogger("dentist-agent");
+
   try {
     const t0 = Date.now();
 
@@ -139,6 +140,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
       throw new Error("Unauthorized");
     }
 
@@ -189,6 +191,10 @@ serve(async (req) => {
       // Check AI consent before loading patient data (LGPD Art. 6-7)
       const hasConsent = await checkAiConsent(supabase, patient_id, clinic_id);
       if (!hasConsent) {
+        log.audit(supabase, {
+          action: "CONSENT_DENIED", table_name: "Patient", record_id: patient_id,
+          user_id: user.id, clinic_id, details: { reason: "AI consent not granted" },
+        });
         return new Response(
           JSON.stringify({
             response: "Este paciente ainda não consentiu com a análise de dados por IA. " +
@@ -215,6 +221,10 @@ serve(async (req) => {
       }
 
       if (patientData) {
+        log.audit(supabase, {
+          action: "READ", table_name: "Patient", record_id: patient_id,
+          user_id: user.id, clinic_id, details: { context: "dentist-agent patient context" },
+        });
         const age = patientData.birth_date
           ? calculateAge(patientData.birth_date)
           : null;
@@ -234,7 +244,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[timing] Auth + patient context: ${Date.now() - t0}ms`);
+    log.debug(`Auth + patient context: ${Date.now() - t0}ms`);
 
     // Get or create conversation
     let conversationId = conversation_id;
@@ -361,7 +371,7 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    console.log(`[timing] Pre-OpenAI: ${Date.now() - t0}ms, messages: ${openaiMessages.length}`);
+    log.debug(`Pre-OpenAI: ${Date.now() - t0}ms, messages: ${openaiMessages.length}`);
 
     const openaiResponse = await fetchWithTimeout(
       "https://api.openai.com/v1/chat/completions",
@@ -382,7 +392,7 @@ serve(async (req) => {
       45000
     );
 
-    console.log(`[timing] First OpenAI call: ${Date.now() - t0}ms`);
+    log.debug(`First OpenAI call: ${Date.now() - t0}ms`);
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -437,9 +447,7 @@ serve(async (req) => {
 
       for (const toolCall of toolCalls) {
         try {
-          console.log(
-            `[timing] Executing tool ${toolCall.name}: ${Date.now() - t0}ms`
-          );
+          log.debug(`Executing tool ${toolCall.name}: ${Date.now() - t0}ms`);
           const result = await executeToolCall(
             toolCall.name,
             toolCall.arguments,
@@ -448,9 +456,7 @@ serve(async (req) => {
           );
 
           const resultStr = JSON.stringify(result);
-          console.log(
-            `[timing] Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`
-          );
+          log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
 
           // Collect vision image URLs
           if (result.requires_vision && result.image_urls) {
@@ -509,7 +515,7 @@ serve(async (req) => {
         });
       }
 
-      console.log(`[timing] Pre-second OpenAI: ${Date.now() - t0}ms`);
+      log.debug(`Pre-second OpenAI: ${Date.now() - t0}ms`);
 
       const secondResponse = await fetchWithTimeout(
         "https://api.openai.com/v1/chat/completions",
@@ -529,7 +535,7 @@ serve(async (req) => {
         45000
       );
 
-      console.log(`[timing] Second OpenAI call: ${Date.now() - t0}ms`);
+      log.debug(`Second OpenAI call: ${Date.now() - t0}ms`);
 
       if (!secondResponse.ok) {
         const errText = await secondResponse.text();
@@ -554,7 +560,18 @@ serve(async (req) => {
       content: responseText,
     });
 
-    console.log(`[timing] Total: ${Date.now() - t0}ms`);
+    log.info(`Request completed in ${Date.now() - t0}ms`);
+
+    // Audit: AI request
+    log.audit(supabase, {
+      action: "AI_REQUEST", table_name: "DentistAgent", record_id: conversationId,
+      user_id: user.id, clinic_id,
+      details: {
+        model: "gpt-4o",
+        tools_used: toolCalls.map((tc: any) => tc.name),
+        has_patient_context: !!patient_id,
+      },
+    });
 
     // Return response
     return new Response(

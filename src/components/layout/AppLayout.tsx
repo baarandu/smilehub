@@ -15,6 +15,7 @@ import {
   CreditCard,
   FileText,
   ShieldCheck,
+  ShieldAlert,
   HelpCircle,
   Settings,
   Calculator,
@@ -259,6 +260,19 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <Crown className={cn("w-5 h-5", location.pathname === '/admin/planos' && "text-[#a03f3d]")} />
               <span className="flex-1">Planos & Preços</span>
+            </NavLink>
+            <NavLink
+              to="/admin/seguranca"
+              onClick={() => setSidebarOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                location.pathname === '/admin/seguranca'
+                  ? "bg-red-100 text-[#8b3634]"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <ShieldAlert className={cn("w-5 h-5", location.pathname === '/admin/seguranca' && "text-[#a03f3d]")} />
+              <span className="flex-1">Segurança</span>
             </NavLink>
           </div>
         )}

@@ -13,6 +13,7 @@ import {
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkForInjection } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -46,6 +47,8 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
+  const log = createLogger("accounting-agent");
+
   try {
     const t0 = Date.now();
 
@@ -70,6 +73,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
       throw new Error("Unauthorized");
     }
 
@@ -114,7 +118,7 @@ serve(async (req) => {
       .eq("clinic_id", clinic_id)
       .maybeSingle();
 
-    console.log(`[timing] Auth + profile: ${Date.now() - t0}ms`);
+    log.debug(`Auth + profile: ${Date.now() - t0}ms`);
 
     // Get or create conversation
     let conversationId = conversation_id;
@@ -200,7 +204,7 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    console.log(`[timing] Pre-OpenAI: ${Date.now() - t0}ms`);
+    log.debug(`Pre-OpenAI: ${Date.now() - t0}ms`);
 
     const openaiResponse = await fetchWithTimeout(
       "https://api.openai.com/v1/chat/completions",
@@ -221,7 +225,7 @@ serve(async (req) => {
       25000
     );
 
-    console.log(`[timing] First OpenAI call: ${Date.now() - t0}ms`);
+    log.debug(`First OpenAI call: ${Date.now() - t0}ms`);
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -272,7 +276,7 @@ serve(async (req) => {
       const toolMessages: any[] = [];
       for (const toolCall of toolCalls) {
         try {
-          console.log(`[timing] Executing tool ${toolCall.name}: ${Date.now() - t0}ms`);
+          log.debug(`Executing tool ${toolCall.name}: ${Date.now() - t0}ms`);
           const result = await executeToolCall(
             toolCall.name,
             toolCall.arguments,
@@ -281,7 +285,7 @@ serve(async (req) => {
           );
 
           const resultStr = JSON.stringify(result);
-          console.log(`[timing] Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
+          log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
 
           toolMessages.push({
             role: "tool",
@@ -320,7 +324,7 @@ serve(async (req) => {
         ...toolMessages,
       ];
 
-      console.log(`[timing] Pre-second OpenAI: ${Date.now() - t0}ms`);
+      log.debug(`Pre-second OpenAI: ${Date.now() - t0}ms`);
 
       const secondResponse = await fetchWithTimeout(
         "https://api.openai.com/v1/chat/completions",
@@ -340,7 +344,7 @@ serve(async (req) => {
         25000
       );
 
-      console.log(`[timing] Second OpenAI call: ${Date.now() - t0}ms`);
+      log.debug(`Second OpenAI call: ${Date.now() - t0}ms`);
 
       if (!secondResponse.ok) {
         const errText = await secondResponse.text();
@@ -365,7 +369,17 @@ serve(async (req) => {
         content: responseText,
       });
 
-    console.log(`[timing] Total: ${Date.now() - t0}ms`);
+    log.info(`Request completed in ${Date.now() - t0}ms`);
+
+    // Audit: AI request
+    log.audit(supabase, {
+      action: "AI_REQUEST", table_name: "AccountingAgent", record_id: conversationId,
+      user_id: user.id, clinic_id,
+      details: {
+        model: "gpt-4o-mini",
+        tools_used: toolCalls.map((tc: any) => tc.name),
+      },
+    });
 
     // Return response
     return new Response(

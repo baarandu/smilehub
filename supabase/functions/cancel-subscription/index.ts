@@ -5,6 +5,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { extractBearerToken, validateUUID } from "../_shared/validation.ts"
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
 import { checkRateLimit } from "../_shared/rateLimit.ts"
+import { createLogger } from "../_shared/logger.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -26,11 +27,14 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
+    const log = createLogger("cancel-subscription");
+
     try {
         // Auth
         const token = extractBearerToken(req.headers.get("Authorization"));
         const { data: { user }, error: userError } = await supabase.auth.getUser(token);
         if (userError || !user) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
             throw new Error("Unauthorized");
         }
 
@@ -96,6 +100,11 @@ serve(async (req) => {
             ? new Date(currentSub.current_period_end)
             : new Date();
         const formattedDate = periodEndDate.toLocaleDateString('pt-BR');
+
+        log.audit(supabase, {
+            action: "SUBSCRIPTION_CANCEL", table_name: "Subscription", record_id: currentSub.id,
+            user_id: user.id, details: { clinic_id: clinicId, reason: reason || "Não informado", access_until: formattedDate },
+        });
 
         return new Response(
             JSON.stringify({

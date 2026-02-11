@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
 import { validateRequired } from "../_shared/validation.ts"
+import { createLogger } from "../_shared/logger.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
@@ -60,6 +62,18 @@ const handler = async (request: Request): Promise<Response> => {
             logError("send-invite", "Resend API error", JSON.stringify(data));
             throw new Error('Erro ao enviar email de convite.')
         }
+
+        // Audit: invite sent (fire-and-forget)
+        const log = createLogger("send-invite");
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+        log.audit(supabase, {
+            action: "INVITE_SENT", table_name: "Invite",
+            details: { role: record.role },
+        });
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

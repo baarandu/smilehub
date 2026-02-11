@@ -5,7 +5,7 @@ export type AuditLog = Database['public']['Tables']['audit_logs']['Row'];
 export type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert'];
 
 export const auditService = {
-    async log(action: string, entity: string, entityId?: string, details?: any) {
+    async log(action: string, tableName: string, recordId?: string, details?: any) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
@@ -23,9 +23,9 @@ export const auditService = {
                 clinic_id: (clinicUser as any).clinic_id,
                 user_id: user.id,
                 action,
-                entity,
-                entity_id: entityId,
-                details: details || {}
+                table_name: tableName,
+                record_id: recordId,
+                new_data: details || {}
             } as any);
         } catch (error) {
             console.error('Failed to log action:', error);

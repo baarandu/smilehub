@@ -47,6 +47,21 @@ export async function checkRateLimit(
       console.warn(
         `[rateLimit] Exceeded: ${identifier} on ${config.endpoint} (${count}/${config.maxRequests} in ${config.windowMinutes}min)`
       );
+
+      // Fire-and-forget audit log for rate limit exceeded
+      supabase
+        .from("audit_logs")
+        .insert({
+          action: "RATE_LIMIT_EXCEEDED",
+          table_name: "RateLimit",
+          user_id: identifier,
+          details: { endpoint: config.endpoint, count, max: config.maxRequests, window_minutes: config.windowMinutes },
+          source: "edge_function",
+          function_name: config.endpoint,
+        })
+        .then(() => {})
+        .catch(() => {});
+
       throw new RateLimitError();
     }
 

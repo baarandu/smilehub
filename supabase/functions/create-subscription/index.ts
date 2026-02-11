@@ -5,6 +5,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { extractBearerToken, validateRequired } from "../_shared/validation.ts"
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
 import { checkRateLimit } from "../_shared/rateLimit.ts"
+import { createLogger } from "../_shared/logger.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -20,6 +21,8 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
+    const log = createLogger("create-subscription");
+
     try {
         // Auth
         const token = extractBearerToken(req.headers.get("Authorization"));
@@ -32,6 +35,7 @@ serve(async (req) => {
 
         const { data: { user }, error: userError } = await supabase.auth.getUser(token);
         if (userError || !user) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
             throw new Error("Unauthorized");
         }
 
@@ -103,6 +107,12 @@ serve(async (req) => {
             logError("create-subscription", "No client_secret in subscription", subscription.id);
             throw new Error('Falha ao gerar o segredo de pagamento. Tente novamente.');
         }
+
+        // Audit: subscription created
+        log.audit(supabase, {
+            action: "SUBSCRIPTION_CREATE", table_name: "Subscription", record_id: subscription.id,
+            user_id: user.id, details: { plan_name: planName },
+        });
 
         return new Response(
             JSON.stringify({

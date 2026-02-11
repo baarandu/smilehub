@@ -5,6 +5,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { extractBearerToken, validateUUID } from "../_shared/validation.ts"
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
 import { checkRateLimit } from "../_shared/rateLimit.ts"
+import { createLogger } from "../_shared/logger.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -26,11 +27,14 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
+    const log = createLogger("update-subscription");
+
     try {
         // Auth
         const token = extractBearerToken(req.headers.get("Authorization"));
         const { data: { user }, error: userError } = await supabase.auth.getUser(token);
         if (userError || !user) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
             throw new Error("Unauthorized");
         }
 
@@ -102,6 +106,11 @@ serve(async (req) => {
                     logError("update-subscription", "Stripe metadata update (non-fatal)", stripeErr);
                 }
             }
+
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_UPDATE", table_name: "Subscription", record_id: currentSub.id,
+                user_id: user.id, details: { new_plan_id: newPlanId, is_upgrade: isUpgrade, is_trialing: true },
+            });
 
             return new Response(
                 JSON.stringify({
@@ -179,6 +188,11 @@ serve(async (req) => {
 
             const prorationAmount = upcomingInvoice.amount_due;
 
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_UPDATE", table_name: "Subscription", record_id: currentSub.id,
+                user_id: user.id, details: { new_plan_id: newPlanId, is_upgrade: true, proration_amount: prorationAmount },
+            });
+
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -235,6 +249,11 @@ serve(async (req) => {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', currentSub.id);
+
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_UPDATE", table_name: "Subscription", record_id: currentSub.id,
+                user_id: user.id, details: { new_plan_id: newPlanId, is_upgrade: false, effective_date: formattedDate },
+            });
 
             return new Response(
                 JSON.stringify({

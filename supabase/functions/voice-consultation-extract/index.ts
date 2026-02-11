@@ -11,6 +11,7 @@ import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkForInjection } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 const EXTRACTION_PROMPT = `Você é um assistente de IA para uma clínica odontológica brasileira. Sua tarefa é extrair dados estruturados de uma transcrição de consulta odontológica.
 
@@ -94,6 +95,8 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
+  const log = createLogger("voice-consultation-extract");
+
   try {
     // Auth
     const token = extractBearerToken(req.headers.get("Authorization"));
@@ -103,7 +106,10 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) throw new Error("Unauthorized");
+    if (authError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
+      throw new Error("Unauthorized");
+    }
 
     // Rate limit: 20 requests per hour
     await checkRateLimit(supabase, user.id, {
@@ -151,6 +157,10 @@ serve(async (req) => {
     if (!is_new_patient && existing_patient_data?.id && clinic_id) {
       const hasConsent = await checkAiConsent(supabase, existing_patient_data.id, clinic_id);
       if (!hasConsent) {
+        log.audit(supabase, {
+          action: "CONSENT_DENIED", table_name: "Patient", record_id: existing_patient_data.id,
+          user_id: user.id, clinic_id, details: { reason: "AI consent not granted" },
+        });
         return new Response(
           JSON.stringify({
             error: "Paciente não consentiu com análise por IA. Registre o consentimento na ficha do paciente.",
@@ -227,6 +237,13 @@ serve(async (req) => {
         })
         .eq("id", session_id);
     }
+
+    // Audit: AI request
+    log.audit(supabase, {
+      action: "AI_REQUEST", table_name: "VoiceExtraction", record_id: session_id,
+      user_id: user.id, clinic_id,
+      details: { model: "gpt-4o-mini", tokens_used: tokensUsed, is_new_patient },
+    });
 
     return new Response(
       JSON.stringify({

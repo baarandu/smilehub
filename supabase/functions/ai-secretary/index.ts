@@ -10,6 +10,7 @@ import {
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkForInjection } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -17,6 +18,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return handleCorsOptions(req);
   }
+
+  const log = createLogger("ai-secretary");
 
   try {
     // Auth
@@ -33,6 +36,7 @@ Deno.serve(async (req) => {
       error: userError,
     } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
       throw new Error("Unauthorized");
     }
 
@@ -110,6 +114,12 @@ Deno.serve(async (req) => {
     const data = await response.json();
     const aiMessage =
       data.choices?.[0]?.message?.content || "Desculpe, não entendi.";
+
+    // Audit: AI request
+    log.audit(supabase, {
+      action: "AI_REQUEST", table_name: "AISecretary",
+      user_id: user.id, details: { model: "gpt-4o-mini" },
+    });
 
     return new Response(JSON.stringify({ message: aiMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

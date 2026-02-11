@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { extractBearerToken, validateUUID } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { createLogger } from "../_shared/logger.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -11,6 +12,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return handleCorsOptions(req);
   }
+
+  const log = createLogger("voice-consultation-transcribe");
 
   try {
     // Auth
@@ -21,7 +24,10 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) throw new Error("Unauthorized");
+    if (authError || !user) {
+      log.audit(supabase, { action: "AUTH_FAILURE", table_name: "System", details: { reason: "Invalid token" } });
+      throw new Error("Unauthorized");
+    }
 
     // Rate limit: 10 requests per hour
     await checkRateLimit(supabase, user.id, {
@@ -95,6 +101,13 @@ serve(async (req) => {
         audio_duration_seconds: durationSeconds,
       })
       .eq("id", sessionId);
+
+    // Audit: AI request (Whisper)
+    log.audit(supabase, {
+      action: "AI_REQUEST", table_name: "VoiceTranscription", record_id: sessionId,
+      user_id: user.id, clinic_id: clinicId,
+      details: { model: "whisper-1", duration_seconds: durationSeconds },
+    });
 
     return new Response(
       JSON.stringify({
