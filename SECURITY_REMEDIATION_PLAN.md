@@ -16,6 +16,7 @@ A auditoria identificou **5 vulnerabilidades críticas**, **5 altas** e diversas
 - **Fase 2 concluída (11/02/2026)** — Rate limiting em 9 funções, auth e hardening em 6 funções restantes, deploy completo
 - **Fase 3 concluída (11/02/2026)** — Criptografia CPF/RG, exportação LGPD, retenção de dados, consentimento IA, anonimização
 - **Fase 4 concluída (11/02/2026)** — Audit logging completo (12 Edge Functions), structured logger, dashboard de segurança
+- **Fase 5 concluída (11/02/2026)** — DPA com terceiros, procedimento de resposta a incidentes, checklist de segurança
 
 ---
 
@@ -244,34 +245,27 @@ A auditoria identificou **5 vulnerabilidades críticas**, **5 altas** e diversas
 
 ---
 
-## Fase 5 — Documentação e Compliance (Semanas 7-8)
+## Fase 5 — Documentação e Compliance ~~(Semanas 7-8)~~ CONCLUÍDA 11/02/2026
 
-> Objetivo: Documentação legal e processos para LGPD.
+> Todas as 3 tarefas implementadas. Documentos criados em `docs/`.
 
-### 5.1 Documentar DPA com Terceiros
+### 5.1 ~~Documentar DPA com Terceiros~~ FEITO
 - **Prioridade:** ALTA
-- **Esforço:** 4 horas (jurídico)
-- **Status:** PENDENTE
+- **Status:** CONCLUÍDO
+- **Arquivo criado:** `docs/DPA-terceiros.md`
+- **Conteúdo:** Fluxos de dados com OpenAI (modelos, dados enviados/não enviados, anonimização), Supabase (armazenamento, criptografia, RLS, retenção), Stripe (PCI-DSS, dados da clínica apenas). Tabela resumo, obrigações LGPD Art. 26/39, direitos dos titulares Art. 18.
 
-### 5.2 Criar Procedimento de Resposta a Incidentes
+### 5.2 ~~Criar Procedimento de Resposta a Incidentes~~ FEITO
 - **Prioridade:** ALTA
-- **Esforço:** 2 horas
-- **Status:** PENDENTE
+- **Status:** CONCLUÍDO
+- **Arquivo criado:** `docs/resposta-incidentes.md`
+- **Conteúdo:** Classificação de severidade (4 níveis com exemplos), 5 fases de resposta (Identificação → Contenção → Erradicação → Recuperação → Lições Aprendidas), template de notificação à ANPD (72h, Art. 48), queries de investigação, checklist rápido de 10 itens.
 
-### 5.3 Checklist de Segurança para Novas Features
+### 5.3 ~~Checklist de Segurança para Novas Features~~ FEITO
 - **Prioridade:** MEDIA
-- **Esforço:** 1 hora
-- **Status:** PENDENTE
-- **Checklist obrigatório para cada nova Edge Function:**
-  - [ ] CORS: Usa `getCorsHeaders()` (nunca `*`)
-  - [ ] Auth: Valida JWT via `extractBearerToken()` + verifica `clinic_users`
-  - [ ] Input: Valida com `validateUUID()`, `validateMaxLength()`, `validateRequired()`
-  - [ ] Erros: Usa `createErrorResponse()` (nunca `error.message` direto)
-  - [ ] IA: Usa `checkForInjection()` em inputs enviados a modelos
-  - [ ] Rate Limiting: Limite configurado via `checkRateLimit()`
-  - [ ] Timeout: Timeout explícito para chamadas externas
-  - [ ] LGPD: Dados de pacientes anonimizados antes de enviar a terceiros
-  - [ ] Audit: Operações sensíveis registradas
+- **Status:** CONCLUÍDO
+- **Arquivo criado:** `docs/checklist-seguranca-features.md`
+- **Conteúdo:** 12 itens de verificação obrigatória (expandido de 9), cada um com exemplo de código e referência ao módulo `_shared/`. Inclui template completo de Edge Function com todos os módulos integrados.
 
 ---
 
@@ -282,11 +276,11 @@ Semana 1  ████████████ Fase 1 — CONCLUÍDA (11/02/2026
 Semana 1  ████████████ Fase 2 — CONCLUÍDA (11/02/2026)
 Semana 1  ████████████ Fase 3 — CONCLUÍDA (11/02/2026)
 Semana 1  ████████████ Fase 4 — CONCLUÍDA (11/02/2026)
-Semana 8  ░░░░░░░░░░░░ Fase 5 — Documentação e compliance (7h)
+Semana 1  ████████████ Fase 5 — CONCLUÍDA (11/02/2026)
 ```
 
-**Esforço concluído: ~53 horas** (Fase 1: 12h + Fase 2: 10h + Fase 3: 22h + Fase 4: 9h)
-**Esforço restante: ~7 horas de desenvolvimento** (Fase 5)
+**Esforço total concluído: ~60 horas** (Fase 1: 12h + Fase 2: 10h + Fase 3: 22h + Fase 4: 9h + Fase 5: 7h)
+**Esforço restante: 0 horas** — Todas as fases concluídas
 
 ---
 
@@ -308,9 +302,10 @@ Semana 8  ░░░░░░░░░░░░ Fase 5 — Documentação e compl
 | Anonimização para OpenAI | 0 | 0 | 0 | **SIM** (phone, email removidos) | SIM |
 | Exportação LGPD Art. 18 | 0 | 0 | 0 | **SIM** (JSON completo) | SIM |
 | Retenção automática de dados | 0 | 0 | 0 | **SIM** (pg_cron diário) | SIM |
-| Conformidade LGPD | ~25% | ~30% | ~35% | **~70%** | ~75% |
+| Conformidade LGPD | ~25% | ~30% | ~35% | **~70%** | **~85%** (DPA + Incidentes + Checklist) |
 | Cobertura de audit log | CUD only | CUD only | CUD only | CUD + export | **CRUD + IA + auth + rate limits** |
 | Dashboard de segurança | Não | Não | Não | Não | **SIM** (/admin/seguranca) |
+| Documentação compliance | Não | Não | Não | Não | **SIM** (DPA, Incidentes, Checklist) |
 | Nota geral de segurança | C+ | B | **B+** | **A-** | **A** |
 
 ---

@@ -39,4 +39,7 @@ evolution-api-local/
 !supabase/**/*.sql
 docker-compose.tmp
 n8n-workflows/
-docs/
+docs/*
+!docs/DPA-terceiros.md
+!docs/resposta-incidentes.md
+!docs/checklist-seguranca-features.md
