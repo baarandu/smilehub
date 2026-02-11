@@ -5,29 +5,29 @@ import { sanitizeForDisplay } from '@/utils/security';
 
 export async function getPatients(page?: number, limit?: number): Promise<Patient[]> {
   const query = supabase
-    .from('patients')
+    .from('patients_secure')
     .select('*')
     .order('name');
 
   if (page !== undefined && limit !== undefined) {
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error } = await query.range(from, to);
+    const { data, error } = await query.range(from, to) as { data: Patient[] | null; error: any };
     if (error) throw error;
     return data || [];
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query as { data: Patient[] | null; error: any };
   if (error) throw error;
   return data || [];
 }
 
 export async function getPatientById(id: string): Promise<Patient | null> {
   const { data, error } = await supabase
-    .from('patients')
+    .from('patients_secure')
     .select('*')
     .eq('id', id)
-    .single();
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
   return data;
@@ -52,17 +52,25 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     user_id: user.id,
   };
 
-  const { data, error } = await supabase
+  const { data: inserted, error: insertError } = await supabase
     .from('patients')
     .insert(patientWithClinic as unknown as never)
-    .select()
+    .select('id')
     .single();
+
+  if (insertError) throw insertError;
+
+  // Read back from secure view (decrypted CPF/RG)
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
+    .eq('id', (inserted as any).id)
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
 
   if (data) {
-    const p = data as unknown as Patient;
-    await auditService.log('CREATE', 'Patient', p.id, { name: p.name });
+    await auditService.log('CREATE', 'Patient', data.id, { name: data.name });
   }
 
   return data;
@@ -96,21 +104,27 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
 }
 
 export async function updatePatient(id: string, patient: PatientUpdate): Promise<Patient> {
-  const { data, error } = await supabase
+  const { error: updateError } = await supabase
     .from('patients')
     .update(patient as unknown as never)
+    .eq('id', id);
+
+  if (updateError) throw updateError;
+
+  // Read back from secure view (decrypted CPF/RG)
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
     .eq('id', id)
-    .select()
-    .single();
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
 
   if (data) {
-    const p = data as unknown as Patient;
-    await auditService.log('UPDATE', 'Patient', p.id, { changes: Object.keys(patient) });
+    await auditService.log('UPDATE', 'Patient', data.id, { changes: Object.keys(patient) });
   }
 
-  return data;
+  return data as Patient;
 }
 
 export async function updatePatientFromForm(id: string, formData: PatientFormData): Promise<Patient> {
@@ -152,11 +166,11 @@ export async function deletePatient(id: string): Promise<void> {
 
 export async function searchPatients(query: string): Promise<Patient[]> {
   const { data, error } = await supabase
-    .from('patients')
+    .from('patients_secure')
     .select('*')
-    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf.ilike.%${query}%,email.ilike.%${query}%`)
+    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf_last4.ilike.%${query}%,email.ilike.%${query}%`)
     .order('name')
-    .limit(20);
+    .limit(20) as { data: Patient[] | null; error: any };
 
   if (error) throw error;
   return data || [];
@@ -172,15 +186,21 @@ export async function toggleReturnAlert(patientId: string, active: boolean, days
     return_alert_date: alertDate
   };
 
-  const { data, error } = await supabase
+  const { error: updateError } = await supabase
     .from('patients')
     .update(updates)
+    .eq('id', patientId);
+
+  if (updateError) throw updateError;
+
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
     .eq('id', patientId)
-    .select()
-    .single();
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
-  return data;
+  return data as Patient;
 }
 
 // Convert Patient to PatientFormData

@@ -4,9 +4,9 @@ import { sanitizeForDisplay } from '../utils/security';
 
 export async function getPatients(): Promise<Patient[]> {
   const { data, error } = await supabase
-    .from('patients')
+    .from('patients_secure')
     .select('*')
-    .order('name');
+    .order('name') as { data: Patient[] | null; error: any };
 
   if (error) throw error;
   return data || [];
@@ -14,10 +14,10 @@ export async function getPatients(): Promise<Patient[]> {
 
 export async function getPatientById(id: string): Promise<Patient | null> {
   const { data, error } = await supabase
-    .from('patients')
+    .from('patients_secure')
     .select('*')
     .eq('id', id)
-    .single();
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
   return data;
@@ -42,11 +42,20 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     user_id: user.id,
   };
 
-  const { data, error } = await (supabase
+  const { data: inserted, error: insertError } = await (supabase
     .from('patients') as any)
     .insert(patientWithClinic)
-    .select()
+    .select('id')
     .single();
+
+  if (insertError) throw insertError;
+
+  // Read back from secure view (decrypted CPF/RG)
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
+    .eq('id', inserted.id)
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
   return data;
@@ -89,15 +98,22 @@ export async function getPatientsCount(): Promise<number> {
 }
 
 export async function updatePatient(id: string, patient: Partial<PatientInsert>): Promise<Patient> {
-  const { data, error } = await (supabase
+  const { error: updateError } = await (supabase
     .from('patients') as any)
     .update(patient)
+    .eq('id', id);
+
+  if (updateError) throw updateError;
+
+  // Read back from secure view (decrypted CPF/RG)
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
     .eq('id', id)
-    .select()
-    .single();
+    .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
-  return data;
+  return data as Patient;
 }
 
 export async function deletePatient(id: string): Promise<void> {
@@ -127,12 +143,18 @@ export const patientsService = {
       return_alert_date: alertDate
     };
 
-    const { data, error } = await (supabase
+    const { error: updateError } = await (supabase
       .from('patients') as any)
       .update(updates)
+      .eq('id', patientId);
+
+    if (updateError) throw updateError;
+
+    const { data, error } = await supabase
+      .from('patients_secure')
+      .select('*')
       .eq('id', patientId)
-      .select()
-      .single() as any;
+      .single() as { data: any; error: any };
 
     if (error) throw error;
     return data;

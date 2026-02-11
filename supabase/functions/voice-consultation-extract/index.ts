@@ -1,11 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import {
+  extractBearerToken,
+  validateUUID,
+  validateRequired,
+  validateMaxLength,
+} from "../_shared/validation.ts";
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
+import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiConsent } from "../_shared/consent.ts";
 
 const EXTRACTION_PROMPT = `Você é um assistente de IA para uma clínica odontológica brasileira. Sua tarefa é extrair dados estruturados de uma transcrição de consulta odontológica.
 
@@ -83,16 +88,15 @@ FORMATO DE SAÍDA (JSON):
 }`;
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsOptions(req);
   }
 
   try {
     // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization header");
-
-    const token = authHeader.replace("Bearer ", "");
+    const token = extractBearerToken(req.headers.get("Authorization"));
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
@@ -100,6 +104,13 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
+
+    // Rate limit: 20 requests per hour
+    await checkRateLimit(supabase, user.id, {
+      endpoint: "voice-consultation-extract",
+      maxRequests: 20,
+      windowMinutes: 60,
+    });
 
     const body = await req.json();
     const {
@@ -111,7 +122,18 @@ serve(async (req) => {
       clinic_id,
     } = body;
 
-    if (!transcription) throw new Error("No transcription provided");
+    // Validate inputs
+    validateRequired(transcription, "transcription");
+    validateMaxLength(transcription, 15000, "transcription");
+    if (clinic_id) validateUUID(clinic_id, "clinic_id");
+    if (session_id) validateUUID(session_id, "session_id");
+
+    // Check for prompt injection (log-only mode)
+    checkForInjection(transcription, {
+      functionName: "voice-consultation-extract",
+      userId: user.id,
+      clinicId: clinic_id,
+    });
 
     // Verify user belongs to clinic
     if (clinic_id) {
@@ -123,6 +145,23 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!clinicUser) throw new Error("User not authorized for this clinic");
+    }
+
+    // Check AI consent for existing patients (LGPD Art. 6-7)
+    if (!is_new_patient && existing_patient_data?.id && clinic_id) {
+      const hasConsent = await checkAiConsent(supabase, existing_patient_data.id, clinic_id);
+      if (!hasConsent) {
+        return new Response(
+          JSON.stringify({
+            error: "Paciente não consentiu com análise por IA. Registre o consentimento na ficha do paciente.",
+            consent_required: true,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 403,
+          }
+        );
+      }
     }
 
     // Build user message
@@ -162,8 +201,8 @@ serve(async (req) => {
 
     if (!gptResponse.ok) {
       const errorText = await gptResponse.text();
-      console.error("GPT API error:", errorText);
-      throw new Error(`GPT API error: ${gptResponse.status}`);
+      logError("voice-consultation-extract", "GPT API error", errorText);
+      throw new Error("Erro no serviço de extração. Tente novamente.");
     }
 
     const gptResult = await gptResponse.json();
@@ -199,13 +238,6 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error("Extraction error:", error);
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return createErrorResponse(error, corsHeaders, "voice-consultation-extract");
   }
 });

@@ -1,3 +1,5 @@
+import { sanitizeSearchTerm } from "../_shared/validation.ts";
+
 interface ToolArgs {
   [key: string]: any;
 }
@@ -8,7 +10,6 @@ export async function executeToolCall(
   clinicId: string,
   supabase: any
 ): Promise<any> {
-  console.log(`Executing tool: ${toolName}`, args);
 
   switch (toolName) {
     case "get_patient_profile":
@@ -65,26 +66,24 @@ async function executeGetPatientProfile(
 
   const { data, error } = await supabase
     .from("patients")
-    .select("id, name, birth_date, phone, email, health_insurance, health_insurance_number, allergies, medications, medical_history, notes, occupation")
+    .select("id, name, birth_date, health_insurance, health_insurance_number, allergies, medications, medical_history, notes, occupation")
     .eq("id", patient_id)
     .eq("clinic_id", clinicId)
     .single();
 
   if (error) {
-    console.error("Error in get_patient_profile:", error);
-    throw new Error(`Erro ao buscar perfil do paciente: ${error.message}`);
+    throw new Error("Erro ao buscar perfil do paciente.");
   }
 
   if (!data) {
     return { error: "Paciente não encontrado nesta clínica." };
   }
 
+  // LGPD: phone, email, address are NOT sent to OpenAI
   return {
     id: data.id,
     name: data.name,
     age: data.birth_date ? calculateAge(data.birth_date) : null,
-    phone: data.phone || null,
-    email: data.email || null,
     insurance: data.health_insurance || "Particular",
     insurance_number: data.health_insurance_number || null,
     allergies: data.allergies || "Nenhuma registrada",
@@ -124,8 +123,7 @@ async function executeGetPatientAnamnesis(
     .single();
 
   if (error && error.code !== "PGRST116") {
-    console.error("Error in get_patient_anamnesis:", error);
-    throw new Error(`Erro ao buscar anamnese: ${error.message}`);
+    throw new Error("Erro ao buscar anamnese.");
   }
 
   if (!data) {
@@ -213,8 +211,7 @@ async function executeGetPatientProcedures(
     .limit(30);
 
   if (error) {
-    console.error("Error in get_patient_procedures:", error);
-    throw new Error(`Erro ao buscar procedimentos: ${error.message}`);
+    throw new Error("Erro ao buscar procedimentos.");
   }
 
   const procedures = data || [];
@@ -257,8 +254,7 @@ async function executeGetPatientExams(
     .limit(20);
 
   if (error) {
-    console.error("Error in get_patient_exams:", error);
-    throw new Error(`Erro ao buscar exames: ${error.message}`);
+    throw new Error("Erro ao buscar exames.");
   }
 
   return {
@@ -294,8 +290,7 @@ async function executeGetPatientConsultations(
     .limit(15);
 
   if (error) {
-    console.error("Error in get_patient_consultations:", error);
-    throw new Error(`Erro ao buscar consultas: ${error.message}`);
+    throw new Error("Erro ao buscar consultas.");
   }
 
   return {
@@ -321,8 +316,7 @@ async function executeGetPatientAppointments(
     .limit(20);
 
   if (error) {
-    console.error("Error in get_patient_appointments:", error);
-    throw new Error(`Erro ao buscar agendamentos: ${error.message}`);
+    throw new Error("Erro ao buscar agendamentos.");
   }
 
   const appointments = data || [];
@@ -344,25 +338,24 @@ async function executeSearchPatients(
   clinicId: string,
   supabase: any
 ): Promise<any> {
-  const { search_term } = args;
+  const sanitizedTerm = sanitizeSearchTerm(args.search_term);
 
   const { data, error } = await supabase
     .from("patients")
-    .select("id, name, birth_date, phone")
+    .select("id, name, birth_date")
     .eq("clinic_id", clinicId)
-    .ilike("name", `%${search_term}%`)
+    .ilike("name", `%${sanitizedTerm}%`)
     .limit(10);
 
   if (error) {
-    console.error("Error in search_patients:", error);
-    throw new Error(`Erro ao buscar pacientes: ${error.message}`);
+    throw new Error("Erro ao buscar pacientes.");
   }
 
+  // LGPD: phone, email, address are NOT sent to OpenAI
   const patients = (data || []).map((p: any) => ({
     id: p.id,
     name: p.name,
     age: p.birth_date ? calculateAge(p.birth_date) : null,
-    phone: p.phone || null,
   }));
 
   return {
@@ -389,8 +382,7 @@ async function executeAnalyzeExamImage(
     .single();
 
   if (error) {
-    console.error("Error in analyze_exam_image:", error);
-    throw new Error(`Erro ao buscar exame: ${error.message}`);
+    throw new Error("Erro ao buscar exame.");
   }
 
   if (!data) {
@@ -466,8 +458,7 @@ async function executeGetPatientBudgets(
     .limit(10);
 
   if (error) {
-    console.error("Error in get_patient_budgets:", error);
-    throw new Error(`Erro ao buscar orçamentos: ${error.message}`);
+    throw new Error("Erro ao buscar orçamentos.");
   }
 
   const budgets = data || [];

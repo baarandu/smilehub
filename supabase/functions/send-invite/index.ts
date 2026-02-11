@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
+import { validateRequired } from "../_shared/validation.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
@@ -12,17 +14,18 @@ const handler = async (request: Request): Promise<Response> => {
 
     try {
         if (!RESEND_API_KEY) {
-            throw new Error('RESEND_API_KEY is not set')
+            throw new Error('Serviço de email não configurado.')
         }
 
         const payload = await request.json()
         const { record } = payload
 
         if (!record || !record.email) {
-            throw new Error('No email found in record')
+            throw new Error('Missing required fields')
         }
 
-        console.log('Sending invite to:', record.email)
+        validateRequired(record.email, "email");
+        validateRequired(record.role, "role");
 
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
@@ -31,7 +34,7 @@ const handler = async (request: Request): Promise<Response> => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: 'Smile Care Hub <onboarding@resend.dev>', // User should change this after verifying domain
+                from: 'Smile Care Hub <onboarding@resend.dev>',
                 to: [record.email],
                 subject: 'Você foi convidado para o Smile Care Hub',
                 html: `
@@ -54,20 +57,16 @@ const handler = async (request: Request): Promise<Response> => {
         const data = await res.json()
 
         if (!res.ok) {
-            console.error('Resend Error:', data)
-            throw new Error(JSON.stringify(data))
+            logError("send-invite", "Resend API error", JSON.stringify(data));
+            throw new Error('Erro ao enviar email de convite.')
         }
 
-        return new Response(JSON.stringify(data), {
+        return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
 
     } catch (error) {
-        console.error('Error:', error)
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+        return createErrorResponse(error, corsHeaders, "send-invite");
     }
 }
 

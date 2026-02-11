@@ -11,6 +11,31 @@ import type {
   SupplierFormData,
 } from '../types/incomeTax';
 
+// Decrypt patient CPFs from PostgREST join (returns encrypted values from patients table)
+async function resolveEncryptedPatientCpfs(transactions: any[]): Promise<void> {
+  const patientIds = [...new Set(
+    transactions
+      .filter((t: any) => t.payer_is_patient && t.patient_id)
+      .map((t: any) => t.patient_id)
+  )];
+  if (patientIds.length === 0) return;
+
+  const { data: patients } = await supabase
+    .from('patients_secure')
+    .select('id, cpf')
+    .in('id', patientIds) as { data: any[] | null };
+
+  if (!patients) return;
+  const cpfMap = new Map(patients.map((p: any) => [p.id, p.cpf]));
+
+  for (const t of transactions) {
+    if (t.payer_is_patient && t.patient && t.patient_id) {
+      const decryptedCpf = cpfMap.get(t.patient_id);
+      if (decryptedCpf !== undefined) t.patient.cpf = decryptedCpf;
+    }
+  }
+}
+
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
@@ -182,7 +207,9 @@ export const incomeTaxService = {
       .order('date', { ascending: false });
 
     if (error) throw error;
-    return (data as unknown as TransactionWithIR[]) || [];
+    const txs = (data as unknown as TransactionWithIR[]) || [];
+    await resolveEncryptedPatientCpfs(txs as any[]);
+    return txs;
   },
 
   async getExpenseTransactionsForYear(year: number): Promise<TransactionWithIR[]> {

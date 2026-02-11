@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
+import { extractBearerToken, validateRequired } from "../_shared/validation.ts"
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
+import { checkRateLimit } from "../_shared/rateLimit.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -17,15 +21,36 @@ serve(async (req) => {
     }
 
     try {
+        // Auth
+        const token = extractBearerToken(req.headers.get("Authorization"));
+
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+            throw new Error("Unauthorized");
+        }
+
+        // Rate limit: 6 requests per minute
+        await checkRateLimit(supabase, user.id, {
+            endpoint: "create-subscription",
+            maxRequests: 6,
+            windowMinutes: 1,
+        });
+
         const body = await req.json();
         const { priceId, email, userId, customerId, planName, amount } = body;
 
-        console.log(`[create-subscription] Starting for user: ${userId}, plan: ${planName}`);
+        validateRequired(email, "email");
+        validateRequired(userId, "userId");
 
         // 1. Get or Create Customer
         let stripeCustomerId = customerId;
         if (!stripeCustomerId) {
-            console.log('[create-subscription] Creating new customer...');
             const customer = await stripe.customers.create({
                 email,
                 metadata: { supabase_user_id: userId }
@@ -38,7 +63,6 @@ serve(async (req) => {
         if (priceId && (priceId.startsWith('price_') || priceId.startsWith('plan_'))) {
             subscriptionItem = { price: priceId };
         } else {
-            console.log('[create-subscription] Creating product/price on fly...');
             // Create Product/Price on the fly for custom plans
             const product = await stripe.products.create({ name: planName || 'Assinatura Organiza Odonto' });
             subscriptionItem = {
@@ -51,8 +75,7 @@ serve(async (req) => {
             };
         }
 
-        // 3. Create Subscription (cobrança imediata, sem trial)
-        console.log('[create-subscription] Creating subscription with immediate payment...');
+        // 3. Create Subscription (immediate payment, no trial)
         const subscription = await stripe.subscriptions.create({
             customer: stripeCustomerId,
             items: [subscriptionItem],
@@ -65,8 +88,6 @@ serve(async (req) => {
             }
         });
 
-        console.log(`[create-subscription] Subscription created: ${subscription.id}`);
-
         // 4. Extract Client Secret from PaymentIntent
         const invoice = subscription.latest_invoice as Stripe.Invoice | null;
         const paymentIntent = invoice ? (invoice.payment_intent as Stripe.PaymentIntent | null) : null;
@@ -76,12 +97,11 @@ serve(async (req) => {
 
         if (paymentIntent && paymentIntent.client_secret) {
             clientSecret = paymentIntent.client_secret;
-            console.log('[create-subscription] Using PaymentIntent for immediate payment');
         }
 
         if (!clientSecret) {
-            console.error('[create-subscription] ERROR: No client_secret found in subscription object.', JSON.stringify(subscription, null, 2));
-            throw new Error('Falha ao gerar o segredo de pagamento (Stripe retornou nulo). Verifique os logs.');
+            logError("create-subscription", "No client_secret in subscription", subscription.id);
+            throw new Error('Falha ao gerar o segredo de pagamento. Tente novamente.');
         }
 
         return new Response(
@@ -98,14 +118,6 @@ serve(async (req) => {
         );
 
     } catch (error: unknown) {
-        console.error('[create-subscription] FATAL ERROR:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno no servidor de pagamento.';
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400,
-            },
-        );
+        return createErrorResponse(error, corsHeaders, "create-subscription");
     }
 })

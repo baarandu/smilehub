@@ -169,7 +169,7 @@ export default function DentistAgentScreen() {
             const { data } = await supabase
                 .from('patients')
                 .select('id, name, phone, birth_date')
-                .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,cpf.ilike.%${searchQuery}%`)
+                .or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,cpf_last4.ilike.%${searchQuery}%`)
                 .eq('clinic_id', clinicId!)
                 .order('name')
                 .limit(10);

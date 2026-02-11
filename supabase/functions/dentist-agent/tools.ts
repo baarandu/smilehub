@@ -2,7 +2,7 @@ export const TOOLS = [
   {
     name: "get_patient_profile",
     description:
-      "Retorna dados demográficos do paciente: nome, idade (calculada), sexo, telefone, email, convênio, alergias e medicações em uso. NÃO inclui CPF/RG (LGPD). Use para contextualizar o caso clínico.",
+      "Retorna dados clínicos do paciente: nome, idade, convênio, alergias, medicações, histórico médico e observações. NÃO inclui dados de contato (LGPD). Use para contextualizar o caso clínico.",
     parameters: {
       type: "object",
       properties: {

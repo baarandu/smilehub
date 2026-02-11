@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Mic, Stethoscope } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Mic, Stethoscope, Download } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +10,7 @@ import { useAnamneses } from '@/hooks/useAnamneses';
 import { toggleReturnAlert } from '@/services/patients';
 import { toast } from 'sonner';
 import { ReportGenerationModal } from './ReportGenerationModal';
+import { PatientAiConsent } from './PatientAiConsent';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +41,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
   const [showAlertConfirm, setShowAlertConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [togglingAlert, setTogglingAlert] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [alertDays, setAlertDays] = useState('180');
 
   const getInitials = (name: string) => {
@@ -134,6 +137,29 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     }
   };
 
+  const handleExportData = async () => {
+    try {
+      setExporting(true);
+      const { data, error } = await supabase.functions.invoke('patient-data-export', {
+        body: { patientId: patient.id, clinicId: patient.clinic_id },
+      });
+      if (error) throw error;
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Dados exportados com sucesso');
+    } catch (error) {
+      toast.error('Erro ao exportar dados do paciente');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <>
       <div className="bg-card rounded-xl p-6 shadow-card border border-border animate-fade-in space-y-4">
@@ -217,6 +243,10 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   <FileText className="w-4 h-4" />
                   <span className="hidden sm:inline">Relatório</span>
                 </Button>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleExportData} disabled={exporting}>
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">{exporting ? 'Exportando...' : 'Exportar Dados'}</span>
+                </Button>
                 <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
                   <Edit className="w-4 h-4" />
                   <span className="hidden sm:inline">Editar</span>
@@ -268,6 +298,12 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
             </div>
           </div>
         </div>
+
+        {patient.clinic_id && (
+          <div className="pt-4 border-t border-border">
+            <PatientAiConsent patientId={patient.id} clinicId={patient.clinic_id} />
+          </div>
+        )}
 
         {badges.length > 0 && (
           <div className="pt-4 border-t border-border flex flex-wrap gap-2">

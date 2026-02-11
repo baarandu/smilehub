@@ -15,4 +15,5 @@ export { NewExamDialog } from './NewExamDialog';
 export { AnamneseTab } from './AnamneseTab';
 export { AnamneseSummaryDialog } from './AnamneseSummaryDialog';
 export { BudgetsTab } from './BudgetsTab';
+export { PatientAiConsent } from './PatientAiConsent';
 

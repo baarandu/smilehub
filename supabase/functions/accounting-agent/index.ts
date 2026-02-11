@@ -3,12 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { buildSystemPrompt } from "./systemPrompt.ts";
 import { TOOLS } from "./tools.ts";
 import { executeToolCall } from "./toolExecutors.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import {
+  extractBearerToken,
+  validateUUID,
+  validateRequired,
+  validateMaxLength,
+} from "../_shared/validation.ts";
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
+import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -35,22 +39,18 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 2
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsOptions(req);
   }
 
   try {
     const t0 = Date.now();
 
-    // Get auth header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-
-    // Extract JWT token from "Bearer <token>"
-    const token = authHeader.replace("Bearer ", "");
+    // Extract and validate JWT token
+    const token = extractBearerToken(req.headers.get("Authorization"));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,15 +70,30 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      throw new Error(`Unauthorized: ${userError?.message || "No user"}`);
+      throw new Error("Unauthorized");
     }
 
-    // Parse request body
+    // Rate limit: 40 requests per hour
+    await checkRateLimit(supabase, user.id, {
+      endpoint: "accounting-agent",
+      maxRequests: 40,
+      windowMinutes: 60,
+    });
+
+    // Parse and validate request body
     const { conversation_id, message, clinic_id } = await req.json();
 
-    if (!message || !clinic_id) {
-      throw new Error("Missing required fields: message, clinic_id");
-    }
+    validateRequired(message, "message");
+    validateMaxLength(message, 4000, "message");
+    validateUUID(clinic_id, "clinic_id");
+    if (conversation_id) validateUUID(conversation_id, "conversation_id");
+
+    // Check for prompt injection (log-only mode)
+    checkForInjection(message, {
+      functionName: "accounting-agent",
+      userId: user.id,
+      clinicId: clinic_id,
+    });
 
     // Verify user is admin of the clinic
     const { data: clinicUser, error: clinicUserError } = await supabase
@@ -89,7 +104,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (clinicUserError || !clinicUser || clinicUser.role !== "admin") {
-      throw new Error(`Only admins can use the accounting agent.`);
+      throw new Error("Unauthorized");
     }
 
     // Get fiscal profile for system prompt
@@ -210,14 +225,14 @@ serve(async (req) => {
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error("OpenAI API error:", errorText);
+      logError("accounting-agent", `OpenAI API error (${openaiResponse.status})`, errorText);
       if (openaiResponse.status === 429) {
         throw new Error("O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos.");
       }
       if (openaiResponse.status === 401) {
         throw new Error("Erro de configuração do serviço de IA. Contacte o suporte.");
       }
-      throw new Error(`Erro no serviço de IA. Tente novamente. (código: ${openaiResponse.status})`);
+      throw new Error("Erro no serviço de IA. Tente novamente.");
     }
 
     const openaiData = await openaiResponse.json();
@@ -329,11 +344,11 @@ serve(async (req) => {
 
       if (!secondResponse.ok) {
         const errText = await secondResponse.text();
-        console.error("Second OpenAI call error:", errText);
+        logError("accounting-agent", `Second OpenAI call error (${secondResponse.status})`, errText);
         if (secondResponse.status === 429) {
           throw new Error("O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos.");
         }
-        throw new Error(`Erro no serviço de IA. Tente novamente. (código: ${secondResponse.status})`);
+        throw new Error("Erro no serviço de IA. Tente novamente.");
       }
 
       const secondData = await secondResponse.json();
@@ -364,13 +379,6 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error in accounting-agent:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return createErrorResponse(error, corsHeaders, "accounting-agent");
   }
 });

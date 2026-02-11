@@ -1,6 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
+import { extractBearerToken } from "../_shared/validation.ts"
+import { createErrorResponse } from "../_shared/errorHandler.ts"
+import { checkRateLimit } from "../_shared/rateLimit.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -17,7 +21,26 @@ serve(async (req) => {
     }
 
     try {
-        console.log('[get-stripe-metrics] Fetching Stripe metrics...');
+        // Auth
+        const token = extractBearerToken(req.headers.get("Authorization"));
+
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+            throw new Error("Unauthorized");
+        }
+
+        // Rate limit: 20 requests per hour
+        await checkRateLimit(supabase, user.id, {
+            endpoint: "get-stripe-metrics",
+            maxRequests: 20,
+            windowMinutes: 60,
+        });
 
         // 1. Get active subscriptions for MRR calculation
         const activeSubscriptions = await stripe.subscriptions.list({
@@ -113,8 +136,6 @@ serve(async (req) => {
             limit: 100
         });
 
-        console.log('[get-stripe-metrics] Metrics calculated successfully');
-
         return new Response(
             JSON.stringify({
                 mrr: mrr / 100, // Convert from cents to currency
@@ -136,14 +157,6 @@ serve(async (req) => {
         );
 
     } catch (error: unknown) {
-        console.error('[get-stripe-metrics] ERROR:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erro ao buscar métricas do Stripe.';
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 400,
-            },
-        );
+        return createErrorResponse(error, corsHeaders, "get-stripe-metrics");
     }
 })

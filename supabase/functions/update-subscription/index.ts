@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
+import { extractBearerToken, validateUUID } from "../_shared/validation.ts"
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
+import { checkRateLimit } from "../_shared/rateLimit.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -11,7 +14,9 @@ const stripe = new Stripe(stripeKey, {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+})
 
 serve(async (req) => {
     const corsHeaders = getCorsHeaders(req);
@@ -22,10 +27,25 @@ serve(async (req) => {
     }
 
     try {
+        // Auth
+        const token = extractBearerToken(req.headers.get("Authorization"));
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+            throw new Error("Unauthorized");
+        }
+
+        // Rate limit: 10 requests per hour
+        await checkRateLimit(supabase, user.id, {
+            endpoint: "update-subscription",
+            maxRequests: 10,
+            windowMinutes: 60,
+        });
+
         const body = await req.json();
         const { clinicId, newPlanId, userId } = body;
 
-        console.log(`[update-subscription] Starting for clinic: ${clinicId}, new plan: ${newPlanId}`);
+        validateUUID(clinicId, "clinicId");
+        validateUUID(newPlanId, "newPlanId");
 
         // 1. Get current subscription from our database
         const { data: currentSub, error: subError } = await supabase
@@ -36,12 +56,8 @@ serve(async (req) => {
             .single();
 
         if (subError || !currentSub) {
-            console.error('[update-subscription] No active subscription found:', subError);
             throw new Error('Nenhuma assinatura ativa encontrada');
         }
-
-        console.log(`[update-subscription] Current subscription:`, currentSub.id);
-        console.log(`[update-subscription] Stripe subscription ID:`, currentSub.stripe_subscription_id);
 
         // 2. Get new plan details
         const { data: newPlan, error: planError } = await supabase
@@ -51,7 +67,6 @@ serve(async (req) => {
             .single();
 
         if (planError || !newPlan) {
-            console.error('[update-subscription] New plan not found:', planError);
             throw new Error('Plano nao encontrado');
         }
 
@@ -59,16 +74,9 @@ serve(async (req) => {
         const isUpgrade = newPlan.price_monthly > currentPlan.price_monthly;
         const isTrialing = currentSub.status === 'trialing';
 
-        console.log(`[update-subscription] Current plan: ${currentPlan.name} (R$${currentPlan.price_monthly/100})`);
-        console.log(`[update-subscription] New plan: ${newPlan.name} (R$${newPlan.price_monthly/100})`);
-        console.log(`[update-subscription] Is upgrade: ${isUpgrade}, Is trialing: ${isTrialing}`);
-
         // 3. Handle based on subscription state
         if (isTrialing) {
             // During trial: Just update the plan in our database
-            // The Stripe subscription doesn't have real charges yet
-            console.log('[update-subscription] Trial period - updating plan directly in database');
-
             const { error: updateError } = await supabase
                 .from('subscriptions')
                 .update({
@@ -78,7 +86,6 @@ serve(async (req) => {
                 .eq('id', currentSub.id);
 
             if (updateError) {
-                console.error('[update-subscription] Database update failed:', updateError);
                 throw new Error('Falha ao atualizar plano');
             }
 
@@ -91,9 +98,8 @@ serve(async (req) => {
                             supabase_user_id: userId
                         }
                     });
-                    console.log('[update-subscription] Stripe metadata updated');
                 } catch (stripeErr) {
-                    console.log('[update-subscription] Could not update Stripe metadata (non-fatal):', stripeErr);
+                    logError("update-subscription", "Stripe metadata update (non-fatal)", stripeErr);
                 }
             }
 
@@ -111,7 +117,6 @@ serve(async (req) => {
 
         // 4. For active (paid) subscriptions, we need to handle via Stripe
         if (!currentSub.stripe_subscription_id) {
-            console.error('[update-subscription] No Stripe subscription ID found');
             throw new Error('ID da assinatura Stripe nao encontrado. Contate o suporte.');
         }
 
@@ -126,7 +131,6 @@ serve(async (req) => {
         // Create or get price for new plan
         let newPriceId: string;
 
-        // Try to find existing Stripe price or create one
         const prices = await stripe.prices.list({
             lookup_keys: [`plan_${newPlan.slug}`],
             limit: 1
@@ -136,7 +140,6 @@ serve(async (req) => {
             newPriceId = prices.data[0].id;
         } else {
             // Create new price on-the-fly
-            console.log('[update-subscription] Creating new Stripe price for plan...');
             const product = await stripe.products.create({
                 name: newPlan.name,
                 metadata: { plan_id: newPlanId }
@@ -154,8 +157,6 @@ serve(async (req) => {
 
         if (isUpgrade) {
             // UPGRADE: Immediate change with proration
-            console.log('[update-subscription] Processing UPGRADE with proration...');
-
             const updatedSubscription = await stripe.subscriptions.update(
                 currentSub.stripe_subscription_id,
                 {
@@ -178,8 +179,6 @@ serve(async (req) => {
 
             const prorationAmount = upcomingInvoice.amount_due;
 
-            console.log(`[update-subscription] Upgrade processed. Proration: R$${prorationAmount/100}`);
-
             return new Response(
                 JSON.stringify({
                     success: true,
@@ -193,10 +192,6 @@ serve(async (req) => {
             );
         } else {
             // DOWNGRADE: Schedule for end of billing period
-            console.log('[update-subscription] Processing DOWNGRADE - scheduling for period end...');
-
-            // Use subscription_schedule to change at period end
-            // First, check if there's already a schedule
             let schedule;
 
             if (stripeSubscription.schedule) {
@@ -232,8 +227,6 @@ serve(async (req) => {
             const periodEndDate = new Date(stripeSubscription.current_period_end * 1000);
             const formattedDate = periodEndDate.toLocaleDateString('pt-BR');
 
-            console.log(`[update-subscription] Downgrade scheduled for ${formattedDate}`);
-
             // Save pending change info in our database
             await supabase
                 .from('subscriptions')
@@ -257,11 +250,6 @@ serve(async (req) => {
         }
 
     } catch (error: unknown) {
-        console.error('[update-subscription] FATAL ERROR:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno no servidor.';
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        return createErrorResponse(error, corsHeaders, "update-subscription");
     }
 })

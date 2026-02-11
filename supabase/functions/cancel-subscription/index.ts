@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
+import { extractBearerToken, validateUUID } from "../_shared/validation.ts"
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
+import { checkRateLimit } from "../_shared/rateLimit.ts"
 
 const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') ?? '';
 const stripe = new Stripe(stripeKey, {
@@ -11,7 +14,9 @@ const stripe = new Stripe(stripeKey, {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+})
 
 serve(async (req) => {
     const corsHeaders = getCorsHeaders(req);
@@ -22,10 +27,24 @@ serve(async (req) => {
     }
 
     try {
+        // Auth
+        const token = extractBearerToken(req.headers.get("Authorization"));
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+        if (userError || !user) {
+            throw new Error("Unauthorized");
+        }
+
+        // Rate limit: 5 requests per hour
+        await checkRateLimit(supabase, user.id, {
+            endpoint: "cancel-subscription",
+            maxRequests: 5,
+            windowMinutes: 60,
+        });
+
         const body = await req.json();
         const { clinicId, reason } = body;
 
-        console.log(`[cancel-subscription] Starting cancellation for clinic: ${clinicId}`);
+        validateUUID(clinicId, "clinicId");
 
         // 1. Get current subscription from our database
         const { data: currentSub, error: subError } = await supabase
@@ -36,17 +55,13 @@ serve(async (req) => {
             .single();
 
         if (subError || !currentSub) {
-            console.error('[cancel-subscription] No active subscription found:', subError);
             throw new Error('Nenhuma assinatura ativa encontrada');
         }
-
-        console.log(`[cancel-subscription] Current subscription ID: ${currentSub.id}`);
-        console.log(`[cancel-subscription] Stripe subscription ID: ${currentSub.stripe_subscription_id}`);
 
         // 2. Cancel on Stripe (at period end)
         if (currentSub.stripe_subscription_id) {
             try {
-                const canceledSubscription = await stripe.subscriptions.update(
+                await stripe.subscriptions.update(
                     currentSub.stripe_subscription_id,
                     {
                         cancel_at_period_end: true,
@@ -56,11 +71,8 @@ serve(async (req) => {
                         }
                     }
                 );
-
-                console.log(`[cancel-subscription] Stripe subscription marked for cancellation at period end`);
-                console.log(`[cancel-subscription] Period end: ${new Date(canceledSubscription.current_period_end * 1000).toISOString()}`);
             } catch (stripeError) {
-                console.error('[cancel-subscription] Stripe cancellation error:', stripeError);
+                logError("cancel-subscription", "Stripe cancellation error", stripeError);
                 throw new Error('Erro ao cancelar no Stripe. Contate o suporte.');
             }
         }
@@ -75,7 +87,7 @@ serve(async (req) => {
             .eq('id', currentSub.id);
 
         if (updateError) {
-            console.error('[cancel-subscription] Database update error:', updateError);
+            logError("cancel-subscription", "Database update error", updateError);
             throw new Error('Erro ao atualizar banco de dados');
         }
 
@@ -84,8 +96,6 @@ serve(async (req) => {
             ? new Date(currentSub.current_period_end)
             : new Date();
         const formattedDate = periodEndDate.toLocaleDateString('pt-BR');
-
-        console.log(`[cancel-subscription] Cancellation complete. Access until: ${formattedDate}`);
 
         return new Response(
             JSON.stringify({
@@ -97,11 +107,6 @@ serve(async (req) => {
         );
 
     } catch (error: unknown) {
-        console.error('[cancel-subscription] FATAL ERROR:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erro interno no servidor.';
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        return createErrorResponse(error, corsHeaders, "cancel-subscription");
     }
 })

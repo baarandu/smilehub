@@ -2,13 +2,37 @@ interface ToolArgs {
   [key: string]: any;
 }
 
+// Decrypt patient CPFs from PostgREST join (patients table stores encrypted values)
+async function resolveEncryptedPatientCpfs(supabase: any, transactions: any[]): Promise<void> {
+  const patientIds = [...new Set(
+    transactions
+      .filter((t: any) => t.payer_is_patient && t.patient_id)
+      .map((t: any) => t.patient_id)
+  )];
+  if (patientIds.length === 0) return;
+
+  const { data: patients } = await supabase
+    .from('patients_secure')
+    .select('id, cpf')
+    .in('id', patientIds);
+
+  if (!patients) return;
+  const cpfMap = new Map(patients.map((p: any) => [p.id, p.cpf]));
+
+  for (const t of transactions) {
+    if (t.payer_is_patient && t.patients && t.patient_id) {
+      const decryptedCpf = cpfMap.get(t.patient_id);
+      if (decryptedCpf !== undefined) t.patients.cpf = decryptedCpf;
+    }
+  }
+}
+
 export async function executeToolCall(
   toolName: string,
   args: ToolArgs,
   clinicId: string,
   supabase: any
 ): Promise<any> {
-  console.log(`Executing tool: ${toolName}`, args);
 
   switch (toolName) {
     case "get_monthly_summary":
@@ -85,8 +109,7 @@ async function executeGetMonthlySummary(
   });
 
   if (error) {
-    console.error("Error in get_monthly_summary:", error);
-    throw new Error(`Erro ao buscar resumo mensal: ${error.message}`);
+    throw new Error("Erro ao buscar resumo mensal.");
   }
 
   return data;
@@ -106,8 +129,7 @@ async function executeValidateBookkeeping(
   });
 
   if (error) {
-    console.error("Error in validate_bookkeeping:", error);
-    throw new Error(`Erro ao validar lançamentos: ${error.message}`);
+    throw new Error("Erro ao validar lançamentos.");
   }
 
   return data;
@@ -309,8 +331,7 @@ async function executeCalculateFactorR(
   });
 
   if (error) {
-    console.error("Error in calculate_factor_r:", error);
-    throw new Error(`Erro ao calcular Fator R: ${error.message}`);
+    throw new Error("Erro ao calcular Fator R.");
   }
 
   return data;
@@ -331,8 +352,7 @@ async function executeCalculateSimplesTax(
   });
 
   if (error) {
-    console.error("Error in calculate_simples_tax:", error);
-    throw new Error(`Erro ao calcular DAS: ${error.message}`);
+    throw new Error("Erro ao calcular DAS.");
   }
 
   return data;
@@ -511,8 +531,7 @@ async function executeSearchTransactions(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error in search_transactions:", error);
-    throw new Error(`Erro ao buscar transações: ${error.message}`);
+    throw new Error("Erro ao buscar transações.");
   }
 
   const transactions = data || [];
@@ -574,8 +593,8 @@ async function executeCompareMonths(
       .lte("date", endB),
   ]);
 
-  if (resA.error) throw new Error(`Erro mês A: ${resA.error.message}`);
-  if (resB.error) throw new Error(`Erro mês B: ${resB.error.message}`);
+  if (resA.error) throw new Error("Erro ao buscar dados do mês A.");
+  if (resB.error) throw new Error("Erro ao buscar dados do mês B.");
 
   function summarizeMonth(transactions: any[]) {
     const income = transactions.filter((t: any) => t.type === "income");
@@ -665,7 +684,6 @@ async function executeGetPendingTransactions(
 
     const { data, error } = await query;
     if (error) {
-      console.error(`Error fetching ${it}:`, error);
       results[it] = [];
       continue;
     }
@@ -705,8 +723,7 @@ async function executeGetTopExpenses(
     .lte("date", end_date);
 
   if (error) {
-    console.error("Error in get_top_expenses:", error);
-    throw new Error(`Erro ao buscar despesas: ${error.message}`);
+    throw new Error("Erro ao buscar despesas.");
   }
 
   const transactions = data || [];
@@ -761,8 +778,7 @@ async function executeGetRevenueByPaymentMethod(
     .lte("date", end_date);
 
   if (error) {
-    console.error("Error in get_revenue_by_payment_method:", error);
-    throw new Error(`Erro ao buscar receitas: ${error.message}`);
+    throw new Error("Erro ao buscar receitas.");
   }
 
   const transactions = data || [];
@@ -840,8 +856,7 @@ async function executeGetFiscalDeadlines(
     .order("due_date", { ascending: true });
 
   if (error) {
-    console.error("Error in get_fiscal_deadlines:", error);
-    throw new Error(`Erro ao buscar prazos: ${error.message}`);
+    throw new Error("Erro ao buscar prazos.");
   }
 
   const reminders = (data || []).map((r: any) => {
@@ -886,8 +901,7 @@ async function executeGetFiscalProfile(
     .single();
 
   if (error && error.code !== "PGRST116") {
-    console.error("Error in get_fiscal_profile:", error);
-    throw new Error(`Erro ao buscar perfil fiscal: ${error.message}`);
+    throw new Error("Erro ao buscar perfil fiscal.");
   }
 
   if (!data) {
@@ -941,18 +955,18 @@ async function executeGetIRAnnualSummary(
   // Fetch transactions with joins
   const { data: transactions, error } = await supabase
     .from("financial_transactions")
-    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, patients(name, cpf), pj_sources(*)")
+    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, patient_id, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, patients(name, cpf), pj_sources(*)")
     .eq("clinic_id", clinicId)
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true });
 
   if (error) {
-    console.error("Error in get_ir_annual_summary:", error);
-    throw new Error(`Erro ao buscar transações do IR: ${error.message}`);
+    throw new Error("Erro ao buscar transações do IR.");
   }
 
   const txs = transactions || [];
+  await resolveEncryptedPatientCpfs(supabase, txs);
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -1116,18 +1130,18 @@ async function executeValidateIRData(
   // Fetch transactions
   const { data: transactions, error } = await supabase
     .from("financial_transactions")
-    .select("id, date, description, amount, type, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf)")
+    .select("id, date, description, amount, type, payer_type, payer_name, payer_cpf, payer_is_patient, patient_id, pj_source_id, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf)")
     .eq("clinic_id", clinicId)
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true });
 
   if (error) {
-    console.error("Error in validate_ir_data:", error);
-    throw new Error(`Erro ao validar dados do IR: ${error.message}`);
+    throw new Error("Erro ao validar dados do IR.");
   }
 
   const txs = transactions || [];
+  await resolveEncryptedPatientCpfs(supabase, txs);
 
   for (const t of txs) {
     // Income validations
@@ -1245,8 +1259,7 @@ async function executeGetPJSources(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error in get_pj_sources:", error);
-    throw new Error(`Erro ao buscar fontes PJ: ${error.message}`);
+    throw new Error("Erro ao buscar fontes PJ.");
   }
 
   const sources = data || [];
@@ -1436,7 +1449,7 @@ async function executeGetIRTransactions(
 
   let query = supabase
     .from("financial_transactions")
-    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf), pj_sources(id, name, razao_social, nome_fantasia, cnpj)")
+    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, patient_id, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf), pj_sources(id, name, razao_social, nome_fantasia, cnpj)")
     .eq("clinic_id", clinicId)
     .gte("date", startDate)
     .lte("date", endDate)
@@ -1447,11 +1460,11 @@ async function executeGetIRTransactions(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error in get_ir_transactions:", error);
-    throw new Error(`Erro ao buscar transações IR: ${error.message}`);
+    throw new Error("Erro ao buscar transações IR.");
   }
 
   let txs = data || [];
+  await resolveEncryptedPatientCpfs(supabase, txs);
 
   // Filter by payer_type
   if (payer_type === "PF") {

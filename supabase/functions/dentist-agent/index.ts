@@ -3,12 +3,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { buildSystemPrompt } from "./systemPrompt.ts";
 import { TOOLS } from "./tools.ts";
 import { executeToolCall } from "./toolExecutors.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
+import {
+  extractBearerToken,
+  validateUUID,
+  validateRequired,
+  validateMaxLength,
+  validateImageUrls,
+} from "../_shared/validation.ts";
+import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
+import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { checkAiConsent } from "../_shared/consent.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -103,21 +109,18 @@ function calculateAge(birthDate: string): number {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsOptions(req);
   }
 
   try {
     const t0 = Date.now();
 
-    // Get auth header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-
-    const token = authHeader.replace("Bearer ", "");
+    // Extract and validate JWT token
+    const token = extractBearerToken(req.headers.get("Authorization"));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -136,16 +139,33 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      throw new Error(`Unauthorized: ${userError?.message || "No user"}`);
+      throw new Error("Unauthorized");
     }
 
-    // Parse request body
+    // Rate limit: 100 requests per hour
+    await checkRateLimit(supabase, user.id, {
+      endpoint: "dentist-agent",
+      maxRequests: 100,
+      windowMinutes: 60,
+    });
+
+    // Parse and validate request body
     const { conversation_id, message, clinic_id, patient_id, image_urls } =
       await req.json();
 
-    if (!message || !clinic_id) {
-      throw new Error("Missing required fields: message, clinic_id");
-    }
+    validateRequired(message, "message");
+    validateMaxLength(message, 4000, "message");
+    validateUUID(clinic_id, "clinic_id");
+    if (conversation_id) validateUUID(conversation_id, "conversation_id");
+    if (patient_id) validateUUID(patient_id, "patient_id");
+    const validatedImageUrls = validateImageUrls(image_urls);
+
+    // Check for prompt injection (log-only mode)
+    checkForInjection(message, {
+      functionName: "dentist-agent",
+      userId: user.id,
+      clinicId: clinic_id,
+    });
 
     // Verify user is dentist or admin of the clinic
     const { data: clinicUser, error: clinicUserError } = await supabase
@@ -160,12 +180,29 @@ serve(async (req) => {
       !clinicUser ||
       !["admin", "dentist"].includes(clinicUser.role)
     ) {
-      throw new Error("Apenas dentistas e administradores podem usar o Dentista IA.");
+      throw new Error("Unauthorized");
     }
 
     // Pre-fetch patient context if patient_id provided
     let patientSummary: string | undefined;
     if (patient_id) {
+      // Check AI consent before loading patient data (LGPD Art. 6-7)
+      const hasConsent = await checkAiConsent(supabase, patient_id, clinic_id);
+      if (!hasConsent) {
+        return new Response(
+          JSON.stringify({
+            response: "Este paciente ainda não consentiu com a análise de dados por IA. " +
+              "Para utilizar o assistente com contexto do paciente, registre o consentimento " +
+              "na ficha do paciente em 'Consentimento IA'.",
+            consent_required: true,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("name, birth_date, allergies, medications, health_insurance")
@@ -174,7 +211,7 @@ serve(async (req) => {
         .single();
 
       if (patientError) {
-        console.error("Error fetching patient:", patientError);
+        logError("dentist-agent", "Error fetching patient context", patientError.message);
       }
 
       if (patientData) {
@@ -234,7 +271,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         role: "user",
         content: message,
-        image_urls: image_urls?.length ? image_urls : null,
+        image_urls: validatedImageUrls.length ? validatedImageUrls : null,
       });
 
     if (saveUserMsgError) throw saveUserMsgError;
@@ -303,12 +340,12 @@ serve(async (req) => {
     openaiMessages.push(systemMsg, ...historyMsgs);
 
     // Add current user message (with images if present)
-    if (image_urls?.length) {
+    if (validatedImageUrls.length) {
       openaiMessages.push({
         role: "user",
         content: [
           { type: "text", text: message },
-          ...image_urls.map((url: string) => ({
+          ...validatedImageUrls.map((url: string) => ({
             type: "image_url",
             image_url: { url, detail: "high" },
           })),
@@ -349,7 +386,7 @@ serve(async (req) => {
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error("OpenAI API error:", errorText);
+      logError("dentist-agent", `OpenAI API error (${openaiResponse.status})`, errorText);
       if (openaiResponse.status === 429) {
         throw new Error(
           "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
@@ -360,9 +397,7 @@ serve(async (req) => {
           "Erro de configuração do serviço de IA. Contacte o suporte."
         );
       }
-      throw new Error(
-        `Erro no serviço de IA. Tente novamente. (código: ${openaiResponse.status})`
-      );
+      throw new Error("Erro no serviço de IA. Tente novamente.");
     }
 
     const openaiData = await openaiResponse.json();
@@ -498,15 +533,13 @@ serve(async (req) => {
 
       if (!secondResponse.ok) {
         const errText = await secondResponse.text();
-        console.error("Second OpenAI call error:", errText);
+        logError("dentist-agent", `Second OpenAI call error (${secondResponse.status})`, errText);
         if (secondResponse.status === 429) {
           throw new Error(
             "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
           );
         }
-        throw new Error(
-          `Erro no serviço de IA. Tente novamente. (código: ${secondResponse.status})`
-        );
+        throw new Error("Erro no serviço de IA. Tente novamente.");
       }
 
       const secondData = await secondResponse.json();
@@ -535,10 +568,6 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
-    console.error("Error in dentist-agent:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return createErrorResponse(error, corsHeaders, "dentist-agent");
   }
 });

@@ -134,7 +134,7 @@ export default function VoiceConsultation() {
 
     const loadPatient = async () => {
       const { data } = await supabase
-        .from('patients')
+        .from('patients_secure')
         .select('*')
         .eq('id', queryPatientId)
         .single();
