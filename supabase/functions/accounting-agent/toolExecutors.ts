@@ -47,6 +47,25 @@ export async function executeToolCall(
     case "get_fiscal_deadlines":
       return await executeGetFiscalDeadlines(args, clinicId, supabase);
 
+    // IR Tools (13-18)
+    case "get_fiscal_profile":
+      return await executeGetFiscalProfile(args, clinicId, supabase);
+
+    case "get_ir_annual_summary":
+      return await executeGetIRAnnualSummary(args, clinicId, supabase);
+
+    case "validate_ir_data":
+      return await executeValidateIRData(args, clinicId, supabase);
+
+    case "get_pj_sources":
+      return await executeGetPJSources(args, clinicId, supabase);
+
+    case "check_missing_documents":
+      return await executeCheckMissingDocuments(args, clinicId, supabase);
+
+    case "get_ir_transactions":
+      return await executeGetIRTransactions(args, clinicId, supabase);
+
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }
@@ -846,6 +865,670 @@ async function executeGetFiscalDeadlines(
       total: reminders.length,
       urgent: reminders.filter((r: any) => r.urgency === "urgente").length,
       upcoming: reminders.filter((r: any) => r.urgency === "proximo").length,
+    },
+  };
+}
+
+// ═══════════════════════════════════════════
+// IMPOSTO DE RENDA (IR) — Tools 13-18
+// ═══════════════════════════════════════════
+
+// Tool 13: Get Fiscal Profile
+async function executeGetFiscalProfile(
+  _args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const { data, error } = await supabase
+    .from("fiscal_profiles")
+    .select("*")
+    .eq("clinic_id", clinicId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("Error in get_fiscal_profile:", error);
+    throw new Error(`Erro ao buscar perfil fiscal: ${error.message}`);
+  }
+
+  if (!data) {
+    return {
+      configured: false,
+      message: "Perfil fiscal não configurado. Configure em Financeiro > Imposto de Renda > Perfil Fiscal.",
+    };
+  }
+
+  const regimeLabels: { [key: string]: string } = {
+    simples_nacional: "Simples Nacional",
+    lucro_presumido: "Lucro Presumido",
+    lucro_real: "Lucro Real",
+    pf: "Pessoa Física",
+  };
+
+  return {
+    configured: true,
+    pf: {
+      active: data.pf_active || false,
+      cpf: data.cpf || null,
+      cro: data.cro || null,
+      cro_state: data.cro_state || null,
+    },
+    pj: {
+      active: data.pj_active !== false,
+      cnpj: data.cnpj || null,
+      razao_social: data.razao_social || null,
+      nome_fantasia: data.nome_fantasia || null,
+    },
+    tax_regime: data.tax_regime || null,
+    tax_regime_label: regimeLabels[data.tax_regime] || null,
+    simples: {
+      anexo: data.simples_anexo || null,
+      fator_r_current: data.fator_r_current || null,
+    },
+    summary: `Regime: ${regimeLabels[data.tax_regime] || "Não definido"}. PF: ${data.pf_active ? "Ativa" : "Inativa"}. PJ: ${data.pj_active !== false ? "Ativa" : "Inativa"}.`,
+  };
+}
+
+// Tool 14: Get IR Annual Summary
+async function executeGetIRAnnualSummary(
+  args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const { year } = args;
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+
+  // Fetch transactions with joins
+  const { data: transactions, error } = await supabase
+    .from("financial_transactions")
+    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, patients(name, cpf), pj_sources(*)")
+    .eq("clinic_id", clinicId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("Error in get_ir_annual_summary:", error);
+    throw new Error(`Erro ao buscar transações do IR: ${error.message}`);
+  }
+
+  const txs = transactions || [];
+  const monthNames = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+  ];
+
+  // Build monthly summary
+  const monthly = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    month_name: monthNames[i],
+    income_pf: 0,
+    income_pj: 0,
+    income_total: 0,
+    irrf_total: 0,
+    expenses_deductible: 0,
+  }));
+
+  const payersPF: { [cpf: string]: { cpf: string; name: string; total_amount: number; transaction_count: number } } = {};
+  const payersPJ: { [cnpj: string]: { cnpj: string; razao_social: string; nome_fantasia: string | null; total_amount: number; irrf_total: number; transaction_count: number } } = {};
+  const expensesByCategory: { [cat: string]: { category: string; total_amount: number; transaction_count: number } } = {};
+
+  let totalIncomePF = 0;
+  let totalIncomePJ = 0;
+  let totalIRRF = 0;
+  let totalExpensesDeductible = 0;
+
+  for (const t of txs) {
+    const txMonth = new Date(t.date).getMonth(); // 0-based
+
+    if (t.type === "income") {
+      const isPJ = t.payer_type === "PJ" || !!t.pj_source_id;
+      const isPF = !isPJ;
+
+      if (isPF) {
+        monthly[txMonth].income_pf += t.amount || 0;
+        totalIncomePF += t.amount || 0;
+
+        // Track PF payer
+        const cpf = t.payer_is_patient ? t.patients?.cpf : t.payer_cpf;
+        const name = t.payer_is_patient ? t.patients?.name : t.payer_name;
+        const cpfKey = cpf || "sem_cpf";
+        if (!payersPF[cpfKey]) {
+          payersPF[cpfKey] = { cpf: cpf || "", name: name || "Não informado", total_amount: 0, transaction_count: 0 };
+        }
+        payersPF[cpfKey].total_amount += t.amount || 0;
+        payersPF[cpfKey].transaction_count += 1;
+      } else {
+        monthly[txMonth].income_pj += t.amount || 0;
+        totalIncomePJ += t.amount || 0;
+
+        // Track PJ payer
+        if (t.pj_sources) {
+          const cnpj = t.pj_sources.cnpj || "sem_cnpj";
+          if (!payersPJ[cnpj]) {
+            payersPJ[cnpj] = {
+              cnpj: t.pj_sources.cnpj || "",
+              razao_social: t.pj_sources.razao_social || t.pj_sources.name || "Não informado",
+              nome_fantasia: t.pj_sources.nome_fantasia || null,
+              total_amount: 0,
+              irrf_total: 0,
+              transaction_count: 0,
+            };
+          }
+          payersPJ[cnpj].total_amount += t.amount || 0;
+          payersPJ[cnpj].irrf_total += t.irrf_amount || 0;
+          payersPJ[cnpj].transaction_count += 1;
+        }
+      }
+
+      monthly[txMonth].income_total += t.amount || 0;
+      monthly[txMonth].irrf_total += t.irrf_amount || 0;
+      totalIRRF += t.irrf_amount || 0;
+    }
+
+    if (t.type === "expense" && t.is_deductible) {
+      monthly[txMonth].expenses_deductible += t.amount || 0;
+      totalExpensesDeductible += t.amount || 0;
+
+      const cat = t.category || "sem_categoria";
+      if (!expensesByCategory[cat]) {
+        expensesByCategory[cat] = { category: cat, total_amount: 0, transaction_count: 0 };
+      }
+      expensesByCategory[cat].total_amount += t.amount || 0;
+      expensesByCategory[cat].transaction_count += 1;
+    }
+  }
+
+  // Round monthly values
+  for (const m of monthly) {
+    m.income_pf = Math.round(m.income_pf * 100) / 100;
+    m.income_pj = Math.round(m.income_pj * 100) / 100;
+    m.income_total = Math.round(m.income_total * 100) / 100;
+    m.irrf_total = Math.round(m.irrf_total * 100) / 100;
+    m.expenses_deductible = Math.round(m.expenses_deductible * 100) / 100;
+  }
+
+  const totalIncome = totalIncomePF + totalIncomePJ;
+
+  return {
+    year,
+    total_income_pf: Math.round(totalIncomePF * 100) / 100,
+    total_income_pj: Math.round(totalIncomePJ * 100) / 100,
+    total_income: Math.round(totalIncome * 100) / 100,
+    total_irrf: Math.round(totalIRRF * 100) / 100,
+    total_expenses_deductible: Math.round(totalExpensesDeductible * 100) / 100,
+    net_result: Math.round((totalIncome - totalExpensesDeductible) * 100) / 100,
+    monthly,
+    payers_pf: Object.values(payersPF)
+      .map(p => ({ ...p, total_amount: Math.round(p.total_amount * 100) / 100 }))
+      .sort((a, b) => b.total_amount - a.total_amount),
+    payers_pj: Object.values(payersPJ)
+      .map(p => ({
+        ...p,
+        total_amount: Math.round(p.total_amount * 100) / 100,
+        irrf_total: Math.round(p.irrf_total * 100) / 100,
+      }))
+      .sort((a, b) => b.total_amount - a.total_amount),
+    expenses_by_category: Object.values(expensesByCategory)
+      .map(e => ({ ...e, total_amount: Math.round(e.total_amount * 100) / 100 }))
+      .sort((a, b) => b.total_amount - a.total_amount),
+    summary: `IR ${year}: Receita total R$ ${Math.round(totalIncome * 100) / 100} (PF: R$ ${Math.round(totalIncomePF * 100) / 100}, PJ: R$ ${Math.round(totalIncomePJ * 100) / 100}). IRRF retido: R$ ${Math.round(totalIRRF * 100) / 100}. Despesas dedutíveis: R$ ${Math.round(totalExpensesDeductible * 100) / 100}.`,
+  };
+}
+
+// Tool 15: Validate IR Data
+async function executeValidateIRData(
+  args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const { year } = args;
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+
+  const issues: {
+    type: string;
+    severity: string;
+    transaction_id: string | null;
+    transaction_date: string | null;
+    transaction_description: string | null;
+    message: string;
+  }[] = [];
+
+  // Check fiscal profile
+  const { data: profile } = await supabase
+    .from("fiscal_profiles")
+    .select("*")
+    .eq("clinic_id", clinicId)
+    .single();
+
+  if (!profile || (!profile.pf_active && profile.pj_active === false)) {
+    issues.push({
+      type: "missing_fiscal_profile",
+      severity: "error",
+      transaction_id: null,
+      transaction_date: null,
+      transaction_description: null,
+      message: "Perfil fiscal não configurado ou sem PF/PJ ativa. Configure em Financeiro > IR > Perfil Fiscal.",
+    });
+  }
+
+  // Fetch transactions
+  const { data: transactions, error } = await supabase
+    .from("financial_transactions")
+    .select("id, date, description, amount, type, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf)")
+    .eq("clinic_id", clinicId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("Error in validate_ir_data:", error);
+    throw new Error(`Erro ao validar dados do IR: ${error.message}`);
+  }
+
+  const txs = transactions || [];
+
+  for (const t of txs) {
+    // Income validations
+    if (t.type === "income") {
+      const isPF = t.payer_type === "PF" || (t.payer_is_patient && !t.pj_source_id);
+
+      if (isPF) {
+        // Check missing CPF
+        const cpf = t.payer_is_patient ? t.patients?.cpf : t.payer_cpf;
+        if (!cpf) {
+          issues.push({
+            type: "missing_payer_cpf",
+            severity: "warning",
+            transaction_id: t.id,
+            transaction_date: t.date,
+            transaction_description: t.description,
+            message: `Receita PF de R$ ${t.amount} sem CPF do pagador.`,
+          });
+        }
+
+        // Check missing name
+        const name = t.payer_is_patient ? t.patients?.name : t.payer_name;
+        if (!name) {
+          issues.push({
+            type: "missing_payer_name",
+            severity: "warning",
+            transaction_id: t.id,
+            transaction_date: t.date,
+            transaction_description: t.description,
+            message: `Receita PF de R$ ${t.amount} sem nome do pagador.`,
+          });
+        }
+      }
+
+      // Check PJ without source
+      if (t.payer_type === "PJ" && !t.pj_source_id) {
+        issues.push({
+          type: "missing_pj_source",
+          severity: "warning",
+          transaction_id: t.id,
+          transaction_date: t.date,
+          transaction_description: t.description,
+          message: `Receita PJ de R$ ${t.amount} sem fonte pagadora vinculada.`,
+        });
+      }
+    }
+
+    // Expense validations (deductible only)
+    if (t.type === "expense" && t.is_deductible) {
+      if (!t.supplier_name && !t.supplier_cpf_cnpj) {
+        issues.push({
+          type: "missing_supplier_data",
+          severity: "warning",
+          transaction_id: t.id,
+          transaction_date: t.date,
+          transaction_description: t.description,
+          message: `Despesa dedutível de R$ ${t.amount} sem dados do fornecedor.`,
+        });
+      }
+
+      if (!t.receipt_number && !t.receipt_attachment_url) {
+        issues.push({
+          type: "missing_receipt",
+          severity: "warning",
+          transaction_id: t.id,
+          transaction_date: t.date,
+          transaction_description: t.description,
+          message: `Despesa dedutível de R$ ${t.amount} sem comprovante/recibo.`,
+        });
+      }
+    }
+  }
+
+  // Limit to 50 issues to save tokens
+  const limitedIssues = issues.slice(0, 50);
+
+  // Summary by type
+  const summaryByType: { [key: string]: number } = {};
+  for (const issue of issues) {
+    summaryByType[issue.type] = (summaryByType[issue.type] || 0) + 1;
+  }
+
+  return {
+    year,
+    total_transactions: txs.length,
+    total_issues: issues.length,
+    issues_shown: limitedIssues.length,
+    issues: limitedIssues,
+    summary_by_type: summaryByType,
+    has_errors: issues.some(i => i.severity === "error"),
+    summary: issues.length === 0
+      ? `Nenhum problema encontrado nos dados do IR ${year}. Tudo OK!`
+      : `Encontrados ${issues.length} problemas nos dados do IR ${year}: ${Object.entries(summaryByType).map(([k, v]) => `${v} ${k}`).join(", ")}.`,
+  };
+}
+
+// Tool 16: Get PJ Sources
+async function executeGetPJSources(
+  args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const activeOnly = args.active_only !== false; // default true
+
+  let query = supabase
+    .from("pj_sources")
+    .select("id, name, razao_social, nome_fantasia, cnpj, is_active, created_at")
+    .eq("clinic_id", clinicId)
+    .order("name", { ascending: true });
+
+  if (activeOnly) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error in get_pj_sources:", error);
+    throw new Error(`Erro ao buscar fontes PJ: ${error.message}`);
+  }
+
+  const sources = data || [];
+
+  return {
+    sources,
+    summary: {
+      total: sources.length,
+      active: sources.filter((s: any) => s.is_active).length,
+      inactive: sources.filter((s: any) => !s.is_active).length,
+      with_cnpj: sources.filter((s: any) => !!s.cnpj).length,
+      without_cnpj: sources.filter((s: any) => !s.cnpj).length,
+    },
+  };
+}
+
+// Tool 17: Check Missing Documents
+async function executeCheckMissingDocuments(
+  args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const { fiscal_year, category: filterCategory } = args;
+
+  // Get fiscal profile for regime
+  const { data: profile } = await supabase
+    .from("fiscal_profiles")
+    .select("tax_regime, pf_active, pj_active")
+    .eq("clinic_id", clinicId)
+    .single();
+
+  const regime = profile?.tax_regime || "simples_nacional";
+
+  // Hardcoded checklist (replicates FISCAL_DOCUMENTS_CHECKLIST)
+  const checklist = [
+    // Identificação
+    { category: "identificacao", subcategory: "cpf_rg", label: "CPF e RG", required: true, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "once" },
+    { category: "identificacao", subcategory: "cro", label: "CRO (registro profissional)", required: true, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "once" },
+    { category: "identificacao", subcategory: "cnpj", label: "Cartão CNPJ", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "once" },
+    { category: "identificacao", subcategory: "contrato_social", label: "Contrato Social / Última alteração", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "once" },
+    { category: "identificacao", subcategory: "alvara", label: "Alvará de Funcionamento", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "identificacao", subcategory: "certificado_digital", label: "Certificado Digital (e-CNPJ/e-CPF)", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "identificacao", subcategory: "comprovante_endereco", label: "Comprovante de Endereço", required: true, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    // Rendimentos
+    { category: "rendimentos", subcategory: "livro_caixa", label: "Livro-Caixa", required: true, regimes: ["pf"], frequency: "monthly" },
+    { category: "rendimentos", subcategory: "nfse", label: "Notas Fiscais de Serviço (NFS-e)", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "rendimentos", subcategory: "informe_convenios", label: "Informes de Rendimentos (Convênios)", required: true, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "rendimentos", subcategory: "extrato_bancario", label: "Extratos Bancários", required: true, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "rendimentos", subcategory: "extrato_maquininha", label: "Extrato da Maquininha de Cartão", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "rendimentos", subcategory: "recibos_pacientes", label: "Recibos Emitidos para Pacientes", required: true, regimes: ["pf"], frequency: "monthly" },
+    // Despesas
+    { category: "despesas", subcategory: "aluguel", label: "Recibos/Contrato de Aluguel", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "despesas", subcategory: "contas_consumo", label: "Contas de Consumo (energia, água, internet)", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "despesas", subcategory: "material_odontologico", label: "Notas de Material Odontológico", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "despesas", subcategory: "laboratorio", label: "Notas de Laboratório (próteses)", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "despesas", subcategory: "cursos", label: "Comprovantes de Cursos/Congressos", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "despesas", subcategory: "seguros", label: "Apólices de Seguro", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    // Folha de pagamento
+    { category: "folha_pagamento", subcategory: "folha", label: "Folha de Pagamento", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "folha_pagamento", subcategory: "fgts", label: "Guias de FGTS", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "folha_pagamento", subcategory: "inss_folha", label: "GPS/INSS sobre folha", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "folha_pagamento", subcategory: "pro_labore", label: "Recibos de Pró-Labore", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "folha_pagamento", subcategory: "rais", label: "RAIS", required: true, regimes: ["simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "folha_pagamento", subcategory: "dirf", label: "DIRF", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "annual" },
+    // Impostos
+    { category: "impostos", subcategory: "carne_leao", label: "Carnê-Leão (DARFs)", required: true, regimes: ["pf"], frequency: "monthly" },
+    { category: "impostos", subcategory: "inss_autonomo", label: "INSS Autônomo (GPS)", required: true, regimes: ["pf"], frequency: "monthly" },
+    { category: "impostos", subcategory: "das", label: "DAS (Simples Nacional)", required: true, regimes: ["simples"], frequency: "monthly" },
+    { category: "impostos", subcategory: "darf_irpj", label: "DARF IRPJ", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "quarterly" },
+    { category: "impostos", subcategory: "darf_csll", label: "DARF CSLL", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "quarterly" },
+    { category: "impostos", subcategory: "pis_cofins", label: "PIS/COFINS", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "monthly" },
+    { category: "impostos", subcategory: "iss", label: "ISS Municipal", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "monthly" },
+    // Bens e direitos
+    { category: "bens_direitos", subcategory: "imoveis", label: "Escrituras/Contratos de Imóveis", required: false, regimes: ["pf"], frequency: "once" },
+    { category: "bens_direitos", subcategory: "veiculos", label: "Documentos de Veículos", required: false, regimes: ["pf"], frequency: "once" },
+    { category: "bens_direitos", subcategory: "equipamentos", label: "Notas de Equipamentos (patrimônio)", required: false, regimes: ["pf", "simples", "lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "bens_direitos", subcategory: "investimentos", label: "Informes de Investimentos", required: false, regimes: ["pf"], frequency: "annual" },
+    { category: "bens_direitos", subcategory: "saldos_bancarios", label: "Saldos Bancários em 31/12", required: true, regimes: ["pf"], frequency: "annual" },
+    // Dívidas
+    { category: "dividas", subcategory: "financiamentos", label: "Contratos de Financiamento", required: false, regimes: ["pf"], frequency: "annual" },
+    // Dependentes
+    { category: "dependentes", subcategory: "cpf_dependentes", label: "CPF dos Dependentes", required: false, regimes: ["pf"], frequency: "once" },
+    { category: "dependentes", subcategory: "certidao_nascimento", label: "Certidões de Nascimento/Casamento", required: false, regimes: ["pf"], frequency: "once" },
+    { category: "dependentes", subcategory: "despesas_medicas_dep", label: "Despesas Médicas dos Dependentes", required: false, regimes: ["pf"], frequency: "annual" },
+    { category: "dependentes", subcategory: "despesas_educacao_dep", label: "Despesas com Educação dos Dependentes", required: false, regimes: ["pf"], frequency: "annual" },
+    // Específicos por regime
+    { category: "especificos", subcategory: "defis", label: "DEFIS (Declaração Anual do Simples)", required: true, regimes: ["simples"], frequency: "annual" },
+    { category: "especificos", subcategory: "faturamento_mensal", label: "Relatório de Faturamento Mensal", required: true, regimes: ["simples"], frequency: "monthly" },
+    { category: "especificos", subcategory: "balancete", label: "Balancete Mensal", required: true, regimes: ["lucro_presumido"], frequency: "monthly" },
+    { category: "especificos", subcategory: "dre", label: "DRE (Demonstração do Resultado)", required: true, regimes: ["lucro_presumido"], frequency: "quarterly" },
+    { category: "especificos", subcategory: "ecf", label: "ECF (Escrituração Contábil Fiscal)", required: true, regimes: ["lucro_presumido", "lucro_real"], frequency: "annual" },
+    { category: "especificos", subcategory: "livro_diario", label: "Livro Diário", required: true, regimes: ["lucro_real"], frequency: "annual" },
+    { category: "especificos", subcategory: "lalur", label: "LALUR / LACS", required: true, regimes: ["lucro_real"], frequency: "annual" },
+  ];
+
+  // Map regime name for filtering
+  const regimeMap: { [key: string]: string } = {
+    simples_nacional: "simples",
+    lucro_presumido: "lucro_presumido",
+    lucro_real: "lucro_real",
+    pf: "pf",
+  };
+  const regimeKey = regimeMap[regime] || "simples";
+
+  // Filter checklist by regime and optional category
+  let filtered = checklist.filter(item => item.regimes.includes(regimeKey) || item.regimes.includes("all"));
+  if (filterCategory) {
+    filtered = filtered.filter(item => item.category === filterCategory);
+  }
+
+  // Get uploaded documents
+  const { data: documents } = await supabase
+    .from("fiscal_documents")
+    .select("category, subcategory, reference_month, uploaded_at")
+    .eq("clinic_id", clinicId)
+    .eq("fiscal_year", fiscal_year);
+
+  const docs = documents || [];
+
+  // Calculate expected vs uploaded per item
+  const results: { [cat: string]: { category: string; items: any[]; complete: number; missing: number; total: number } } = {};
+
+  for (const item of filtered) {
+    if (!results[item.category]) {
+      results[item.category] = { category: item.category, items: [], complete: 0, missing: 0, total: 0 };
+    }
+
+    // Determine expected count based on frequency
+    let expectedCount = 1;
+    if (item.frequency === "monthly") expectedCount = 12;
+    else if (item.frequency === "quarterly") expectedCount = 4;
+
+    // Count matching uploaded docs
+    const matchingDocs = docs.filter((d: any) =>
+      d.category === item.category && d.subcategory === item.subcategory
+    );
+
+    const uploadedCount = matchingDocs.length;
+    const isComplete = uploadedCount >= expectedCount;
+
+    results[item.category].items.push({
+      subcategory: item.subcategory,
+      label: item.label,
+      required: item.required,
+      frequency: item.frequency,
+      expected_count: expectedCount,
+      uploaded_count: uploadedCount,
+      status: isComplete ? "complete" : "missing",
+      percent: expectedCount > 0 ? Math.round((uploadedCount / expectedCount) * 100) : 0,
+    });
+
+    results[item.category].total += 1;
+    if (isComplete) {
+      results[item.category].complete += 1;
+    } else {
+      results[item.category].missing += 1;
+    }
+  }
+
+  const allItems = Object.values(results).flatMap(r => r.items);
+  const totalComplete = allItems.filter(i => i.status === "complete").length;
+  const totalMissing = allItems.filter(i => i.status === "missing").length;
+
+  return {
+    fiscal_year,
+    regime,
+    categories: results,
+    summary: {
+      total_items: allItems.length,
+      complete: totalComplete,
+      missing: totalMissing,
+      percent_complete: allItems.length > 0 ? Math.round((totalComplete / allItems.length) * 100) : 0,
+    },
+  };
+}
+
+// Tool 18: Get IR Transactions
+async function executeGetIRTransactions(
+  args: ToolArgs,
+  clinicId: string,
+  supabase: any
+): Promise<any> {
+  const { year, type, payer_type, missing_data_only, limit: resultLimit } = args;
+  const safeLimit = Math.min(resultLimit || 30, 50);
+  const startDate = `${year}-01-01`;
+  const endDate = `${year}-12-31`;
+
+  let query = supabase
+    .from("financial_transactions")
+    .select("id, date, description, amount, type, category, payer_type, payer_name, payer_cpf, payer_is_patient, pj_source_id, irrf_amount, is_deductible, supplier_name, supplier_cpf_cnpj, receipt_number, receipt_attachment_url, patients(name, cpf), pj_sources(id, name, razao_social, nome_fantasia, cnpj)")
+    .eq("clinic_id", clinicId)
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .order("date", { ascending: false });
+
+  if (type) query = query.eq("type", type);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error in get_ir_transactions:", error);
+    throw new Error(`Erro ao buscar transações IR: ${error.message}`);
+  }
+
+  let txs = data || [];
+
+  // Filter by payer_type
+  if (payer_type === "PF") {
+    txs = txs.filter((t: any) => t.type === "income" && (t.payer_type === "PF" || (t.payer_is_patient && !t.pj_source_id)));
+  } else if (payer_type === "PJ") {
+    txs = txs.filter((t: any) => t.type === "income" && (t.payer_type === "PJ" || !!t.pj_source_id));
+  }
+
+  // Filter for missing data only
+  if (missing_data_only) {
+    txs = txs.filter((t: any) => {
+      if (t.type === "income") {
+        const isPF = t.payer_type === "PF" || (t.payer_is_patient && !t.pj_source_id);
+        if (isPF) {
+          const cpf = t.payer_is_patient ? t.patients?.cpf : t.payer_cpf;
+          const name = t.payer_is_patient ? t.patients?.name : t.payer_name;
+          return !cpf || !name;
+        }
+        if (t.payer_type === "PJ" && !t.pj_source_id) return true;
+      }
+      if (t.type === "expense" && t.is_deductible) {
+        if (!t.supplier_name && !t.supplier_cpf_cnpj) return true;
+        if (!t.receipt_number && !t.receipt_attachment_url) return true;
+      }
+      return false;
+    });
+  }
+
+  // Apply limit
+  const limited = txs.slice(0, safeLimit);
+
+  // Format for output
+  const formatted = limited.map((t: any) => {
+    const isPF = t.type === "income" && (t.payer_type === "PF" || (t.payer_is_patient && !t.pj_source_id));
+    const isPJ = t.type === "income" && (t.payer_type === "PJ" || !!t.pj_source_id);
+
+    return {
+      id: t.id,
+      date: t.date,
+      description: t.description,
+      amount: t.amount,
+      type: t.type,
+      category: t.category,
+      is_deductible: t.is_deductible,
+      irrf_amount: t.irrf_amount || 0,
+      payer: isPF ? {
+        type: "PF",
+        name: t.payer_is_patient ? t.patients?.name : t.payer_name,
+        cpf: t.payer_is_patient ? t.patients?.cpf : t.payer_cpf,
+      } : isPJ ? {
+        type: "PJ",
+        name: t.pj_sources?.razao_social || t.pj_sources?.name || t.payer_name,
+        cnpj: t.pj_sources?.cnpj || null,
+        pj_source_id: t.pj_source_id,
+      } : null,
+      supplier: t.type === "expense" ? {
+        name: t.supplier_name,
+        cpf_cnpj: t.supplier_cpf_cnpj,
+      } : null,
+      has_receipt: !!(t.receipt_number || t.receipt_attachment_url),
+    };
+  });
+
+  const totalAmount = formatted.reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+  return {
+    year,
+    transactions: formatted,
+    summary: {
+      total_found: txs.length,
+      shown: formatted.length,
+      total_amount: Math.round(totalAmount * 100) / 100,
+      filters: {
+        ...(type && { type }),
+        ...(payer_type && { payer_type }),
+        ...(missing_data_only && { missing_data_only }),
+      },
     },
   };
 }

@@ -260,4 +260,112 @@ export const TOOLS = [
       required: [] as string[],
     },
   },
+  // ═══════════════════════════════════════
+  // IMPOSTO DE RENDA (IR) — Tools 13-18
+  // ═══════════════════════════════════════
+  {
+    name: "get_fiscal_profile",
+    description: "Retorna perfil fiscal da clínica: dados PF (CPF, CRO), dados PJ (CNPJ, razão social, regime tributário), configuração do Simples Nacional. Use para entender o contexto fiscal da clínica antes de análises de IR.",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: [] as string[],
+    },
+  },
+  {
+    name: "get_ir_annual_summary",
+    description: "Gera resumo anual do Imposto de Renda: receita PF e PJ, IRRF retido, despesas dedutíveis, breakdown mensal e por pagador (PF por CPF, PJ por CNPJ). Use para 'resumo do IR', 'quanto recebi no ano', 'IRRF retido', 'declaração de IR'.",
+    parameters: {
+      type: "object",
+      properties: {
+        year: {
+          type: "number",
+          description: "Ano fiscal para o resumo (ex: 2025).",
+        },
+      },
+      required: ["year"],
+    },
+  },
+  {
+    name: "validate_ir_data",
+    description: "Verifica dados incompletos para declaração de IR: perfil fiscal não configurado, receitas PF sem CPF/nome, receitas PJ sem fonte pagadora, despesas dedutíveis sem fornecedor ou comprovante. Use para 'o que falta pro IR?', 'dados incompletos', 'verificar IR'.",
+    parameters: {
+      type: "object",
+      properties: {
+        year: {
+          type: "number",
+          description: "Ano fiscal para validar (ex: 2025).",
+        },
+      },
+      required: ["year"],
+    },
+  },
+  {
+    name: "get_pj_sources",
+    description: "Lista fontes pagadoras PJ (convênios/planos odontológicos) com CNPJ, razão social e status. Use para 'quais meus convênios?', 'fontes pagadoras', 'listar PJ'.",
+    parameters: {
+      type: "object",
+      properties: {
+        active_only: {
+          type: "boolean",
+          description: "Se true, retorna apenas fontes ativas. Padrão: true.",
+        },
+      },
+      required: [] as string[],
+    },
+  },
+  {
+    name: "check_missing_documents",
+    description: "Verifica documentos fiscais obrigatórios faltantes por categoria (identificação, rendimentos, despesas, folha, impostos, bens, dívidas, dependentes, específicos). Cruza com docs já enviados e calcula percentual de completude. Use para 'documentos faltando pro IR', 'o que falta enviar?', 'checklist de documentos'.",
+    parameters: {
+      type: "object",
+      properties: {
+        fiscal_year: {
+          type: "number",
+          description: "Ano fiscal (ex: 2025).",
+        },
+        category: {
+          type: "string",
+          description: "Filtrar por categoria específica. Opcional — sem filtro retorna todas.",
+          enum: [
+            "identificacao", "rendimentos", "despesas", "folha_pagamento",
+            "impostos", "bens_direitos", "dividas", "dependentes", "especificos",
+          ],
+        },
+      },
+      required: ["fiscal_year"],
+    },
+  },
+  {
+    name: "get_ir_transactions",
+    description: "Busca transações com campos detalhados de IR: pagador (CPF/CNPJ, nome), fonte PJ, IRRF retido, dedutibilidade. Permite filtrar por tipo (receita/despesa), tipo de pagador (PF/PJ), e dados faltantes. Use para 'receitas PJ sem fonte', 'despesas dedutíveis', 'transações do IR'.",
+    parameters: {
+      type: "object",
+      properties: {
+        year: {
+          type: "number",
+          description: "Ano fiscal (ex: 2025).",
+        },
+        type: {
+          type: "string",
+          description: "Tipo de transação: 'income' (receita) ou 'expense' (despesa).",
+          enum: ["income", "expense"],
+        },
+        payer_type: {
+          type: "string",
+          description: "Tipo de pagador: 'PF' (pessoa física) ou 'PJ' (pessoa jurídica). Apenas para receitas.",
+          enum: ["PF", "PJ"],
+        },
+        missing_data_only: {
+          type: "boolean",
+          description: "Se true, retorna apenas transações com dados incompletos para IR (sem CPF, sem fonte PJ, sem comprovante). Padrão: false.",
+        },
+        limit: {
+          type: "number",
+          description: "Número máximo de resultados (padrão: 30, máximo: 50).",
+        },
+      },
+      required: ["year"],
+    },
+  },
 ];
