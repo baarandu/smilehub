@@ -92,6 +92,34 @@ async function fetchWithTimeout(
   }
 }
 
+// Convert image URL to base64 data URI so OpenAI receives the actual image data
+// (avoids issues with OpenAI servers being unable to fetch Supabase Storage URLs)
+async function imageUrlToDataUri(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`[vision] Failed to fetch image (${response.status}): ${url}`);
+      return url; // fallback to URL
+    }
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const buffer = await response.arrayBuffer();
+    // Skip if image is too large (>15MB)
+    if (buffer.byteLength > 15 * 1024 * 1024) {
+      console.warn(`[vision] Image too large (${buffer.byteLength} bytes), using URL`);
+      return url;
+    }
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return `data:${contentType};base64,${btoa(binary)}`;
+  } catch (error) {
+    console.warn(`[vision] Error converting image: ${error}`);
+    return url; // fallback to URL
+  }
+}
+
 // Helper: calculate age from birth date
 function calculateAge(birthDate: string): number {
   const today = new Date();
@@ -295,14 +323,18 @@ serve(async (req) => {
     ];
 
     // Add history, reconstructing multi-part content for messages with images
+    // Convert history images to base64 to ensure OpenAI can access them in follow-ups
     for (const msg of history || []) {
       if (msg.role === "user") {
         if (msg.image_urls?.length) {
+          const historyBase64Urls = await Promise.all(
+            msg.image_urls.map((url: string) => imageUrlToDataUri(url))
+          );
           openaiMessages.push({
             role: "user",
             content: [
               { type: "text", text: msg.content },
-              ...msg.image_urls.map((url: string) => ({
+              ...historyBase64Urls.map((url: string) => ({
                 type: "image_url",
                 image_url: { url, detail: "high" },
               })),
@@ -351,11 +383,15 @@ serve(async (req) => {
 
     // Add current user message (with images if present)
     if (validatedImageUrls.length) {
+      // Convert to base64 to guarantee OpenAI receives the image data
+      const base64Urls = await Promise.all(
+        validatedImageUrls.map(imageUrlToDataUri)
+      );
       openaiMessages.push({
         role: "user",
         content: [
           { type: "text", text: message },
-          ...validatedImageUrls.map((url: string) => ({
+          ...base64Urls.map((url: string) => ({
             type: "image_url",
             image_url: { url, detail: "high" },
           })),
@@ -386,10 +422,10 @@ serve(async (req) => {
           messages: openaiMessages,
           tools: getOpenAITools(),
           temperature: 0.3,
-          max_tokens: 2500,
+          max_tokens: validatedImageUrls.length > 0 ? 4000 : 2500,
         }),
       },
-      45000
+      validatedImageUrls.length > 0 ? 60000 : 45000
     );
 
     log.debug(`First OpenAI call: ${Date.now() - t0}ms`);
@@ -444,6 +480,7 @@ serve(async (req) => {
       // Execute each tool call and collect results
       const toolMessages: any[] = [];
       let visionImageUrls: string[] = [];
+      let visionExamInfo: any = null;
 
       for (const toolCall of toolCalls) {
         try {
@@ -458,9 +495,10 @@ serve(async (req) => {
           const resultStr = JSON.stringify(result);
           log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
 
-          // Collect vision image URLs
+          // Collect vision image URLs and exam context
           if (result.requires_vision && result.image_urls) {
             visionImageUrls = [...visionImageUrls, ...result.image_urls];
+            if (result.exam_info) visionExamInfo = result.exam_info;
           }
 
           toolMessages.push({
@@ -498,16 +536,25 @@ serve(async (req) => {
         ...toolMessages,
       ];
 
-      // If vision required, add images to a follow-up user message
+      // If vision required, convert images to base64 and add to follow-up message
       if (visionImageUrls.length > 0) {
+        const base64VisionUrls = await Promise.all(
+          visionImageUrls.map(imageUrlToDataUri)
+        );
+
+        // Build contextual prompt with exam metadata
+        const examContext = visionExamInfo
+          ? `Exame: ${visionExamInfo.type || "Não especificado"}${visionExamInfo.date ? ` (${visionExamInfo.date})` : ""}${visionExamInfo.description ? `. Descrição: ${visionExamInfo.description}` : ""}.`
+          : "";
+
         secondMessages.push({
           role: "user",
           content: [
             {
               type: "text",
-              text: "Aqui está a imagem do exame para análise. Descreva os achados radiográficos/clínicos objetivamente.",
+              text: `${examContext}\nAnalise esta imagem odontológica seguindo o protocolo IMAGEM do system prompt. Identifique estruturas anatômicas, achados normais e anormais, possíveis patologias e qualidade técnica. Use notação FDI para dentes. Seja específico e objetivo nos achados.`,
             },
-            ...visionImageUrls.map((url: string) => ({
+            ...base64VisionUrls.map((url: string) => ({
               type: "image_url",
               image_url: { url, detail: "high" },
             })),
@@ -529,10 +576,10 @@ serve(async (req) => {
             model: "gpt-4o",
             messages: secondMessages,
             temperature: 0.3,
-            max_tokens: 2500,
+            max_tokens: visionImageUrls.length > 0 ? 4000 : 2500,
           }),
         },
-        45000
+        60000 // longer timeout when processing images
       );
 
       log.debug(`Second OpenAI call: ${Date.now() - t0}ms`);

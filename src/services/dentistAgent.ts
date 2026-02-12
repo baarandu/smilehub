@@ -104,7 +104,7 @@ export const dentistAgentService = {
   // Upload image for chat
   async uploadChatImage(clinicId: string, file: File): Promise<string> {
     const fileExt = file.name.split(".").pop();
-    const fileName = `chat-images/${clinicId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const fileName = `${clinicId}/chat-images/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("exams")
