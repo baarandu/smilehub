@@ -5,6 +5,9 @@ import { X, Calendar } from 'lucide-react-native';
 import { anamnesesService } from '../../services/anamneses';
 import type { AnamneseInsert, Anamnese } from '../../types/database';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
+import { extractedToFormState } from '../voice-consultation/extractionHelpers';
+import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewAnamneseModalProps {
     visible: boolean;
@@ -248,6 +251,14 @@ export function NewAnamneseModal({
         }
     }, [visible, anamnese?.id]);
 
+    const handleVoiceResult = (result: ExtractionResult) => {
+        const mapped = extractedToFormState(result.anamnesis);
+        setForm(prev => ({ ...prev, ...mapped }));
+        if (result.consultation?.chiefComplaint) {
+            setForm(prev => ({ ...prev, notes: result.consultation.chiefComplaint || prev.notes }));
+        }
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -343,6 +354,10 @@ export function NewAnamneseModal({
                         <Text className="text-sm text-gray-500 mb-4">
                             Responda às perguntas abaixo sobre o histórico de saúde do paciente.
                         </Text>
+
+                        {!anamnese && (
+                            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+                        )}
 
                         {/* Date Field */}
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">

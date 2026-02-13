@@ -70,7 +70,6 @@ export default function Agenda() {
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
-
   useEffect(() => {
     loadDayAppointments();
   }, [selectedDate]);

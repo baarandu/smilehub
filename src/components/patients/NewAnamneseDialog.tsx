@@ -21,6 +21,9 @@ import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
 import { ptBR } from 'date-fns/locale';
 import { format } from 'date-fns';
+import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
+import { extractedToFormState } from '@/components/voice-consultation/AnamnesisReviewForm';
+import type { ExtractionResult } from '@/types/voiceConsultation';
 
 interface NewAnamneseDialogProps {
   open: boolean;
@@ -261,6 +264,14 @@ export function NewAnamneseDialog({
     }
   }, [open, anamnese?.id]);
 
+  const handleVoiceResult = (result: ExtractionResult) => {
+    const mapped = extractedToFormState(result.anamnesis);
+    setForm(prev => ({ ...prev, ...mapped }));
+    if (result.consultation?.chiefComplaint) {
+      setForm(prev => ({ ...prev, notes: result.consultation.chiefComplaint }));
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -342,6 +353,12 @@ export function NewAnamneseDialog({
         <DialogHeader>
           <DialogTitle>{anamnese ? 'Editar Anamnese' : 'Nova Anamnese'}</DialogTitle>
         </DialogHeader>
+
+        {!anamnese && (
+          <div className="px-1 pb-2">
+            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+          </div>
+        )}
 
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6">

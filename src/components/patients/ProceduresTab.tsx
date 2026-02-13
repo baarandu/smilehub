@@ -113,10 +113,12 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
       <div className="bg-card rounded-xl p-6 border border-border">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-foreground">Procedimentos Realizados</h3>
-          <Button size="sm" className="gap-2" onClick={() => setShowDialog(true)}>
-            <Plus className="w-4 h-4" />
-            Novo Procedimento
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" className="gap-2" onClick={() => setShowDialog(true)}>
+              <Plus className="w-4 h-4" />
+              Novo Procedimento
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (

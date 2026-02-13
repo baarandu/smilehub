@@ -91,10 +91,12 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                     <CardTitle className="text-lg font-semibold">Anamnese do Paciente</CardTitle>
-                    <Button size="sm" className="gap-2" onClick={handleAddAnamnese}>
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Adicionar</span>
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button size="sm" className="gap-2" onClick={handleAddAnamnese}>
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Adicionar</span>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (

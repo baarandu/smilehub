@@ -17,6 +17,8 @@ import { ApprovedBudgetList } from './procedures/ApprovedBudgetList';
 import { AttachmentManager } from './procedures/AttachmentManager';
 import { ProcedureFooter } from './procedures/ProcedureFooter';
 import type { ApprovedItemOption, ProcedureFormState, Attachment } from './procedures/types';
+import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
+import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewProcedureModalProps {
   visible: boolean;
@@ -57,6 +59,20 @@ export function NewProcedureModal({
   const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [finalizedItemIds, setFinalizedItemIds] = useState<string[]>([]);
+
+  const handleVoiceResult = (result: ExtractionResult) => {
+    if (result.procedures?.[0]) {
+      const p = result.procedures[0];
+      const desc = [
+        p.treatment,
+        p.tooth && `Dente ${p.tooth}`,
+        p.material && `Material: ${p.material}`,
+        p.description,
+      ].filter(Boolean).join(' - ');
+      setObservations(desc);
+      if (p.status) setForm(prev => ({ ...prev, status: p.status }));
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -441,6 +457,10 @@ export function NewProcedureModal({
           </View>
 
           <ScrollView className="flex-1 px-4 py-4">
+            {!procedure && (
+              <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+            )}
+
             <ProcedureForm
               form={form}
               onChange={(updates) => setForm(prev => ({ ...prev, ...updates }))}

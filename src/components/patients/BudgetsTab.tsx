@@ -10,6 +10,7 @@ import type { BudgetWithItems } from '@/types/database';
 import { BudgetViewDialog } from './BudgetViewDialog';
 import { NewBudgetDialog } from './NewBudgetDialog';
 
+
 interface BudgetsTabProps {
     patientId: string;
     patientName?: string;
@@ -187,10 +188,12 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                             </div>
                         </div>
                     </div>
-                    <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-[#a03f3d] hover:bg-[#8b3634]">
-                        <Plus className="w-4 h-4" />
-                        <span className="hidden sm:inline">Adicionar</span>
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-[#a03f3d] hover:bg-[#8b3634]">
+                            <Plus className="w-4 h-4" />
+                            <span className="hidden sm:inline">Adicionar</span>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     {budgets.length === 0 ? (

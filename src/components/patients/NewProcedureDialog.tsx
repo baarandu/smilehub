@@ -27,6 +27,8 @@ import type { Procedure } from '@/types/database';
 
 // Components
 import { ProcedureForm, type ProcedureFormState } from './procedures/ProcedureForm';
+import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
+import type { ExtractionResult } from '@/types/voiceConsultation';
 
 interface NewProcedureDialogProps {
   open: boolean;
@@ -75,6 +77,20 @@ export function NewProcedureDialog({
       }
     }
   }, [procedure?.id, open]);
+
+  const handleVoiceResult = (result: ExtractionResult) => {
+    if (result.procedures?.[0]) {
+      const p = result.procedures[0];
+      const desc = [
+        p.treatment,
+        p.tooth && `Dente ${p.tooth}`,
+        p.material && `Material: ${p.material}`,
+        p.description,
+      ].filter(Boolean).join(' - ');
+      setDescription(desc);
+      if (p.status) setForm(prev => ({ ...prev, status: p.status }));
+    }
+  };
 
   const isValidDate = (dateStr: string): boolean => {
     if (!dateStr || dateStr.length !== 10) return false;
@@ -156,6 +172,12 @@ export function NewProcedureDialog({
         <DialogHeader>
           <DialogTitle>{procedure ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
         </DialogHeader>
+
+        {!procedure && (
+          <div className="px-1 pb-2">
+            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto pr-4">
           <form id="procedure-form" onSubmit={handleSubmit} className="space-y-6 mt-2">
