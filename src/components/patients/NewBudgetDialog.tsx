@@ -9,9 +9,6 @@ import { getShortToothId, calculateBudgetStatus, type ToothEntry } from '@/utils
 import type { BudgetInsert, BudgetWithItems } from '@/types/database';
 import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
-import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
-import { extractedToBudgetForm } from '@/components/voice-consultation/BudgetReviewForm';
-import type { ExtractionResult } from '@/types/voiceConsultation';
 
 interface NewBudgetDialogProps {
     patientId: string;
@@ -33,12 +30,6 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
     const isEditing = !!budget;
-
-    const handleVoiceResult = (result: ExtractionResult) => {
-        const { items, location: loc } = extractedToBudgetForm(result.budget, locations);
-        setTeethList(items);
-        if (loc) setLocation(loc);
-    };
 
     // Reset form when opening or load existing budget
     // Reset form when opening or load existing budget
@@ -196,11 +187,6 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
             <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="p-6 border-b shrink-0">
                     <DialogTitle>{isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
-                    {!isEditing && (
-                        <div className="pt-2">
-                            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
-                        </div>
-                    )}
                 </DialogHeader>
 
                 <div className="flex flex-1 overflow-hidden">

@@ -1,4 +1,4 @@
-import { Calendar, MapPin, FileText } from 'lucide-react';
+import { Calendar, MapPin, FileText, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Procedure } from '@/types/database';
+import type { BudgetLink } from '@/services/procedures';
 
 interface ProcedureViewDialogProps {
   open: boolean;
@@ -76,6 +77,7 @@ export function ProcedureViewDialog({
     return { structuredItems, unstructuredLines, obsPart };
   };
 
+  const budgetLinks = (procedure as any).budget_links as BudgetLink[] | null;
   const statusInfo = getStatusInfo(procedure.status);
   const { structuredItems, unstructuredLines, obsPart } = procedure.description
     ? parseDescription(procedure.description)
@@ -108,6 +110,23 @@ export function ProcedureViewDialog({
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4" />
               <span>{procedure.location}</span>
+            </div>
+          )}
+
+          {/* Linked Budget Items */}
+          {budgetLinks && budgetLinks.length > 0 && (
+            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+              <h4 className="text-xs font-bold text-purple-700 uppercase mb-2 flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5" />
+                Itens do Orçamento Vinculados
+              </h4>
+              <div className="space-y-1">
+                {budgetLinks.map((link, idx) => (
+                  <p key={idx} className="text-sm text-purple-900">
+                    Item {idx + 1}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
 

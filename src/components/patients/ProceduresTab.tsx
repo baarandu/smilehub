@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hospital, Plus, MapPin, Calendar as CalendarIcon, Edit3, Trash2, User } from 'lucide-react';
+import { Hospital, Plus, MapPin, Calendar as CalendarIcon, Edit3, Trash2, User, LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProcedures, useDeleteProcedure } from '@/hooks/useProcedures';
@@ -59,15 +59,6 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
     return new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
   };
 
-  const getPaymentMethodLabel = (method: string | null) => {
-    switch (method) {
-      case 'cash': return 'Dinheiro';
-      case 'debit': return 'Cartão de Débito';
-      case 'credit': return 'Cartão de Crédito';
-      default: return '-';
-    }
-  };
-
   const getStatusInfo = (status: string | null) => {
     switch (status) {
       case 'pending': return { label: 'Pendente', className: 'bg-amber-100 text-amber-700' };
@@ -75,6 +66,11 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
       case 'completed': return { label: 'Finalizado', className: 'bg-green-100 text-green-700' };
       default: return { label: 'Em Progresso', className: 'bg-blue-100 text-blue-700' };
     }
+  };
+
+  const hasBudgetLinks = (procedure: Procedure) => {
+    const links = (procedure as any).budget_links;
+    return links && Array.isArray(links) && links.length > 0;
   };
 
   const handleView = (procedure: Procedure) => {
@@ -147,6 +143,12 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusInfo(procedure.status).className}`}>
                         {getStatusInfo(procedure.status).label}
                       </span>
+                      {hasBudgetLinks(procedure) && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                          <LinkIcon className="w-3 h-3" />
+                          Vinculado
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 mb-2 text-sm text-muted-foreground flex-wrap">
                       {procedure.location && (
@@ -163,20 +165,12 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                       )}
                     </div>
                     {procedure.description && (
-                      <p className="text-sm text-foreground mb-2">{procedure.description}</p>
+                      <p className="text-sm text-foreground mb-2 line-clamp-2">{procedure.description}</p>
                     )}
                     <div className="flex items-center gap-4 text-sm">
                       {procedure.value && (
                         <span className="font-semibold text-primary">
                           {formatCurrency(procedure.value)}
-                        </span>
-                      )}
-                      {procedure.payment_method && (
-                        <span className="text-muted-foreground">
-                          {getPaymentMethodLabel(procedure.payment_method)}
-                          {procedure.payment_method === 'credit' && procedure.installments > 1 && (
-                            <span> ({procedure.installments}x)</span>
-                          )}
                         </span>
                       )}
                     </div>
@@ -263,4 +257,3 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
     </>
   );
 }
-

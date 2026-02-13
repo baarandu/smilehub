@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import type { Procedure, ProcedureInsert, ProcedureWithCreator } from '@/types/database';
 
+export interface BudgetLink {
+  budgetId: string;
+  toothIndex: number;
+}
+
 export const proceduresService = {
   async getByPatient(patientId: string): Promise<ProcedureWithCreator[]> {
     const { data, error } = await supabase
@@ -33,8 +38,7 @@ export const proceduresService = {
     })) as ProcedureWithCreator[];
   },
 
-  async create(procedure: ProcedureInsert): Promise<Procedure> {
-    // Get current user
+  async create(procedure: ProcedureInsert & { budget_links?: BudgetLink[] | null }): Promise<Procedure> {
     const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
@@ -47,7 +51,7 @@ export const proceduresService = {
     return data;
   },
 
-  async update(id: string, procedure: Partial<ProcedureInsert>): Promise<Procedure> {
+  async update(id: string, procedure: Partial<ProcedureInsert> & { budget_links?: BudgetLink[] | null }): Promise<Procedure> {
     const { data, error } = await (supabase
       .from('procedures') as any)
       .update(procedure)
@@ -68,9 +72,3 @@ export const proceduresService = {
     if (error) throw error;
   },
 };
-
-
-
-
-
-

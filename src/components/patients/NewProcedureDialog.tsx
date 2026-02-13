@@ -22,13 +22,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useCreateProcedure, useUpdateProcedure, useDeleteProcedure } from '@/hooks/useProcedures';
 import { type Location } from '@/services/locations';
+import { budgetsService } from '@/services/budgets';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Procedure } from '@/types/database';
+import type { BudgetLink } from '@/services/procedures';
 
 // Components
 import { ProcedureForm, type ProcedureFormState } from './procedures/ProcedureForm';
 import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
 import type { ExtractionResult } from '@/types/voiceConsultation';
+import { usePaidBudgetItems, keysToBudgetLinks, budgetLinksToKeys } from '@/hooks/useBudgetProcedures';
 
 interface NewProcedureDialogProps {
   open: boolean;
@@ -48,6 +52,9 @@ export function NewProcedureDialog({
   const createProcedure = useCreateProcedure();
   const updateProcedure = useUpdateProcedure();
   const deleteProcedure = useDeleteProcedure();
+  const queryClient = useQueryClient();
+
+  const { paidItems } = usePaidBudgetItems(patientId);
 
   const [form, setForm] = useState<ProcedureFormState>({
     date: new Date().toISOString().split('T')[0],
@@ -56,6 +63,7 @@ export function NewProcedureDialog({
   });
 
   const [description, setDescription] = useState('');
+  const [selectedBudgetKeys, setSelectedBudgetKeys] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -67,6 +75,9 @@ export function NewProcedureDialog({
           status: (procedure.status as ProcedureFormState['status']) || 'in_progress',
         });
         setDescription(procedure.description || '');
+        // Restore linked budget items from existing procedure
+        const existingLinks = (procedure as any).budget_links as BudgetLink[] | null;
+        setSelectedBudgetKeys(budgetLinksToKeys(existingLinks));
       } else {
         setForm({
           date: new Date().toISOString().split('T')[0],
@@ -74,6 +85,7 @@ export function NewProcedureDialog({
           status: 'in_progress',
         });
         setDescription('');
+        setSelectedBudgetKeys(new Set());
       }
     }
   }, [procedure?.id, open]);
@@ -81,7 +93,6 @@ export function NewProcedureDialog({
   const handleVoiceResult = (result: ExtractionResult) => {
     const parts: string[] = [];
 
-    // Try structured procedures first
     if (result.procedures && result.procedures.length > 0) {
       for (const p of result.procedures) {
         const desc = [
@@ -101,7 +112,6 @@ export function NewProcedureDialog({
       }
     }
 
-    // Fallback: use consultation data if no structured procedures
     if (parts.length === 0 && result.consultation) {
       const c = result.consultation;
       if (c.procedures) parts.push(c.procedures);
@@ -137,12 +147,21 @@ export function NewProcedureDialog({
       return;
     }
 
+    if (selectedBudgetKeys.size === 0) {
+      toast.error('Selecione ao menos um procedimento pago');
+      return;
+    }
+
     if (!isValidDate(form.date)) {
       toast.error('Por favor, insira uma data válida');
       return;
     }
 
     try {
+      const budgetLinks = selectedBudgetKeys.size > 0
+        ? keysToBudgetLinks(selectedBudgetKeys)
+        : null;
+
       const procedureData = {
         date: form.date,
         location: form.location || null,
@@ -151,6 +170,7 @@ export function NewProcedureDialog({
         payment_method: null,
         installments: null,
         status: form.status,
+        budget_links: budgetLinks,
       };
 
       if (procedure) {
@@ -165,6 +185,19 @@ export function NewProcedureDialog({
           ...procedureData,
         });
         toast.success('Procedimento registrado com sucesso!');
+      }
+
+      // If status is "completed" and there are linked budget items,
+      // update their tooth status to "completed"
+      if (form.status === 'completed' && budgetLinks && budgetLinks.length > 0) {
+        for (const link of budgetLinks) {
+          try {
+            await budgetsService.updateToothStatus(link.budgetId, link.toothIndex, 'completed');
+          } catch (err) {
+            console.error('Error updating budget tooth status:', err);
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
       }
 
       onOpenChange(false);
@@ -196,12 +229,6 @@ export function NewProcedureDialog({
           <DialogTitle>{procedure ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
         </DialogHeader>
 
-        {!procedure && (
-          <div className="px-1 pb-2">
-            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
-          </div>
-        )}
-
         <div className="flex-1 overflow-y-auto pr-4">
           <form id="procedure-form" onSubmit={handleSubmit} className="space-y-6 mt-2">
 
@@ -210,10 +237,18 @@ export function NewProcedureDialog({
               onChange={(updates) => setForm(prev => ({ ...prev, ...updates }))}
               locations={locations}
               loading={isLoading}
+              paidBudgetItems={paidItems}
+              selectedBudgetKeys={selectedBudgetKeys}
+              onBudgetSelectionChange={setSelectedBudgetKeys}
             />
 
             <div className="space-y-2">
-              <Label htmlFor="description">Descrição do Procedimento</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description">Descrição do Procedimento</Label>
+                {!procedure && (
+                  <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+                )}
+              </div>
               <Textarea
                 id="description"
                 value={description}

@@ -208,6 +208,23 @@ export const budgetsService = {
         return patientsWithPending.size;
     },
 
+    async updateToothStatus(budgetId: string, toothIndex: number, newStatus: 'paid' | 'completed'): Promise<void> {
+        const budget = await this.getById(budgetId);
+        const parsed = JSON.parse(budget.notes || '{}');
+        const teeth = parsed.teeth as any[];
+        if (!teeth || !teeth[toothIndex]) throw new Error('Tooth not found');
+
+        teeth[toothIndex] = { ...teeth[toothIndex], status: newStatus };
+
+        const newBudgetStatus = calculateBudgetStatus(teeth);
+        const updatedNotes = JSON.stringify({ ...parsed, teeth });
+
+        await this.update(budgetId, {
+            notes: updatedNotes,
+            status: newBudgetStatus,
+        });
+    },
+
     async reconcileAllStatuses(): Promise<void> {
         const { data, error } = await supabase
             .from('budgets')
