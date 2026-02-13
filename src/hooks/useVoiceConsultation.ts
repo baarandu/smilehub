@@ -92,7 +92,8 @@ export function useVoiceConsultation({
     } catch (err) {
       recorder.resetRecording();
       setPhase('consent');
-      toast.error('Erro ao iniciar a consulta');
+      const message = err instanceof Error ? err.message : 'Erro ao iniciar a consulta';
+      toast.error(message);
       console.error('Error starting consultation:', err);
     }
   }, [clinicId, userId, appointmentId, patientId, isNewPatient, recorder]);
