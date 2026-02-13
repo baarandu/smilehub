@@ -47,6 +47,11 @@ export function useVoiceConsultation({
 
   const startConsultation = useCallback(async () => {
     try {
+      // Start recording FIRST — permissions must be requested promptly
+      await recorder.startRecording();
+      setPhase('recording');
+
+      // Then create session in DB
       const newSession = await voiceConsultationService.createSession({
         clinic_id: clinicId,
         user_id: userId,
@@ -58,16 +63,18 @@ export function useVoiceConsultation({
       });
 
       setSession(newSession);
-      await recorder.startRecording();
-      setPhase('recording');
     } catch (err) {
+      setPhase('consent');
       Alert.alert('Erro', 'Erro ao iniciar a gravação');
       console.error('Error starting consultation:', err);
     }
   }, [clinicId, userId, patientId, isNewPatient, recorder]);
 
   const finishRecording = useCallback(async () => {
-    if (!session) return;
+    if (!session) {
+      Alert.alert('Erro', 'Sessão não inicializada. Tente novamente.');
+      return;
+    }
 
     setPhase('processing');
     setProcessingError(null);

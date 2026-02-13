@@ -79,16 +79,39 @@ export function NewProcedureDialog({
   }, [procedure?.id, open]);
 
   const handleVoiceResult = (result: ExtractionResult) => {
-    if (result.procedures?.[0]) {
-      const p = result.procedures[0];
-      const desc = [
-        p.treatment,
-        p.tooth && `Dente ${p.tooth}`,
-        p.material && `Material: ${p.material}`,
-        p.description,
-      ].filter(Boolean).join(' - ');
-      setDescription(desc);
-      if (p.status) setForm(prev => ({ ...prev, status: p.status }));
+    const parts: string[] = [];
+
+    // Try structured procedures first
+    if (result.procedures && result.procedures.length > 0) {
+      for (const p of result.procedures) {
+        const desc = [
+          p.treatment,
+          p.tooth && `Dente ${p.tooth}`,
+          p.material && `Material: ${p.material}`,
+          p.description,
+        ].filter(Boolean).join(' - ');
+        if (desc) parts.push(desc);
+      }
+
+      const first = result.procedures[0];
+      if (first.status) setForm(prev => ({ ...prev, status: first.status }));
+      if (first.location) {
+        const loc = locations.find(l => l.name.toLowerCase() === first.location!.toLowerCase());
+        if (loc) setForm(prev => ({ ...prev, location: loc.name }));
+      }
+    }
+
+    // Fallback: use consultation data if no structured procedures
+    if (parts.length === 0 && result.consultation) {
+      const c = result.consultation;
+      if (c.procedures) parts.push(c.procedures);
+      if (c.chiefComplaint) parts.push(c.chiefComplaint);
+      if (c.treatmentPlan) parts.push(c.treatmentPlan);
+      if (c.notes) parts.push(c.notes);
+    }
+
+    if (parts.length > 0) {
+      setDescription(parts.join('\n'));
     }
   };
 

@@ -47,6 +47,10 @@ export function InlineVoiceRecorder({ patientId, onResult }: InlineVoiceRecorder
     if (voiceConsultation.phase === 'processing' && phase !== 'processing') {
       setPhase('processing');
     }
+    // If recording failed, go back to consent
+    if (voiceConsultation.phase === 'consent' && phase === 'recording') {
+      setPhase('consent');
+    }
   }, [voiceConsultation.phase]);
 
   // When extraction result arrives, call onResult and move to done
@@ -148,6 +152,23 @@ export function InlineVoiceRecorder({ patientId, onResult }: InlineVoiceRecorder
 
   // Phase: recording
   if (phase === 'recording') {
+    // If recorder has error, show it and allow retry
+    if (voiceConsultation.recorder.error) {
+      return (
+        <div className="border border-red-200 bg-red-50/50 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-red-700">{voiceConsultation.recorder.error}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => { setPhase('consent'); voiceConsultation.setPhase('consent'); }}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      );
+    }
+
     return (
       <div className="border rounded-lg p-4">
         <AudioRecorder

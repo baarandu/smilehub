@@ -106,6 +106,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         ? 'Permissão de microfone negada. Habilite o microfone nas configurações do navegador.'
         : 'Erro ao acessar o microfone. Verifique se há um microfone disponível.';
       setError(message);
+      throw new Error(message);
     }
   }, []);
 

@@ -71,7 +71,12 @@ export function useVoiceConsultation({
 
   const startConsultation = useCallback(async () => {
     try {
-      // Create session in DB
+      // Start recording FIRST — getUserMedia needs user gesture context
+      // If called after an async network call, the browser may reject it
+      await recorder.startRecording();
+      setPhase('recording');
+
+      // Then create session in DB (doesn't need user gesture)
       const newSession = await voiceConsultationService.createSession({
         clinic_id: clinicId,
         user_id: userId,
@@ -84,18 +89,19 @@ export function useVoiceConsultation({
       });
 
       setSession(newSession);
-
-      // Start recording
-      await recorder.startRecording();
-      setPhase('recording');
     } catch (err) {
+      recorder.resetRecording();
+      setPhase('consent');
       toast.error('Erro ao iniciar a consulta');
       console.error('Error starting consultation:', err);
     }
   }, [clinicId, userId, appointmentId, patientId, isNewPatient, recorder]);
 
   const finishRecording = useCallback(async () => {
-    if (!session) return;
+    if (!session) {
+      toast.error('Sessão não inicializada. Tente novamente.');
+      return;
+    }
 
     setPhase('processing');
     setProcessingError(null);
