@@ -1,7 +1,7 @@
 /**
  * Rate limiting para Edge Functions
- * Usa tabela api_rate_limits no Supabase para tracking
- * Fail-open: se o rate limiter der erro, permite a request
+ * Primary: tabela api_rate_limits no Supabase
+ * Fallback: in-memory tracking per isolate when DB fails
  */
 
 export class RateLimitError extends Error {
@@ -18,6 +18,35 @@ interface RateLimitConfig {
   endpoint: string;
   maxRequests: number;
   windowMinutes: number;
+}
+
+// In-memory fallback rate limit tracking (per Deno isolate)
+const memoryStore = new Map<string, { count: number; windowStart: number }>();
+
+function checkMemoryRateLimit(
+  identifier: string,
+  config: RateLimitConfig
+): void {
+  const key = `${identifier}:${config.endpoint}`;
+  const now = Date.now();
+  const windowMs = config.windowMinutes * 60 * 1000;
+  const entry = memoryStore.get(key);
+
+  if (entry && now - entry.windowStart < windowMs) {
+    entry.count++;
+    if (entry.count > config.maxRequests) {
+      throw new RateLimitError();
+    }
+  } else {
+    memoryStore.set(key, { count: 1, windowStart: now });
+  }
+
+  // Cleanup old entries (limit memory usage)
+  if (memoryStore.size > 1000) {
+    for (const [k, v] of memoryStore) {
+      if (now - v.windowStart >= windowMs) memoryStore.delete(k);
+    }
+  }
 }
 
 export async function checkRateLimit(
@@ -39,8 +68,9 @@ export async function checkRateLimit(
       .gte("created_at", windowStart);
 
     if (error) {
-      console.warn(`[rateLimit] Error checking: ${error.message}`);
-      return; // Fail open
+      console.warn(`[rateLimit] DB error, using in-memory fallback: ${error.message}`);
+      checkMemoryRateLimit(identifier, config);
+      return;
     }
 
     if ((count || 0) >= config.maxRequests) {
@@ -75,7 +105,7 @@ export async function checkRateLimit(
       );
   } catch (error) {
     if (error instanceof RateLimitError) throw error;
-    console.warn(`[rateLimit] Unexpected error: ${error}`);
-    // Fail open
+    console.warn(`[rateLimit] Unexpected error, using in-memory fallback: ${error}`);
+    checkMemoryRateLimit(identifier, config);
   }
 }

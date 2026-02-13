@@ -12,14 +12,24 @@ export default function ResetPassword() {
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
+    const validatePassword = (pw: string): string | null => {
+        if (pw.length < 12) return 'Senha deve ter pelo menos 12 caracteres';
+        if (!/[A-Z]/.test(pw)) return 'Senha deve conter pelo menos uma letra maiúscula';
+        if (!/[a-z]/.test(pw)) return 'Senha deve conter pelo menos uma letra minúscula';
+        if (!/[0-9]/.test(pw)) return 'Senha deve conter pelo menos um número';
+        if (!/[^A-Za-z0-9]/.test(pw)) return 'Senha deve conter pelo menos um caractere especial';
+        return null;
+    };
+
     const handleReset = async () => {
         if (!password || !confirmPassword) {
             Alert.alert('Erro', 'Preencha todos os campos');
             return;
         }
 
-        if (password.length < 6) {
-            Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+        const pwError = validatePassword(password);
+        if (pwError) {
+            Alert.alert('Erro', pwError);
             return;
         }
 

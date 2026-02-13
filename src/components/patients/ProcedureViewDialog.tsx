@@ -153,7 +153,7 @@ export function ProcedureViewDialog({
               {/* Observations */}
               {obsPart && (
                 <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                  <h4 className="text-xs font-bold text-amber-700 uppercase mb-2">Observações</h4>
+                  <h4 className="text-xs font-bold text-amber-700 uppercase mb-2">Descrição do Procedimento</h4>
                   <p className="text-sm text-amber-900">{obsPart}</p>
                 </div>
               )}

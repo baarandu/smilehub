@@ -2,7 +2,29 @@ interface ToolArgs {
   [key: string]: any;
 }
 
-// Decrypt patient CPFs from PostgREST join (patients table stores encrypted values)
+// Mask CPF: show only last 2 digits → ***.***.***-XX
+function maskCpf(cpf: string | null | undefined): string {
+  if (!cpf) return '';
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length < 2) return '***.***.***-**';
+  const last2 = digits.slice(-2);
+  return `***.***.***-${last2}`;
+}
+
+// Anonymize patient names: consistent pseudonyms per session
+const _nameMap = new Map<string, string>();
+let _nameCounter = 0;
+function anonymizeName(name: string | null | undefined): string {
+  if (!name) return 'Paciente';
+  const existing = _nameMap.get(name);
+  if (existing) return existing;
+  _nameCounter++;
+  const pseudonym = `Paciente ${_nameCounter}`;
+  _nameMap.set(name, pseudonym);
+  return pseudonym;
+}
+
+// Decrypt patient CPFs from PostgREST join, then anonymize for AI
 async function resolveEncryptedPatientCpfs(supabase: any, transactions: any[]): Promise<void> {
   const patientIds = [...new Set(
     transactions
@@ -22,7 +44,9 @@ async function resolveEncryptedPatientCpfs(supabase: any, transactions: any[]): 
   for (const t of transactions) {
     if (t.payer_is_patient && t.patients && t.patient_id) {
       const decryptedCpf = cpfMap.get(t.patient_id);
-      if (decryptedCpf !== undefined) t.patients.cpf = decryptedCpf;
+      // Anonymize: mask CPF and pseudonymize name before sending to AI
+      t.patients.cpf = maskCpf(decryptedCpf);
+      if (t.patients.name) t.patients.name = anonymizeName(t.patients.name);
     }
   }
 }
@@ -1004,8 +1028,8 @@ async function executeGetIRAnnualSummary(
         totalIncomePF += t.amount || 0;
 
         // Track PF payer
-        const cpf = t.payer_is_patient ? t.patients?.cpf : t.payer_cpf;
-        const name = t.payer_is_patient ? t.patients?.name : t.payer_name;
+        const cpf = t.payer_is_patient ? t.patients?.cpf : maskCpf(t.payer_cpf);
+        const name = t.payer_is_patient ? t.patients?.name : anonymizeName(t.payer_name);
         const cpfKey = cpf || "sem_cpf";
         if (!payersPF[cpfKey]) {
           payersPF[cpfKey] = { cpf: cpf || "", name: name || "Não informado", total_amount: 0, transaction_count: 0 };
@@ -1512,8 +1536,8 @@ async function executeGetIRTransactions(
       irrf_amount: t.irrf_amount || 0,
       payer: isPF ? {
         type: "PF",
-        name: t.payer_is_patient ? t.patients?.name : t.payer_name,
-        cpf: t.payer_is_patient ? t.patients?.cpf : t.payer_cpf,
+        name: t.payer_is_patient ? t.patients?.name : anonymizeName(t.payer_name),
+        cpf: t.payer_is_patient ? t.patients?.cpf : maskCpf(t.payer_cpf),
       } : isPJ ? {
         type: "PJ",
         name: t.pj_sources?.razao_social || t.pj_sources?.name || t.payer_name,

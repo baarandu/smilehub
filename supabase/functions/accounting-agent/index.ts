@@ -11,7 +11,7 @@ import {
   validateMaxLength,
 } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
-import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
 
@@ -92,8 +92,8 @@ serve(async (req) => {
     validateUUID(clinic_id, "clinic_id");
     if (conversation_id) validateUUID(conversation_id, "conversation_id");
 
-    // Check for prompt injection (log-only mode)
-    checkForInjection(message, {
+    // Check for prompt injection (blocking mode for clinical functions)
+    requireSafeInput(message, {
       functionName: "accounting-agent",
       userId: user.id,
       clinicId: clinic_id,

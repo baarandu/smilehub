@@ -15,6 +15,34 @@ const handler = async (request: Request): Promise<Response> => {
     }
 
     try {
+        // This function is called by Supabase webhook, not by frontend.
+        // Verify webhook secret to prevent unauthorized access.
+        const authHeader = request.headers.get('Authorization') || '';
+        const webhookSecret = request.headers.get('x-webhook-secret') || '';
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+        // Timing-safe comparison to prevent timing attacks
+        const timingSafeEqual = (a: string, b: string): boolean => {
+            if (a.length !== b.length) return false;
+            let result = 0;
+            for (let i = 0; i < a.length; i++) {
+                result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+            }
+            return result === 0;
+        };
+
+        const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+        const isAuthorized =
+            (bearerToken.length > 0 && timingSafeEqual(bearerToken, serviceRoleKey)) ||
+            (webhookSecret.length > 0 && timingSafeEqual(webhookSecret, serviceRoleKey));
+
+        if (!isAuthorized) {
+            return new Response(
+                JSON.stringify({ error: 'Unauthorized' }),
+                { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+
         if (!RESEND_API_KEY) {
             throw new Error('Serviço de email não configurado.')
         }

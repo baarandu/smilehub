@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { passwordSchema, getPasswordStrength } from '@/lib/validation';
 
 type AccountType = 'solo' | 'clinic';
 type Gender = 'male' | 'female';
@@ -36,8 +37,9 @@ export default function Signup() {
             return;
         }
 
-        if (password.length < 6) {
-            toast.error('A senha deve ter pelo menos 6 caracteres');
+        const pwResult = passwordSchema.safeParse(password);
+        if (!pwResult.success) {
+            toast.error(pwResult.error.issues[0].message);
             return;
         }
 
@@ -211,7 +213,7 @@ export default function Signup() {
                                 <Input
                                     id="password"
                                     type={showPassword ? 'text' : 'password'}
-                                    placeholder="Mínimo 6 caracteres"
+                                    placeholder="Mínimo 12 caracteres"
                                     className="pl-10 pr-10"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

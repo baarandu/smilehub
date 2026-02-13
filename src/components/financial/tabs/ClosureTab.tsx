@@ -295,15 +295,15 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                     </CardContent>
                 </Card>
 
-                <Card className={`border-l-4 ${netBalance >= 0 ? 'border-l-red-500 bg-red-50/30' : 'border-l-red-500 bg-red-50/30'}`}>
+                <Card className={`border-l-4 ${netBalance >= 0 ? 'border-l-green-500 bg-green-50/30' : 'border-l-red-500 bg-red-50/30'}`}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-foreground">
                             Balanço Líquido
                         </CardTitle>
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                        <Wallet className={`h-4 w-4 ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
                     </CardHeader>
                     <CardContent>
-                        <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-[#8b3634]' : 'text-red-700'}`}>
+                        <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                             {formatCurrency(netBalance)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">Considerando taxas descontadas</p>

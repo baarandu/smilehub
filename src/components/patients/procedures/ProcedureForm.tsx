@@ -13,9 +13,6 @@ import { Location } from '@/services/locations';
 export interface ProcedureFormState {
     date: string;
     location: string;
-    value: string;
-    paymentMethod: string;
-    installments: string;
     status: 'pending' | 'in_progress' | 'completed';
 }
 
@@ -38,14 +35,6 @@ export function ProcedureForm({
     locations,
     loading = false
 }: ProcedureFormProps) {
-
-    const formatCurrency = (value: string) => {
-        const numbers = value.replace(/\D/g, '');
-        if (!numbers) return '';
-        const amount = parseFloat(numbers) / 100;
-        return amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
-
     return (
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -84,18 +73,8 @@ export function ProcedureForm({
                 </Select>
             </div>
 
-            <div className="space-y-2">
-                <Label htmlFor="value">Valor Total (R$)</Label>
-                <Input
-                    id="value"
-                    value={form.value ? `R$ ${form.value}` : 'R$ 0,00'}
-                    readOnly
-                    className="bg-muted cursor-not-allowed"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Label htmlFor="status">Status do Tratamento</Label>
+            <div className="col-span-2 space-y-2">
+                <Label htmlFor="status">Status do Procedimento</Label>
                 <Select
                     value={form.status}
                     onValueChange={(v) => onChange({ status: v as ProcedureFormState['status'] })}
@@ -116,4 +95,3 @@ export function ProcedureForm({
         </div>
     );
 }
-

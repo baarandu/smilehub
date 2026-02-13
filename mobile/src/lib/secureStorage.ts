@@ -56,7 +56,7 @@ export const SecureStorageAdapter = {
                 return secureValue;
             }
 
-            // If not found, try migrating from AsyncStorage
+            // If not found, try migrating from AsyncStorage (read-only for migration)
             const migratedValue = await migrateFromAsyncStorage(key);
             if (migratedValue) {
                 return migratedValue;
@@ -64,24 +64,23 @@ export const SecureStorageAdapter = {
 
             return null;
         } catch {
-            // Fallback to AsyncStorage if SecureStore fails (e.g., device locked on iOS)
-            // Note: This is a security trade-off for reliability
-            return AsyncStorage.getItem(key);
+            // Migration fallback: read from AsyncStorage only during migration period
+            // This allows existing users to migrate their session to SecureStore
+            if (!migrationDone) {
+                return AsyncStorage.getItem(key);
+            }
+            // After migration, fail-closed: do not fall back to insecure storage
+            return null;
         }
     },
 
     async setItem(key: string, value: string): Promise<void> {
-        try {
-            await SecureStore.setItemAsync(key, value, {
-                keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
-            });
-            // Mark migration as complete when we successfully set a value
-            await markMigrationComplete();
-        } catch {
-            // Fallback to AsyncStorage if SecureStore fails (e.g., device locked on iOS)
-            // Note: This is a security trade-off for reliability
-            await AsyncStorage.setItem(key, value);
-        }
+        // Fail-closed: never write auth tokens to insecure AsyncStorage
+        await SecureStore.setItemAsync(key, value, {
+            keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
+        });
+        // Mark migration as complete when we successfully set a value
+        await markMigrationComplete();
     },
 
     async removeItem(key: string): Promise<void> {

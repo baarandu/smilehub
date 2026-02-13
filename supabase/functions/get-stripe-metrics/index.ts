@@ -39,6 +39,20 @@ serve(async (req) => {
             throw new Error("Unauthorized");
         }
 
+        // Verify user is admin of at least one clinic
+        const { data: adminRole, error: adminError } = await supabase
+            .from('clinic_users')
+            .select('role')
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .limit(1)
+            .maybeSingle();
+
+        if (adminError || !adminRole) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "StripeMetrics", user_id: user.id, details: { reason: "Not admin" } });
+            throw new Error("Unauthorized");
+        }
+
         // Rate limit: 20 requests per hour
         await checkRateLimit(supabase, user.id, {
             endpoint: "get-stripe-metrics",

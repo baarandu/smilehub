@@ -8,7 +8,7 @@ import {
   validateMaxLength,
 } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
-import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
 
@@ -47,13 +47,24 @@ Deno.serve(async (req) => {
       windowMinutes: 60,
     });
 
+    // Verify user belongs to at least one clinic
+    const { data: userClinics } = await supabase
+      .from("clinic_users")
+      .select("clinic_id")
+      .eq("user_id", user.id)
+      .limit(1);
+
+    if (!userClinics || userClinics.length === 0) {
+      throw new Error("User not authorized");
+    }
+
     const { message, history } = await req.json();
 
     validateRequired(message, "message");
     validateMaxLength(message, 2000, "message");
 
-    // Check for prompt injection
-    checkForInjection(message, {
+    // Check for prompt injection (blocking mode)
+    requireSafeInput(message, {
       functionName: "ai-secretary",
       userId: user.id,
     });

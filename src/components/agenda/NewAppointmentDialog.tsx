@@ -36,6 +36,7 @@ export function NewAppointmentDialog({
   const [form, setForm] = useState({
     patientId: '',
     patientName: '',
+    date: '',
     time: '',
     location: '',
     notes: '',
@@ -50,13 +51,14 @@ export function NewAppointmentDialog({
         setForm({
           patientId: appointmentToEdit.patient_id,
           patientName: appointmentToEdit.patients?.name || '',
+          date: appointmentToEdit.date || '',
           time: appointmentToEdit.time?.slice(0, 5) || '',
           location: appointmentToEdit.location || '',
           notes: appointmentToEdit.notes || '',
           procedure: appointmentToEdit.procedure_name || '',
         });
       } else {
-        setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '' });
       }
       setPatientSearch('');
       setShowPatientList(false);
@@ -108,7 +110,7 @@ export function NewAppointmentDialog({
     } else {
       onAdd(form);
     }
-    setForm({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+    setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '' });
     setPatientSearch('');
   };
 
@@ -217,6 +219,16 @@ export function NewAppointmentDialog({
               </div>
             )}
           </div>
+          {appointmentToEdit && (
+            <div className="space-y-2">
+              <Label>Data *</Label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Horário *</Label>
             <Input

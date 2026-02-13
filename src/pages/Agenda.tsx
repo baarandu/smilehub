@@ -177,7 +177,7 @@ export default function Agenda() {
     }
   };
 
-  const handleAddAppointment = async (data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => {
+  const handleAddAppointment = async (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => {
     if (!data.patientId || !data.time) {
       toast.error('Selecione um paciente e horário');
       return;
@@ -213,7 +213,7 @@ export default function Agenda() {
     }
   };
 
-  const handleUpdateAppointment = async (id: string, data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => {
+  const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => {
     // Check for time conflict (exclude current appointment)
     const timeConflict = appointments.find(
       apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5)
@@ -224,9 +224,10 @@ export default function Agenda() {
     }
 
     try {
+      const newDate = data.date || dateString;
       await appointmentsService.update(id, {
         patient_id: data.patientId,
-        date: dateString,
+        date: newDate,
         time: data.time,
         location: data.location || null,
         notes: data.notes || null,

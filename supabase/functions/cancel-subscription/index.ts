@@ -50,6 +50,20 @@ serve(async (req) => {
 
         validateUUID(clinicId, "clinicId");
 
+        // Verify user is admin of the clinic
+        const { data: adminRole, error: adminCheckError } = await supabase
+            .from('clinic_users')
+            .select('role')
+            .eq('clinic_id', clinicId)
+            .eq('user_id', user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
+
+        if (adminCheckError || !adminRole) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "Subscription", user_id: user.id, details: { reason: "Not admin of clinic", clinic_id: clinicId } });
+            throw new Error("Unauthorized");
+        }
+
         // 1. Get current subscription from our database
         const { data: currentSub, error: subError } = await supabase
             .from('subscriptions')

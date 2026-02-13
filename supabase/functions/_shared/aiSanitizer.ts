@@ -84,3 +84,27 @@ export function checkForInjection(
     matchedPatterns,
   };
 }
+
+/**
+ * Blocking mode: throws ValidationError if prompt injection is detected.
+ * Use for clinical/financial AI functions where injection is unacceptable.
+ */
+export class AIInjectionError extends Error {
+  public readonly statusCode = 400;
+  constructor(message = "Entrada bloqueada por razões de segurança.") {
+    super(message);
+    this.name = "AIInjectionError";
+  }
+}
+
+export function requireSafeInput(
+  input: string,
+  context: { functionName: string; userId?: string; clinicId?: string }
+): void {
+  const result = checkForInjection(input, context);
+  if (result.suspicious) {
+    throw new AIInjectionError(
+      "Sua mensagem contém padrões bloqueados por segurança. Reformule sua pergunta."
+    );
+  }
+}

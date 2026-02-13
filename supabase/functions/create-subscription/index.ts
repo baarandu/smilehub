@@ -52,6 +52,19 @@ serve(async (req) => {
         validateRequired(email, "email");
         validateRequired(userId, "userId");
 
+        // Verify userId matches authenticated user
+        if (userId !== user.id) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "Subscription", user_id: user.id, details: { reason: "userId mismatch", provided: userId } });
+            throw new Error("Unauthorized");
+        }
+
+        // Validate amount range if provided (R$9.99 - R$999.99 = 999-99999 centavos)
+        if (amount !== undefined && amount !== null) {
+            if (typeof amount !== 'number' || amount < 999 || amount > 99999) {
+                throw new Error("Valor de assinatura inválido.");
+            }
+        }
+
         // 1. Get or Create Customer
         let stripeCustomerId = customerId;
         if (!stripeCustomerId) {

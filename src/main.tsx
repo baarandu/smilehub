@@ -20,13 +20,13 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     enabled: import.meta.env.PROD, // Only send errors in production
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
+      // Replay disabled: captures PII (patient CPF, medical history) on screen
     ],
     // Performance Monitoring
     tracesSampleRate: 0.1, // Capture 10% of transactions
-    // Session Replay
-    replaysSessionSampleRate: 0.1, // Capture 10% of sessions
-    replaysOnErrorSampleRate: 1.0, // Capture 100% of sessions with errors
+    // Session Replay — DISABLED for PII protection (LGPD)
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
   });
 }
 

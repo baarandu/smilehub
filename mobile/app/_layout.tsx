@@ -25,8 +25,8 @@ if (sentryDsn) {
         debug: __DEV__, // Show debug info in development
         enabled: !__DEV__, // Only send errors in production
         tracesSampleRate: 0.1, // Capture 10% of transactions for performance
-        attachScreenshot: true, // Attach screenshots to errors
-        attachViewHierarchy: true, // Attach view hierarchy to errors
+        attachScreenshot: false, // Disabled: captures PII (patient data) on screen
+        attachViewHierarchy: false, // Disabled: may leak component structure with PII
     });
 }
 

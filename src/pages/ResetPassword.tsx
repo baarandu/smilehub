@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { passwordSchema } from '@/lib/validation';
 
 export default function ResetPassword() {
     const [password, setPassword] = useState('');
@@ -65,8 +66,9 @@ export default function ResetPassword() {
             return;
         }
 
-        if (password.length < 6) {
-            toast.error('A senha deve ter pelo menos 6 caracteres');
+        const pwResult = passwordSchema.safeParse(password);
+        if (!pwResult.success) {
+            toast.error(pwResult.error.issues[0].message);
             return;
         }
 

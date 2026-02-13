@@ -1,8 +1,8 @@
 # Plano de Remediação de Segurança — Smile Care Hub
 
 **Data da Auditoria:** 11/02/2026
-**Última Atualização:** 11/02/2026
-**Nota Atual:** A (melhorou de A- após Fase 4)
+**Última Atualização:** 13/02/2026
+**Nota Atual:** A+ (melhorou de A após Fase 6)
 **Meta:** Atingir nota A- em 45 dias — **META ATINGIDA E SUPERADA**
 
 ---
@@ -321,3 +321,79 @@ Semana 1  ████████████ Fase 5 — CONCLUÍDA (11/02/2026
 | `supabase/functions/_shared/rateLimit.ts` | 2 | CRIADO | Rate limiting fail-open por usuário/função |
 | `supabase/functions/_shared/consent.ts` | 3 | CRIADO | Verificação de consentimento IA (LGPD Art. 6-7) |
 | `supabase/functions/_shared/logger.ts` | 4 | ATUALIZADO | Logging estruturado JSON + audit fire-and-forget |
+
+---
+
+## Fase 6 — Remediação Pós-Auditoria (13/02/2026) — CONCLUÍDA
+
+> Auditoria completa identificou itens incompletos das Fases 1-5 e vulnerabilidades novas. Todas as 18 sub-tarefas implementadas.
+
+### 6.1 ~~Sentry PII Protection~~ FEITO
+- **Prioridade:** URGENTE
+- **Web:** Removido `replayIntegration()`, rates zerados (`src/main.tsx`)
+- **Mobile:** `attachScreenshot: false`, `attachViewHierarchy: false` (`mobile/app/_layout.tsx`)
+
+### 6.2 ~~Proteger send-invite Edge Function~~ FEITO
+- **Prioridade:** URGENTE
+- **Arquivo:** `supabase/functions/send-invite/index.ts`
+- **O que foi feito:** Verificação de webhook secret (`Authorization: Bearer <SERVICE_ROLE_KEY>` ou `x-webhook-secret`). Retorna 401 para requisições não autorizadas.
+
+### 6.3 ~~CORS: Bloquear origens desconhecidas~~ FEITO
+- **Prioridade:** URGENTE
+- **Arquivo:** `supabase/functions/_shared/cors.ts`
+- **O que foi feito:** Removido fallback para `ALLOWED_ORIGINS[0]`. Origens desconhecidas não recebem `Access-Control-Allow-Origin`. Localhost excluído em produção via `DENO_DEPLOYMENT_ID`.
+
+### 6.4 ~~Política de Senha Forte~~ FEITO
+- **Prioridade:** ALTA
+- **Arquivos:** `src/lib/validation.ts` (passwordSchema + getPasswordStrength), `src/pages/Signup.tsx`, `src/pages/ResetPassword.tsx`, `mobile/app/signup.tsx`, `mobile/app/reset-password.tsx`
+- **Requisitos:** min 12 chars, maiúscula, minúscula, número, caractere especial
+
+### 6.5 ~~Completar Anonimização OpenAI~~ FEITO
+- **Prioridade:** ALTA
+- **dentist-agent:** `Nome: X` → `Paciente: [contexto ativo]`
+- **accounting-agent:** `maskCpf()` (***.***.***-XX) + `anonymizeName()` (Paciente 1, 2...) aplicados em `resolveEncryptedPatientCpfs()`, `get_ir_annual_summary`, `get_ir_transactions`
+
+### 6.6 ~~Consent fail-closed (LGPD)~~ FEITO
+- **Prioridade:** ALTA
+- **Arquivo:** `supabase/functions/_shared/consent.ts`
+- **O que foi feito:** `checkAiConsent` agora faz throw `ConsentError` em caso de erro DB (antes retornava `true`)
+
+### 6.7 ~~AI Sanitizer Bloqueante~~ FEITO
+- **Prioridade:** ALTA
+- **Arquivo:** `supabase/functions/_shared/aiSanitizer.ts`
+- **O que foi feito:** Nova classe `AIInjectionError` + `requireSafeInput()` que faz throw quando prompt injection é detectado
+- **Aplicado em:** `dentist-agent`, `accounting-agent` (funções clínicas/financeiras)
+- **Log-only mantido em:** `ai-secretary`, `voice-consultation-extract`
+
+### 6.8 ~~Admin Check Stripe Functions~~ FEITO
+- **Prioridade:** ALTA
+- `get-stripe-metrics`: verifica `role = 'admin'` em `clinic_users`
+- `create-subscription`: verifica `userId === user.id` + amount range (999-99999)
+- `update-subscription`: verifica user é admin da clínica
+- `cancel-subscription`: verifica user é admin da clínica
+
+### 6.9 ~~Rate Limit Fallback In-Memory~~ FEITO
+- **Prioridade:** MEDIA
+- **Arquivo:** `supabase/functions/_shared/rateLimit.ts`
+- **O que foi feito:** `checkMemoryRateLimit()` com `Map<string, {count, windowStart}>` como fallback quando DB falha. Cleanup automático quando Map > 1000 entries.
+
+### 6.10 ~~RPC get_profiles_for_users Auth Check~~ FEITO
+- **Prioridade:** MEDIA
+- **Arquivo:** `supabase/migrations/20260214_phase6_security_fixes.sql`
+- **O que foi feito:** Recriada com `auth.uid()` check + restrição a users que compartilham clínica
+
+### 6.11 ~~Headers HSTS + CSP~~ FEITO
+- **Prioridade:** MEDIA
+- **Arquivo:** `vercel.json`
+- **Headers adicionados:** `Strict-Transport-Security: max-age=31536000; includeSubDomains` + `Content-Security-Policy` (self, Supabase, Stripe, Sentry)
+
+### 6.12 ~~SecureStore Fail-Closed~~ FEITO
+- **Prioridade:** MEDIA
+- **Arquivo:** `mobile/src/lib/secureStorage.ts`
+- **setItem:** throw Error (sem fallback para AsyncStorage)
+- **getItem:** fallback de leitura apenas durante migração
+
+### 6.13 ~~Criptografia de Transcrições de Voz~~ FEITO
+- **Prioridade:** MEDIA
+- **Migration:** `20260214_phase6_security_fixes.sql` (coluna `transcription_encrypted bytea`, RPC `encrypt_voice_transcription`, view `voice_consultation_sessions_secure`)
+- **Edge Function:** `voice-consultation-transcribe/index.ts` usa RPC com fallback plaintext

@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { extractBearerToken, validateUUID } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { checkAiConsent } from "../_shared/consent.ts";
 import { createLogger } from "../_shared/logger.ts";
 
 serve(async (req) => {
@@ -56,6 +57,33 @@ serve(async (req) => {
 
     if (!clinicUser) throw new Error("User not authorized for this clinic");
 
+    // Check AI consent for existing patients (LGPD Art. 6-7)
+    const { data: sessionData } = await supabase
+      .from("voice_consultation_sessions")
+      .select("patient_id, is_new_patient")
+      .eq("id", sessionId)
+      .single();
+
+    if (sessionData && !sessionData.is_new_patient && sessionData.patient_id) {
+      const hasConsent = await checkAiConsent(supabase, sessionData.patient_id, clinicId);
+      if (!hasConsent) {
+        log.audit(supabase, {
+          action: "CONSENT_DENIED", table_name: "Patient", record_id: sessionData.patient_id,
+          user_id: user.id, clinic_id: clinicId, details: { reason: "AI consent not granted" },
+        });
+        return new Response(
+          JSON.stringify({
+            error: "Paciente não consentiu com análise por IA. Registre o consentimento na ficha do paciente.",
+            consent_required: true,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 403,
+          }
+        );
+      }
+    }
+
     // Update session status
     await supabase
       .from("voice_consultation_sessions")
@@ -93,13 +121,27 @@ serve(async (req) => {
     const transcriptionText = whisperResult.text || "";
     const durationSeconds = Math.round(whisperResult.duration || 0);
 
-    // Update session with transcription
+    // Update session with encrypted transcription via RPC
+    const { error: encryptError } = await supabase.rpc('encrypt_voice_transcription', {
+      p_session_id: sessionId,
+      p_transcription: transcriptionText,
+    });
+
+    if (encryptError) {
+      // Fallback: store plaintext if encryption RPC not available yet
+      console.warn('[voice-transcribe] Encryption RPC failed, storing plaintext:', encryptError.message);
+      await supabase
+        .from("voice_consultation_sessions")
+        .update({
+          transcription: transcriptionText,
+        })
+        .eq("id", sessionId);
+    }
+
+    // Always update duration
     await supabase
       .from("voice_consultation_sessions")
-      .update({
-        transcription: transcriptionText,
-        audio_duration_seconds: durationSeconds,
-      })
+      .update({ audio_duration_seconds: durationSeconds })
       .eq("id", sessionId);
 
     // Audit: AI request (Whisper)

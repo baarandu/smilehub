@@ -179,6 +179,41 @@ export function validatePixKey(key: string, type: string): { valid: boolean; err
 }
 
 // =====================================================
+// Password Validation
+// =====================================================
+export const passwordSchema = z.string()
+    .min(12, 'Senha deve ter pelo menos 12 caracteres')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+    .regex(/[^A-Za-z0-9]/, 'Senha deve conter pelo menos um caractere especial');
+
+export type PasswordStrength = 'weak' | 'medium' | 'strong';
+
+export function getPasswordStrength(password: string): { strength: PasswordStrength; score: number; feedback: string[] } {
+    const feedback: string[] = [];
+    let score = 0;
+
+    if (password.length >= 12) score++;
+    else feedback.push('Mínimo 12 caracteres');
+
+    if (/[A-Z]/.test(password)) score++;
+    else feedback.push('Letra maiúscula');
+
+    if (/[a-z]/.test(password)) score++;
+    else feedback.push('Letra minúscula');
+
+    if (/[0-9]/.test(password)) score++;
+    else feedback.push('Número');
+
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    else feedback.push('Caractere especial (!@#$...)');
+
+    const strength: PasswordStrength = score <= 2 ? 'weak' : score <= 4 ? 'medium' : 'strong';
+    return { strength, score, feedback };
+}
+
+// =====================================================
 // Export validation helper
 // =====================================================
 export type PatientData = z.infer<typeof patientSchema>;

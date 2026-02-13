@@ -12,7 +12,7 @@ import {
   validateImageUrls,
 } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
-import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
@@ -190,8 +190,8 @@ serve(async (req) => {
     if (patient_id) validateUUID(patient_id, "patient_id");
     const validatedImageUrls = validateImageUrls(image_urls);
 
-    // Check for prompt injection (log-only mode)
-    checkForInjection(message, {
+    // Check for prompt injection (blocking mode for clinical functions)
+    requireSafeInput(message, {
       functionName: "dentist-agent",
       userId: user.id,
       clinicId: clinic_id,
@@ -257,7 +257,7 @@ serve(async (req) => {
           ? calculateAge(patientData.birth_date)
           : null;
         patientSummary = [
-          `Nome: ${patientData.name}`,
+          `Paciente: [contexto ativo]`,
           age !== null ? `Idade: ${age} anos` : null,
           patientData.allergies ? `Alergias: ${patientData.allergies}` : null,
           patientData.medications

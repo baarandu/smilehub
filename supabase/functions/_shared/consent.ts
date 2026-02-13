@@ -28,15 +28,17 @@ export async function checkAiConsent(
       });
 
     if (error) {
-      // Fail-open: if consent check fails, allow (log the error)
-      console.warn('[consent] Check failed, allowing request:', error.message);
-      return true;
+      // Fail-closed: if consent check fails, block request (LGPD compliance)
+      console.error('[consent] Check failed, blocking request:', error.message);
+      throw new ConsentError("Erro ao verificar consentimento. Tente novamente.");
     }
 
     return data === true;
-  } catch {
-    // Fail-open on unexpected errors
-    return true;
+  } catch (err) {
+    if (err instanceof ConsentError) throw err;
+    // Fail-closed on unexpected errors (LGPD compliance)
+    console.error('[consent] Unexpected error, blocking request:', err);
+    throw new ConsentError("Erro ao verificar consentimento. Tente novamente.");
   }
 }
 

@@ -31,8 +31,8 @@ export interface NewAppointmentDialogProps {
   patients: Patient[];
   locations: Location[];
   selectedDate: string;
-  onAdd: (data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => void;
-  onUpdate?: (id: string, data: { patientId: string; time: string; location: string; notes: string; procedure: string }) => void;
+  onAdd: (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => void;
+  onUpdate?: (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => void;
   appointmentToEdit?: AppointmentWithPatient | null;
   onRequestCreatePatient?: (prefillName: string) => void;
   preSelectedPatient?: Patient | null;

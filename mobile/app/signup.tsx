@@ -21,8 +21,23 @@ export default function SignUp() {
     const { signUp } = useAuth();
     const router = useRouter();
 
+    const validatePassword = (pw: string): string | null => {
+        if (pw.length < 12) return 'Senha deve ter pelo menos 12 caracteres';
+        if (!/[A-Z]/.test(pw)) return 'Senha deve conter pelo menos uma letra maiúscula';
+        if (!/[a-z]/.test(pw)) return 'Senha deve conter pelo menos uma letra minúscula';
+        if (!/[0-9]/.test(pw)) return 'Senha deve conter pelo menos um número';
+        if (!/[^A-Za-z0-9]/.test(pw)) return 'Senha deve conter pelo menos um caractere especial';
+        return null;
+    };
+
     const handleSignUp = async () => {
         if (!name || !email || !password || !confirmPassword) {
+            return;
+        }
+
+        const pwError = validatePassword(password);
+        if (pwError) {
+            alert(pwError);
             return;
         }
 
