@@ -8,7 +8,7 @@ import {
   validateMaxLength,
 } from "../_shared/validation.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
-import { checkForInjection } from "../_shared/aiSanitizer.ts";
+import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { createLogger } from "../_shared/logger.ts";
@@ -25,6 +25,24 @@ REGRAS CRÍTICAS:
 4. Diferencie a fala do dentista da fala do paciente pelo contexto.
 5. Formate automaticamente: CPF (000.000.000-00), telefone ((11) 99999-9999), datas (YYYY-MM-DD).
 6. Para paciente EXISTENTE: retorne apenas campos que tiveram informação nova ou diferente.
+
+REGRAS PARA PROCEDIMENTOS (procedures):
+- Extraia cada procedimento mencionado como item separado.
+- "realizei"/"fiz"/"executei" → status "completed"
+- "iniciei"/"comecei" → status "in_progress"
+- "precisa"/"agendado"/"necessita" → status "pending"
+- Dentes FDI: 11-18, 21-28, 31-38, 41-48 (permanentes); 51-55, 61-65, 71-75, 81-85 (decíduos).
+- Tratamentos válidos: Avaliação, Bloco, Canal, Clareamento, Coroa, Extração, Faceta, Implante, Limpeza, Outros, Pino, Radiografia, Raspagem Subgengival, Restauração.
+- Se o tratamento mencionado não se encaixa nos válidos, use "Outros" e coloque a descrição no campo description.
+- Array vazio se nenhum procedimento mencionado.
+
+REGRAS PARA ORÇAMENTO (budget):
+- Identificar por palavras: "orçamento", "custo", "investimento", "valor", "R$", "reais".
+- Valores em centavos (string): R$1.500 → "150000", R$200 → "20000".
+- O campo values é um mapa de tratamento → valor em centavos: { "Restauração": "15000" }.
+- Faces (M/D/O/V/L/P) relevantes apenas para Restauração.
+- materials: mapa de tratamento → material: { "Restauração": "Z350" }.
+- { items: [], location: null } se nenhum orçamento mencionado.
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -81,10 +99,34 @@ FORMATO DE SAÍDA (JSON):
     "suggestedReturnDate": string | null (YYYY-MM-DD),
     "notes": string | null
   },
+  "procedures": [
+    {
+      "description": string | null,
+      "tooth": string | null (FDI number),
+      "treatment": string | null (from valid list),
+      "material": string | null,
+      "status": "pending" | "in_progress" | "completed",
+      "location": string | null
+    }
+  ],
+  "budget": {
+    "items": [
+      {
+        "tooth": string (FDI number),
+        "treatments": string[] (from valid list),
+        "values": { "treatment_name": "value_in_cents" },
+        "faces": string[] (M/D/O/V/L/P, only for Restauração),
+        "materials": { "treatment_name": "material_name" }
+      }
+    ],
+    "location": string | null
+  },
   "confidence": {
     "patient": "high" | "medium" | "low",
     "anamnesis": "high" | "medium" | "low",
-    "consultation": "high" | "medium" | "low"
+    "consultation": "high" | "medium" | "low",
+    "procedures": "high" | "medium" | "low",
+    "budget": "high" | "medium" | "low"
   }
 }`;
 
@@ -134,8 +176,8 @@ serve(async (req) => {
     if (clinic_id) validateUUID(clinic_id, "clinic_id");
     if (session_id) validateUUID(session_id, "session_id");
 
-    // Check for prompt injection (log-only mode)
-    checkForInjection(transcription, {
+    // Check for prompt injection (blocking mode)
+    requireSafeInput(transcription, {
       functionName: "voice-consultation-extract",
       userId: user.id,
       clinicId: clinic_id,
@@ -204,7 +246,7 @@ serve(async (req) => {
           ],
           response_format: { type: "json_object" },
           temperature: 0.1,
-          max_tokens: 4000,
+          max_tokens: 6000,
         }),
       }
     );
@@ -232,6 +274,8 @@ serve(async (req) => {
           extracted_patient_data: extractedData.patient,
           extracted_anamnesis_data: extractedData.anamnesis,
           extracted_consultation_data: extractedData.consultation,
+          extracted_procedures_data: extractedData.procedures || [],
+          extracted_budget_data: extractedData.budget || { items: [], location: null },
           processing_completed_at: new Date().toISOString(),
           gpt_tokens_used: tokensUsed,
         })

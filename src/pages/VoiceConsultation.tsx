@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,9 +43,22 @@ import {
 
 import { createPatientFromForm, updatePatientFromForm } from '@/services/patients';
 import { anamnesesService } from '@/services/anamneses';
+import { proceduresService } from '@/services/procedures';
+import { budgetsService } from '@/services/budgets';
+import { locationsService, type Location } from '@/services/locations';
 import { supabase } from '@/lib/supabase';
+import { getShortToothId, calculateToothTotal, type ToothEntry } from '@/utils/budgetUtils';
+import {
+  ProceduresReviewForm,
+  extractedToProcedureForm,
+  type ProcedureFormItem,
+} from '@/components/voice-consultation/ProceduresReviewForm';
+import {
+  BudgetReviewForm,
+  extractedToBudgetForm,
+} from '@/components/voice-consultation/BudgetReviewForm';
 
-import type { PatientFormData, Patient, Anamnese } from '@/types/database';
+import type { PatientFormData, Patient, Anamnese, BudgetInsert } from '@/types/database';
 
 const emptyPatientForm: PatientFormData = {
   name: '', phone: '', email: '', birthDate: '', cpf: '', rg: '',
@@ -79,14 +92,23 @@ export default function VoiceConsultation() {
   const [patientForm, setPatientForm] = useState<PatientFormData>(emptyPatientForm);
   const [anamnesisForm, setAnamnesisForm] = useState<AnamnesisFormState>(getEmptyAnamnesisForm());
   const [consultationForm, setConsultationForm] = useState<ConsultationFormState>({
-    chiefComplaint: '', procedures: '', treatmentPlan: '', suggestedReturnDate: '', notes: '',
+    chiefComplaint: '', treatmentPlan: '', suggestedReturnDate: '', notes: '',
   });
+  const [proceduresForm, setProceduresForm] = useState<ProcedureFormItem[]>([]);
+  const [budgetForm, setBudgetForm] = useState<ToothEntry[]>([]);
+  const [budgetLocation, setBudgetLocation] = useState('');
+  const [locations, setLocations] = useState<Location[]>([]);
 
   // Get current user
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) setUserId(data.user.id);
     });
+  }, []);
+
+  // Load locations
+  useEffect(() => {
+    locationsService.getAll().then(setLocations).catch(console.error);
   }, []);
 
   // Load appointment data if provided
@@ -174,7 +196,7 @@ export default function VoiceConsultation() {
   // Populate forms when extraction completes
   useEffect(() => {
     if (!voiceConsultation.extractionResult) return;
-    const { patient, anamnesis, consultation } = voiceConsultation.extractionResult;
+    const { patient, anamnesis, consultation, procedures, budget } = voiceConsultation.extractionResult;
 
     // Patient form
     if (patient) {
@@ -215,7 +237,19 @@ export default function VoiceConsultation() {
     if (consultation) {
       setConsultationForm(extractedToConsultationForm(consultation));
     }
-  }, [voiceConsultation.extractionResult]);
+
+    // Procedures form
+    if (procedures) {
+      setProceduresForm(extractedToProcedureForm(procedures, locations));
+    }
+
+    // Budget form
+    if (budget) {
+      const result = extractedToBudgetForm(budget, locations);
+      setBudgetForm(result.items);
+      setBudgetLocation(result.location);
+    }
+  }, [voiceConsultation.extractionResult, locations]);
 
   // Warn before leaving during recording
   useEffect(() => {
@@ -271,83 +305,169 @@ export default function VoiceConsultation() {
         return;
       }
 
-      // 2. Create anamnesis
       const today = new Date();
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      const anamneseData = {
-        patient_id: savedPatientId,
-        date: dateStr,
-        medical_treatment: anamnesisForm.medicalTreatment,
-        medical_treatment_details: anamnesisForm.medicalTreatment ? anamnesisForm.medicalTreatmentDetails || null : null,
-        recent_surgery: anamnesisForm.recentSurgery,
-        recent_surgery_details: anamnesisForm.recentSurgery ? anamnesisForm.recentSurgeryDetails || null : null,
-        healing_problems: anamnesisForm.healingProblems,
-        healing_problems_details: anamnesisForm.healingProblems ? anamnesisForm.healingProblemsDetails || null : null,
-        respiratory_problems: anamnesisForm.respiratoryProblems,
-        respiratory_problems_details: anamnesisForm.respiratoryProblems ? anamnesisForm.respiratoryProblemsDetails || null : null,
-        current_medication: anamnesisForm.currentMedication,
-        current_medication_details: anamnesisForm.currentMedication ? anamnesisForm.currentMedicationDetails || null : null,
-        allergy: anamnesisForm.allergy,
-        allergy_details: anamnesisForm.allergy ? anamnesisForm.allergyDetails || null : null,
-        drug_allergy: anamnesisForm.drugAllergy,
-        drug_allergy_details: anamnesisForm.drugAllergy ? anamnesisForm.drugAllergyDetails || null : null,
-        continuous_medication: anamnesisForm.continuousMedication,
-        continuous_medication_details: anamnesisForm.continuousMedication ? anamnesisForm.continuousMedicationDetails || null : null,
-        local_anesthesia_history: anamnesisForm.localAnesthesiaHistory,
-        local_anesthesia_history_details: anamnesisForm.localAnesthesiaHistory ? anamnesisForm.localAnesthesiaHistoryDetails || null : null,
-        anesthesia_reaction: anamnesisForm.anesthesiaReaction,
-        anesthesia_reaction_details: anamnesisForm.anesthesiaReaction ? anamnesisForm.anesthesiaReactionDetails || null : null,
-        pregnant_or_breastfeeding: anamnesisForm.pregnantOrBreastfeeding,
-        pregnant_or_breastfeeding_details: anamnesisForm.pregnantOrBreastfeeding ? anamnesisForm.pregnantOrBreastfeedingDetails || null : null,
-        smoker_or_drinker: anamnesisForm.smokerOrDrinker,
-        smoker_or_drinker_details: anamnesisForm.smokerOrDrinker ? anamnesisForm.smokerOrDrinkerDetails || null : null,
-        fasting: anamnesisForm.fasting,
-        fasting_details: anamnesisForm.fasting ? anamnesisForm.fastingDetails || null : null,
-        diabetes: anamnesisForm.diabetes,
-        diabetes_details: anamnesisForm.diabetes ? anamnesisForm.diabetesDetails || null : null,
-        depression_anxiety_panic: anamnesisForm.depressionAnxietyPanic,
-        depression_anxiety_panic_details: anamnesisForm.depressionAnxietyPanic ? anamnesisForm.depressionAnxietyPanicDetails || null : null,
-        seizure_epilepsy: anamnesisForm.seizureEpilepsy,
-        seizure_epilepsy_details: anamnesisForm.seizureEpilepsy ? anamnesisForm.seizureEpilepsyDetails || null : null,
-        heart_disease: anamnesisForm.heartDisease,
-        heart_disease_details: anamnesisForm.heartDisease ? anamnesisForm.heartDiseaseDetails || null : null,
-        hypertension: anamnesisForm.hypertension,
-        hypertension_details: anamnesisForm.hypertension ? anamnesisForm.hypertensionDetails || null : null,
-        pacemaker: anamnesisForm.pacemaker,
-        pacemaker_details: anamnesisForm.pacemaker ? anamnesisForm.pacemakerDetails || null : null,
-        infectious_disease: anamnesisForm.infectiousDisease,
-        infectious_disease_details: anamnesisForm.infectiousDisease ? anamnesisForm.infectiousDiseaseDetails || null : null,
-        arthritis: anamnesisForm.arthritis,
-        arthritis_details: anamnesisForm.arthritis ? anamnesisForm.arthritisDetails || null : null,
-        gastritis_reflux: anamnesisForm.gastritisReflux,
-        gastritis_reflux_details: anamnesisForm.gastritisReflux ? anamnesisForm.gastritisRefluxDetails || null : null,
-        bruxism_dtm_orofacial_pain: anamnesisForm.bruxismDtmOrofacialPain,
-        bruxism_dtm_orofacial_pain_details: anamnesisForm.bruxismDtmOrofacialPain ? anamnesisForm.bruxismDtmOrofacialPainDetails || null : null,
-        notes: anamnesisForm.notes || null,
-        observations: [
-          anamnesisForm.observations,
-          consultationForm.chiefComplaint && `Queixa: ${consultationForm.chiefComplaint}`,
-          consultationForm.procedures && `Procedimentos: ${consultationForm.procedures}`,
-          consultationForm.treatmentPlan && `Plano: ${consultationForm.treatmentPlan}`,
-          consultationForm.suggestedReturnDate && `Retorno sugerido: ${consultationForm.suggestedReturnDate}`,
-          consultationForm.notes && `Notas: ${consultationForm.notes}`,
-        ].filter(Boolean).join('\n\n') || null,
-      };
+      // 2. Create anamnesis ONLY if there's meaningful data
+      const hasAnamnesisData = [
+        anamnesisForm.medicalTreatment, anamnesisForm.recentSurgery,
+        anamnesisForm.healingProblems, anamnesisForm.respiratoryProblems,
+        anamnesisForm.currentMedication, anamnesisForm.allergy,
+        anamnesisForm.drugAllergy, anamnesisForm.continuousMedication,
+        anamnesisForm.localAnesthesiaHistory, anamnesisForm.anesthesiaReaction,
+        anamnesisForm.pregnantOrBreastfeeding, anamnesisForm.smokerOrDrinker,
+        anamnesisForm.fasting, anamnesisForm.diabetes,
+        anamnesisForm.depressionAnxietyPanic, anamnesisForm.seizureEpilepsy,
+        anamnesisForm.heartDisease, anamnesisForm.hypertension,
+        anamnesisForm.pacemaker, anamnesisForm.infectiousDisease,
+        anamnesisForm.arthritis, anamnesisForm.gastritisReflux,
+        anamnesisForm.bruxismDtmOrofacialPain,
+      ].some(Boolean) || !!(anamnesisForm.notes?.trim()) || !!(anamnesisForm.observations?.trim())
+        || !!(consultationForm.chiefComplaint?.trim()) || !!(consultationForm.treatmentPlan?.trim())
+        || !!(consultationForm.notes?.trim());
 
-      try {
-        await anamnesesService.create(anamneseData as any);
-      } catch (err) {
-        console.error('Error creating anamnesis:', err);
-        toast.error('Erro ao salvar anamnese');
-        return;
+      if (hasAnamnesisData) {
+        const anamneseData = {
+          patient_id: savedPatientId,
+          date: dateStr,
+          medical_treatment: anamnesisForm.medicalTreatment,
+          medical_treatment_details: anamnesisForm.medicalTreatment ? anamnesisForm.medicalTreatmentDetails || null : null,
+          recent_surgery: anamnesisForm.recentSurgery,
+          recent_surgery_details: anamnesisForm.recentSurgery ? anamnesisForm.recentSurgeryDetails || null : null,
+          healing_problems: anamnesisForm.healingProblems,
+          healing_problems_details: anamnesisForm.healingProblems ? anamnesisForm.healingProblemsDetails || null : null,
+          respiratory_problems: anamnesisForm.respiratoryProblems,
+          respiratory_problems_details: anamnesisForm.respiratoryProblems ? anamnesisForm.respiratoryProblemsDetails || null : null,
+          current_medication: anamnesisForm.currentMedication,
+          current_medication_details: anamnesisForm.currentMedication ? anamnesisForm.currentMedicationDetails || null : null,
+          allergy: anamnesisForm.allergy,
+          allergy_details: anamnesisForm.allergy ? anamnesisForm.allergyDetails || null : null,
+          drug_allergy: anamnesisForm.drugAllergy,
+          drug_allergy_details: anamnesisForm.drugAllergy ? anamnesisForm.drugAllergyDetails || null : null,
+          continuous_medication: anamnesisForm.continuousMedication,
+          continuous_medication_details: anamnesisForm.continuousMedication ? anamnesisForm.continuousMedicationDetails || null : null,
+          local_anesthesia_history: anamnesisForm.localAnesthesiaHistory,
+          local_anesthesia_history_details: anamnesisForm.localAnesthesiaHistory ? anamnesisForm.localAnesthesiaHistoryDetails || null : null,
+          anesthesia_reaction: anamnesisForm.anesthesiaReaction,
+          anesthesia_reaction_details: anamnesisForm.anesthesiaReaction ? anamnesisForm.anesthesiaReactionDetails || null : null,
+          pregnant_or_breastfeeding: anamnesisForm.pregnantOrBreastfeeding,
+          pregnant_or_breastfeeding_details: anamnesisForm.pregnantOrBreastfeeding ? anamnesisForm.pregnantOrBreastfeedingDetails || null : null,
+          smoker_or_drinker: anamnesisForm.smokerOrDrinker,
+          smoker_or_drinker_details: anamnesisForm.smokerOrDrinker ? anamnesisForm.smokerOrDrinkerDetails || null : null,
+          fasting: anamnesisForm.fasting,
+          fasting_details: anamnesisForm.fasting ? anamnesisForm.fastingDetails || null : null,
+          diabetes: anamnesisForm.diabetes,
+          diabetes_details: anamnesisForm.diabetes ? anamnesisForm.diabetesDetails || null : null,
+          depression_anxiety_panic: anamnesisForm.depressionAnxietyPanic,
+          depression_anxiety_panic_details: anamnesisForm.depressionAnxietyPanic ? anamnesisForm.depressionAnxietyPanicDetails || null : null,
+          seizure_epilepsy: anamnesisForm.seizureEpilepsy,
+          seizure_epilepsy_details: anamnesisForm.seizureEpilepsy ? anamnesisForm.seizureEpilepsyDetails || null : null,
+          heart_disease: anamnesisForm.heartDisease,
+          heart_disease_details: anamnesisForm.heartDisease ? anamnesisForm.heartDiseaseDetails || null : null,
+          hypertension: anamnesisForm.hypertension,
+          hypertension_details: anamnesisForm.hypertension ? anamnesisForm.hypertensionDetails || null : null,
+          pacemaker: anamnesisForm.pacemaker,
+          pacemaker_details: anamnesisForm.pacemaker ? anamnesisForm.pacemakerDetails || null : null,
+          infectious_disease: anamnesisForm.infectiousDisease,
+          infectious_disease_details: anamnesisForm.infectiousDisease ? anamnesisForm.infectiousDiseaseDetails || null : null,
+          arthritis: anamnesisForm.arthritis,
+          arthritis_details: anamnesisForm.arthritis ? anamnesisForm.arthritisDetails || null : null,
+          gastritis_reflux: anamnesisForm.gastritisReflux,
+          gastritis_reflux_details: anamnesisForm.gastritisReflux ? anamnesisForm.gastritisRefluxDetails || null : null,
+          bruxism_dtm_orofacial_pain: anamnesisForm.bruxismDtmOrofacialPain,
+          bruxism_dtm_orofacial_pain_details: anamnesisForm.bruxismDtmOrofacialPain ? anamnesisForm.bruxismDtmOrofacialPainDetails || null : null,
+          notes: anamnesisForm.notes || null,
+          observations: [
+            anamnesisForm.observations,
+            consultationForm.chiefComplaint && `Queixa: ${consultationForm.chiefComplaint}`,
+            consultationForm.treatmentPlan && `Plano: ${consultationForm.treatmentPlan}`,
+            consultationForm.suggestedReturnDate && `Retorno sugerido: ${consultationForm.suggestedReturnDate}`,
+            consultationForm.notes && `Notas: ${consultationForm.notes}`,
+          ].filter(Boolean).join('\n\n') || null,
+        };
+
+        try {
+          await anamnesesService.create(anamneseData as any);
+        } catch (err) {
+          console.error('Error creating anamnesis:', err);
+          toast.error('Erro ao salvar anamnese');
+          return;
+        }
       }
 
-      // 4. Mark session as completed
+      // 3. Create procedures
+      const savedProcedureIds: string[] = [];
+      for (const proc of proceduresForm) {
+        if (!proc.treatment && !proc.description) continue;
+        try {
+          const description = [
+            proc.treatment,
+            proc.tooth && `Dente ${proc.tooth}`,
+            proc.material && `Material: ${proc.material}`,
+            proc.description,
+          ].filter(Boolean).join(' - ');
+
+          const created = await proceduresService.create({
+            patient_id: savedPatientId,
+            date: dateStr,
+            description,
+            location: proc.location || null,
+            status: proc.status || 'completed',
+          });
+          savedProcedureIds.push(created.id);
+        } catch (err) {
+          console.error('Error creating procedure:', err);
+          toast.error('Erro ao salvar procedimento');
+        }
+      }
+
+      // 4. Create budget if items exist
+      let savedBudgetId: string | null = null;
+      if (budgetForm.length > 0) {
+        try {
+          const total = budgetForm.reduce(
+            (sum, item) => sum + calculateToothTotal(item.values),
+            0,
+          );
+          const allTreatments = [
+            ...new Set(budgetForm.flatMap((t) => t.treatments)),
+          ].join(', ');
+
+          const notesData = JSON.stringify({
+            teeth: budgetForm.map((t) => ({ ...t, status: 'pending' })),
+            location: budgetLocation,
+          });
+
+          const budgetItems = budgetForm.map((t) => ({
+            tooth: getShortToothId(t.tooth),
+            faces: t.faces || [],
+          }));
+
+          const budgetData: BudgetInsert = {
+            patient_id: savedPatientId,
+            date: dateStr,
+            treatment: allTreatments || 'Orçamento via consulta por voz',
+            value: total,
+            notes: notesData,
+            status: 'pending',
+            location: budgetLocation || null,
+          };
+
+          const created = await budgetsService.create(budgetData, budgetItems);
+          savedBudgetId = created.id;
+        } catch (err) {
+          console.error('Error creating budget:', err);
+          toast.error('Erro ao salvar orçamento');
+        }
+      }
+
+      // 5. Mark session as completed with IDs
       await voiceConsultation.saveAll(
         patientForm as any,
         anamnesisForm as any,
         consultationForm as any,
+        savedProcedureIds,
+        savedBudgetId,
       );
 
       toast.success('Todos os dados foram salvos com sucesso!');
@@ -435,7 +555,13 @@ export default function VoiceConsultation() {
           <div className="space-y-6">
             <TranscriptionPreview transcription={voiceConsultation.transcription} />
 
-            <Accordion type="multiple" defaultValue={['patient', 'anamnesis', 'consultation']} className="space-y-3">
+            <Accordion type="multiple" defaultValue={[
+              'patient',
+              'anamnesis',
+              'consultation',
+              ...(proceduresForm.length > 0 ? ['procedures'] : []),
+              ...(budgetForm.length > 0 ? ['budget'] : []),
+            ]} className="space-y-3">
               {/* Patient Section */}
               <AccordionItem value="patient" className="border rounded-lg">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline">
@@ -478,6 +604,40 @@ export default function VoiceConsultation() {
                     onChange={setConsultationForm}
                     confidence={confidence?.consultation || 'medium'}
                     aiExtracted={voiceConsultation.extractionResult?.consultation || null}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Procedures Section */}
+              <AccordionItem value="procedures" className="border rounded-lg">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <span className="font-semibold">
+                    Procedimentos ({proceduresForm.length})
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <ProceduresReviewForm
+                    data={proceduresForm}
+                    onChange={setProceduresForm}
+                    locations={locations}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Budget Section */}
+              <AccordionItem value="budget" className="border rounded-lg">
+                <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                  <span className="font-semibold">
+                    Orçamento ({budgetForm.length} {budgetForm.length === 1 ? 'item' : 'itens'})
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <BudgetReviewForm
+                    data={budgetForm}
+                    onChange={setBudgetForm}
+                    location={budgetLocation}
+                    onLocationChange={setBudgetLocation}
+                    locations={locations}
                   />
                 </AccordionContent>
               </AccordionItem>

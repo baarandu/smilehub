@@ -6,7 +6,6 @@ import type { ExtractedConsultationData, ConfidenceLevel } from '@/types/voiceCo
 
 export interface ConsultationFormState {
   chiefComplaint: string;
-  procedures: string;
   treatmentPlan: string;
   suggestedReturnDate: string;
   notes: string;
@@ -17,7 +16,6 @@ export function extractedToConsultationForm(
 ): ConsultationFormState {
   return {
     chiefComplaint: extracted?.chiefComplaint || '',
-    procedures: extracted?.procedures || '',
     treatmentPlan: extracted?.treatmentPlan || '',
     suggestedReturnDate: extracted?.suggestedReturnDate || '',
     notes: extracted?.notes || '',
@@ -74,18 +72,6 @@ export function ConsultationReviewForm({
           onChange={(e) => onChange({ ...data, chiefComplaint: e.target.value })}
           placeholder="O que motivou a consulta..."
           className={`min-h-[100px] ${isAI('chiefComplaint') ? 'bg-blue-50/50 border-blue-200' : ''}`}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label className="flex items-center gap-1.5">
-          Procedimentos Realizados {isAI('procedures') && <AIBadge />}
-        </Label>
-        <Textarea
-          value={data.procedures}
-          onChange={(e) => onChange({ ...data, procedures: e.target.value })}
-          placeholder="Procedimentos executados durante a consulta..."
-          className={`min-h-[100px] ${isAI('procedures') ? 'bg-blue-50/50 border-blue-200' : ''}`}
         />
       </div>
 

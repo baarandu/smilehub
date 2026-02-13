@@ -22,9 +22,13 @@ export interface VoiceConsultationSession {
   extracted_patient_data: ExtractedPatientData | null;
   extracted_anamnesis_data: ExtractedAnamnesisData | null;
   extracted_consultation_data: ExtractedConsultationData | null;
+  extracted_procedures_data: ExtractedProcedureData[] | null;
+  extracted_budget_data: ExtractedBudgetData | null;
   saved_patient_id: string | null;
   saved_anamnesis_id: string | null;
   saved_consultation_id: string | null;
+  saved_procedure_ids: string[];
+  saved_budget_id: string | null;
   processing_started_at: string | null;
   processing_completed_at: string | null;
   processing_error: string | null;
@@ -51,6 +55,8 @@ export interface VoiceConsultationSessionInsert {
   extracted_patient_data?: ExtractedPatientData | null;
   extracted_anamnesis_data?: ExtractedAnamnesisData | null;
   extracted_consultation_data?: ExtractedConsultationData | null;
+  extracted_procedures_data?: ExtractedProcedureData[] | null;
+  extracted_budget_data?: ExtractedBudgetData | null;
 }
 
 // Update type
@@ -63,9 +69,13 @@ export interface VoiceConsultationSessionUpdate {
   extracted_patient_data?: ExtractedPatientData | null;
   extracted_anamnesis_data?: ExtractedAnamnesisData | null;
   extracted_consultation_data?: ExtractedConsultationData | null;
+  extracted_procedures_data?: ExtractedProcedureData[] | null;
+  extracted_budget_data?: ExtractedBudgetData | null;
   saved_patient_id?: string | null;
   saved_anamnesis_id?: string | null;
   saved_consultation_id?: string | null;
+  saved_procedure_ids?: string[];
+  saved_budget_id?: string | null;
   processing_started_at?: string | null;
   processing_completed_at?: string | null;
   processing_error?: string | null;
@@ -139,15 +149,44 @@ export interface ExtractedConsultationData {
   notes: string | null;
 }
 
+// Extracted structured procedure from AI
+export interface ExtractedProcedureData {
+  description: string | null;
+  tooth: string | null;
+  treatment: string | null;
+  material: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  location: string | null;
+}
+
+// Extracted budget item from AI
+export interface ExtractedBudgetItem {
+  tooth: string;
+  treatments: string[];
+  values: Record<string, string>;
+  faces: string[];
+  materials: Record<string, string>;
+}
+
+// Extracted budget data from AI
+export interface ExtractedBudgetData {
+  items: ExtractedBudgetItem[];
+  location: string | null;
+}
+
 // Full extraction result from GPT
 export interface ExtractionResult {
   patient: ExtractedPatientData;
   anamnesis: ExtractedAnamnesisData;
   consultation: ExtractedConsultationData;
+  procedures: ExtractedProcedureData[];
+  budget: ExtractedBudgetData;
   confidence: {
     patient: ConfidenceLevel;
     anamnesis: ConfidenceLevel;
     consultation: ConfidenceLevel;
+    procedures: ConfidenceLevel;
+    budget: ConfidenceLevel;
   };
 }
 

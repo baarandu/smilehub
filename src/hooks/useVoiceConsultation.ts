@@ -43,6 +43,8 @@ interface UseVoiceConsultationReturn {
     patientData: Record<string, unknown>,
     anamnesisData: Record<string, unknown>,
     consultationData: Record<string, unknown>,
+    procedureIds?: string[],
+    budgetId?: string | null,
   ) => Promise<void>;
   discard: () => Promise<void>;
   isSaving: boolean;
@@ -151,6 +153,8 @@ export function useVoiceConsultation({
       patientData: Record<string, unknown>,
       anamnesisData: Record<string, unknown>,
       consultationData: Record<string, unknown>,
+      procedureIds?: string[],
+      budgetId?: string | null,
     ) => {
       if (!session) return;
       setIsSaving(true);
@@ -161,6 +165,8 @@ export function useVoiceConsultation({
           extracted_patient_data: patientData as any,
           extracted_anamnesis_data: anamnesisData as any,
           extracted_consultation_data: consultationData as any,
+          ...(procedureIds && { saved_procedure_ids: procedureIds }),
+          ...(budgetId !== undefined && { saved_budget_id: budgetId }),
         });
 
         toast.success('Dados da consulta salvos com sucesso!');
