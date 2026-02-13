@@ -84,11 +84,7 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async saveAsExam(patientId: string, patientName: string, name: string, content: string): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        // Dynamically import jsPDF
+    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string): Promise<Blob> {
         const { default: jsPDF } = await import('jspdf');
 
         const doc = new jsPDF({ format: 'a4' });
@@ -101,7 +97,7 @@ export const documentTemplatesService = {
         // Title
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
-        doc.text(name.toUpperCase(), pageWidth / 2, y, { align: 'center' });
+        doc.text(templateName.toUpperCase(), pageWidth / 2, y, { align: 'center' });
         y += 20;
 
         // Content
@@ -119,11 +115,55 @@ export const documentTemplatesService = {
         }
 
         // Signature
-        const nameLower = name.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento');
+        const nameLower = templateName.toLowerCase();
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
+            || nameLower.includes('autoriza');
         const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado');
 
-        let dentistName = 'Responsável Técnico';
+        const signerName = dentistName || 'Responsável Técnico';
+
+        y += 40;
+        if (y > pageHeight - 60) {
+            doc.addPage();
+            y = 60;
+        }
+
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.5);
+        doc.setFontSize(10);
+
+        if (isConsentForm) {
+            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
+            y += 5;
+            doc.text(patientName, pageWidth / 2, y, { align: 'center' });
+        } else if (isDentistOnlyDoc) {
+            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
+            y += 5;
+            doc.text(signerName, pageWidth / 2, y, { align: 'center' });
+        } else {
+            const leftCenter = pageWidth / 4;
+            const rightCenter = (pageWidth * 3) / 4;
+            doc.line(leftCenter - 35, y, leftCenter + 35, y);
+            doc.line(rightCenter - 35, y, rightCenter + 35, y);
+            y += 5;
+            doc.text(patientName, leftCenter, y, { align: 'center' });
+            doc.text(signerName, rightCenter, y, { align: 'center' });
+        }
+
+        const pdfOutput = doc.output('arraybuffer');
+        return new Blob([pdfOutput], { type: 'application/pdf' });
+    },
+
+    async saveAsExam(patientId: string, patientName: string, name: string, content: string): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // Get dentist name for signature
+        let dentistName: string | undefined;
+        const nameLower = name.toLowerCase();
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
+            || nameLower.includes('autoriza');
+
         if (!isConsentForm) {
             const { data: profile } = await supabase
                 .from('profiles')
@@ -137,41 +177,7 @@ export const documentTemplatesService = {
             }
         }
 
-        y += 40;
-        if (y > pageHeight - 60) {
-            doc.addPage();
-            y = 60;
-        }
-
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.5);
-        doc.setFontSize(10);
-
-        if (isConsentForm) {
-            // Termo de consentimento: apenas assinatura do paciente
-            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
-            y += 5;
-            doc.text(patientName, pageWidth / 2, y, { align: 'center' });
-        } else if (isDentistOnlyDoc) {
-            // Receituário/Atestado: apenas assinatura do dentista
-            doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
-            y += 5;
-            doc.text(dentistName, pageWidth / 2, y, { align: 'center' });
-        } else {
-            // Outros documentos: assinatura do paciente e dentista
-            const leftCenter = pageWidth / 4;
-            const rightCenter = (pageWidth * 3) / 4;
-
-            doc.line(leftCenter - 35, y, leftCenter + 35, y);
-            doc.line(rightCenter - 35, y, rightCenter + 35, y);
-            y += 5;
-            doc.text(patientName, leftCenter, y, { align: 'center' });
-            doc.text(dentistName, rightCenter, y, { align: 'center' });
-        }
-
-        // Generate PDF
-        const pdfOutput = doc.output('arraybuffer');
-        const pdfBlob = new Blob([pdfOutput], { type: 'application/pdf' });
+        const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName);
 
         const fileName = `doc_${patientId}_${Date.now()}.pdf`;
 

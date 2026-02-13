@@ -16,6 +16,7 @@ import {
   AnamneseTab,
   BudgetsTab
 } from '@/components/patients';
+import { SignaturesPanel } from '@/components/patients/SignaturesPanel';
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -152,6 +153,7 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="exams" className="mt-6">
+          <SignaturesPanel patientId={patient.id} />
           <ExamsTab patientId={patient.id} />
         </TabsContent>
 

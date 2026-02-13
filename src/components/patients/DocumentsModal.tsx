@@ -4,12 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
+import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save, PenTool, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useCreateSignature } from '@/hooks/useDigitalSignatures';
+import { SigningModal } from './SigningModal';
+import type { DeliveryMethod } from '@/types/digitalSignature';
+import { useClinic } from '@/contexts/ClinicContext';
 
 interface DocumentsModalProps {
     open: boolean;
@@ -99,6 +106,7 @@ Assinatura do Responsável Legal`
 
 export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const { toast } = useToast();
+    const { clinicId } = useClinic();
     const [view, setView] = useState<View>('list');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -118,6 +126,16 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [editableContent, setEditableContent] = useState('');
     const [isSavingExam, setIsSavingExam] = useState(false);
     const [isSavingAsTemplate, setIsSavingAsTemplate] = useState(false);
+
+    // Digital Signature
+    const [digitalSignEnabled, setDigitalSignEnabled] = useState(false);
+    const [needsPatientSignature, setNeedsPatientSignature] = useState(true);
+    const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('EMAIL');
+    const [isCreatingSignature, setIsCreatingSignature] = useState(false);
+    const [signingModal, setSigningModal] = useState<{
+        open: boolean; url: string; signatureId: string; title: string;
+    }>({ open: false, url: '', signatureId: '', title: '' });
+    const createSignature = useCreateSignature();
 
     useEffect(() => {
         if (open) {
@@ -233,6 +251,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         setSelectedPatientId('');
         setDocumentDate(new Date().toISOString().split('T')[0]);
         setEditableContent('');
+        setDigitalSignEnabled(false);
+        // Default: consent forms need patient signature, prescriptions/certificates don't
+        const nameLower = template.name.toLowerCase();
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza');
+        setNeedsPatientSignature(isConsentForm);
+        setDeliveryMethod('EMAIL');
         setView('generate');
     };
 
@@ -279,13 +303,62 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         }
 
         const patient = patients.find(p => p.id === selectedPatientId);
+        const templateName = selectedTemplate?.name || '';
+        const nameLower = templateName.toLowerCase();
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
+            || nameLower.includes('autoriza');
+        const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado')
+            || nameLower.includes('encaminhamento') || nameLower.includes('declaração') || nameLower.includes('declaracao');
+
+        let dentistName = 'Responsável Técnico';
+        if (!isConsentForm) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('full_name, gender')
+                        .eq('id', user.id)
+                        .maybeSingle() as any;
+                    if (profile?.full_name) {
+                        const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
+                        dentistName = `${prefix} ${profile.full_name}`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching dentist profile:', e);
+            }
+        }
+
+        let signatureHtml = '';
+        if (isConsentForm) {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${patient?.name}</div>
+                </div>`;
+        } else if (isDentistOnlyDoc) {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${dentistName}</div>
+                </div>`;
+        } else {
+            signatureHtml = `
+                <div class="signature-dual">
+                    <div class="signature">
+                        <div class="signature-line">${patient?.name}</div>
+                    </div>
+                    <div class="signature">
+                        <div class="signature-line">${dentistName}</div>
+                    </div>
+                </div>`;
+        }
 
         const html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>${selectedTemplate?.name}</title>
+                <title>${templateName}</title>
                 <style>
                     @page { size: A4; margin: 20mm; }
                     body {
@@ -317,14 +390,23 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         margin: 0 auto 10px;
                         padding-top: 10px;
                     }
+                    .signature-dual {
+                        display: flex;
+                        justify-content: space-around;
+                        margin-top: 80px;
+                    }
+                    .signature-dual .signature {
+                        margin-top: 0;
+                    }
+                    .signature-dual .signature-line {
+                        width: 220px;
+                    }
                 </style>
             </head>
             <body>
-                <h1>${selectedTemplate?.name}</h1>
+                <h1>${templateName}</h1>
                 <div class="content">${editableContent}</div>
-                <div class="signature">
-                    <div class="signature-line">${patient?.name}</div>
-                </div>
+                ${signatureHtml}
             </body>
             </html>
         `;
@@ -358,6 +440,97 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             toast({ title: 'Erro ao salvar documento', variant: 'destructive' });
         } finally {
             setIsSavingExam(false);
+        }
+    };
+
+    const handleDigitalSign = async () => {
+        if (!editableContent || !selectedPatientId || !selectedTemplate || !clinicId) {
+            toast({ title: 'Dados insuficientes', variant: 'destructive' });
+            return;
+        }
+
+        const patient = patients.find(p => p.id === selectedPatientId);
+        if (!patient) return;
+
+        // Validate patient contact info
+        if (needsPatientSignature) {
+            if (deliveryMethod === 'EMAIL' && !patient.email) {
+                toast({ title: 'Paciente não possui email cadastrado', variant: 'destructive' });
+                return;
+            }
+            if (deliveryMethod === 'WHATSAPP' && !patient.phone) {
+                toast({ title: 'Paciente não possui telefone cadastrado', variant: 'destructive' });
+                return;
+            }
+        }
+
+        try {
+            setIsCreatingSignature(true);
+
+            // Get dentist name for PDF
+            let dentistName: string | undefined;
+            const nameLower = selectedTemplate.name.toLowerCase();
+            const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza');
+            if (!isConsentForm) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('full_name, gender')
+                        .eq('id', user.id)
+                        .maybeSingle() as any;
+                    if (profile?.full_name) {
+                        const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
+                        dentistName = `${prefix} ${profile.full_name}`;
+                    }
+                }
+            }
+
+            // Generate PDF blob
+            const pdfBlob = await documentTemplatesService.generatePdfBlob(
+                patient.name,
+                selectedTemplate.name,
+                editableContent,
+                dentistName
+            );
+
+            // Upload PDF to storage first (avoids large base64 in request body)
+            const storagePath = `${clinicId}/sign_${Date.now()}.pdf`;
+            const { error: uploadError } = await supabase.storage
+                .from('exams')
+                .upload(storagePath, pdfBlob, {
+                    contentType: 'application/pdf',
+                    upsert: true,
+                });
+
+            if (uploadError) {
+                console.error('Storage upload error:', uploadError);
+                toast({ title: `Erro ao salvar PDF: ${uploadError.message}`, variant: 'destructive' });
+                return;
+            }
+
+            // Create envelope (send only storage path, not the full PDF)
+            const result = await createSignature.mutateAsync({
+                patient_id: selectedPatientId,
+                clinic_id: clinicId,
+                title: selectedTemplate.name,
+                pdf_storage_path: storagePath,
+                needs_patient_signature: needsPatientSignature,
+                patient_delivery_method: needsPatientSignature ? deliveryMethod : undefined,
+                document_template_id: selectedTemplate.id,
+            });
+
+            // Open signing modal
+            setSigningModal({
+                open: true,
+                url: result.dentist_signing_url,
+                signatureId: result.signature_id,
+                title: selectedTemplate.name,
+            });
+        } catch (error) {
+            console.error('Error creating digital signature:', error);
+        } finally {
+            setIsCreatingSignature(false);
         }
     };
 
@@ -575,6 +748,76 @@ Nesta data {{data}}, declaro que...`}
                             )}
                         </div>
 
+                        {/* Digital Signature Controls */}
+                        {selectedPatientId && (
+                            <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="digital-sign" className="flex items-center gap-2 cursor-pointer">
+                                        <PenTool className="w-4 h-4 text-[#a03f3d]" />
+                                        Assinar Digitalmente
+                                    </Label>
+                                    <Switch
+                                        id="digital-sign"
+                                        checked={digitalSignEnabled}
+                                        onCheckedChange={setDigitalSignEnabled}
+                                    />
+                                </div>
+
+                                {digitalSignEnabled && (
+                                    <div className="space-y-3 pl-6 border-l-2 border-[#a03f3d]/20">
+                                        <div className="flex items-center gap-2">
+                                            <Checkbox
+                                                id="needs-patient-sig"
+                                                checked={needsPatientSignature}
+                                                onCheckedChange={(checked) => setNeedsPatientSignature(!!checked)}
+                                            />
+                                            <Label htmlFor="needs-patient-sig" className="text-sm cursor-pointer">
+                                                Requer assinatura do paciente
+                                            </Label>
+                                        </div>
+
+                                        {needsPatientSignature && (
+                                            <>
+                                                <div>
+                                                    <Label className="text-sm">Enviar link via</Label>
+                                                    <Select value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v as DeliveryMethod)}>
+                                                        <SelectTrigger className="mt-1">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="EMAIL">Email</SelectItem>
+                                                            <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                {(() => {
+                                                    const patient = patients.find(p => p.id === selectedPatientId);
+                                                    if (deliveryMethod === 'EMAIL' && !patient?.email) {
+                                                        return (
+                                                            <div className="flex items-center gap-2 text-amber-600 text-xs">
+                                                                <AlertCircle className="w-3 h-3" />
+                                                                Paciente sem email cadastrado
+                                                            </div>
+                                                        );
+                                                    }
+                                                    if (deliveryMethod === 'WHATSAPP' && !patient?.phone) {
+                                                        return (
+                                                            <div className="flex items-center gap-2 text-amber-600 text-xs">
+                                                                <AlertCircle className="w-3 h-3" />
+                                                                Paciente sem telefone cadastrado
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex justify-between">
                             <Button
                                 variant="ghost"
@@ -593,23 +836,48 @@ Nesta data {{data}}, declaro que...`}
                                 <Button variant="outline" onClick={goBack}>
                                     Voltar
                                 </Button>
-                                <Button onClick={handleSaveToExams} disabled={!editableContent || isSavingExam} variant="outline">
-                                    {isSavingExam ? (
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    ) : (
-                                        <Save className="w-4 h-4 mr-2" />
-                                    )}
-                                    Salvar em Exames
-                                </Button>
-                                <Button onClick={handleDownloadPDF} disabled={!editableContent}>
-                                    <FileDown className="w-4 h-4 mr-2" />
-                                    Imprimir / PDF
-                                </Button>
+                                {!digitalSignEnabled && (
+                                    <>
+                                        <Button onClick={handleSaveToExams} disabled={!editableContent || isSavingExam} variant="outline">
+                                            {isSavingExam ? (
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            ) : (
+                                                <Save className="w-4 h-4 mr-2" />
+                                            )}
+                                            Salvar em Exames
+                                        </Button>
+                                        <Button onClick={handleDownloadPDF} disabled={!editableContent}>
+                                            <FileDown className="w-4 h-4 mr-2" />
+                                            Imprimir / PDF
+                                        </Button>
+                                    </>
+                                )}
+                                {digitalSignEnabled && (
+                                    <Button
+                                        onClick={handleDigitalSign}
+                                        disabled={!editableContent || isCreatingSignature}
+                                    >
+                                        {isCreatingSignature ? (
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <PenTool className="w-4 h-4 mr-2" />
+                                        )}
+                                        Assinar Digitalmente
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
                 )}
             </DialogContent>
+
+            <SigningModal
+                open={signingModal.open}
+                onClose={() => setSigningModal({ open: false, url: '', signatureId: '', title: '' })}
+                signingUrl={signingModal.url}
+                signatureId={signingModal.signatureId}
+                title={signingModal.title}
+            />
         </Dialog>
     );
 }
