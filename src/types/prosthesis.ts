@@ -53,6 +53,8 @@ export interface ProsthesisOrder {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  budget_id: string | null;
+  budget_tooth_index: number | null;
   // Joined fields
   patient_name?: string;
   dentist_name?: string;
@@ -76,6 +78,8 @@ export interface ProsthesisOrderInsert {
   patient_price?: number | null;
   estimated_delivery_date?: string | null;
   created_by?: string | null;
+  budget_id?: string | null;
+  budget_tooth_index?: number | null;
 }
 
 export interface ProsthesisOrderFormData {
@@ -141,9 +145,11 @@ export const PROSTHESIS_TYPE_LABELS: Record<string, string> = {
   ponte: 'Ponte',
   protese_total: 'Prótese Total',
   protese_parcial: 'Prótese Parcial',
+  protese_removivel: 'Prótese Removível',
   faceta: 'Faceta',
   onlay: 'Onlay',
   inlay: 'Inlay',
+  pino: 'Pino',
   provisorio: 'Provisório',
   nucleo: 'Núcleo',
   implante: 'Implante',
@@ -156,7 +162,6 @@ export const PROSTHESIS_MATERIAL_LABELS: Record<string, string> = {
   resina: 'Resina',
   metal: 'Metal',
   emax: 'E-max',
-  ceramica: 'Cerâmica',
   acrilico: 'Acrílico',
   metalceramica: 'Metalocerâmica',
   outro: 'Outro',

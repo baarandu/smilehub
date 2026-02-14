@@ -32,7 +32,7 @@ REGRAS PARA PROCEDIMENTOS (procedures):
 - "iniciei"/"comecei" → status "in_progress"
 - "precisa"/"agendado"/"necessita" → status "pending"
 - Dentes FDI: 11-18, 21-28, 31-38, 41-48 (permanentes); 51-55, 61-65, 71-75, 81-85 (decíduos).
-- Tratamentos válidos: Avaliação, Bloco, Canal, Clareamento, Coroa, Extração, Faceta, Implante, Limpeza, Outros, Pino, Radiografia, Raspagem Subgengival, Restauração.
+- Tratamentos válidos: Avaliação, Bloco, Canal, Clareamento, Coroa, Extração, Faceta, Implante, Limpeza, Outros, Pino, Prótese Removível, Radiografia, Raspagem Subgengival, Restauração.
 - Se o tratamento mencionado não se encaixa nos válidos, use "Outros" e coloque a descrição no campo description.
 - Array vazio se nenhum procedimento mencionado.
 

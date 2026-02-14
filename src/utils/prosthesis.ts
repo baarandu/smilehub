@@ -1,4 +1,6 @@
-import type { ProsthesisOrder, ProsthesisStatus, ProsthesisChecklist } from '@/types/prosthesis';
+import type { ProsthesisOrder, ProsthesisStatus, ProsthesisChecklist, KanbanColumn } from '@/types/prosthesis';
+import { KANBAN_COLUMNS } from '@/types/prosthesis';
+import type { ToothEntry } from '@/utils/budgetUtils';
 
 const STATUS_FLOW: ProsthesisStatus[] = ['pre_lab', 'sent', 'in_lab', 'try_in', 'adjustment', 'installation', 'completed'];
 
@@ -91,4 +93,47 @@ export function getChecklistItems(order: ProsthesisChecklist): { key: keyof Pros
     { key: 'checklist_photos_attached', label: 'Fotos anexadas', checked: order.checklist_photos_attached },
     { key: 'checklist_observations_added', label: 'Observações adicionadas', checked: order.checklist_observations_added },
   ];
+}
+
+// ==================== Budget Integration ====================
+
+/** Map budget treatment names to prosthesis type keys */
+export const TREATMENT_TO_PROSTHESIS_TYPE: Record<string, string> = {
+  'Bloco': 'onlay',
+  'Coroa': 'coroa',
+  'Faceta': 'faceta',
+  'Implante': 'implante',
+  'Pino': 'pino',
+  'Prótese Removível': 'protese_removivel',
+};
+
+/** Budget treatments that are prosthetic */
+export const PROSTHETIC_TREATMENTS = Object.keys(TREATMENT_TO_PROSTHESIS_TYPE);
+
+/** Check if any treatment in the list is prosthetic */
+export function isProstheticTreatment(treatments: string[]): boolean {
+  return treatments.some(t => PROSTHETIC_TREATMENTS.includes(t));
+}
+
+/** Get the prosthesis type key for a list of treatments (first match) */
+export function getProsthesisTypeFromTreatments(treatments: string[]): string | null {
+  for (const t of treatments) {
+    if (TREATMENT_TO_PROSTHESIS_TYPE[t]) return TREATMENT_TO_PROSTHESIS_TYPE[t];
+  }
+  return null;
+}
+
+/** Check if a tooth entry has at least one prosthetic treatment marked for lab.
+ *  Backwards-compatible: if labTreatments is missing, treats all prosthetic treatments as lab-bound. */
+export function hasLabTreatment(tooth: ToothEntry): boolean {
+  const prostheticInItem = tooth.treatments.filter(t => PROSTHETIC_TREATMENTS.includes(t));
+  if (prostheticInItem.length === 0) return false;
+  // If labTreatments not set (old data), default to true
+  if (!tooth.labTreatments) return true;
+  return prostheticInItem.some(t => tooth.labTreatments![t] !== false);
+}
+
+/** Get the Kanban column config for a given status */
+export function getKanbanColumn(status: ProsthesisStatus): KanbanColumn | undefined {
+  return KANBAN_COLUMNS.find(c => c.id === status);
 }

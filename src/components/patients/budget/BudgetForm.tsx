@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Check, Calendar as CalendarIcon, Save } from 'lucide-react';
+import { Plus, Check, Calendar as CalendarIcon, Save, MapPin, FlaskConical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -19,6 +19,8 @@ import {
     TREATMENTS_WITH_DESCRIPTION,
     type ToothEntry
 } from '@/utils/budgetUtils';
+import { PROSTHETIC_TREATMENTS } from '@/utils/prosthesis';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Odontogram } from './odontogram';
 import { isUpperTooth } from './odontogram/odontogramData';
 
@@ -36,9 +38,10 @@ interface BudgetFormProps {
     editingIndex?: number | null;
     onCancelEdit?: () => void;
     toothEntries?: ToothEntry[];
+    onAddLocation?: () => void;
 }
 
-export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit, toothEntries }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit, toothEntries, onAddLocation }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -47,6 +50,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     const [selectedFaces, setSelectedFaces] = useState<string[]>([]);
     const [values, setValues] = useState<Record<string, string>>({});
     const [materials, setMaterials] = useState<Record<string, string>>({});
+    const [labTreatments, setLabTreatments] = useState<Record<string, boolean>>({});
     const [itemLocationRate, setItemLocationRate] = useState<string>('');
 
     const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
@@ -59,6 +63,16 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             setSelectedFaces([...(editingItem.faces || [])]);
             setValues({ ...editingItem.values });
             setMaterials({ ...(editingItem.materials || {}) });
+            // Load labTreatments — default true for prosthetics if not set (backwards compat)
+            if (editingItem.labTreatments) {
+                setLabTreatments({ ...editingItem.labTreatments });
+            } else {
+                const defaults: Record<string, boolean> = {};
+                editingItem.treatments.forEach(t => {
+                    if (PROSTHETIC_TREATMENTS.includes(t)) defaults[t] = true;
+                });
+                setLabTreatments(defaults);
+            }
             // Load item-specific location rate
             setItemLocationRate(editingItem.locationRate ? editingItem.locationRate.toString() : locationRate);
         }
@@ -70,6 +84,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
         setSelectedFaces([]);
         setValues({});
         setMaterials({});
+        setLabTreatments({});
         setItemLocationRate('');
     };
 
@@ -79,11 +94,18 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                 // Remove logic
                 const newValues = { ...values };
                 const newMaterials = { ...materials };
+                const newLabTreatments = { ...labTreatments };
                 delete newValues[treatment];
                 delete newMaterials[treatment];
+                delete newLabTreatments[treatment];
                 setValues(newValues);
                 setMaterials(newMaterials);
+                setLabTreatments(newLabTreatments);
                 return prev.filter(t => t !== treatment);
+            }
+            // When adding a prosthetic treatment, default lab to true
+            if (PROSTHETIC_TREATMENTS.includes(treatment)) {
+                setLabTreatments(prev => ({ ...prev, [treatment]: true }));
             }
             return [...prev, treatment];
         });
@@ -131,12 +153,21 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             return;
         }
 
+        // Build labTreatments only for prosthetic treatments in this item
+        const itemLabTreatments: Record<string, boolean> = {};
+        selectedTreatments.forEach(t => {
+            if (PROSTHETIC_TREATMENTS.includes(t)) {
+                itemLabTreatments[t] = labTreatments[t] !== false;
+            }
+        });
+
         const newItem: ToothEntry = {
             tooth: selectedTooth,
             faces: showFaces ? selectedFaces : [],
             treatments: [...selectedTreatments],
             values: { ...values },
             materials: { ...materials },
+            labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
             status: editingItem?.status || 'pending',
             locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0
         };
@@ -214,9 +245,29 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                 <SelectValue placeholder="Selecione o local..." />
                             </SelectTrigger>
                             <SelectContent>
-                                {locations.map(loc => (
-                                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                ))}
+                                {locations.length === 0 ? (
+                                    <div className="py-4 px-3 text-center">
+                                        <MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                                        <p className="text-sm font-medium text-muted-foreground mb-1">Nenhum local cadastrado</p>
+                                        <p className="text-xs text-muted-foreground/70 mb-3">Cadastre seus locais de atendimento</p>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            className="w-full gap-1.5"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                onAddLocation?.();
+                                            }}
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            Cadastrar Local
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    locations.map(loc => (
+                                        <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                    ))
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -328,6 +379,18 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                         </div>
                                     )}
                                 </div>
+                                {PROSTHETIC_TREATMENTS.includes(treatment) && (
+                                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                        <Checkbox
+                                            checked={labTreatments[treatment] !== false}
+                                            onCheckedChange={(checked) =>
+                                                setLabTreatments(prev => ({ ...prev, [treatment]: !!checked }))
+                                            }
+                                        />
+                                        <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-xs text-muted-foreground">Enviar ao laboratório</span>
+                                    </label>
+                                )}
                             </div>
                         ))}
                     </div>

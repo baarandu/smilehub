@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { ChevronDown, Plus, Save, X } from 'lucide-react-native';
+import { ChevronDown, FlaskConical, Plus, Save, X } from 'lucide-react-native';
 import {
     FACES,
     TREATMENTS,
     TREATMENTS_WITH_MATERIAL,
     TREATMENTS_WITH_DESCRIPTION
 } from '../budgetUtils';
+
+const PROSTHETIC_TREATMENTS = ['Bloco', 'Coroa', 'Faceta', 'Implante', 'Pino', 'Prótese Removível'];
 
 interface BudgetAddItemFormProps {
     selectedTooth: string;
@@ -25,6 +27,9 @@ interface BudgetAddItemFormProps {
 
     treatmentMaterials: Record<string, string>;
     onMaterialChange: (treatment: string, value: string) => void;
+
+    labTreatments: Record<string, boolean>;
+    onLabTreatmentToggle: (treatment: string) => void;
 
     itemLocationRate: string;
     onItemLocationRateChange: (rate: string) => void;
@@ -48,6 +53,8 @@ export function BudgetAddItemForm({
     formatTreatmentValue,
     treatmentMaterials,
     onMaterialChange,
+    labTreatments,
+    onLabTreatmentToggle,
     itemLocationRate,
     onItemLocationRateChange,
     locationRate,
@@ -184,6 +191,21 @@ export function BudgetAddItemForm({
                                 placeholderTextColor="#9CA3AF"
                                 keyboardType="numeric"
                             />
+
+                            {PROSTHETIC_TREATMENTS.includes(treatment) && (
+                                <TouchableOpacity
+                                    onPress={() => onLabTreatmentToggle(treatment)}
+                                    className="flex-row items-center gap-2 mt-2"
+                                >
+                                    <View className={`w-5 h-5 rounded border-2 items-center justify-center ${labTreatments[treatment] !== false ? 'bg-[#b94a48] border-[#b94a48]' : 'border-gray-300 bg-white'}`}>
+                                        {labTreatments[treatment] !== false && (
+                                            <Text className="text-white text-xs font-bold">✓</Text>
+                                        )}
+                                    </View>
+                                    <FlaskConical size={14} color="#6B7280" />
+                                    <Text className="text-gray-500 text-xs">Enviar ao laboratório</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     ))}
                 </View>

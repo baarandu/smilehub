@@ -15,6 +15,8 @@ import {
     calculateBudgetStatus,
     type ToothEntry,
 } from './budgetUtils';
+
+const PROSTHETIC_TREATMENTS = ['Bloco', 'Coroa', 'Faceta', 'Implante', 'Pino', 'Prótese Removível'];
 import { ToothPickerModal } from './ToothPickerModal';
 import { BudgetSummarySection } from './BudgetSummarySection';
 import { BudgetForm } from './budgets/BudgetForm';
@@ -57,6 +59,7 @@ export function NewBudgetModal({
     const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
     const [treatmentValues, setTreatmentValues] = useState<Record<string, string>>({});
     const [treatmentMaterials, setTreatmentMaterials] = useState<Record<string, string>>({});
+    const [labTreatments, setLabTreatments] = useState<Record<string, boolean>>({});
 
     // List of added teeth with their data
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
@@ -144,6 +147,7 @@ export function NewBudgetModal({
         setSelectedTreatments([]);
         setTreatmentValues({});
         setTreatmentMaterials({});
+        setLabTreatments({});
         setItemLocationRate(''); // Reset for next item
     };
 
@@ -165,14 +169,21 @@ export function NewBudgetModal({
     const toggleTreatment = (treatment: string) => {
         setSelectedTreatments(prev => {
             if (prev.includes(treatment)) {
-                // Remove treatment and its value/material
+                // Remove treatment and its value/material/lab
                 const newValues = { ...treatmentValues };
                 const newMaterials = { ...treatmentMaterials };
+                const newLab = { ...labTreatments };
                 delete newValues[treatment];
                 delete newMaterials[treatment];
+                delete newLab[treatment];
                 setTreatmentValues(newValues);
                 setTreatmentMaterials(newMaterials);
+                setLabTreatments(newLab);
                 return prev.filter(t => t !== treatment);
+            }
+            // Default lab to true for prosthetic treatments
+            if (PROSTHETIC_TREATMENTS.includes(treatment)) {
+                setLabTreatments(prev => ({ ...prev, [treatment]: true }));
             }
             return [...prev, treatment];
         });
@@ -185,6 +196,10 @@ export function NewBudgetModal({
 
     const handleMaterialChange = (treatment: string, material: string) => {
         setTreatmentMaterials(prev => ({ ...prev, [treatment]: material }));
+    };
+
+    const handleLabTreatmentToggle = (treatment: string) => {
+        setLabTreatments(prev => ({ ...prev, [treatment]: prev[treatment] === false ? true : false }));
     };
 
     const formatTreatmentValue = (treatment: string) => {
@@ -256,12 +271,21 @@ export function NewBudgetModal({
             return;
         }
 
+        // Build labTreatments for prosthetic treatments only
+        const itemLabTreatments: Record<string, boolean> = {};
+        selectedTreatments.forEach(t => {
+            if (PROSTHETIC_TREATMENTS.includes(t)) {
+                itemLabTreatments[t] = labTreatments[t] !== false;
+            }
+        });
+
         const newEntry: ToothEntry = {
             tooth: selectedTooth,
             faces: showFaces ? selectedFaces : [],
             treatments: [...selectedTreatments],
             values: { ...treatmentValues },
             materials: { ...treatmentMaterials },
+            labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
             status: editingIndex !== null ? teethList[editingIndex]?.status || 'pending' : 'pending',
             locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
         };
@@ -288,6 +312,16 @@ export function NewBudgetModal({
         setSelectedTreatments([...item.treatments]);
         setTreatmentValues({ ...item.values });
         setTreatmentMaterials({ ...(item.materials || {}) });
+        // Load labTreatments — default true for prosthetics if not set (backwards compat)
+        if (item.labTreatments) {
+            setLabTreatments({ ...item.labTreatments });
+        } else {
+            const defaults: Record<string, boolean> = {};
+            item.treatments.forEach(t => {
+                if (PROSTHETIC_TREATMENTS.includes(t)) defaults[t] = true;
+            });
+            setLabTreatments(defaults);
+        }
         setItemLocationRate(item.locationRate ? item.locationRate.toString() : '');
     };
 
@@ -428,6 +462,8 @@ export function NewBudgetModal({
                             formatTreatmentValue={formatTreatmentValue}
                             treatmentMaterials={treatmentMaterials}
                             onMaterialChange={handleMaterialChange}
+                            labTreatments={labTreatments}
+                            onLabTreatmentToggle={handleLabTreatmentToggle}
                             itemLocationRate={itemLocationRate}
                             onItemLocationRateChange={setItemLocationRate}
                             locationRate={locationRate}

@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { FlaskConical, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import {
   calculateToothTotal,
   type ToothEntry,
 } from '@/utils/budgetUtils';
+import { PROSTHETIC_TREATMENTS } from '@/utils/prosthesis';
 import type { Location } from '@/services/locations';
 import type { ExtractedBudgetData } from '@/types/voiceConsultation';
 
@@ -38,14 +39,23 @@ export function extractedToBudgetForm(
     if (match) locationId = match.id;
   }
 
-  const items: ToothEntry[] = extracted.items.map((item) => ({
-    tooth: item.tooth || '',
-    treatments: item.treatments || [],
-    values: item.values || {},
-    status: 'pending' as const,
-    faces: item.faces || [],
-    materials: item.materials || {},
-  }));
+  const items: ToothEntry[] = extracted.items.map((item) => {
+    const treatments = item.treatments || [];
+    // Default all prosthetic treatments to send to lab
+    const labTreatments: Record<string, boolean> = {};
+    treatments.forEach((t) => {
+      if (PROSTHETIC_TREATMENTS.includes(t)) labTreatments[t] = true;
+    });
+    return {
+      tooth: item.tooth || '',
+      treatments,
+      values: item.values || {},
+      status: 'pending' as const,
+      faces: item.faces || [],
+      materials: item.materials || {},
+      labTreatments: Object.keys(labTreatments).length > 0 ? labTreatments : undefined,
+    };
+  });
 
   return { items, location: locationId };
 }
@@ -96,20 +106,26 @@ export function BudgetReviewForm({
     let newTreatments: string[];
     const newValues = { ...item.values };
     const newMaterials = { ...item.materials };
+    const newLabTreatments = { ...(item.labTreatments || {}) };
 
     if (hasTreatment) {
       newTreatments = item.treatments.filter((t) => t !== treatment);
       delete newValues[treatment];
       delete newMaterials[treatment];
+      delete newLabTreatments[treatment];
     } else {
       newTreatments = [...item.treatments, treatment];
       newValues[treatment] = '';
+      if (PROSTHETIC_TREATMENTS.includes(treatment)) {
+        newLabTreatments[treatment] = true;
+      }
     }
 
     updateItem(index, {
       treatments: newTreatments,
       values: newValues,
       materials: newMaterials,
+      labTreatments: Object.keys(newLabTreatments).length > 0 ? newLabTreatments : undefined,
     });
   };
 
@@ -122,10 +138,19 @@ export function BudgetReviewForm({
     updateItem(index, { faces: newFaces });
   };
 
+  const toggleLabTreatment = (index: number, treatment: string) => {
+    const item = data[index];
+    const newLabTreatments = { ...(item.labTreatments || {}) };
+    newLabTreatments[treatment] = newLabTreatments[treatment] === false ? true : false;
+    updateItem(index, { labTreatments: newLabTreatments });
+  };
+
   const total = data.reduce((sum, item) => sum + calculateToothTotal(item.values), 0);
   const hasRestauracao = (item: ToothEntry) => item.treatments.includes('Restauração');
   const hasMaterialTreatment = (item: ToothEntry) =>
     item.treatments.some((t) => TREATMENTS_WITH_MATERIAL.includes(t));
+  const hasProstheticTreatment = (item: ToothEntry) =>
+    item.treatments.some((t) => PROSTHETIC_TREATMENTS.includes(t));
 
   return (
     <div className="space-y-4">
@@ -281,6 +306,31 @@ export function BudgetReviewForm({
                         className="h-8"
                       />
                     </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lab checkbox for prosthetic treatments */}
+          {hasProstheticTreatment(item) && (
+            <div className="space-y-1">
+              <Label className="text-xs">Enviar ao laboratório</Label>
+              <div className="flex flex-wrap gap-2">
+                {item.treatments
+                  .filter((t) => PROSTHETIC_TREATMENTS.includes(t))
+                  .map((t) => (
+                    <label
+                      key={t}
+                      className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border cursor-pointer transition-colors bg-background hover:bg-muted"
+                    >
+                      <Checkbox
+                        checked={(item.labTreatments?.[t]) !== false}
+                        onCheckedChange={() => toggleLabTreatment(index, t)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <FlaskConical className="w-3 h-3 text-muted-foreground" />
+                      {t}
+                    </label>
                   ))}
               </div>
             </div>

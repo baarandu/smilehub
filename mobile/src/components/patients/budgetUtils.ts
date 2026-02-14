@@ -29,13 +29,14 @@ export const TREATMENTS = [
     'Limpeza',
     'Outros',
     'Pino',
+    'Prótese Removível',
     'Radiografia',
     'Raspagem Subgengival',
     'Restauração',
 ];
 
 // Tratamentos que precisam de material
-export const TREATMENTS_WITH_MATERIAL = ['Bloco', 'Coroa', 'Faceta'];
+export const TREATMENTS_WITH_MATERIAL = ['Bloco', 'Coroa', 'Faceta', 'Pino', 'Prótese Removível'];
 
 // Tratamentos que precisam de descrição
 export const TREATMENTS_WITH_DESCRIPTION = ['Outros'];
@@ -46,6 +47,7 @@ export type ToothEntry = {
     treatments: string[];
     values: Record<string, string>;
     materials?: Record<string, string>;
+    labTreatments?: Record<string, boolean>;
     faces?: string[];
     status: 'pending' | 'approved' | 'paid' | 'completed';
     paymentMethod?: string;
