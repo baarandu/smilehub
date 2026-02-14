@@ -124,7 +124,7 @@ export function SendToProsthesisDialog({
         lab_cost: labCost ? parseFloat(labCost.replace(',', '.')) : null,
         patient_price: budgetItem.value,
         estimated_delivery_date: estimatedDelivery || null,
-        notes: `Vinculado ao orçamento - ${budgetItem.tooth.treatments.join(', ')}`,
+        notes: null,
         created_by: user?.id || null,
         budget_id: budgetItem.budgetId,
         budget_tooth_index: budgetItem.toothIndex,

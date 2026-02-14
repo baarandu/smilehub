@@ -145,6 +145,7 @@ export function useMoveOrder() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['prosthesis-orders'] });
       queryClient.invalidateQueries({ queryKey: ['prosthesis-history'] });
+      queryClient.invalidateQueries({ queryKey: ['prosthesis-shipments'] });
     },
   });
 }
@@ -187,6 +188,16 @@ export function useOrderHistory(orderId: string | null) {
   return useQuery({
     queryKey: ['prosthesis-history', orderId],
     queryFn: () => prosthesisService.getOrderHistory(orderId!),
+    enabled: !!orderId,
+  });
+}
+
+// ==================== Shipments ====================
+
+export function useOrderShipments(orderId: string | null) {
+  return useQuery({
+    queryKey: ['prosthesis-shipments', orderId],
+    queryFn: () => prosthesisService.getShipments(orderId!),
     enabled: !!orderId,
   });
 }

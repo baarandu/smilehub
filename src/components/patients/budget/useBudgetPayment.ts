@@ -66,7 +66,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 shade_details: tooth.prosthesisShadeDetails || null,
                 cementation_type: tooth.prosthesisCementation || null,
                 estimated_delivery_date: tooth.prosthesisDeliveryDate || null,
-                notes: tooth.prosthesisNotes || `Vinculado ao orçamento - ${tooth.treatments.join(', ')}`,
+                notes: tooth.prosthesisNotes || null,
                 special_instructions: tooth.prosthesisInstructions || null,
                 created_by: user.id,
                 budget_id: budgetId,

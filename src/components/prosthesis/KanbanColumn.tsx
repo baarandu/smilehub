@@ -18,7 +18,7 @@ export function KanbanColumn({ column, orders, onCardClick }: KanbanColumnProps)
 
   return (
     <div
-      className={`flex flex-col rounded-lg border ${column.borderColor} ${column.bgColor} min-w-[260px] w-[260px] shrink-0`}
+      className={`flex flex-col rounded-lg border ${column.borderColor} ${column.bgColor} min-w-0 flex-1`}
     >
       {/* Header */}
       <div className={`px-3 py-2.5 border-b ${column.borderColor} flex items-center justify-between`}>

@@ -6,7 +6,8 @@ import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
 import { ProfileMenu } from '@/components/profile';
 import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
-import { useBirthdayAlerts, useProcedureReminders } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useProsthesisSchedulingAlerts } from '@/hooks/useAlerts';
+import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePendingReturns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
+  const { data: prosthesisAlerts } = useProsthesisSchedulingAlerts();
   const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
 
   // Pending Returns (Procedures) Hooks
@@ -134,6 +136,15 @@ export default function Dashboard() {
       date: r.created_at,
       subtitle: r.description || 'Lembrete',
       urgency: 'normal' as const
+    })),
+    ...(prosthesisAlerts || []).map(a => ({
+      id: `prost-${a.id}`,
+      type: 'prosthesis_scheduling' as const,
+      patientName: a.patientName,
+      patientPhone: a.patientPhone,
+      date: a.createdAt,
+      subtitle: `Agendar prova - ${PROSTHESIS_TYPE_LABELS[a.type] || a.type}${a.toothNumbers.length > 0 ? ` (${a.toothNumbers.join(', ')})` : ''}`,
+      urgency: 'urgent' as const
     }))
   ].slice(0, 6); // Top 6
 

@@ -158,13 +158,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           import('@/services/alerts')
         ]);
 
-        const [remindersCount, birthdays, returns] = await Promise.all([
+        const [remindersCount, birthdays, returns, prosthesisAlerts] = await Promise.all([
           remindersService.getActiveCount(),
           alertsService.getBirthdayAlerts(),
-          alertsService.getProcedureReminders()
+          alertsService.getProcedureReminders(),
+          alertsService.getProsthesisSchedulingAlerts().catch(() => [])
         ]);
 
-        setActiveRemindersCount(remindersCount + birthdays.length + returns.length);
+        setActiveRemindersCount(remindersCount + birthdays.length + returns.length + prosthesisAlerts.length);
       } catch (e) { console.error(e); }
     };
     loadCount();

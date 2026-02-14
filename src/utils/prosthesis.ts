@@ -2,29 +2,28 @@ import type { ProsthesisOrder, ProsthesisStatus, ProsthesisChecklist, KanbanColu
 import { KANBAN_COLUMNS } from '@/types/prosthesis';
 import type { ToothEntry } from '@/utils/budgetUtils';
 
-const STATUS_FLOW: ProsthesisStatus[] = ['pre_lab', 'sent', 'in_lab', 'try_in', 'adjustment', 'installation', 'completed'];
+const STATUS_FLOW: ProsthesisStatus[] = ['pre_lab', 'in_lab', 'in_clinic', 'completed'];
 
-const STATUS_LABELS: Record<ProsthesisStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   pre_lab: 'Pré-laboratório',
-  sent: 'Envio',
-  in_lab: 'Laboratório',
-  try_in: 'Prova',
-  adjustment: 'Ajuste/Retrabalho',
+  in_lab: 'No Laboratório',
+  in_clinic: 'Na Clínica (Prova)',
   installation: 'Instalação',
   completed: 'Concluído',
+  // Legacy labels (for history display)
+  sent: 'Primeiro Envio',
+  try_in: 'Segundo Envio',
+  adjustment: 'Ajuste/Retrabalho',
 };
 
 const STATUS_DATE_FIELDS: Record<ProsthesisStatus, keyof ProsthesisOrder | null> = {
   pre_lab: 'date_ordered',
-  sent: 'date_sent',
-  in_lab: 'date_received',
-  try_in: 'date_try_in',
-  adjustment: 'date_adjustment',
-  installation: 'date_installation',
+  in_lab: null,
+  in_clinic: null,
   completed: 'date_completed',
 };
 
-export function getStatusLabel(status: ProsthesisStatus): string {
+export function getStatusLabel(status: string): string {
   return STATUS_LABELS[status] || status;
 }
 
@@ -46,7 +45,8 @@ export function getDaysElapsed(order: ProsthesisOrder): number {
   // Find the most recent status change date
   const dateField = STATUS_DATE_FIELDS[order.status];
   const dateValue = dateField ? (order[dateField] as string | null) : null;
-  const referenceDate = dateValue || order.created_at;
+  // For in_lab/in_clinic the date is tracked via shipments, fallback to updated_at or created_at
+  const referenceDate = dateValue || order.updated_at || order.created_at;
   const diff = Date.now() - new Date(referenceDate).getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }

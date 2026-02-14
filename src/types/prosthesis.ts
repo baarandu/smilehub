@@ -1,5 +1,5 @@
-// Status das 7 colunas do Kanban
-export type ProsthesisStatus = 'pre_lab' | 'sent' | 'in_lab' | 'try_in' | 'adjustment' | 'installation' | 'completed';
+// Status das 4 colunas do Kanban cíclico (in_lab ⇄ in_clinic)
+export type ProsthesisStatus = 'pre_lab' | 'in_lab' | 'in_clinic' | 'completed';
 
 export interface KanbanColumn {
   id: ProsthesisStatus;
@@ -11,11 +11,8 @@ export interface KanbanColumn {
 
 export const KANBAN_COLUMNS: KanbanColumn[] = [
   { id: 'pre_lab', title: 'Pré-laboratório', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
-  { id: 'sent', title: 'Envio', color: 'text-orange-700', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
-  { id: 'in_lab', title: 'Laboratório', color: 'text-purple-700', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
-  { id: 'try_in', title: 'Prova', color: 'text-cyan-700', bgColor: 'bg-cyan-50', borderColor: 'border-cyan-200' },
-  { id: 'adjustment', title: 'Ajuste/Retrabalho', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
-  { id: 'installation', title: 'Instalação', color: 'text-indigo-700', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+  { id: 'in_lab', title: 'No Laboratório', color: 'text-orange-700', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
+  { id: 'in_clinic', title: 'Na Clínica (Prova)', color: 'text-purple-700', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
   { id: 'completed', title: 'Concluído', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
 ];
 
@@ -41,12 +38,8 @@ export interface ProsthesisOrder {
   checklist_cementation_defined: boolean;
   checklist_photos_attached: boolean;
   checklist_observations_added: boolean;
+  current_shipment_number: number;
   date_ordered: string | null;
-  date_sent: string | null;
-  date_received: string | null;
-  date_try_in: string | null;
-  date_adjustment: string | null;
-  date_installation: string | null;
   date_completed: string | null;
   estimated_delivery_date: string | null;
   position: number;
@@ -113,11 +106,22 @@ export interface ProsthesisLab {
   updated_at: string;
 }
 
+export interface ProsthesisShipment {
+  id: string;
+  order_id: string;
+  shipment_number: number;
+  sent_to_lab_at: string;
+  returned_to_clinic_at: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface ProsthesisOrderHistory {
   id: string;
   order_id: string;
-  from_status: ProsthesisStatus | null;
-  to_status: ProsthesisStatus;
+  from_status: string | null; // string to support legacy statuses
+  to_status: string;
   changed_by: string | null;
   changed_by_name?: string;
   notes: string | null;

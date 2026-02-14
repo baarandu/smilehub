@@ -1,4 +1,4 @@
-import { Phone, MessageCircle, Clock, Gift, AlertTriangle, Bell, ChevronRight } from 'lucide-react';
+import { Phone, MessageCircle, Clock, Gift, AlertTriangle, Bell, ChevronRight, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface RecentAlert {
   id: string;
-  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder';
+  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder' | 'prosthesis_scheduling';
   patientName: string;
   patientPhone: string;
   date: string;
@@ -48,6 +48,8 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
         return { icon: Gift, color: 'text-pink-600', bg: 'bg-pink-50 border-pink-100' };
       case 'procedure_return':
         return { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' };
+      case 'prosthesis_scheduling':
+        return { icon: CalendarClock, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' };
       case 'reminder':
         return { icon: Bell, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
       default:

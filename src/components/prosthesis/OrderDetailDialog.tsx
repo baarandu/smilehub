@@ -16,19 +16,25 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, ArrowRight, Pencil, Trash2, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trash2, FileText, Save, RotateCw, Truck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import type { ProsthesisOrder } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
 import { getStatusLabel, getNextStatus, getPreviousStatus } from '@/utils/prosthesis';
-import { useUpdateOrder, useDeleteOrder } from '@/hooks/useProsthesis';
+import { useUpdateOrder, useDeleteOrder, useActiveProsthesisLabs, useOrderShipments } from '@/hooks/useProsthesis';
 import { StatusTimeline } from './StatusTimeline';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { budgetsService } from '@/services/budgets';
 import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { useClinic } from '@/contexts/ClinicContext';
+import { supabase } from '@/lib/supabase';
 
 interface OrderDetailDialogProps {
   open: boolean;
@@ -37,6 +43,12 @@ interface OrderDetailDialogProps {
   onEdit: (order: ProsthesisOrder) => void;
   onAdvanceStatus: (order: ProsthesisOrder) => void;
   onRetreatStatus: (order: ProsthesisOrder) => void;
+  onResendToLab?: (order: ProsthesisOrder) => void;
+}
+
+interface DentistOption {
+  id: string;
+  full_name: string;
 }
 
 export function OrderDetailDialog({
@@ -46,11 +58,73 @@ export function OrderDetailDialog({
   onEdit,
   onAdvanceStatus,
   onRetreatStatus,
+  onResendToLab,
 }: OrderDetailDialogProps) {
+  const { clinicId } = useClinic();
   const { toast } = useToast();
   const updateOrder = useUpdateOrder();
   const deleteOrder = useDeleteOrder();
+  const { data: labs = [] } = useActiveProsthesisLabs();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [dentists, setDentists] = useState<DentistOption[]>([]);
+
+  // Editable fields
+  const [dentistId, setDentistId] = useState('');
+  const [labId, setLabId] = useState<string | null>(null);
+  const [toothNumbers, setToothNumbers] = useState('');
+  const [color, setColor] = useState('');
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [labCost, setLabCost] = useState('');
+  const [patientPrice, setPatientPrice] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Load dentists
+  useEffect(() => {
+    if (!clinicId || !open) return;
+    const loadDentists = async () => {
+      const { data, error } = await (supabase
+        .from('clinic_users') as any)
+        .select('user_id, role')
+        .eq('clinic_id', clinicId);
+      if (error || !data) return;
+      const dentistUsers = (data as any[]).filter((d: any) =>
+        ['admin', 'dentist'].includes(d.role)
+      );
+      if (dentistUsers.length === 0) { setDentists([]); return; }
+      const userIds = dentistUsers.map((d: any) => d.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+      const nameMap: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { nameMap[p.id] = p.full_name; });
+      setDentists(
+        dentistUsers.map((d: any) => ({
+          id: d.user_id,
+          full_name: nameMap[d.user_id] || d.user_id,
+        }))
+      );
+    };
+    loadDentists();
+  }, [clinicId, open]);
+
+  // Sync form state from order
+  useEffect(() => {
+    if (open && order) {
+      setDentistId(order.dentist_id || '');
+      setLabId(order.lab_id);
+      setToothNumbers(order.tooth_numbers?.join(', ') || '');
+      setColor(order.color || '');
+      setEstimatedDeliveryDate(order.estimated_delivery_date || '');
+      setNotes(order.notes || '');
+      setSpecialInstructions(order.special_instructions || '');
+      setLabCost(order.lab_cost != null ? String(order.lab_cost) : '');
+      setPatientPrice(order.patient_price != null ? String(order.patient_price) : '');
+      setHasChanges(false);
+    }
+  }, [open, order]);
 
   // Fetch linked budget if exists
   const budgetQuery = useQuery({
@@ -59,11 +133,13 @@ export function OrderDetailDialog({
     enabled: !!order?.budget_id,
   });
 
+  // Fetch shipments
+  const { data: shipments = [] } = useOrderShipments(order?.id ?? null);
+
   if (!order) return null;
 
   const nextStatus = getNextStatus(order.status);
   const prevStatus = getPreviousStatus(order.status);
-
 
   // Parse linked budget item info
   let linkedBudgetInfo: { toothName: string; treatments: string; value: string; date: string } | null = null;
@@ -97,12 +173,51 @@ export function OrderDetailDialog({
     setShowDeleteConfirm(false);
   };
 
-  const formatCurrency = (val: number | null) =>
-    val != null ? `R$ ${val.toFixed(2).replace('.', ',')}` : '—';
+  const parseAmount = (val: string): number | null => {
+    if (!val) return null;
+    const cleaned = val.replace(/[^\d,.-]/g, '').replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  };
+
+  const handleSave = async () => {
+    const toothArr = toothNumbers
+      ? toothNumbers.split(',').map(t => t.trim()).filter(Boolean)
+      : [];
+
+    try {
+      await updateOrder.mutateAsync({
+        id: order.id,
+        updates: {
+          dentist_id: dentistId,
+          lab_id: labId || null,
+          tooth_numbers: toothArr,
+          color: color || null,
+          estimated_delivery_date: estimatedDeliveryDate || null,
+          notes: notes || null,
+          special_instructions: specialInstructions || null,
+          lab_cost: parseAmount(labCost),
+          patient_price: parseAmount(patientPrice),
+        },
+      });
+      toast({ title: 'Alterações salvas' });
+      setHasChanges(false);
+    } catch {
+      toast({ title: 'Erro ao salvar alterações', variant: 'destructive' });
+    }
+  };
+
+  const markChanged = () => { if (!hasChanges) setHasChanges(true); };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(v) => {
+        if (!v && hasChanges) {
+          // Auto-save on close if there are changes
+          handleSave();
+        }
+        onOpenChange(v);
+      }}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0">
           <DialogHeader className="px-6 pt-6 pb-2">
             <div className="flex items-start justify-between">
@@ -116,82 +231,124 @@ export function OrderDetailDialog({
                   )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                className="bg-[#a03f3d] hover:bg-[#8b3634] text-white mr-6"
-                onClick={() => {
-                  onOpenChange(false);
-                  onEdit(order);
-                }}
-              >
-                <Pencil className="w-4 h-4 mr-1" />
-                Editar
-              </Button>
+              {hasChanges && (
+                <Button
+                  size="sm"
+                  className="bg-[#a03f3d] hover:bg-[#8b3634] text-white mr-6"
+                  onClick={handleSave}
+                  disabled={updateOrder.isPending}
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  {updateOrder.isPending ? 'Salvando...' : 'Salvar'}
+                </Button>
+              )}
             </div>
           </DialogHeader>
 
           <ScrollArea className="max-h-[calc(90vh-140px)]">
             <div className="px-6 pb-6 space-y-5">
-              {/* Info Grid */}
+              {/* Editable Info Grid */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Dentista</p>
-                  <p className="font-medium">{order.dentist_name || '—'}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Dentista</Label>
+                  <Select value={dentistId} onValueChange={v => { setDentistId(v); markChanged(); }}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dentists.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.full_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Laboratório</p>
-                  <p className="font-medium">{order.lab_name || '—'}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Laboratório</Label>
+                  <Select value={labId || 'none'} onValueChange={v => { setLabId(v === 'none' ? null : v); markChanged(); }}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {labs.map(l => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Dentes</p>
-                  <p className="font-medium">
-                    {order.tooth_numbers?.length > 0 ? order.tooth_numbers.join(', ') : '—'}
-                  </p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Dentes</Label>
+                  <Input
+                    className="h-9"
+                    placeholder="Ex: 11, 12, 21"
+                    value={toothNumbers}
+                    onChange={e => { setToothNumbers(e.target.value); markChanged(); }}
+                  />
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Cor</p>
-                  <p className="font-medium">{order.color || '—'}</p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Cor</Label>
+                  <Input
+                    className="h-9"
+                    placeholder="Ex: A2, B1"
+                    value={color}
+                    onChange={e => { setColor(e.target.value); markChanged(); }}
+                  />
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Previsão de Entrega</p>
-                  <p className="font-medium">
-                    {order.estimated_delivery_date
-                      ? new Date(order.estimated_delivery_date + 'T00:00:00').toLocaleDateString('pt-BR')
-                      : '—'}
-                  </p>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Previsão de Entrega</Label>
+                  <Input
+                    className="h-9"
+                    type="date"
+                    value={estimatedDeliveryDate}
+                    onChange={e => { setEstimatedDeliveryDate(e.target.value); markChanged(); }}
+                  />
                 </div>
               </div>
 
-              {(order.notes || order.special_instructions) && (
-                <>
-                  <Separator />
-                  {order.notes && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Observações</p>
-                      <p className="text-sm">{order.notes}</p>
-                    </div>
-                  )}
-                  {order.special_instructions && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Instruções Especiais</p>
-                      <p className="text-sm">{order.special_instructions}</p>
-                    </div>
-                  )}
-                </>
-              )}
+              <Separator />
+
+              {/* Observações */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Observações</Label>
+                <Textarea
+                  placeholder="Observações gerais..."
+                  value={notes}
+                  onChange={e => { setNotes(e.target.value); markChanged(); }}
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Instruções Especiais</Label>
+                <Textarea
+                  placeholder="Instruções para o laboratório..."
+                  value={specialInstructions}
+                  onChange={e => { setSpecialInstructions(e.target.value); markChanged(); }}
+                  rows={2}
+                />
+              </div>
 
               {/* Financial */}
               <Separator />
               <div>
                 <h4 className="text-sm font-semibold mb-2">Financeiro</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Custo Lab</p>
-                    <p className="font-semibold text-sm">{formatCurrency(order.lab_cost)}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Custo Lab (R$)</Label>
+                    <Input
+                      className="h-9"
+                      placeholder="0,00"
+                      value={labCost}
+                      onChange={e => { setLabCost(e.target.value); markChanged(); }}
+                    />
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Valor Paciente</p>
-                    <p className="font-semibold text-sm">{formatCurrency(order.patient_price)}</p>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Valor Paciente (R$)</Label>
+                    <Input
+                      className="h-9"
+                      placeholder="0,00"
+                      value={patientPrice}
+                      onChange={e => { setPatientPrice(e.target.value); markChanged(); }}
+                    />
                   </div>
                 </div>
               </div>
@@ -236,10 +393,52 @@ export function OrderDetailDialog({
                 <StatusTimeline orderId={order.id} />
               </div>
 
+              {/* Shipments Timeline */}
+              {shipments.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Truck className="w-4 h-4 text-orange-600" />
+                      Envios ({shipments.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {shipments.map(s => (
+                        <div key={s.id} className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-orange-800">{s.shipment_number}o Envio</span>
+                            {s.returned_to_clinic_at ? (
+                              <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">Retornou</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] bg-orange-50 text-orange-700 border-orange-200">No Lab</Badge>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 mt-1.5 text-xs text-muted-foreground">
+                            <div>
+                              <span className="text-orange-600">Enviado:</span>{' '}
+                              {new Date(s.sent_to_lab_at).toLocaleDateString('pt-BR')}
+                            </div>
+                            {s.returned_to_clinic_at && (
+                              <div>
+                                <span className="text-green-600">Retorno:</span>{' '}
+                                {new Date(s.returned_to_clinic_at).toLocaleDateString('pt-BR')}
+                              </div>
+                            )}
+                          </div>
+                          {s.notes && (
+                            <p className="text-xs text-muted-foreground mt-1">{s.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* Actions */}
               <Separator />
               <div className="flex flex-wrap gap-2">
-                {prevStatus && (
+                {prevStatus && order.status !== 'in_clinic' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -249,7 +448,17 @@ export function OrderDetailDialog({
                     {getStatusLabel(prevStatus)}
                   </Button>
                 )}
-                {nextStatus && (
+                {order.status === 'in_clinic' && onResendToLab && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onResendToLab(order)}
+                  >
+                    <RotateCw className="w-4 h-4 mr-1" />
+                    Reenviar ao Laboratório
+                  </Button>
+                )}
+                {nextStatus ? (
                   <Button
                     size="sm"
                     onClick={() => onAdvanceStatus(order)}
@@ -257,7 +466,7 @@ export function OrderDetailDialog({
                     {getStatusLabel(nextStatus)}
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
-                )}
+                ) : null}
                 <Button
                   variant="outline"
                   size="sm"

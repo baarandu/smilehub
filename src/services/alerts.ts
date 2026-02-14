@@ -192,6 +192,28 @@ export const alertsService = {
         if (error) throw error;
     },
 
+    async getProsthesisSchedulingAlerts(): Promise<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]> {
+        const { data, error } = await supabase
+            .from('prosthesis_orders')
+            .select('id, patient_id, tooth_numbers, type, created_at, patients!inner(name, phone)')
+            .eq('status', 'in_clinic');
+
+        if (error) {
+            console.error('Error fetching prosthesis scheduling alerts:', error);
+            return [];
+        }
+
+        return (data || []).map((row: any) => ({
+            id: row.id,
+            patientId: row.patient_id,
+            patientName: row.patients?.name || '',
+            patientPhone: row.patients?.phone || '',
+            toothNumbers: row.tooth_numbers || [],
+            type: row.type,
+            createdAt: row.created_at,
+        }));
+    },
+
     async getTotalAlertsCount(): Promise<number> {
         // Import services inline to avoid circular dependencies
         const { appointmentsService } = await import('./appointments');
@@ -202,14 +224,15 @@ export const alertsService = {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-        const [birthdays, procedureReturns, importantReturns, tomorrowAppointments, scheduledReturns] = await Promise.all([
+        const [birthdays, procedureReturns, importantReturns, tomorrowAppointments, scheduledReturns, prosthesisAlerts] = await Promise.all([
             this.getBirthdayAlerts(),
             this.getProcedureReminders(),
             this.getImportantReturnAlerts(),
             appointmentsService.getByDate(tomorrowStr).catch(() => []),
-            consultationsService.getReturnAlerts().catch(() => [])
+            consultationsService.getReturnAlerts().catch(() => []),
+            this.getProsthesisSchedulingAlerts().catch(() => [])
         ]);
 
-        return birthdays.length + procedureReturns.length + importantReturns.length + tomorrowAppointments.length + scheduledReturns.length;
+        return birthdays.length + procedureReturns.length + importantReturns.length + tomorrowAppointments.length + scheduledReturns.length + prosthesisAlerts.length;
     }
 };

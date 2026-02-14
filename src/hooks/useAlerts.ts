@@ -15,6 +15,13 @@ export function useProcedureReminders() {
     });
 }
 
+export function useProsthesisSchedulingAlerts() {
+    return useQuery({
+        queryKey: ['alerts', 'prosthesis-scheduling'],
+        queryFn: () => alertsService.getProsthesisSchedulingAlerts(),
+    });
+}
+
 export function useDismissAlert() {
     const queryClient = useQueryClient();
 

@@ -6,6 +6,7 @@ import type {
   ProsthesisOrderHistory,
   ProsthesisOrderFilters,
   ProsthesisStatus,
+  ProsthesisShipment,
 } from '@/types/prosthesis';
 import { getStatusDateField } from '@/utils/prosthesis';
 
@@ -191,14 +192,15 @@ export const prosthesisService = {
     // Get current order
     const { data: current, error: fetchError } = await supabase
       .from('prosthesis_orders')
-      .select('status')
+      .select('status, current_shipment_number')
       .eq('id', orderId)
       .single();
 
     if (fetchError) throw fetchError;
     if (!current) throw new Error('Ordem não encontrada');
 
-    const oldStatus = current.status;
+    const oldStatus = current.status as ProsthesisStatus;
+    const currentShipmentNum = current.current_shipment_number || 0;
 
     // Build update object with status date
     const updateData: Record<string, any> = {
@@ -209,6 +211,38 @@ export const prosthesisService = {
     const dateField = getStatusDateField(newStatus);
     if (dateField) {
       updateData[dateField] = new Date().toISOString();
+    }
+
+    // Handle shipment transitions
+    if (oldStatus === 'pre_lab' && newStatus === 'in_lab') {
+      // First send to lab: create shipment #1
+      const newShipmentNum = 1;
+      updateData.current_shipment_number = newShipmentNum;
+      await supabase.from('prosthesis_shipments').insert({
+        order_id: orderId,
+        shipment_number: newShipmentNum,
+        sent_to_lab_at: new Date().toISOString(),
+        created_by: userId,
+        notes: notes || null,
+      });
+    } else if (oldStatus === 'in_lab' && newStatus === 'in_clinic') {
+      // Returned from lab: set returned_to_clinic_at on current shipment
+      await supabase
+        .from('prosthesis_shipments')
+        .update({ returned_to_clinic_at: new Date().toISOString() })
+        .eq('order_id', orderId)
+        .eq('shipment_number', currentShipmentNum);
+    } else if (oldStatus === 'in_clinic' && newStatus === 'in_lab') {
+      // Re-send to lab: create next shipment
+      const newShipmentNum = currentShipmentNum + 1;
+      updateData.current_shipment_number = newShipmentNum;
+      await supabase.from('prosthesis_shipments').insert({
+        order_id: orderId,
+        shipment_number: newShipmentNum,
+        sent_to_lab_at: new Date().toISOString(),
+        created_by: userId,
+        notes: notes || null,
+      });
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -256,6 +290,32 @@ export const prosthesisService = {
     return (data || []).map(mapOrder);
   },
 
+  async completeOrderAutomatically(orderId: string, userId: string): Promise<void> {
+    // Fetch current order to check status
+    const { data: current, error } = await supabase
+      .from('prosthesis_orders')
+      .select('status, clinic_id')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !current) return;
+    if (current.status === 'completed') return;
+
+    // Calculate new position (append to end of completed column)
+    const { data: maxPos } = await supabase
+      .from('prosthesis_orders')
+      .select('position')
+      .eq('clinic_id', current.clinic_id)
+      .eq('status', 'completed')
+      .order('position', { ascending: false })
+      .limit(1)
+      .single();
+
+    const newPosition = (maxPos?.position ?? -1) + 1;
+
+    await this.moveOrder(orderId, 'completed', newPosition, userId, 'Concluído automaticamente via procedimento');
+  },
+
   async getOrderByBudgetLink(budgetId: string, toothIndex: number): Promise<ProsthesisOrder | null> {
     const { data, error } = await supabase
       .from('prosthesis_orders')
@@ -291,5 +351,18 @@ export const prosthesisService = {
       changed_by_name: row.profiles?.full_name ?? null,
       profiles: undefined,
     }));
+  },
+
+  // ==================== Shipments ====================
+
+  async getShipments(orderId: string): Promise<ProsthesisShipment[]> {
+    const { data, error } = await supabase
+      .from('prosthesis_shipments')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('shipment_number');
+
+    if (error) throw error;
+    return data || [];
   },
 };

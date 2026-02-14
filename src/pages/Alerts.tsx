@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare } from 'lucide-react';
+import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { subscriptionService } from '@/services/subscription';
 import { supabase } from '@/lib/supabase';
@@ -14,9 +14,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMe
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
-import { useBirthdayAlerts, useProcedureReminders, useDismissAlert } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts } from '@/hooks/useAlerts';
+import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 import { useReminders, useTemplates, useWhatsAppMessaging, AlertAccordion } from './alerts/index';
 
@@ -30,6 +32,7 @@ const AI_SECRETARY_ALLOWED_EMAILS = (import.meta.env.VITE_AI_SECRETARY_BETA_EMAI
 const AI_SECRETARY_ALLOWED_PLANS = ['enterprise'];
 
 export default function Alerts() {
+  const navigate = useNavigate();
   // Get tomorrow's date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -39,6 +42,7 @@ export default function Alerts() {
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
+  const { data: prosthesisAlerts, isLoading: loadingProsthesis } = useProsthesisSchedulingAlerts();
   const dismissAlert = useDismissAlert();
   const { data: tomorrowAppointments, isLoading: loadingTomorrow } = useAppointmentsByDate(tomorrowStr);
   const updateAppointmentStatus = useUpdateAppointmentStatus();
@@ -749,6 +753,43 @@ export default function Alerts() {
                   </div>
                 );
               })}
+            </AlertAccordion>
+          )}
+
+          {/* Prosthesis Scheduling Alerts */}
+          {prosthesisAlerts && prosthesisAlerts.length > 0 && (
+            <AlertAccordion
+              open={openAccordions.prosthesis}
+              onToggle={() => toggleAccordion('prosthesis')}
+              icon={<CalendarClock className="w-5 h-5 text-purple-600" />}
+              title="Próteses aguardando agendamento"
+              description="Pacientes com prótese pronta para prova"
+              count={prosthesisAlerts.length}
+              loading={loadingProsthesis}
+              colorScheme="pink"
+            >
+              {prosthesisAlerts.map((alert) => (
+                <div key={alert.id} className="p-4 hover:bg-purple-50/30 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium">{alert.patientName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {PROSTHESIS_TYPE_LABELS[alert.type] || alert.type}
+                        {alert.toothNumbers.length > 0 && ` — Dentes: ${alert.toothNumbers.join(', ')}`}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                      onClick={() => navigate('/agenda')}
+                    >
+                      <Calendar className="w-4 h-4 mr-1" />
+                      Agendar
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </AlertAccordion>
           )}
         </div>

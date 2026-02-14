@@ -10,7 +10,8 @@ import {
 } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Building2, ArrowRight } from 'lucide-react';
+import { Plus, Building2, ArrowRight, CalendarClock, RotateCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -38,6 +39,7 @@ import { CompletionDialog } from './CompletionDialog';
 export function KanbanBoard() {
   const { clinicId } = useClinic();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<ProsthesisOrderFilters>({});
   const { data: orders = [], isLoading } = useProsthesisOrders(filters.search || filters.dentistId || filters.labId || filters.type ? filters : undefined);
   const { data: labs = [] } = useActiveProsthesisLabs();
@@ -71,7 +73,7 @@ export function KanbanBoard() {
   // Group orders by status
   const ordersByStatus = useMemo(() => {
     const grouped: Record<ProsthesisStatus, ProsthesisOrder[]> = {
-      pre_lab: [], sent: [], in_lab: [], try_in: [], adjustment: [], installation: [], completed: [],
+      pre_lab: [], in_lab: [], in_clinic: [], completed: [],
     };
     orders.forEach(o => {
       if (grouped[o.status]) grouped[o.status].push(o);
@@ -254,7 +256,7 @@ export function KanbanBoard() {
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <div className="flex gap-3 overflow-x-auto pb-4">
+              <div className="flex gap-3 pb-4">
                 {KANBAN_COLUMNS.map(column => (
                   <KanbanColumn
                     key={column.id}
@@ -298,24 +300,59 @@ export function KanbanBoard() {
                             className="bg-white rounded-lg border p-3 shadow-sm"
                             onClick={() => handleCardClick(order)}
                           >
-                            <p className="font-medium text-sm">{order.patient_name}</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-medium text-sm">{order.patient_name}</p>
+                              {order.current_shipment_number > 0 && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 shrink-0">
+                                  {order.current_shipment_number}o envio
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {order.tooth_numbers?.join(', ')}
                             </p>
-                            {next && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-2 h-7 text-xs"
-                                onClick={e => {
+                            {order.status === 'in_clinic' && (
+                              <div
+                                className="mt-1.5 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
+                                onClick={(e) => {
                                   e.stopPropagation();
-                                  handleAdvanceStatus(order);
+                                  navigate('/agenda');
                                 }}
                               >
-                                <ArrowRight className="w-3 h-3 mr-1" />
-                                Avançar
-                              </Button>
+                                <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                <span className="text-[10px] font-medium text-amber-700">Agendar com paciente</span>
+                              </div>
                             )}
+                            <div className="mt-2 flex gap-1.5">
+                              {order.status === 'in_clinic' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleMoveOrder(order, 'in_lab');
+                                  }}
+                                >
+                                  <RotateCw className="w-3 h-3 mr-1" />
+                                  Reenviar ao Lab
+                                </Button>
+                              )}
+                              {next && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleAdvanceStatus(order);
+                                  }}
+                                >
+                                  <ArrowRight className="w-3 h-3 mr-1" />
+                                  Avançar
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         );
                       })
@@ -343,6 +380,7 @@ export function KanbanBoard() {
         onEdit={handleEditFromDetail}
         onAdvanceStatus={handleAdvanceStatus}
         onRetreatStatus={handleRetreatStatus}
+        onResendToLab={(order) => handleMoveOrder(order, 'in_lab')}
       />
       <CompletionDialog
         open={completionOpen}

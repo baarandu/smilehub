@@ -23,6 +23,8 @@ import {
 import { useCreateProcedure, useUpdateProcedure, useDeleteProcedure } from '@/hooks/useProcedures';
 import { type Location } from '@/services/locations';
 import { budgetsService } from '@/services/budgets';
+import { prosthesisService } from '@/services/prosthesis';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Procedure } from '@/types/database';
@@ -198,6 +200,20 @@ export function NewProcedureDialog({
           }
         }
         queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+
+        // Auto-complete linked prosthesis orders
+        const { data: { user } } = await supabase.auth.getUser();
+        for (const link of budgetLinks) {
+          try {
+            const order = await prosthesisService.getOrderByBudgetLink(link.budgetId, link.toothIndex);
+            if (order && order.status !== 'completed') {
+              await prosthesisService.completeOrderAutomatically(order.id, user?.id || '');
+            }
+          } catch (err) {
+            console.error('Error auto-completing prosthesis order:', err);
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ['prosthesis-orders'] });
       }
 
       onOpenChange(false);
