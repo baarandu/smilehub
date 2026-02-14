@@ -5,137 +5,65 @@
 // - Lucro Real: despesas dedutíveis (todas operacionais comprovadas)
 
 export const EXPENSE_CATEGORIES: string[] = [
-    // ═══════════════════════════════════════════════════════════════
-    // ATIVIDADE ODONTOLÓGICA
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Materiais',  // Mantido para compatibilidade com sistema de compras
-    'Instrumentais e Insumos',
-    'Laboratório Protético',
-    'EPIs (Luvas, Máscaras, Aventais)',
-    'Esterilização e Biossegurança',
-
-    // ═══════════════════════════════════════════════════════════════
-    // ESTRUTURA DO CONSULTÓRIO
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Aluguel',
-    'Condomínio',
-    'Energia Elétrica',
-    'Água',
-    'Internet',
-    'Telefone',
-    'IPTU',
-
-    // ═══════════════════════════════════════════════════════════════
-    // PESSOAL E FOLHA DE PAGAMENTO
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Salários',
-    'Pró-labore',
-    'FGTS',
-    'INSS Patronal',
     '13º Salário',
-    'Férias',
-    'Encargos Trabalhistas',
-    'Benefícios (VT, VR, Plano de Saúde)',
-
-    // ═══════════════════════════════════════════════════════════════
-    // SERVIÇOS TERCEIRIZADOS
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Contador',
-    'Serviços de Limpeza',
-    'Serviços de Segurança',
-    'Consultorias',
-    'Assessoria Jurídica',
-
-    // ═══════════════════════════════════════════════════════════════
-    // EQUIPAMENTOS E MANUTENÇÃO
-    // PF: Dedutível (manutenção) | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Equipamentos',
-    'Manutenção de Equipamentos',
-    'Manutenção Predial',
-    'Depreciação de Equipamentos',
-
-    // ═══════════════════════════════════════════════════════════════
-    // TECNOLOGIA E SOFTWARE
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Software de Gestão',
-    'Sistemas e Licenças',
-    'Hospedagem e Domínio',
-
-    // ═══════════════════════════════════════════════════════════════
-    // MARKETING E PUBLICIDADE
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Marketing Digital',
-    'Publicidade e Propaganda',
-    'Material Gráfico e Impressos',
-
-    // ═══════════════════════════════════════════════════════════════
-    // DESENVOLVIMENTO PROFISSIONAL
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Cursos e Especializações',
-    'Congressos e Seminários',
-    'Livros Técnicos',
-    'Anuidade CRO',
-
-    // ═══════════════════════════════════════════════════════════════
-    // TRIBUTOS E TAXAS
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'ISS',
-    'Impostos Federais',
-    'Impostos Estaduais',
-    'Taxas e Licenças',
+    'Água',
+    'Aluguel',
     'Alvarás',
-
-    // ═══════════════════════════════════════════════════════════════
-    // VEÍCULO (USO PROFISSIONAL)
-    // PF: Dedutível (com restrições) | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Combustível',
-    'Estacionamento',
-    'Manutenção de Veículo',
-    'Seguro de Veículo',
-    'IPVA',
-
-    // ═══════════════════════════════════════════════════════════════
-    // FINANCEIRAS (principalmente Lucro Real)
-    // PF: Não dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Juros e Financiamentos',
+    'Anuidade CRO',
     'Arrendamento Mercantil (Leasing)',
-    'Tarifas Bancárias',
-
-    // ═══════════════════════════════════════════════════════════════
-    // SEGUROS
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
-    'Seguro do Consultório',
-    'Seguro de Responsabilidade Civil',
-
-    // ═══════════════════════════════════════════════════════════════
-    // DESPESAS ADMINISTRATIVAS
-    // PF: Dedutível | Simples/Presumido: Operacional | Real: Dedutível
-    // ═══════════════════════════════════════════════════════════════
+    'Assessoria Jurídica',
+    'Benefícios (VT, VR, Plano de Saúde)',
+    'Combustível',
+    'Condomínio',
+    'Congressos e Seminários',
+    'Consultorias',
+    'Contador',
+    'Correios e Entregas',
+    'Cursos e Especializações',
+    'Depreciação de Equipamentos',
+    'Doações a Entidades Autorizadas',
+    'Encargos Trabalhistas',
+    'Energia Elétrica',
+    'EPIs (Luvas, Máscaras, Aventais)',
+    'Equipamentos',
+    'Estacionamento',
+    'Esterilização e Biossegurança',
+    'Férias',
+    'FGTS',
+    'Hospedagem e Domínio',
+    'Impostos Estaduais',
+    'Impostos Federais',
+    'INSS Patronal',
+    'Instrumentais e Insumos',
+    'Internet',
+    'IPTU',
+    'IPVA',
+    'ISS',
+    'Juros e Financiamentos',
+    'Laboratório Protético',
+    'Livros Técnicos',
+    'Manutenção de Equipamentos',
+    'Manutenção de Veículo',
+    'Manutenção Predial',
+    'Marketing Digital',
     'Material de Escritório',
     'Material de Limpeza',
-    'Correios e Entregas',
-
-    // ═══════════════════════════════════════════════════════════════
-    // DOAÇÕES (Lucro Real com limites)
-    // PF: Não dedutível | Simples/Presumido: Não dedutível | Real: Dedutível (com limites)
-    // ═══════════════════════════════════════════════════════════════
-    'Doações a Entidades Autorizadas',
-
-    // ═══════════════════════════════════════════════════════════════
-    // OUTROS
-    // ═══════════════════════════════════════════════════════════════
+    'Material Gráfico e Impressos',
+    'Materiais',
+    'Pró-labore',
+    'Publicidade e Propaganda',
+    'Salários',
+    'Seguro de Responsabilidade Civil',
+    'Seguro de Veículo',
+    'Seguro do Consultório',
+    'Serviços de Limpeza',
+    'Serviços de Segurança',
+    'Sistemas e Licenças',
+    'Software de Gestão',
+    'Tarifas Bancárias',
+    'Taxas e Licenças',
+    'Telefone',
+    // "Outros" sempre no final
     'Outros'
 ];
 
