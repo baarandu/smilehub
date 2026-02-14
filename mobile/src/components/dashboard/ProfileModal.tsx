@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
-import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { subscriptionService } from '../../services/subscription';
 
@@ -182,6 +182,17 @@ export function ProfileModal({
                                 className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
                                 onPress={() => {
                                     onClose();
+                                    router.push('/settings/profile');
+                                }}
+                            >
+                                <User size={20} color="#6B7280" />
+                                <Text className="text-gray-700 font-medium">Meu Perfil</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
                                     router.push('/settings/clinic');
                                 }}
                             >
@@ -223,6 +234,19 @@ export function ProfileModal({
                                 >
                                     <Stethoscope size={20} color="#0d9488" />
                                     <Text className="text-gray-700 font-medium">Dentista IA</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {isDentist && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/prosthesis-center');
+                                    }}
+                                >
+                                    <Layers size={20} color="#6B7280" />
+                                    <Text className="text-gray-700 font-medium">Central de Prótese</Text>
                                 </TouchableOpacity>
                             )}
 

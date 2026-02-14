@@ -19,7 +19,8 @@ import {
   HelpCircle,
   Settings,
   Calculator,
-  Mic
+  Mic,
+  Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ const navItems = [
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
   { to: '/consulta-voz', icon: Mic, label: 'Consulta por Voz' },
   { to: '/materiais', icon: Package, label: 'Materiais' },
+  { to: '/protese', icon: Layers, label: 'Central de Prótese' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
   { to: '/dentista-ia', icon: Stethoscope, label: 'Dentista IA', dentistOnly: true },
@@ -89,6 +91,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       // Materiais: profissional+ plan
       if (item.to === '/materiais') {
         return planHasFeature(planSlug, 'estoque');
+      }
+      // Central de Prótese: isDentist + profissional+ plan
+      if (item.to === '/protese') {
+        return isDentist && planHasFeature(planSlug, 'central_protese');
       }
       return true;
     });

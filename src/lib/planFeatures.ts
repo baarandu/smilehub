@@ -19,6 +19,7 @@ const PLAN_FEATURES: Record<PlanSlug, string[]> = {
     'estoque',
     'imposto_renda',
     'comissoes',
+    'central_protese',
     'suporte_chat',
   ],
   premium: [
