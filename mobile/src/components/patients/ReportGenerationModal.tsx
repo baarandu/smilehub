@@ -66,15 +66,15 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                 clinicId = (clinicUser as any)?.clinic_id || null;
             }
 
-            // Fetch FiscalProfile for CRO
+            // Fetch CRO from logged-in dentist's profile
             let dentistCRO: string | undefined;
-            if (clinicId) {
-                const { data: fiscalProfile } = await supabase
-                    .from('fiscal_profiles')
-                    .select('pf_cro')
-                    .eq('clinic_id', clinicId)
-                    .single();
-                dentistCRO = (fiscalProfile as any)?.pf_cro || undefined;
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('cro')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                dentistCRO = (profile as any)?.cro || undefined;
             }
 
             // Fetch clinic contact info from ai_secretary_settings

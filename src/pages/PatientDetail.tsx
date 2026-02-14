@@ -25,10 +25,10 @@ export default function PatientDetail() {
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
   const deletePatient = useDeletePatient();
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const { role } = useClinic();
+  const { roles } = useClinic();
 
-  // Secretaries cannot see anamnese - default to budgets tab
-  const isSecretary = role === 'assistant';
+  // Secretaries (who are not also dentists/admins) cannot see anamnese - default to budgets tab
+  const isSecretary = roles.length > 0 && roles.every(r => r === 'assistant' || r === 'viewer');
   const defaultTab = isSecretary ? 'budgets' : 'anamnese';
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || defaultTab);
 

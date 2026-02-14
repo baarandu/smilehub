@@ -54,7 +54,7 @@ serve(async (req) => {
     // Verify user has access to this clinic
     const { data: clinicUser, error: accessError } = await supabase
       .from("clinic_users")
-      .select("role")
+      .select("role, roles")
       .eq("user_id", user.id)
       .eq("clinic_id", clinicId)
       .single();
@@ -64,7 +64,8 @@ serve(async (req) => {
     }
 
     // Only admin and dentist can export patient data
-    if (!["admin", "dentist"].includes(clinicUser.role)) {
+    const userRoles: string[] = clinicUser.roles || (clinicUser.role ? [clinicUser.role] : []);
+    if (!userRoles.some((r: string) => ["admin", "dentist"].includes(r))) {
       throw new Error("Unauthorized");
     }
 

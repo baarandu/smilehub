@@ -18,22 +18,23 @@ export const financialService = {
 
         const { data: clinicUser } = await supabase
             .from('clinic_users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, roles')
             .eq('user_id', user.id)
             .single();
 
         if (!clinicUser) return null;
 
+        const userRoles: string[] = (clinicUser as any).roles || [(clinicUser as any).role];
         const role = (clinicUser as any).role;
         // Owners, admins, and managers can see all financials
         // Dentists and other roles only see their own transactions
-        const canSeeAllFinancials = ['owner', 'admin', 'manager'].includes(role);
+        const canSeeAll = userRoles.some(r => ['owner', 'admin', 'manager'].includes(r));
 
         return {
             userId: user.id,
             clinicId: (clinicUser as any).clinic_id,
             role,
-            canSeeAllFinancials
+            canSeeAllFinancials: canSeeAll
         };
     },
 

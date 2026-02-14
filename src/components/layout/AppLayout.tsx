@@ -28,7 +28,7 @@ import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
 import { subscriptionService } from '@/services/subscription';
-import { planHasFeature } from '@/lib/planFeatures';
+import { planHasFeature, getFeaturesForPlan } from '@/lib/planFeatures';
 
 // Beta testers emails loaded from environment variable (comma-separated)
 // Example: VITE_AI_SECRETARY_BETA_EMAILS=email1@test.com,email2@test.com
@@ -36,9 +36,6 @@ const AI_SECRETARY_ALLOWED_EMAILS = (import.meta.env.VITE_AI_SECRETARY_BETA_EMAI
   .split(',')
   .map((email: string) => email.trim().toLowerCase())
   .filter(Boolean);
-
-// Plan slugs that have access to AI Secretary
-const AI_SECRETARY_ALLOWED_PLANS = ['enterprise'];
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -53,11 +50,15 @@ const navItems = [
   { to: '/protese', icon: Layers, label: 'Central de Prótese' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
-  { to: '/dentista-ia', icon: Stethoscope, label: 'Dentista IA', dentistOnly: true },
-  { to: '/contabilidade-ia', icon: Calculator, label: 'Contabilidade IA', adminOnly: true },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Planos e Assinatura' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+];
+
+const aiNavItems = [
+  { to: '/contabilidade-ia', icon: Calculator, label: 'Contabilidade IA', adminOnly: true },
+  { to: '/dentista-ia', icon: Stethoscope, label: 'Dentista IA', dentistOnly: true },
+  { to: '/secretaria-ia', icon: Bot, label: 'Secretária IA', secretaryAccess: true },
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -66,53 +67,57 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
-  const [planSlug, setPlanSlug] = useState<string | null>(null);
+  const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
   const { role, clinicId, isAdmin, isDentist } = useClinic();
 
-  // Filter nav items based on role AND subscription plan
+  // Filter nav items based on role AND subscription plan features
   const filteredNavItems = useMemo(() => {
     return navItems.filter(item => {
-      // Financeiro / IR: admin role + profissional+ plan
       if (item.to === '/financeiro' || item.to === '/imposto-de-renda') {
-        return isAdmin && planHasFeature(planSlug, 'financeiro');
+        return isAdmin && planHasFeature(planFeatureKeys, 'financeiro');
       }
-      // Contabilidade IA: admin role + premium+ plan
-      if (item.to === '/contabilidade-ia') {
-        return isAdmin && planHasFeature(planSlug, 'contabilidade_ia');
-      }
-      // Dentista IA: dentist role + premium+ plan
-      if ((item as any).dentistOnly) {
-        return isDentist && planHasFeature(planSlug, 'dentista_ia');
-      }
-      // Consulta por Voz: premium+ plan
       if (item.to === '/consulta-voz') {
-        return planHasFeature(planSlug, 'consulta_voz');
+        return planHasFeature(planFeatureKeys, 'consulta_voz');
       }
-      // Materiais: profissional+ plan
       if (item.to === '/materiais') {
-        return planHasFeature(planSlug, 'estoque');
+        return planHasFeature(planFeatureKeys, 'estoque');
       }
-      // Central de Prótese: isDentist + profissional+ plan
       if (item.to === '/protese') {
-        return isDentist && planHasFeature(planSlug, 'central_protese');
+        return isDentist && planHasFeature(planFeatureKeys, 'central_protese');
       }
       return true;
     });
-  }, [isAdmin, isDentist, planSlug]);
+  }, [isAdmin, isDentist, planFeatureKeys]);
 
   // Check if user has access to AI Secretary:
-  // 1. Has enterprise plan, OR
+  // 1. Has secretaria_ia feature in plan, OR
   // 2. Is in the beta testers email list (fallback), OR
   // 3. Is super admin
-  const hasEnterprisePlan = planSlug && AI_SECRETARY_ALLOWED_PLANS.includes(planSlug.toLowerCase());
-  const isInBetaList = userEmail && AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
-  const hasAISecretaryAccess = hasEnterprisePlan || isInBetaList || isSuperAdmin;
+  const hasAISecretaryAccess = planHasFeature(planFeatureKeys, 'secretaria_ia')
+    || (userEmail && AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase()))
+    || isSuperAdmin;
 
-  // Fetch subscription plan when clinicId is available
+  // Filter AI nav items based on role and plan features
+  const filteredAiNavItems = useMemo(() => {
+    return aiNavItems.filter(item => {
+      if (item.to === '/contabilidade-ia') {
+        return isAdmin && planHasFeature(planFeatureKeys, 'contabilidade_ia');
+      }
+      if (item.to === '/dentista-ia') {
+        return isDentist && planHasFeature(planFeatureKeys, 'dentista_ia');
+      }
+      if (item.to === '/secretaria-ia') {
+        return hasAISecretaryAccess;
+      }
+      return true;
+    });
+  }, [isAdmin, isDentist, planFeatureKeys, hasAISecretaryAccess]);
+
+  // Fetch subscription plan and derive features from plan slug hierarchy
   useEffect(() => {
     if (clinicId) {
       subscriptionService.getCurrentSubscription(clinicId).then(({ plan }) => {
-        setPlanSlug(plan?.slug || null);
+        setPlanFeatureKeys(getFeaturesForPlan(plan?.slug));
       }).catch(console.error);
     }
   }, [clinicId]);
@@ -283,23 +288,31 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         )}
 
-        {/* Secretária IA - Only for whitelisted emails (Beta) */}
-        {hasAISecretaryAccess && (
+        {/* AI Section - grouped */}
+        {filteredAiNavItems.length > 0 && (
           <div className="px-4 pb-4">
-            <NavLink
-              to="/secretaria-ia"
-              className={({ isActive }) =>
-                cn(
-                  "flex w-full items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground hover:bg-violet-50 hover:text-violet-700"
-                )
-              }
-            >
-              <Bot className="w-5 h-5" />
-              <span className="flex-1 text-left">Secretária IA</span>
-            </NavLink>
+            <p className="px-4 pt-3 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inteligência Artificial</p>
+            <div className="space-y-1">
+              {filteredAiNavItems.map((item) => {
+                const isActive = location.pathname === item.to;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn("w-5 h-5")} />
+                    <span className="flex-1">{item.label}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
           </div>
         )}
         </div>{/* End Scrollable Navigation Area */}

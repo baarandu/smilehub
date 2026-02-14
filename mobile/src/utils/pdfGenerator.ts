@@ -648,6 +648,7 @@ interface BudgetPDFData {
     clinicAddress?: string;
     clinicPhone?: string;
     isClinic?: boolean;
+    dentistCRO?: string | null;
 }
 
 const formatMoney = (value: number) => {
@@ -671,7 +672,7 @@ const getStatusColor = (status: string): string => {
 };
 
 export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
-    const { budget, patientName, clinicName, dentistName, logoUrl, isClinic } = data;
+    const { budget, patientName, clinicName, dentistName, logoUrl, isClinic, dentistCRO } = data;
 
     const teeth = JSON.parse(budget.notes || '{"teeth":[]}').teeth || [];
 
@@ -689,6 +690,7 @@ export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
 
     // Get dentist display name
     const responsibleName = dentistName || clinicName || 'Dentista';
+    const croText = dentistCRO ? ` — CRO ${dentistCRO}` : '';
 
     // Status icon SVGs
     const checkIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -1040,7 +1042,7 @@ export const generateBudgetPDFHtml = (data: BudgetPDFData) => {
                     <div>
                         <div class="info-label">Validade</div>
                         <div class="info-value">${validityDate.toLocaleDateString('pt-BR')}</div>
-                        <div class="info-sub">Responsável: ${responsibleName}</div>
+                        <div class="info-sub">Responsável: ${responsibleName}${croText}</div>
                     </div>
                 </div>
             </div>

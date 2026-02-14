@@ -56,13 +56,14 @@ export default function SubscriptionScreen() {
             if (session?.user) {
                 const { data: clinicUser } = await supabase
                     .from('clinic_users')
-                    .select('clinic_id, role')
+                    .select('clinic_id, role, roles')
                     .eq('user_id', session.user.id)
                     .single();
 
                 if (clinicUser) {
                     const typedUser = clinicUser as any;
-                    setIsAdmin(typedUser.role === 'admin' || typedUser.role === 'owner');
+                    const userRoles: string[] = typedUser.roles || (typedUser.role ? [typedUser.role] : []);
+                    setIsAdmin(userRoles.some((r: string) => ['admin', 'owner'].includes(r)));
                     setClinicId(typedUser.clinic_id);
                     const subStatus = await subscriptionService.getCurrentSubscription(typedUser.clinic_id);
                     if ((subStatus.isActive || subStatus.isTrialing) && subStatus.plan) {

@@ -152,7 +152,6 @@ export const PROSTHESIS_TYPE_LABELS: Record<string, string> = {
   pino: 'Pino',
   provisorio: 'Provisório',
   nucleo: 'Núcleo',
-  implante: 'Implante',
   outro: 'Outro',
 };
 

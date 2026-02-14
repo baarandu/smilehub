@@ -1,74 +1,42 @@
-// Feature gating by subscription plan
-// Used to control access to features in the sidebar and throughout the app
+/**
+ * Check if a plan's feature list includes a given feature key.
+ * Features are now stored explicitly per plan in subscription_plans.features.
+ * No more hierarchy/inheritance — each plan lists all its features.
+ */
+export function planHasFeature(planFeatures: string[] | null | undefined, feature: string): boolean {
+  if (!planFeatures || !Array.isArray(planFeatures)) return false;
+  return planFeatures.includes(feature);
+}
 
-export const PLAN_HIERARCHY = ['basico', 'profissional', 'premium', 'enterprise'] as const;
+// Plan hierarchy and features — used as fallback when plan.features is not set
+const PLAN_HIERARCHY = ['basico', 'profissional', 'premium', 'enterprise'] as const;
 
-type PlanSlug = (typeof PLAN_HIERARCHY)[number];
-
-const PLAN_FEATURES: Record<PlanSlug, string[]> = {
+const PLAN_FEATURES: Record<string, string[]> = {
   basico: [
-    'agenda',
-    'prontuario',
-    'anamnese',
-    'orcamentos',
-    'alertas',
-    'suporte_email',
+    'agenda', 'prontuario', 'anamnese', 'orcamentos', 'alertas', 'suporte_email',
   ],
   profissional: [
-    'financeiro',
-    'estoque',
-    'imposto_renda',
-    'comissoes',
-    'central_protese',
-    'suporte_chat',
+    'financeiro', 'estoque', 'imposto_renda', 'comissoes', 'central_protese', 'suporte_chat',
   ],
   premium: [
-    'consulta_voz',
-    'dentista_ia',
-    'contabilidade_ia',
-    'whatsapp_confirmacao',
-    'multi_unidades',
+    'consulta_voz', 'dentista_ia', 'contabilidade_ia', 'whatsapp_confirmacao', 'multi_unidades',
   ],
   enterprise: [
-    'secretaria_ia',
-    'whitelabel',
-    'api',
-    'relatorios_avancados',
-    'suporte_telefone',
-    'gerente_dedicado',
+    'secretaria_ia', 'whitelabel', 'api', 'relatorios_avancados', 'suporte_telefone', 'gerente_dedicado',
   ],
 };
 
 /**
- * Returns the index of a plan in the hierarchy (-1 if not found).
+ * Get all feature keys for a plan slug (with inheritance from lower tiers).
+ * Used as fallback when plan.features is not stored in the database.
  */
-function planIndex(slug: string): number {
-  return PLAN_HIERARCHY.indexOf(slug.toLowerCase() as PlanSlug);
-}
-
-/**
- * Check if a plan has access to a given feature.
- * Features accumulate — higher plans inherit all lower plan features.
- */
-export function planHasFeature(planSlug: string | null | undefined, feature: string): boolean {
-  if (!planSlug) return false;
-
-  const idx = planIndex(planSlug);
-  if (idx === -1) return false;
-
-  // Check all tiers up to and including the current plan
+export function getFeaturesForPlan(planSlug: string | null | undefined): string[] {
+  if (!planSlug) return [];
+  const idx = PLAN_HIERARCHY.indexOf(planSlug.toLowerCase() as typeof PLAN_HIERARCHY[number]);
+  if (idx === -1) return [];
+  const features: string[] = [];
   for (let i = 0; i <= idx; i++) {
-    if (PLAN_FEATURES[PLAN_HIERARCHY[i]].includes(feature)) {
-      return true;
-    }
+    features.push(...PLAN_FEATURES[PLAN_HIERARCHY[i]]);
   }
-  return false;
-}
-
-/**
- * Check if planA is at least at the level of planB.
- */
-export function planIsAtLeast(planSlug: string | null | undefined, minimumPlan: string): boolean {
-  if (!planSlug) return false;
-  return planIndex(planSlug) >= planIndex(minimumPlan);
+  return features;
 }

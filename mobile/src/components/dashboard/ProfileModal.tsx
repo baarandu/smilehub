@@ -118,25 +118,6 @@ export function ProfileModal({
 
                         {/* Menu Items */}
                         <View className="p-6 gap-2">
-                            {/* AI Secretary - Only for whitelisted emails (Beta) or Enterprise plan */}
-                            {hasAISecretaryAccess && (
-                                <TouchableOpacity
-                                    className="flex-row items-center gap-4 p-4 bg-white border border-[#fecaca] rounded-2xl shadow-sm mb-2"
-                                    onPress={() => {
-                                        onClose();
-                                        router.push('/secretary');
-                                    }}
-                                >
-                                    <View className="w-10 h-10 bg-[#fef2f2] rounded-full items-center justify-center">
-                                        <Bot size={22} color="#b94a48" />
-                                    </View>
-                                    <View>
-                                        <Text className="text-gray-900 font-bold">Secretária IA</Text>
-                                        <Text className="text-gray-500 text-xs">Assistente Virtual</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-
                             {/* Admin Section - Only for Super Admins */}
                             {isSuperAdmin && (
                                 <>
@@ -173,6 +154,52 @@ export function ProfileModal({
                                             <Text className="text-gray-500 text-xs">Visão geral do SaaS</Text>
                                         </View>
                                     </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* AI Section - Grouped */}
+                            {(isAdmin || isDentist || hasAISecretaryAccess) && (
+                                <>
+                                    <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Inteligência Artificial</Text>
+
+                                    {isAdmin && (
+                                        <TouchableOpacity
+                                            className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                            onPress={() => {
+                                                onClose();
+                                                router.push('/accounting-agent');
+                                            }}
+                                        >
+                                            <Calculator size={20} color="#7C3AED" />
+                                            <Text className="text-gray-700 font-medium">Contabilidade IA</Text>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    {isDentist && (
+                                        <TouchableOpacity
+                                            className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                            onPress={() => {
+                                                onClose();
+                                                router.push('/dentist-agent');
+                                            }}
+                                        >
+                                            <Stethoscope size={20} color="#7C3AED" />
+                                            <Text className="text-gray-700 font-medium">Dentista IA</Text>
+                                        </TouchableOpacity>
+                                    )}
+
+                                    {hasAISecretaryAccess && (
+                                        <TouchableOpacity
+                                            className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                            onPress={() => {
+                                                onClose();
+                                                router.push('/secretary');
+                                            }}
+                                        >
+                                            <Bot size={20} color="#7C3AED" />
+                                            <Text className="text-gray-700 font-medium">Secretária IA</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </>
                             )}
 
@@ -229,37 +256,11 @@ export function ProfileModal({
                                     className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
                                     onPress={() => {
                                         onClose();
-                                        router.push('/dentist-agent');
-                                    }}
-                                >
-                                    <Stethoscope size={20} color="#0d9488" />
-                                    <Text className="text-gray-700 font-medium">Dentista IA</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {isDentist && (
-                                <TouchableOpacity
-                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
-                                    onPress={() => {
-                                        onClose();
                                         router.push('/prosthesis-center');
                                     }}
                                 >
                                     <Layers size={20} color="#6B7280" />
                                     <Text className="text-gray-700 font-medium">Central de Prótese</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            {isAdmin && (
-                                <TouchableOpacity
-                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
-                                    onPress={() => {
-                                        onClose();
-                                        router.push('/accounting-agent');
-                                    }}
-                                >
-                                    <Calculator size={20} color="#6B7280" />
-                                    <Text className="text-gray-700 font-medium">Contabilidade IA</Text>
                                 </TouchableOpacity>
                             )}
 

@@ -160,6 +160,27 @@ export function useBatchUpdatePositions() {
   });
 }
 
+// ==================== Budget Integration ====================
+
+export function useProsthesisOrdersByPatient(patientId: string | undefined) {
+  return useQuery({
+    queryKey: ['prosthesis-orders', 'patient', patientId],
+    queryFn: () => prosthesisService.getOrdersByPatient(patientId!),
+    enabled: !!patientId,
+  });
+}
+
+export function useCreateOrderFromBudget() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: ProsthesisOrderInsert) => prosthesisService.createOrderFromBudget(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prosthesis-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    },
+  });
+}
+
 // ==================== History ====================
 
 export function useOrderHistory(orderId: string | null) {

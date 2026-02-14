@@ -2,6 +2,13 @@ import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 
+export interface UserProfile {
+    id: string;
+    full_name: string | null;
+    gender: string | null;
+    cro: string | null;
+}
+
 export interface ClinicInfo {
     clinicName: string;
     dentistName: string | null;
@@ -13,9 +20,40 @@ export interface ClinicInfo {
     state: string | null;
     phone: string | null;
     email: string | null;
+    dentistCRO: string | null;
 }
 
 export const profileService = {
+    async getCurrentProfile(): Promise<UserProfile | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await (supabase
+            .from('profiles') as any)
+            .select('id, full_name, gender, cro')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching profile:', error);
+            return null;
+        }
+
+        return data as UserProfile;
+    },
+
+    async updateProfile(data: { full_name?: string; gender?: string; cro?: string }): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await (supabase
+            .from('profiles') as any)
+            .update(data)
+            .eq('id', user.id);
+
+        if (error) throw error;
+    },
+
     async getClinicInfo(): Promise<ClinicInfo> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -29,7 +67,8 @@ export const profileService = {
                 city: null,
                 state: null,
                 phone: null,
-                email: null
+                email: null,
+                dentistCRO: null
             };
         }
 
@@ -80,15 +119,16 @@ export const profileService = {
 
         const letterheadUrl = settings?.letterhead_url || null;
 
-        // Get dentist name and gender from profiles
+        // Get dentist name, gender and CRO from profiles
         const { data: profile } = await (supabase
             .from('profiles') as any)
-            .select('full_name, gender')
+            .select('full_name, gender, cro')
             .eq('id', user.id)
             .single();
 
         const rawName = (profile as any)?.full_name || null;
         const gender = (profile as any)?.gender || null;
+        const dentistCRO = (profile as any)?.cro || null;
 
         // Format dentist name with Dr./Dra. prefix
         let dentistName: string | null = null;
@@ -115,7 +155,8 @@ export const profileService = {
             city,
             state,
             phone,
-            email
+            email,
+            dentistCRO
         };
     },
 

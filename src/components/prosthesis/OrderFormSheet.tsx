@@ -20,6 +20,7 @@ import { useCreateOrder, useUpdateOrder, useActiveProsthesisLabs } from '@/hooks
 import { usePatients } from '@/hooks/usePatients';
 import type { ProsthesisOrder, ProsthesisOrderFormData } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
+import { useProstheticBudgetItems, type ProstheticBudgetItem } from '@/hooks/useProstheticBudgetItems';
 
 interface OrderFormSheetProps {
   open: boolean;
@@ -59,31 +60,50 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
   const { data: labs = [] } = useActiveProsthesisLabs();
 
   const [form, setForm] = useState<ProsthesisOrderFormData>(emptyForm);
+  const [materialCustom, setMaterialCustom] = useState('');
   const [dentists, setDentists] = useState<DentistOption[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
   const [showPatientList, setShowPatientList] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState('');
+  const [budgetLink, setBudgetLink] = useState<{ budgetId: string; toothIndex: number } | null>(null);
 
   const isEditing = !!order;
+
+  // Prosthetic budget items for selected patient
+  const prostheticItems = useProstheticBudgetItems(form.patientId || undefined);
 
   // Load dentists for the clinic
   useEffect(() => {
     if (!clinicId || !open) return;
     const loadDentists = async () => {
-      const { data } = await (supabase
+      const { data, error } = await (supabase
         .from('clinic_users') as any)
-        .select('user_id, role, profiles:user_id(full_name)')
-        .eq('clinic_id', clinicId)
-        .in('role', ['admin', 'dentist']);
+        .select('user_id, role')
+        .eq('clinic_id', clinicId);
 
-      if (data) {
-        setDentists(
-          data.map((d: any) => ({
-            id: d.user_id,
-            full_name: d.profiles?.full_name || d.user_id,
-          }))
-        );
-      }
+      if (error || !data) return;
+
+      const dentistUsers = (data as any[]).filter((d: any) =>
+        ['admin', 'dentist'].includes(d.role)
+      );
+
+      if (dentistUsers.length === 0) { setDentists([]); return; }
+
+      const userIds = dentistUsers.map((d: any) => d.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const nameMap: Record<string, string> = {};
+      (profiles || []).forEach((p: any) => { nameMap[p.id] = p.full_name; });
+
+      setDentists(
+        dentistUsers.map((d: any) => ({
+          id: d.user_id,
+          full_name: nameMap[d.user_id] || d.user_id,
+        }))
+      );
     };
     loadDentists();
   }, [clinicId, open]);
@@ -91,12 +111,15 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
   // Populate form when editing
   useEffect(() => {
     if (open && order) {
+      const knownKeys = Object.keys(PROSTHESIS_MATERIAL_LABELS);
+      const storedMaterial = order.material || '';
+      const isCustom = storedMaterial && !knownKeys.includes(storedMaterial) && storedMaterial !== 'none';
       setForm({
         patientId: order.patient_id,
         dentistId: order.dentist_id,
         labId: order.lab_id,
         type: order.type,
-        material: order.material || '',
+        material: isCustom ? 'outro' : storedMaterial,
         toothNumbers: order.tooth_numbers?.join(', ') || '',
         color: order.color || '',
         shadeDetails: order.shade_details || '',
@@ -107,11 +130,14 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
         notes: order.notes || '',
         specialInstructions: order.special_instructions || '',
       });
+      setMaterialCustom(isCustom ? storedMaterial : '');
       setSelectedPatientName(order.patient_name || '');
     } else if (open) {
       setForm(emptyForm);
+      setMaterialCustom('');
       setSelectedPatientName('');
       setPatientSearch('');
+      setBudgetLink(null);
     }
   }, [open, order]);
 
@@ -151,6 +177,8 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
       ? form.toothNumbers.split(',').map(t => t.trim()).filter(Boolean)
       : [];
 
+    const resolvedMaterial = form.material === 'outro' ? (materialCustom || null) : (form.material || null);
+
     try {
       if (isEditing && order) {
         await updateOrder.mutateAsync({
@@ -160,7 +188,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
             dentist_id: form.dentistId,
             lab_id: form.labId || null,
             type: form.type,
-            material: form.material || null,
+            material: resolvedMaterial,
             tooth_numbers: toothArr,
             color: form.color || null,
             shade_details: form.shadeDetails || null,
@@ -192,6 +220,8 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
           notes: form.notes || null,
           special_instructions: form.specialInstructions || null,
           created_by: user?.id || null,
+          budget_id: budgetLink?.budgetId || null,
+          budget_tooth_index: budgetLink?.toothIndex ?? null,
         });
         toast({ title: 'Ordem criada com sucesso' });
       }
@@ -323,7 +353,10 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
                 <Label>Material</Label>
                 <Select
                   value={form.material || 'none'}
-                  onValueChange={v => updateField('material', v === 'none' ? '' : v)}
+                  onValueChange={v => {
+                    updateField('material', v === 'none' ? '' : v);
+                    if (v !== 'outro') setMaterialCustom('');
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Material" />
@@ -335,6 +368,14 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
                     ))}
                   </SelectContent>
                 </Select>
+                {form.material === 'outro' && (
+                  <Input
+                    placeholder="Descreva o material..."
+                    value={materialCustom}
+                    onChange={e => setMaterialCustom(e.target.value)}
+                    className="mt-1.5"
+                  />
+                )}
               </div>
             </div>
 
@@ -348,24 +389,61 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
               />
             </div>
 
-            {/* Color + Cementation */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Budget Link (only for new orders) */}
+            {!isEditing && form.patientId && prostheticItems.itemsWithoutOrder.length > 0 && (
               <div className="space-y-2">
-                <Label>Cor</Label>
-                <Input
-                  placeholder="Ex: A2, B1, Bleach"
-                  value={form.color}
-                  onChange={e => updateField('color', e.target.value)}
-                />
+                <Label>Vincular ao Orçamento</Label>
+                <Select
+                  value={budgetLink ? `${budgetLink.budgetId}:${budgetLink.toothIndex}` : 'none'}
+                  onValueChange={v => {
+                    if (v === 'none') {
+                      setBudgetLink(null);
+                      return;
+                    }
+                    const [bId, tIdx] = v.split(':');
+                    const item = prostheticItems.itemsWithoutOrder.find(
+                      i => i.budgetId === bId && i.toothIndex === parseInt(tIdx)
+                    );
+                    if (item) {
+                      setBudgetLink({ budgetId: item.budgetId, toothIndex: item.toothIndex });
+                      // Auto-fill fields from budget item
+                      const budgetMat = item.material?.toLowerCase() || '';
+                      const knownKeys = Object.keys(PROSTHESIS_MATERIAL_LABELS);
+                      const isBudgetCustom = budgetMat && !knownKeys.includes(budgetMat);
+                      setForm(prev => ({
+                        ...prev,
+                        type: item.prosthesisType || prev.type,
+                        material: isBudgetCustom ? 'outro' : (budgetMat || prev.material),
+                        toothNumbers: item.tooth.tooth || prev.toothNumbers,
+                        patientPrice: String(item.value) || prev.patientPrice,
+                      }));
+                      if (isBudgetCustom) setMaterialCustom(budgetMat);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar item do orçamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {prostheticItems.itemsWithoutOrder.map(item => (
+                      <SelectItem key={item.key} value={item.key}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Cimentação</Label>
-                <Input
-                  placeholder="Tipo de cimentação"
-                  value={form.cementationType}
-                  onChange={e => updateField('cementationType', e.target.value)}
-                />
-              </div>
+            )}
+
+            {/* Color */}
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <Input
+                placeholder="Ex: A2, B1, Bleach"
+                value={form.color}
+                onChange={e => updateField('color', e.target.value)}
+              />
             </div>
 
             {/* Shade details */}

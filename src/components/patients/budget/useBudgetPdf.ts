@@ -74,6 +74,7 @@ export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemV
                 logoUrl: clinicInfo.logoUrl,
                 letterheadUrl: clinicInfo.letterheadUrl,
                 isClinic: clinicInfo.isClinic,
+                dentistCRO: clinicInfo.dentistCRO,
             });
 
             setPdfPreviewUrl(blobUrl);

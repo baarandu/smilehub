@@ -24,10 +24,10 @@ type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 export default function PatientDetail() {
     const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
     const router = useRouter();
-    const { role } = useClinic();
+    const { roles } = useClinic();
 
-    // Secretaries cannot see anamnese
-    const isSecretary = role === 'assistant';
+    // Secretaries (who are not also dentists/admins) cannot see anamnese
+    const isSecretary = roles.length > 0 && roles.every(r => r === 'assistant' || r === 'viewer');
     const defaultTab: TabType = isSecretary ? 'budgets' : 'anamnese';
 
     // Filter available tabs based on role

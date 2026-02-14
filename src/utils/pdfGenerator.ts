@@ -12,6 +12,7 @@ interface BudgetPDFData {
     clinicAddress?: string;
     clinicPhone?: string;
     isClinic?: boolean;
+    dentistCRO?: string | null;
 }
 
 // Helper to get status label
@@ -30,7 +31,7 @@ function drawRoundedRect(doc: jsPDF, x: number, y: number, width: number, height
 
 // Core function that builds the PDF document
 async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
-    const { budget, patientName, clinicName, dentistName } = data;
+    const { budget, patientName, clinicName, dentistName, dentistCRO } = data;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -55,6 +56,7 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
 
     // Get responsible name
     const responsibleName = dentistName || clinicName || 'Dentista';
+    const croText = dentistCRO ? ` — CRO ${dentistCRO}` : '';
 
     // ========== HEADER ==========
     // Title
@@ -210,7 +212,7 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(107, 114, 128);
-    doc.text(`Responsável: ${responsibleName}`, colX + 13, infoY + 15);
+    doc.text(`Responsável: ${responsibleName}${croText}`, colX + 13, infoY + 15);
 
     y += 45;
 

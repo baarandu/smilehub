@@ -200,15 +200,16 @@ serve(async (req) => {
     // Verify user is dentist or admin of the clinic
     const { data: clinicUser, error: clinicUserError } = await supabase
       .from("clinic_users")
-      .select("role, clinic_id, user_id")
+      .select("role, roles, clinic_id, user_id")
       .eq("clinic_id", clinic_id)
       .eq("user_id", user.id)
       .maybeSingle();
 
+    const userRoles: string[] = clinicUser?.roles || (clinicUser?.role ? [clinicUser.role] : []);
     if (
       clinicUserError ||
       !clinicUser ||
-      !["admin", "dentist"].includes(clinicUser.role)
+      !userRoles.some((r: string) => ["admin", "dentist"].includes(r))
     ) {
       throw new Error("Unauthorized");
     }

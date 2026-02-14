@@ -4,6 +4,7 @@ export interface UserProfile {
     id: string;
     full_name: string | null;
     gender: string | null;
+    cro: string | null;
 }
 
 export interface ClinicInfo {
@@ -18,6 +19,7 @@ export interface ClinicInfo {
     state: string | null;
     phone: string | null;
     email: string | null;
+    dentistCRO: string | null;
 }
 
 export const profileService = {
@@ -27,7 +29,7 @@ export const profileService = {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('id, full_name, gender')
+            .select('id, full_name, gender, cro')
             .eq('id', user.id)
             .single();
 
@@ -53,7 +55,8 @@ export const profileService = {
                 city: null,
                 state: null,
                 phone: null,
-                email: null
+                email: null,
+                dentistCRO: null
             };
         }
 
@@ -93,15 +96,16 @@ export const profileService = {
             }
         }
 
-        // Get dentist name and gender from profiles
+        // Get dentist name, gender and CRO from profiles
         const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, gender')
+            .select('full_name, gender, cro')
             .eq('id', user.id)
             .maybeSingle() as any;
 
         const rawName = profile?.full_name || null;
         const gender = profile?.gender || null;
+        const dentistCRO = profile?.cro || null;
 
         // Format dentist name with Dr./Dra. prefix
         let dentistName: string | null = null;
@@ -142,7 +146,8 @@ export const profileService = {
             city,
             state,
             phone,
-            email
+            email,
+            dentistCRO
         };
     },
 
@@ -253,6 +258,27 @@ export const profileService = {
             .from('clinics') as any)
             .update({ logo_url: null })
             .eq('id', clinicUser.clinic_id);
+    },
+
+    async updateProfile(data: { full_name?: string; gender?: string; cro?: string }): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await (supabase
+            .from('profiles') as any)
+            .update(data)
+            .eq('id', user.id);
+
+        if (error) throw error;
+    },
+
+    async updateMemberCRO(userId: string, cro: string): Promise<void> {
+        const { error } = await (supabase as any).rpc('update_member_cro', {
+            p_user_id: userId,
+            p_cro: cro
+        });
+
+        if (error) throw error;
     },
 
     async updateClinicName(name: string): Promise<void> {

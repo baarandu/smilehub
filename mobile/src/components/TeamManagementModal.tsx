@@ -23,6 +23,7 @@ interface TeamMember {
     email: string;
     full_name: string;
     role: Role;
+    roles: Role[];
 }
 
 interface TeamInvite {
@@ -37,6 +38,7 @@ interface ClinicUserRow {
     id: string;
     user_id: string;
     role: string;
+    roles: string[] | null;
 }
 
 const ROLE_CONFIG: Record<string, { label: string; description: string; color: string; bgColor: string }> = {
@@ -90,7 +92,7 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
             // Load Members
             const { data: membersData, error: membersError } = await supabase
                 .from('clinic_users')
-                .select('id, user_id, role')
+                .select('id, user_id, role, roles')
                 .eq('clinic_id', clinicId)
                 .order('created_at');
 
@@ -126,12 +128,14 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
 
             const membersWithProfiles = (typedData || []).map((m) => {
                 const profile = profilesMap[m.user_id];
+                const memberRoles = (m.roles || [m.role]) as Role[];
                 return {
                     id: m.id,
                     user_id: m.user_id,
                     email: profile?.email || `Usuário ${m.user_id.slice(0, 8)}...`,
                     full_name: profile?.full_name || 'Membro da Equipe',
                     role: m.role as Role,
+                    roles: memberRoles,
                 };
             });
 
@@ -215,8 +219,8 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
     };
 
     const handleRemoveMember = (member: TeamMember) => {
-        if (member.role === 'admin') {
-            const adminCount = members.filter((m) => m.role === 'admin').length;
+        if (member.roles.includes('admin')) {
+            const adminCount = members.filter((m) => m.roles.includes('admin')).length;
             if (adminCount === 1) {
                 Alert.alert('Erro', 'Não é possível remover o único administrador');
                 return;

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { budgetsService } from '@/services/budgets';
 import { financialService } from '@/services/financial';
+import { prosthesisService } from '@/services/prosthesis';
 import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
+import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment } from '@/utils/prosthesis';
+import { useClinic } from '@/contexts/ClinicContext';
+import { supabase } from '@/lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 import type { BudgetWithItems } from '@/types/database';
 import type { PayerData } from '../PaymentMethodDialog';
 
@@ -14,9 +19,65 @@ interface UseBudgetPaymentProps {
 }
 
 export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, toast }: UseBudgetPaymentProps) {
+    const { clinicId } = useClinic();
+    const queryClient = useQueryClient();
     const [paymentItem, setPaymentItem] = useState<{ index: number; tooth: ToothEntry } | null>(null);
     const [paymentBatch, setPaymentBatch] = useState<{ indices: number[]; teeth: ToothEntry[]; totalValue: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const autoCreateProsthesisOrder = async (tooth: ToothEntry, toothIndex: number, budgetId: string) => {
+        if (!clinicId) return;
+        if (!isProstheticTreatment(tooth.treatments)) return;
+        if (!hasLabTreatment(tooth)) return;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Use prosthesis type from budget form, fallback to auto-mapping
+            const type = tooth.prosthesisType || getProsthesisTypeFromTreatments(tooth.treatments) || 'outro';
+            const value = Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
+
+            let material: string | null = null;
+            if (tooth.materials) {
+                for (const t of tooth.treatments) {
+                    if (tooth.materials[t]) { material = tooth.materials[t]; break; }
+                }
+            }
+
+            const parseLabCost = (val?: string): number | null => {
+                if (!val) return null;
+                const cents = parseInt(val, 10);
+                if (isNaN(cents) || cents === 0) return null;
+                return cents / 100;
+            };
+
+            await prosthesisService.createOrderFromBudget({
+                clinic_id: clinicId,
+                patient_id: patientId,
+                dentist_id: user.id,
+                type,
+                material: material?.toLowerCase() || null,
+                tooth_numbers: tooth.tooth ? [tooth.tooth] : [],
+                patient_price: value,
+                lab_id: tooth.prosthesisLabId || null,
+                lab_cost: parseLabCost(tooth.prosthesisLabCost),
+                color: tooth.prosthesisColor || null,
+                shade_details: tooth.prosthesisShadeDetails || null,
+                cementation_type: tooth.prosthesisCementation || null,
+                estimated_delivery_date: tooth.prosthesisDeliveryDate || null,
+                notes: tooth.prosthesisNotes || `Vinculado ao orçamento - ${tooth.treatments.join(', ')}`,
+                special_instructions: tooth.prosthesisInstructions || null,
+                created_by: user.id,
+                budget_id: budgetId,
+                budget_tooth_index: toothIndex,
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['prosthesis-orders'] });
+        } catch (err) {
+            console.error('Erro ao criar ordem de prótese automaticamente:', err);
+        }
+    };
 
     const getItemValue = (tooth: ToothEntry) => {
         return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
@@ -178,6 +239,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 status: newBudgetStatus
             });
 
+            // Auto-create prosthesis order if item is prosthetic with lab
+            await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
+
             toast({ title: "Pagamento Registrado", description: "O item foi marcado como pago e lançado no financeiro." });
             onSuccess();
         } catch (error) {
@@ -304,6 +368,11 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 notes: updatedNotes,
                 status: newBudgetStatus
             });
+
+            // Auto-create prosthesis orders for prosthetic items with lab
+            for (const idx of indices) {
+                await autoCreateProsthesisOrder(currentTeeth[idx], idx, budget.id);
+            }
 
             toast({ title: "Pagamento Registrado", description: `${indices.length} item(ns) marcado(s) como pago(s) e lançado(s) no financeiro.` });
             onSuccess();

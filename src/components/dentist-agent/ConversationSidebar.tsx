@@ -90,7 +90,7 @@ export function ConversationSidebar({
             </h2>
             <Button
               size="sm"
-              variant="outline"
+              className="bg-[#c4605e] hover:bg-[#b35351] text-white"
               onClick={() => onSelectConversation(null)}
             >
               <Plus className="w-4 h-4 mr-1" />

@@ -2,29 +2,22 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { plansService } from '@/services/admin/plans';
 import { appSettingsService } from '@/services/admin/appSettings';
+import { featureDefinitionsService } from '@/services/admin/featureDefinitions';
 import { SubscriptionPlan, SubscriptionPlanInsert } from '@/types/database';
+import type { FeatureDefinition, FeatureDefinitionInsert } from '@/types/featureDefinition';
 import { Button } from '@/components/ui/button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
     DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Trash2, Check, X, Loader2, Percent, Save, AlertTriangle, Info } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, Loader2, Percent, Save, AlertTriangle, Info, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -35,6 +28,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PlanFeatureAssigner } from './PlanFeatureAssigner';
 
 export function PlansTab() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
@@ -43,6 +38,9 @@ export function PlansTab() {
     const [saving, setSaving] = useState(false);
     const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
     const { toast } = useToast();
+
+    // Feature definitions
+    const [featureDefs, setFeatureDefs] = useState<FeatureDefinition[]>([]);
 
     // Annual discount settings
     const [annualDiscount, setAnnualDiscount] = useState<number>(17);
@@ -63,9 +61,15 @@ export function PlansTab() {
         is_active: true,
         sort_order: 0
     });
-    const [featuresText, setFeaturesText] = useState('');
+    const [assignedFeatureKeys, setAssignedFeatureKeys] = useState<string[]>([]);
     const [priceMonthlyInput, setPriceMonthlyInput] = useState('');
     const [priceYearlyInput, setPriceYearlyInput] = useState('');
+
+    // Feature definition CRUD dialog
+    const [featureDialogOpen, setFeatureDialogOpen] = useState(false);
+    const [editingFeature, setEditingFeature] = useState<FeatureDefinition | null>(null);
+    const [featureForm, setFeatureForm] = useState({ key: '', label: '', icon: 'CheckCircle', description: '' });
+    const [savingFeature, setSavingFeature] = useState(false);
 
     // Delete/Migration dialog state
     const [deleteDialog, setDeleteDialog] = useState<{
@@ -80,7 +84,17 @@ export function PlansTab() {
     useEffect(() => {
         loadPlans();
         loadAnnualDiscount();
+        loadFeatureDefinitions();
     }, []);
+
+    async function loadFeatureDefinitions() {
+        try {
+            const data = await featureDefinitionsService.getAll();
+            setFeatureDefs(data);
+        } catch (error) {
+            console.error('Error loading feature definitions:', error);
+        }
+    }
 
     async function loadAnnualDiscount() {
         try {
@@ -153,9 +167,9 @@ export function PlansTab() {
                 is_active: plan.is_active,
                 sort_order: plan.sort_order
             });
-            // Convert JSON features to newline separated string for textarea
-            const feats = Array.isArray(plan.features) ? plan.features : [];
-            setFeaturesText(feats.join('\n'));
+            // Parse features as keys array
+            const feats = Array.isArray(plan.features) ? plan.features as string[] : [];
+            setAssignedFeatureKeys(feats);
 
             // Set price inputs (convert cents to reais)
             setPriceMonthlyInput((plan.price_monthly / 100).toFixed(2));
@@ -175,7 +189,7 @@ export function PlansTab() {
                 is_active: true,
                 sort_order: 0
             });
-            setFeaturesText('');
+            setAssignedFeatureKeys([]);
             setPriceMonthlyInput('');
             setPriceYearlyInput('');
         }
@@ -186,12 +200,9 @@ export function PlansTab() {
         try {
             setSaving(true);
 
-            // Process features text to array
-            const featuresArray = featuresText.split('\n').filter(line => line.trim() !== '');
             const payload = {
                 ...formData,
-                features: featuresArray,
-                // Ensure required fields
+                features: assignedFeatureKeys,
                 name: formData.name || 'Novo Plano',
                 slug: formData.slug || `plan-${Date.now()}`,
                 price_monthly: Number(formData.price_monthly),
@@ -284,20 +295,81 @@ export function PlansTab() {
         }
     };
 
-    const handleToggleActive = async (id: string, currentStatus: boolean) => {
+    // Feature definition CRUD handlers
+    const handleOpenFeatureDialog = (feature?: FeatureDefinition) => {
+        if (feature) {
+            setEditingFeature(feature);
+            setFeatureForm({ key: feature.key, label: feature.label, icon: feature.icon, description: feature.description || '' });
+        } else {
+            setEditingFeature(null);
+            setFeatureForm({ key: '', label: '', icon: 'CheckCircle', description: '' });
+        }
+        setFeatureDialogOpen(true);
+    };
+
+    const handleSaveFeature = async () => {
+        if (!featureForm.key.trim() || !featureForm.label.trim()) {
+            toast({ title: "Preencha key e label", variant: "destructive" });
+            return;
+        }
+        setSavingFeature(true);
         try {
-            await plansService.toggleActive(id, !currentStatus);
-            // Optimistic update
-            setPlans(plans.map(p => p.id === id ? { ...p, is_active: !currentStatus } : p));
-        } catch (error) {
-            toast({ title: "Erro ao atualizar status", variant: "destructive" });
-            loadPlans(); // Revert on error
+            if (editingFeature) {
+                await featureDefinitionsService.update(editingFeature.id, {
+                    key: featureForm.key.trim(),
+                    label: featureForm.label.trim(),
+                    icon: featureForm.icon,
+                    description: featureForm.description.trim() || null,
+                });
+                toast({ title: "Feature atualizada!" });
+            } else {
+                await featureDefinitionsService.create({
+                    key: featureForm.key.trim(),
+                    label: featureForm.label.trim(),
+                    icon: featureForm.icon,
+                    description: featureForm.description.trim() || null,
+                    sort_order: featureDefs.length,
+                    is_active: true,
+                });
+                toast({ title: "Feature criada!" });
+            }
+            setFeatureDialogOpen(false);
+            loadFeatureDefinitions();
+        } catch (error: any) {
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
+        } finally {
+            setSavingFeature(false);
+        }
+    };
+
+    const handleDeleteFeature = async (id: string) => {
+        try {
+            await featureDefinitionsService.delete(id);
+            toast({ title: "Feature removida!" });
+            loadFeatureDefinitions();
+        } catch (error: any) {
+            toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
+        }
+    };
+
+    const handleToggleFeatureActive = async (feature: FeatureDefinition) => {
+        try {
+            await featureDefinitionsService.update(feature.id, { is_active: !feature.is_active });
+            setFeatureDefs(prev => prev.map(f => f.id === feature.id ? { ...f, is_active: !f.is_active } : f));
+        } catch (error: any) {
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
         }
     };
 
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
     };
+
+    const ICON_OPTIONS = [
+        'Calendar', 'FileText', 'DollarSign', 'Bell', 'MessageCircle', 'Package',
+        'Award', 'Stethoscope', 'Mic', 'Calculator', 'Bot', 'Sparkles', 'BarChart3',
+        'Headphones', 'UserCog', 'CheckCircle', 'FileSignature',
+    ];
 
     if (loading) {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-[#a03f3d]" /></div>;
@@ -361,53 +433,107 @@ export function PlansTab() {
                 </CardContent>
             </Card>
 
-            <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold text-gray-800">Planos de Assinatura</h3>
-                <Button onClick={() => handleOpenDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">
-                    <Plus className="mr-2 h-4 w-4" /> Novo Plano
-                </Button>
-            </div>
+            <Tabs defaultValue="plans">
+                <TabsList>
+                    <TabsTrigger value="plans">Planos de Assinatura</TabsTrigger>
+                    <TabsTrigger value="features">
+                        <Settings2 className="h-4 w-4 mr-1" />
+                        Feature Definitions
+                    </TabsTrigger>
+                </TabsList>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {plans.map((plan) => (
-                    <Card key={plan.id} className={`border-l-4 ${plan.is_active ? 'border-l-red-500' : 'border-l-gray-300'}`}>
-                        <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <Badge variant={plan.is_active ? "default" : "secondary"} className="mb-2">
-                                        {plan.is_active ? 'Ativo' : 'Inativo'}
-                                    </Badge>
-                                    <CardTitle>{plan.name}</CardTitle>
-                                    <p className="text-sm text-gray-500 font-mono mt-1">{plan.slug}</p>
-                                </div>
-                                <div className="flex gap-1">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(plan)}>
-                                        <Pencil className="h-4 w-4 text-gray-500" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(plan)}>
-                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <p className="text-2xl font-bold text-[#8b3634]">{formatCurrency(plan.price_monthly)}<span className="text-sm font-normal text-gray-500">/mês</span></p>
-                                <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">{plan.description}</p>
+                <TabsContent value="plans" className="space-y-4 mt-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-semibold text-gray-800">Planos de Assinatura</h3>
+                        <Button onClick={() => handleOpenDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">
+                            <Plus className="mr-2 h-4 w-4" /> Novo Plano
+                        </Button>
+                    </div>
 
-                                <div className="text-xs text-gray-500 space-y-1 mt-4 pt-4 border-t border-gray-100">
-                                    <p>👥 {plan.max_users} usuário(s)</p>
-                                    <p>🏥 {plan.max_locations ? `${plan.max_locations} locais` : 'Locais ilimitados'}</p>
-                                    <p>😷 {plan.max_patients ? `${plan.max_patients} pacientes` : 'Pacientes ilimitados'}</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {plans.map((plan) => {
+                            const featureKeys = Array.isArray(plan.features) ? plan.features as string[] : [];
+                            return (
+                                <Card key={plan.id} className={`border-l-4 ${plan.is_active ? 'border-l-red-500' : 'border-l-gray-300'}`}>
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Badge variant={plan.is_active ? "default" : "secondary"} className="mb-2">
+                                                    {plan.is_active ? 'Ativo' : 'Inativo'}
+                                                </Badge>
+                                                <CardTitle>{plan.name}</CardTitle>
+                                                <p className="text-sm text-gray-500 font-mono mt-1">{plan.slug}</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(plan)}>
+                                                    <Pencil className="h-4 w-4 text-gray-500" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(plan)}>
+                                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            <p className="text-2xl font-bold text-[#8b3634]">{formatCurrency(plan.price_monthly)}<span className="text-sm font-normal text-gray-500">/mês</span></p>
+                                            <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">{plan.description}</p>
 
+                                            <div className="text-xs text-gray-500 space-y-1 mt-4 pt-4 border-t border-gray-100">
+                                                <p>👥 {plan.max_users} usuário(s)</p>
+                                                <p>🏥 {plan.max_locations ? `${plan.max_locations} locais` : 'Locais ilimitados'}</p>
+                                                <p>😷 {plan.max_patients ? `${plan.max_patients} pacientes` : 'Pacientes ilimitados'}</p>
+                                                <p>🔧 {featureKeys.length} feature(s)</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="features" className="space-y-4 mt-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-semibold text-gray-800">Feature Definitions</h3>
+                        <Button onClick={() => handleOpenFeatureDialog()} className="bg-[#a03f3d] hover:bg-[#8b3634]">
+                            <Plus className="mr-2 h-4 w-4" /> Nova Feature
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {featureDefs.map((feature) => (
+                            <Card key={feature.id} className={`${!feature.is_active ? 'opacity-50' : ''}`}>
+                                <CardContent className="p-4 flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm truncate">{feature.label}</span>
+                                            <Badge variant="outline" className="text-xs font-mono shrink-0">{feature.key}</Badge>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-0.5">{feature.icon} {feature.description ? `· ${feature.description}` : ''}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                                        <Switch
+                                            checked={feature.is_active}
+                                            onCheckedChange={() => handleToggleFeatureActive(feature)}
+                                        />
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenFeatureDialog(feature)}>
+                                            <Pencil className="h-3.5 w-3.5 text-gray-500" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteFeature(feature.id)}>
+                                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </TabsContent>
+            </Tabs>
+
+            {/* Plan Edit/Create Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingPlan ? 'Editar Plano' : 'Novo Plano'}</DialogTitle>
                     </DialogHeader>
@@ -519,13 +645,52 @@ export function PlansTab() {
                             </div>
                         </div>
 
+                        {/* Feature Assigner (Drag & Drop) */}
                         <div className="space-y-2">
-                            <Label>Features (uma por linha)</Label>
-                            <Textarea
-                                value={featuresText}
-                                onChange={e => setFeaturesText(e.target.value)}
-                                rows={5}
-                                placeholder="Agenda ilimitada&#10;Suporte 24h&#10;Backup diário"
+                            <Label>Features do Plano</Label>
+                            <p className="text-xs text-gray-500">Inclua features de outro plano ou arraste manualmente entre as colunas.</p>
+
+                            {/* Inherit features from another plan */}
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value=""
+                                    onValueChange={(planId) => {
+                                        const sourcePlan = plans.find(p => p.id === planId);
+                                        if (sourcePlan) {
+                                            const sourceKeys = Array.isArray(sourcePlan.features) ? sourcePlan.features as string[] : [];
+                                            // Merge: keep existing + add new ones (no duplicates)
+                                            const merged = [...assignedFeatureKeys];
+                                            sourceKeys.forEach(key => {
+                                                if (!merged.includes(key)) merged.push(key);
+                                            });
+                                            setAssignedFeatureKeys(merged);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Incluir tudo de outro plano..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {plans
+                                            .filter(p => !editingPlan || p.id !== editingPlan.id)
+                                            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                                            .map(p => {
+                                                const featureCount = Array.isArray(p.features) ? (p.features as string[]).length : 0;
+                                                return (
+                                                    <SelectItem key={p.id} value={p.id}>
+                                                        {p.name} ({featureCount} features)
+                                                    </SelectItem>
+                                                );
+                                            })
+                                        }
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <PlanFeatureAssigner
+                                allFeatures={featureDefs.filter(f => f.is_active)}
+                                assignedKeys={assignedFeatureKeys}
+                                onChange={setAssignedFeatureKeys}
                             />
                         </div>
 
@@ -552,6 +717,63 @@ export function PlansTab() {
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
                         <Button onClick={handleSave} disabled={saving} className="bg-[#a03f3d]">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                            Salvar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Feature Definition Edit/Create Dialog */}
+            <Dialog open={featureDialogOpen} onOpenChange={setFeatureDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>{editingFeature ? 'Editar Feature' : 'Nova Feature'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Key (identificador único)</Label>
+                            <Input
+                                value={featureForm.key}
+                                onChange={e => setFeatureForm({ ...featureForm, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+                                placeholder="ex: relatorios_pdf"
+                                disabled={!!editingFeature}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Label (nome exibido)</Label>
+                            <Input
+                                value={featureForm.label}
+                                onChange={e => setFeatureForm({ ...featureForm, label: e.target.value })}
+                                placeholder="ex: Relatórios em PDF"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Ícone</Label>
+                            <Select value={featureForm.icon} onValueChange={v => setFeatureForm({ ...featureForm, icon: v })}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {ICON_OPTIONS.map(icon => (
+                                        <SelectItem key={icon} value={icon}>{icon}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descrição (opcional)</Label>
+                            <Textarea
+                                value={featureForm.description}
+                                onChange={e => setFeatureForm({ ...featureForm, description: e.target.value })}
+                                placeholder="Descrição para tooltip..."
+                                rows={2}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setFeatureDialogOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleSaveFeature} disabled={savingFeature} className="bg-[#a03f3d]">
+                            {savingFeature ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
                             Salvar
                         </Button>
                     </DialogFooter>

@@ -7,7 +7,6 @@ import type {
   ProsthesisOrderFilters,
   ProsthesisStatus,
 } from '@/types/prosthesis';
-import { isChecklistComplete } from '@/utils/prosthesis';
 import { getStatusDateField } from '@/utils/prosthesis';
 
 const ORDER_SELECT = `
@@ -192,17 +191,12 @@ export const prosthesisService = {
     // Get current order
     const { data: current, error: fetchError } = await supabase
       .from('prosthesis_orders')
-      .select('status, checklist_color_defined, checklist_material_defined, checklist_cementation_defined, checklist_photos_attached, checklist_observations_added')
+      .select('status')
       .eq('id', orderId)
       .single();
 
     if (fetchError) throw fetchError;
     if (!current) throw new Error('Ordem não encontrada');
-
-    // Validate checklist if moving to 'sent'
-    if (newStatus === 'sent' && !isChecklistComplete(current)) {
-      throw new Error('CHECKLIST_INCOMPLETE');
-    }
 
     const oldStatus = current.status;
 
@@ -247,6 +241,36 @@ export const prosthesisService = {
     const results = await Promise.all(promises);
     const firstError = results.find(r => r.error);
     if (firstError?.error) throw firstError.error;
+  },
+
+  // ==================== History ====================
+
+  async getOrdersByPatient(patientId: string): Promise<ProsthesisOrder[]> {
+    const { data, error } = await supabase
+      .from('prosthesis_orders')
+      .select(ORDER_SELECT)
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map(mapOrder);
+  },
+
+  async getOrderByBudgetLink(budgetId: string, toothIndex: number): Promise<ProsthesisOrder | null> {
+    const { data, error } = await supabase
+      .from('prosthesis_orders')
+      .select(ORDER_SELECT)
+      .eq('budget_id', budgetId)
+      .eq('budget_tooth_index', toothIndex)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapOrder(data) : null;
+  },
+
+  async createOrderFromBudget(data: ProsthesisOrderInsert): Promise<ProsthesisOrder> {
+    // Same as createOrder but budget_id and budget_tooth_index are already in the data
+    return this.createOrder(data);
   },
 
   // ==================== History ====================

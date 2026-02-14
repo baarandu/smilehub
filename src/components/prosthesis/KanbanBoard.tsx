@@ -19,23 +19,21 @@ import {
   useMoveOrder,
   useBatchUpdatePositions,
   useActiveProsthesisLabs,
-  useUpdateOrder,
 } from '@/hooks/useProsthesis';
 import type {
   ProsthesisOrder,
   ProsthesisOrderFilters,
   ProsthesisStatus,
-  ProsthesisChecklist,
 } from '@/types/prosthesis';
 import { KANBAN_COLUMNS } from '@/types/prosthesis';
-import { getNextStatus, getPreviousStatus, isChecklistComplete } from '@/utils/prosthesis';
+import { getNextStatus, getPreviousStatus } from '@/utils/prosthesis';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCardOverlay } from './KanbanCard';
 import { OrderFilters } from './OrderFilters';
 import { OrderFormSheet } from './OrderFormSheet';
 import { OrderDetailDialog } from './OrderDetailDialog';
 import { LabManagementSheet } from './LabManagementSheet';
-import { ChecklistDialog } from './ChecklistDialog';
+import { CompletionDialog } from './CompletionDialog';
 
 export function KanbanBoard() {
   const { clinicId } = useClinic();
@@ -45,7 +43,7 @@ export function KanbanBoard() {
   const { data: labs = [] } = useActiveProsthesisLabs();
   const moveOrder = useMoveOrder();
   const batchUpdatePositions = useBatchUpdatePositions();
-  const updateOrder = useUpdateOrder();
+
 
   // Dialogs state
   const [labSheetOpen, setLabSheetOpen] = useState(false);
@@ -53,9 +51,9 @@ export function KanbanBoard() {
   const [editingOrder, setEditingOrder] = useState<ProsthesisOrder | null>(null);
   const [detailOrder, setDetailOrder] = useState<ProsthesisOrder | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [checklistOrder, setChecklistOrder] = useState<ProsthesisOrder | null>(null);
-  const [checklistOpen, setChecklistOpen] = useState(false);
-  const [pendingMoveStatus, setPendingMoveStatus] = useState<ProsthesisStatus | null>(null);
+
+  const [completionOrder, setCompletionOrder] = useState<ProsthesisOrder | null>(null);
+  const [completionOpen, setCompletionOpen] = useState(false);
 
   // DnD state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -91,11 +89,10 @@ export function KanbanBoard() {
   };
 
   const handleMoveOrder = useCallback(async (order: ProsthesisOrder, newStatus: ProsthesisStatus) => {
-    // Check checklist for 'sent'
-    if (newStatus === 'sent' && !isChecklistComplete(order)) {
-      setChecklistOrder(order);
-      setPendingMoveStatus(newStatus);
-      setChecklistOpen(true);
+    // Intercept completion to show CompletionDialog
+    if (newStatus === 'completed') {
+      setCompletionOrder(order);
+      setCompletionOpen(true);
       return;
     }
 
@@ -110,46 +107,10 @@ export function KanbanBoard() {
         newPosition,
         userId,
       });
-    } catch (err: any) {
-      if (err.message === 'CHECKLIST_INCOMPLETE') {
-        setChecklistOrder(order);
-        setPendingMoveStatus(newStatus);
-        setChecklistOpen(true);
-      } else {
-        toast({ title: 'Erro ao mover ordem', variant: 'destructive' });
-      }
+    } catch {
+      toast({ title: 'Erro ao mover ordem', variant: 'destructive' });
     }
   }, [ordersByStatus, moveOrder, toast]);
-
-  const handleChecklistSaveAndSend = async (checklist: ProsthesisChecklist) => {
-    if (!checklistOrder || !pendingMoveStatus) return;
-
-    try {
-      // Save checklist first
-      await updateOrder.mutateAsync({
-        id: checklistOrder.id,
-        updates: checklist,
-      });
-
-      // Then move
-      const targetOrders = ordersByStatus[pendingMoveStatus];
-      const newPosition = targetOrders.length;
-      const userId = await getUserId();
-
-      await moveOrder.mutateAsync({
-        orderId: checklistOrder.id,
-        newStatus: pendingMoveStatus,
-        newPosition,
-        userId,
-      });
-
-      setChecklistOpen(false);
-      setChecklistOrder(null);
-      setPendingMoveStatus(null);
-    } catch {
-      toast({ title: 'Erro ao enviar', variant: 'destructive' });
-    }
-  };
 
   // DnD handlers
   const handleDragStart = (event: DragStartEvent) => {
@@ -210,6 +171,49 @@ export function KanbanBoard() {
   const handleOpenCreateForm = () => {
     setEditingOrder(null);
     setOrderFormOpen(true);
+  };
+
+  const handleCompleteOnly = async () => {
+    if (!completionOrder) return;
+    const targetOrders = ordersByStatus['completed'];
+    const newPosition = targetOrders.length;
+    const userId = await getUserId();
+    try {
+      await moveOrder.mutateAsync({
+        orderId: completionOrder.id,
+        newStatus: 'completed',
+        newPosition,
+        userId,
+      });
+      toast({ title: 'Serviço concluído' });
+    } catch {
+      toast({ title: 'Erro ao concluir', variant: 'destructive' });
+    }
+    setCompletionOpen(false);
+    setCompletionOrder(null);
+  };
+
+  const handleCompleteAndRegister = async () => {
+    if (!completionOrder) return;
+    const targetOrders = ordersByStatus['completed'];
+    const newPosition = targetOrders.length;
+    const userId = await getUserId();
+    try {
+      await moveOrder.mutateAsync({
+        orderId: completionOrder.id,
+        newStatus: 'completed',
+        newPosition,
+        userId,
+      });
+      toast({
+        title: 'Serviço concluído',
+        description: 'Registre o procedimento clínico na aba de procedimentos do paciente.',
+      });
+    } catch {
+      toast({ title: 'Erro ao concluir', variant: 'destructive' });
+    }
+    setCompletionOpen(false);
+    setCompletionOrder(null);
   };
 
   return (
@@ -340,12 +344,13 @@ export function KanbanBoard() {
         onAdvanceStatus={handleAdvanceStatus}
         onRetreatStatus={handleRetreatStatus}
       />
-      <ChecklistDialog
-        open={checklistOpen}
-        onOpenChange={setChecklistOpen}
-        order={checklistOrder}
-        onSaveAndSend={handleChecklistSaveAndSend}
-        isSaving={updateOrder.isPending || moveOrder.isPending}
+      <CompletionDialog
+        open={completionOpen}
+        onOpenChange={setCompletionOpen}
+        order={completionOrder}
+        onCompleteOnly={handleCompleteOnly}
+        onCompleteAndRegister={handleCompleteAndRegister}
+        isLoading={moveOrder.isPending}
       />
     </div>
   );

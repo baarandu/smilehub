@@ -24,27 +24,35 @@ export const ROLE_DESCRIPTIONS: Record<ClinicRole, string> = {
     viewer: 'Apenas visualizacao',
 };
 
+/** Normalize role input to array */
+function toArray(role: string | string[]): string[] {
+    return Array.isArray(role) ? role : [role];
+}
+
 /**
  * Check if role can see all financial transactions
  * Only owners, admins, and managers can see clinic-wide financials
  */
-export const canSeeAllFinancials = (role: string): boolean => {
-    return ['owner', 'admin', 'manager'].includes(role);
+export const canSeeAllFinancials = (role: string | string[]): boolean => {
+    const roles = toArray(role);
+    return roles.some(r => ['owner', 'admin', 'manager'].includes(r));
 };
 
 /**
  * Check if role has admin-level permissions
  */
-export const isAdminRole = (role: string): boolean => {
-    return ['owner', 'admin'].includes(role);
+export const isAdminRole = (role: string | string[]): boolean => {
+    const roles = toArray(role);
+    return roles.some(r => ['owner', 'admin'].includes(r));
 };
 
 /**
  * Check if role can act as a dentist (attend patients, manage appointments)
  * Owners, admins, and dentists can all act as clinical professionals
  */
-export const canActAsDentist = (role: string): boolean => {
-    return ['owner', 'admin', 'dentist'].includes(role);
+export const canActAsDentist = (role: string | string[]): boolean => {
+    const roles = toArray(role);
+    return roles.some(r => ['owner', 'admin', 'dentist'].includes(r));
 };
 
 /**
@@ -52,4 +60,12 @@ export const canActAsDentist = (role: string): boolean => {
  */
 export const getRoleLabel = (role: string): string => {
     return ROLE_LABELS[role as ClinicRole] || role;
+};
+
+/**
+ * Get combined display label for multiple roles
+ */
+export const getRolesLabel = (roles: string[]): string => {
+    if (roles.length === 0) return '';
+    return roles.map(r => ROLE_LABELS[r as ClinicRole] || r).join(', ');
 };

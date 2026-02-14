@@ -343,6 +343,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                 logoUrl: clinicInfo.logoUrl,
                 letterheadUrl: clinicInfo.letterheadUrl,
                 isClinic: clinicInfo.isClinic,
+                dentistCRO: clinicInfo.dentistCRO,
             });
 
             setPreviewHtml(html);

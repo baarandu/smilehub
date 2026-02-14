@@ -52,15 +52,15 @@ serve(async (req) => {
         validateUUID(newPlanId, "newPlanId");
 
         // Verify user is admin of the clinic
-        const { data: adminRole, error: adminCheckError } = await supabase
+        const { data: clinicUser, error: adminCheckError } = await supabase
             .from('clinic_users')
-            .select('role')
+            .select('role, roles')
             .eq('clinic_id', clinicId)
             .eq('user_id', user.id)
-            .eq('role', 'admin')
             .maybeSingle();
 
-        if (adminCheckError || !adminRole) {
+        const userRoles: string[] = clinicUser?.roles || (clinicUser?.role ? [clinicUser.role] : []);
+        if (adminCheckError || !clinicUser || !userRoles.includes('admin')) {
             log.audit(supabase, { action: "AUTH_FAILURE", table_name: "Subscription", user_id: user.id, details: { reason: "Not admin of clinic", clinic_id: clinicId } });
             throw new Error("Unauthorized");
         }

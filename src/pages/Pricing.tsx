@@ -14,7 +14,6 @@ import {
     BarChart3,
     Bot,
     UserCog,
-    Briefcase,
     MessageCircle,
     XCircle,
     AlertTriangle,
@@ -24,13 +23,21 @@ import {
     Package,
     DollarSign,
     Award,
-    Headphones
+    Headphones,
+    FileSignature,
+    Tag,
+    type LucideIcon,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PaymentModal } from '@/components/subscription/PaymentModal';
 import { subscriptionService } from '@/services/subscription';
 import { appSettingsService } from '@/services/admin/appSettings';
+import { featureDefinitionsService } from '@/services/admin/featureDefinitions';
+import { couponsService } from '@/services/admin/coupons';
+import type { FeatureDefinition } from '@/types/featureDefinition';
+import type { DiscountCoupon } from '@/types/database';
 import { useToast } from '@/components/ui/use-toast';
 import {
     AlertDialog,
@@ -45,34 +52,11 @@ import {
 
 type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 
-// Feature icons mapping
-const featureIcons: Record<string, any> = {
-    'Agenda inteligente': Calendar,
-    'Prontuário digital': FileText,
-    'Anamnese completa': FileText,
-    'Orçamentos': DollarSign,
-    'Alertas e lembretes': Bell,
-    'Suporte por e-mail': MessageCircle,
-    'Tudo do Básico': CheckCircle,
-    'Financeiro completo': DollarSign,
-    'Estoque e materiais': Package,
-    'Imposto de Renda': FileText,
-    'Comissões de dentistas': Award,
-    'Até 3 usuários': Users,
-    'Tudo do Profissional': CheckCircle,
-    'Consulta por Voz (IA)': Mic,
-    'Dentista IA': Stethoscope,
-    'Contabilidade IA': Calculator,
-    'Confirmação WhatsApp': MessageCircle,
-    'Até 3 unidades': BarChart3,
-    'Tudo do Premium': CheckCircle,
-    'Secretária IA': Bot,
-    'Usuários ilimitados': Users,
-    'Migração assistida': Briefcase,
-    'API personalizada': Sparkles,
-    'Suporte prioritário': Headphones,
-    'Relatórios avançados': BarChart3,
-    'Gestor dedicado': UserCog,
+// Map icon name strings to Lucide components
+const lucideIconMap: Record<string, LucideIcon> = {
+    Calendar, FileText, DollarSign, Bell, MessageCircle, Package,
+    Award, Stethoscope, Mic, Calculator, Bot, Sparkles, BarChart3,
+    Headphones, UserCog, Users, CheckCircle, FileSignature,
 };
 
 export default function Pricing() {
@@ -106,11 +90,55 @@ export default function Pricing() {
     // Annual discount from admin settings
     const [annualDiscountPercent, setAnnualDiscountPercent] = useState<number>(17);
 
+    // Feature definitions from DB
+    const [featureDefs, setFeatureDefs] = useState<Map<string, FeatureDefinition>>(new Map());
+
+    // Coupon state
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedCoupon, setAppliedCoupon] = useState<DiscountCoupon | null>(null);
+    const [couponError, setCouponError] = useState('');
+    const [validatingCoupon, setValidatingCoupon] = useState(false);
+
     useEffect(() => {
         fetchPlans();
         getCurrentUser();
         fetchAnnualDiscount();
+        fetchFeatureDefinitions();
     }, []);
+
+    const fetchFeatureDefinitions = async () => {
+        try {
+            const defs = await featureDefinitionsService.getActive();
+            const map = new Map<string, FeatureDefinition>();
+            defs.forEach(d => map.set(d.key, d));
+            setFeatureDefs(map);
+        } catch (error) {
+            console.error('Error fetching feature definitions:', error);
+        }
+    };
+
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return;
+        setValidatingCoupon(true);
+        setCouponError('');
+        try {
+            const coupon = await couponsService.validateCode(couponCode.trim().toUpperCase());
+            setAppliedCoupon(coupon);
+            setCouponError('');
+            toast({ title: 'Cupom aplicado!', description: `Desconto de ${coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `R$ ${(coupon.discount_value / 100).toFixed(2)}`} aplicado.` });
+        } catch (error: any) {
+            setCouponError(error.message || 'Cupom inválido');
+            setAppliedCoupon(null);
+        } finally {
+            setValidatingCoupon(false);
+        }
+    };
+
+    const removeCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponCode('');
+        setCouponError('');
+    };
 
     const fetchAnnualDiscount = async () => {
         try {
@@ -259,7 +287,9 @@ export default function Pricing() {
                 userEmail,
                 userId,
                 plan.name,
-                plan.price_monthly
+                plan.price_monthly,
+                undefined,
+                appliedCoupon?.code
             );
 
             if (result && result.clientSecret) {
@@ -303,13 +333,40 @@ export default function Pricing() {
         return yearlyTotal - discount;
     };
 
+    const applyCouponDiscount = (priceInCents: number, plan: Plan): number => {
+        if (!appliedCoupon) return priceInCents;
+        // Check plan applicability
+        if (appliedCoupon.applicable_plan_ids && appliedCoupon.applicable_plan_ids.length > 0 && !appliedCoupon.applicable_plan_ids.includes(plan.id)) {
+            return priceInCents;
+        }
+        if (appliedCoupon.discount_type === 'percent') {
+            return priceInCents * (1 - appliedCoupon.discount_value / 100);
+        }
+        // Fixed amount discount (in cents)
+        return Math.max(0, priceInCents - appliedCoupon.discount_value);
+    };
+
     const getDisplayPrice = (plan: Plan) => {
+        let price = plan.price_monthly;
         if (billingCycle === 'annual') {
             const annualTotal = getAnnualPrice(plan.price_monthly);
-            const monthlyEquivalent = annualTotal / 12;
-            return formatPrice(monthlyEquivalent);
+            price = annualTotal / 12;
+        }
+        price = applyCouponDiscount(price, plan);
+        return formatPrice(price);
+    };
+
+    const getOriginalPrice = (plan: Plan) => {
+        if (billingCycle === 'annual') {
+            return formatPrice(getAnnualPrice(plan.price_monthly) / 12);
         }
         return formatPrice(plan.price_monthly);
+    };
+
+    const hasCouponDiscountForPlan = (plan: Plan): boolean => {
+        if (!appliedCoupon) return false;
+        if (appliedCoupon.applicable_plan_ids && appliedCoupon.applicable_plan_ids.length > 0 && !appliedCoupon.applicable_plan_ids.includes(plan.id)) return false;
+        return true;
     };
 
     const getAnnualSavings = (plan: Plan) => {
@@ -452,12 +509,53 @@ export default function Pricing() {
                     </div>
                 </div>
 
+                {/* Coupon Input */}
+                <div className="flex justify-center mb-8">
+                    <div className="flex items-center gap-2 bg-white rounded-xl p-2 shadow-sm border border-gray-200 max-w-md w-full">
+                        <Tag className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+                        <Input
+                            placeholder="Código do cupom"
+                            value={couponCode}
+                            onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                            className="border-0 shadow-none focus-visible:ring-0 uppercase"
+                            disabled={!!appliedCoupon}
+                        />
+                        {appliedCoupon ? (
+                            <Button variant="ghost" size="sm" onClick={removeCoupon} className="text-red-500 hover:text-red-700 shrink-0">
+                                <XCircle className="w-4 h-4 mr-1" /> Remover
+                            </Button>
+                        ) : (
+                            <Button
+                                size="sm"
+                                onClick={handleApplyCoupon}
+                                disabled={!couponCode.trim() || validatingCoupon}
+                                className="bg-[#a03f3d] hover:bg-[#8b3634] shrink-0"
+                            >
+                                {validatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                {couponError && (
+                    <p className="text-center text-sm text-red-500 -mt-6 mb-6">{couponError}</p>
+                )}
+                {appliedCoupon && (
+                    <div className="flex justify-center -mt-6 mb-6">
+                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-sm font-medium px-3 py-1 rounded-full">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Cupom {appliedCoupon.code} aplicado ({appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `R$ ${(appliedCoupon.discount_value / 100).toFixed(2)}`} de desconto)
+                        </span>
+                    </div>
+                )}
+
                 {/* Plans Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {plans.map((plan) => {
-                        const features = parseFeatures(plan.features);
+                        const featureKeys = parseFeatures(plan.features);
                         const isCurrent = currentPlanId === plan.id;
                         const price = getDisplayPrice(plan);
+                        const originalPrice = getOriginalPrice(plan);
+                        const showCouponStrike = hasCouponDiscountForPlan(plan);
                         const buttonConfig = getButtonConfig(plan);
                         const isEnterprise = plan.slug === 'enterprise';
                         const savings = billingCycle === 'annual' ? getAnnualSavings(plan) : null;
@@ -499,7 +597,10 @@ export default function Pricing() {
                                 <div className="mb-6">
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-sm text-gray-500">R$</span>
-                                        <span className="text-4xl font-bold text-gray-900">{price.int},{price.dec}</span>
+                                        {showCouponStrike && (
+                                            <span className="text-lg text-gray-400 line-through mr-1">{originalPrice.int},{originalPrice.dec}</span>
+                                        )}
+                                        <span className={`text-4xl font-bold ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>{price.int},{price.dec}</span>
                                         <span className="text-sm text-gray-500">/mês</span>
                                     </div>
                                     {billingCycle === 'annual' && !isEnterprise && (
@@ -511,15 +612,17 @@ export default function Pricing() {
 
                                 {/* Features */}
                                 <div className="space-y-3 mb-6">
-                                    {features.slice(0, 6).map((feature, i) => {
-                                        const IconComponent = featureIcons[feature] || CheckCircle;
+                                    {featureKeys.slice(0, 6).map((key, i) => {
+                                        const def = featureDefs.get(key);
+                                        const IconComponent = lucideIconMap[def?.icon || 'CheckCircle'] || CheckCircle;
+                                        const label = def?.label || key;
 
                                         return (
                                             <div key={i} className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-[#fef2f2]">
                                                     <IconComponent className="w-4 h-4 text-[#a03f3d]" />
                                                 </div>
-                                                <span className="text-sm text-gray-700">{feature}</span>
+                                                <span className="text-sm text-gray-700">{label}</span>
                                             </div>
                                         );
                                     })}

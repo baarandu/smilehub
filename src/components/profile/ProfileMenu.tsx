@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LocationsModal } from './LocationsModal';
-
+import { MyProfileModal } from './MyProfileModal';
 import { ProfileSettingsModal } from './ProfileSettingsModal';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -23,7 +23,7 @@ interface ProfileMenuProps {
 
 export function ProfileMenu({ className }: ProfileMenuProps) {
   const [locationsOpen, setLocationsOpen] = useState(false);
-
+  const [myProfileOpen, setMyProfileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const { isAdmin, clinicName, displayName } = useClinic();
   const { setIsOnboardingOpen, isCompleted, progress } = useOnboarding();
@@ -53,6 +53,13 @@ export function ProfileMenu({ className }: ProfileMenuProps) {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setMyProfileOpen(true)}
+          >
+            <User className="mr-2 h-4 w-4" />
+            <span>Meu Perfil</span>
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="cursor-pointer"
             onClick={() => setProfileOpen(true)}
@@ -99,8 +106,8 @@ export function ProfileMenu({ className }: ProfileMenuProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <MyProfileModal open={myProfileOpen} onOpenChange={setMyProfileOpen} />
       <LocationsModal open={locationsOpen} onOpenChange={setLocationsOpen} />
-
       <ProfileSettingsModal open={profileOpen} onOpenChange={setProfileOpen} />
     </>
   );

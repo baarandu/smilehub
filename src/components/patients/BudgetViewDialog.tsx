@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, CheckCircle, Clock, X, Pencil, Trash2, Eye, CreditCard, Square, CheckSquare, Undo2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, CheckCircle, Clock, X, Pencil, Trash2, Eye, CreditCard, Square, CheckSquare, Undo2, Wrench } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
 import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry, calculateBudgetStatus } from '@/utils/budgetUtils';
 import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
@@ -13,6 +14,10 @@ import type { BudgetWithItems } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
 import { useToast } from '@/hooks/use-toast';
 import { useBudgetPayment, useBudgetPdf, PdfItemSelectionDialog } from './budget';
+import { isProstheticTreatment } from '@/utils/prosthesis';
+import { getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
+import { useProstheticBudgetItems, type ProstheticBudgetItem } from '@/hooks/useProstheticBudgetItems';
+import { SendToProsthesisDialog } from '@/components/prosthesis/SendToProsthesisDialog';
 
 interface BudgetViewDialogProps {
     budget: BudgetWithItems | null;
@@ -59,6 +64,18 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
         getItemValue: payment.getItemValue,
         toast,
     });
+
+    // Prosthesis integration
+    const prostheticItems = useProstheticBudgetItems(patientId);
+    const [sendToProsthesisItem, setSendToProsthesisItem] = useState<ProstheticBudgetItem | null>(null);
+
+    // Helper to find prosthetic budget item for a given tooth index
+    const getProstheticItem = (toothIndex: number): ProstheticBudgetItem | undefined => {
+      if (!budget) return undefined;
+      return prostheticItems.items.find(
+        i => i.budgetId === budget.id && i.toothIndex === toothIndex
+      );
+    };
 
     // Load patient data and PJ sources when dialog opens
     useEffect(() => {
@@ -392,13 +409,38 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'paid' && item.status !== 'completed') return null;
                                     const total = payment.getItemValue(item);
+                                    const isProsthetic = isProstheticTreatment(item.treatments);
+                                    const prostheticItem = isProsthetic ? getProstheticItem(index) : undefined;
+                                    const hasOrder = prostheticItem?.existingOrderId != null;
+                                    const orderStatus = prostheticItem?.existingOrderStatus;
+                                    const kanbanCol = orderStatus ? getKanbanColumn(orderStatus) : null;
+
                                     return (
                                         <div key={index} className="px-3 py-2 border-b border-gray-100 bg-blue-50/30 flex items-center gap-2">
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
-                                                <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
+                                                    {isProsthetic && hasOrder && kanbanCol && (
+                                                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${kanbanCol.color} ${kanbanCol.bgColor} ${kanbanCol.borderColor}`}>
+                                                            {getStatusLabel(orderStatus!)}
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <p className="font-semibold text-blue-700 text-sm flex-shrink-0">R$ {formatMoney(total)}</p>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <p className="font-semibold text-blue-700 text-sm">R$ {formatMoney(total)}</p>
+                                                {isProsthetic && !hasOrder && (
+                                                    <button
+                                                        onClick={() => prostheticItem && setSendToProsthesisItem(prostheticItem)}
+                                                        className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors"
+                                                        title="Enviar para Central de Prótese"
+                                                    >
+                                                        <Wrench className="w-3 h-3" />
+                                                        Prótese
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -480,6 +522,16 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                 getItemValue={payment.getItemValue}
                 getSelectedTotal={pdf.getSelectedTotal}
             />
+
+            {/* Send to Prosthesis Dialog */}
+            {patientId && (
+                <SendToProsthesisDialog
+                    open={!!sendToProsthesisItem}
+                    onOpenChange={(open) => { if (!open) setSendToProsthesisItem(null); }}
+                    budgetItem={sendToProsthesisItem}
+                    patientId={patientId}
+                />
+            )}
         </Dialog>
     );
 }

@@ -67,6 +67,16 @@ export type ToothEntry = {
     materials?: Record<string, string>;
     labTreatments?: Record<string, boolean>;
     locationRate?: number;
+    // Prosthesis lab fields (collected at budget time)
+    prosthesisType?: string;
+    prosthesisLabId?: string;
+    prosthesisColor?: string;
+    prosthesisShadeDetails?: string;
+    prosthesisCementation?: string;
+    prosthesisLabCost?: string;
+    prosthesisDeliveryDate?: string;
+    prosthesisNotes?: string;
+    prosthesisInstructions?: string;
 };
 
 // Helper to get short tooth ID for database (max 10 chars)

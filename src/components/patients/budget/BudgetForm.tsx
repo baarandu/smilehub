@@ -19,6 +19,7 @@ import {
     TREATMENTS_WITH_DESCRIPTION,
     type ToothEntry
 } from '@/utils/budgetUtils';
+import { PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
 import { PROSTHETIC_TREATMENTS } from '@/utils/prosthesis';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Odontogram } from './odontogram';
@@ -50,6 +51,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     const [selectedFaces, setSelectedFaces] = useState<string[]>([]);
     const [values, setValues] = useState<Record<string, string>>({});
     const [materials, setMaterials] = useState<Record<string, string>>({});
+    const [customMaterials, setCustomMaterials] = useState<Record<string, string>>({});
     const [labTreatments, setLabTreatments] = useState<Record<string, boolean>>({});
     const [itemLocationRate, setItemLocationRate] = useState<string>('');
 
@@ -62,7 +64,20 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             setSelectedTreatments([...editingItem.treatments]);
             setSelectedFaces([...(editingItem.faces || [])]);
             setValues({ ...editingItem.values });
-            setMaterials({ ...(editingItem.materials || {}) });
+            // Detect custom materials: if stored value is not a known key, it's custom
+            const knownKeys = Object.keys(PROSTHESIS_MATERIAL_LABELS);
+            const mats: Record<string, string> = {};
+            const customs: Record<string, string> = {};
+            Object.entries(editingItem.materials || {}).forEach(([t, val]) => {
+                if (knownKeys.includes(val)) {
+                    mats[t] = val;
+                } else if (val) {
+                    mats[t] = 'outro';
+                    customs[t] = val;
+                }
+            });
+            setMaterials(mats);
+            setCustomMaterials(customs);
             // Load labTreatments — default true for prosthetics if not set (backwards compat)
             if (editingItem.labTreatments) {
                 setLabTreatments({ ...editingItem.labTreatments });
@@ -84,6 +99,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
         setSelectedFaces([]);
         setValues({});
         setMaterials({});
+        setCustomMaterials({});
         setLabTreatments({});
         setItemLocationRate('');
     };
@@ -94,12 +110,15 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                 // Remove logic
                 const newValues = { ...values };
                 const newMaterials = { ...materials };
+                const newCustomMaterials = { ...customMaterials };
                 const newLabTreatments = { ...labTreatments };
                 delete newValues[treatment];
                 delete newMaterials[treatment];
+                delete newCustomMaterials[treatment];
                 delete newLabTreatments[treatment];
                 setValues(newValues);
                 setMaterials(newMaterials);
+                setCustomMaterials(newCustomMaterials);
                 setLabTreatments(newLabTreatments);
                 return prev.filter(t => t !== treatment);
             }
@@ -161,15 +180,21 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             }
         });
 
+        // Resolve custom materials: replace 'outro' with actual custom text
+        const resolvedMaterials: Record<string, string> = {};
+        Object.entries(materials).forEach(([t, val]) => {
+            resolvedMaterials[t] = val === 'outro' ? (customMaterials[t] || 'outro') : val;
+        });
+
         const newItem: ToothEntry = {
             tooth: selectedTooth,
             faces: showFaces ? selectedFaces : [],
             treatments: [...selectedTreatments],
             values: { ...values },
-            materials: { ...materials },
+            materials: resolvedMaterials,
             labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
             status: editingItem?.status || 'pending',
-            locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0
+            locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
         };
 
         if (isEditing && onUpdateItem && editingIndex !== null && editingIndex !== undefined) {
@@ -366,13 +391,44 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                         />
                                     </div>
 
-                                    {(TREATMENTS_WITH_MATERIAL.includes(treatment) || TREATMENTS_WITH_DESCRIPTION.includes(treatment)) && (
+                                    {TREATMENTS_WITH_MATERIAL.includes(treatment) && (
                                         <div className="space-y-1">
-                                            <Label className="text-xs text-muted-foreground">
-                                                {TREATMENTS_WITH_DESCRIPTION.includes(treatment) ? 'Descrição' : 'Material'}
-                                            </Label>
+                                            <Label className="text-xs text-muted-foreground">Material</Label>
+                                            <Select
+                                                value={materials[treatment] || ''}
+                                                onValueChange={(val) => {
+                                                    setMaterials({ ...materials, [treatment]: val });
+                                                    if (val !== 'outro') {
+                                                        const c = { ...customMaterials };
+                                                        delete c[treatment];
+                                                        setCustomMaterials(c);
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione o material..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {Object.entries(PROSTHESIS_MATERIAL_LABELS).map(([key, label]) => (
+                                                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {materials[treatment] === 'outro' && (
+                                                <Input
+                                                    placeholder="Descreva o material..."
+                                                    value={customMaterials[treatment] || ''}
+                                                    onChange={(e) => setCustomMaterials({ ...customMaterials, [treatment]: e.target.value })}
+                                                    className="mt-1.5"
+                                                />
+                                            )}
+                                        </div>
+                                    )}
+                                    {TREATMENTS_WITH_DESCRIPTION.includes(treatment) && (
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">Descrição</Label>
                                             <Input
-                                                placeholder={TREATMENTS_WITH_DESCRIPTION.includes(treatment) ? "Descreva..." : "Ex: Resina, Porcelana..."}
+                                                placeholder="Descreva..."
                                                 value={materials[treatment] || ''}
                                                 onChange={(e) => setMaterials({ ...materials, [treatment]: e.target.value })}
                                             />

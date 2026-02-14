@@ -8,12 +8,14 @@ interface ClinicMember {
     user_id: string;
     email: string;
     role: Role;
+    roles: Role[];
     created_at: string;
 }
 
 interface ClinicUserRow {
     clinic_id: string;
     role: string;
+    roles: string[] | null;
     clinics: { name: string } | null;
 }
 
@@ -24,6 +26,7 @@ interface ClinicContextType {
     displayName: string | null;
     gender: 'male' | 'female' | null;
     role: Role | null;
+    roles: Role[];
     isAdmin: boolean;
     isDentist: boolean;
     canEdit: boolean;
@@ -41,6 +44,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     const [displayName, setDisplayName] = useState<string | null>(null);
     const [gender, setGender] = useState<'male' | 'female' | null>(null);
     const [role, setRole] = useState<Role | null>(null);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [members, setMembers] = useState<ClinicMember[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -79,6 +83,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 .select(`
           clinic_id,
           role,
+          roles,
           clinics (name)
         `)
                 .eq('user_id', user.id)
@@ -87,24 +92,30 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             // Get the first clinic (preferring admin role)
             const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
             const typedClinicUser = clinicUsersList && clinicUsersList.length > 0
-                ? (clinicUsersList.find(cu => cu.role === 'admin') || clinicUsersList[0])
+                ? (clinicUsersList.find(cu => {
+                    const r = cu.roles || [cu.role];
+                    return r.includes('admin');
+                }) || clinicUsersList[0])
                 : null;
 
             if (typedClinicUser) {
                 setClinicId(typedClinicUser.clinic_id);
                 setClinicName(typedClinicUser.clinics?.name || null);
+                const userRoles = (typedClinicUser.roles || [typedClinicUser.role]) as Role[];
                 setRole(typedClinicUser.role as Role);
+                setRoles(userRoles);
 
                 // If admin, also fetch all members
-                if (typedClinicUser.role === 'admin') {
+                if (userRoles.includes('admin')) {
                     const { data: membersData } = await supabase
                         .from('clinic_users')
-                        .select('id, user_id, role, created_at')
+                        .select('id, user_id, role, roles, created_at')
                         .eq('clinic_id', typedClinicUser.clinic_id);
 
                     if (membersData) {
                         setMembers((membersData as any[]).map(m => ({
                             ...m,
+                            roles: m.roles || [m.role],
                             email: m.user_id,
                         })) as ClinicMember[]);
                     }
@@ -134,9 +145,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         displayName,
         gender,
         role,
-        isAdmin: role === 'admin',
-        isDentist: role === 'admin' || role === 'dentist',
-        canEdit: role === 'admin' || role === 'editor',
+        roles,
+        isAdmin: roles.includes('admin'),
+        isDentist: roles.some(r => ['admin', 'dentist'].includes(r)),
+        canEdit: roles.some(r => ['admin', 'editor', 'dentist'].includes(r)),
         loading,
         members,
         refetch: fetchClinicData,

@@ -40,15 +40,18 @@ serve(async (req) => {
         }
 
         // Verify user is admin of at least one clinic
-        const { data: adminRole, error: adminError } = await supabase
+        const { data: clinicUserRows, error: adminError } = await supabase
             .from('clinic_users')
-            .select('role')
+            .select('role, roles')
             .eq('user_id', user.id)
-            .eq('role', 'admin')
-            .limit(1)
-            .maybeSingle();
+            .limit(10);
 
-        if (adminError || !adminRole) {
+        const isAdmin = (clinicUserRows || []).some((cu: any) => {
+            const roles: string[] = cu.roles || (cu.role ? [cu.role] : []);
+            return roles.includes('admin');
+        });
+
+        if (adminError || !isAdmin) {
             log.audit(supabase, { action: "AUTH_FAILURE", table_name: "StripeMetrics", user_id: user.id, details: { reason: "Not admin" } });
             throw new Error("Unauthorized");
         }

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin } from 'lucide-react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, ty
 import type { BudgetWithItems } from '@/types/database';
 import { BudgetViewDialog } from './BudgetViewDialog';
 import { NewBudgetDialog } from './NewBudgetDialog';
+import { isProstheticTreatment, getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
+import { useProstheticBudgetItems } from '@/hooks/useProstheticBudgetItems';
 
 
 interface BudgetsTabProps {
@@ -25,6 +27,8 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [editingBudget, setEditingBudget] = useState<BudgetWithItems | null>(null);
+
+    const prostheticItems = useProstheticBudgetItems(patientId);
 
     // Sort budgets by date descending
     const sortedBudgets = useMemo(() => {
@@ -85,15 +89,6 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
         }
     };
 
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'approved': return 'Aprovado';
-            case 'completed': return 'Concluído';
-            case 'rejected': return 'Rejeitado';
-            default: return 'Pendente';
-        }
-    };
-
     const getItemStatusColor = (status: string) => {
         switch (status) {
             case 'approved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -141,15 +136,41 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                         {hint && <span className="text-gray-900 font-normal ml-1">{hint}</span>}
                                     </div>
                                     <div className="flex flex-wrap gap-3">
-                                        {teeth.map((tooth: ToothEntry, idx: number) => (
+                                        {parsed.teeth.map((tooth: ToothEntry, originalIndex: number) => {
+                                            // Only show teeth that belong to this status group
+                                            const belongsToGroup = key === 'pending'
+                                                ? (!tooth.status || tooth.status === 'pending')
+                                                : key === 'approved'
+                                                    ? tooth.status === 'approved'
+                                                    : (tooth.status === 'paid' || tooth.status === 'completed');
+                                            if (!belongsToGroup) return null;
+
+                                            const isProsthetic = (tooth.status === 'paid' || tooth.status === 'completed') && isProstheticTreatment(tooth.treatments);
+                                            const prostheticItem = isProsthetic
+                                                ? prostheticItems.items.find(pi => pi.budgetId === budget.id && pi.toothIndex === originalIndex)
+                                                : undefined;
+
+                                            return (
                                             <div
-                                                key={idx}
+                                                key={originalIndex}
                                                 className={`flex flex-col px-4 py-3 rounded-lg border ${getItemStatusColor(tooth.status)}`}
                                             >
                                                 <span className="font-semibold text-base">{getToothDisplayName(tooth.tooth)}</span>
                                                 <span className="text-sm opacity-90">{tooth.treatments.join(', ')}</span>
+                                                {isProsthetic && prostheticItem && prostheticItem.existingOrderId && (
+                                                    <Badge variant="outline" className={`mt-1 text-[10px] w-fit ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.color || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.bgColor || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.borderColor || ''}`}>
+                                                        <Wrench className="w-3 h-3 mr-0.5" />
+                                                        {getStatusLabel(prostheticItem.existingOrderStatus!)}
+                                                    </Badge>
+                                                )}
+                                                {isProsthetic && !prostheticItem?.existingOrderId && (
+                                                    <Badge variant="outline" className="mt-1 text-[10px] w-fit text-gray-500 bg-gray-50 border-gray-200">
+                                                        Envio Pendente
+                                                    </Badge>
+                                                )}
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );

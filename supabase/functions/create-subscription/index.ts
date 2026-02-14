@@ -47,7 +47,7 @@ serve(async (req) => {
         });
 
         const body = await req.json();
-        const { priceId, email, userId, customerId, planName, amount } = body;
+        const { priceId, email, userId, customerId, planName, amount, couponCode } = body;
 
         validateRequired(email, "email");
         validateRequired(userId, "userId");
@@ -65,6 +65,44 @@ serve(async (req) => {
             }
         }
 
+        // Validate coupon if provided
+        let validatedCoupon: any = null;
+        let discountedAmount = amount;
+        if (couponCode && typeof couponCode === 'string') {
+            const { data: coupon, error: couponError } = await supabase
+                .from('discount_coupons')
+                .select('*')
+                .eq('code', couponCode.trim().toUpperCase())
+                .eq('is_active', true)
+                .single();
+
+            if (couponError || !coupon) {
+                throw new Error("Cupom inválido ou não encontrado.");
+            }
+
+            const now = new Date();
+            if (now < new Date(coupon.valid_from) || now > new Date(coupon.valid_until)) {
+                throw new Error("Cupom expirado.");
+            }
+            if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) {
+                throw new Error("Cupom esgotado.");
+            }
+            if (coupon.applicable_plan_ids && coupon.applicable_plan_ids.length > 0 && priceId && !coupon.applicable_plan_ids.includes(priceId)) {
+                throw new Error("Cupom não aplicável a este plano.");
+            }
+
+            validatedCoupon = coupon;
+
+            // Apply discount to amount
+            if (amount) {
+                if (coupon.discount_type === 'percent') {
+                    discountedAmount = Math.round(amount * (1 - coupon.discount_value / 100));
+                } else {
+                    discountedAmount = Math.max(0, amount - coupon.discount_value);
+                }
+            }
+        }
+
         // 1. Get or Create Customer
         let stripeCustomerId = customerId;
         if (!stripeCustomerId) {
@@ -76,6 +114,7 @@ serve(async (req) => {
         }
 
         // 2. Prepare Subscription Item
+        const finalAmount = validatedCoupon ? discountedAmount : amount;
         let subscriptionItem: any = {};
         if (priceId && (priceId.startsWith('price_') || priceId.startsWith('plan_'))) {
             subscriptionItem = { price: priceId };
@@ -86,7 +125,7 @@ serve(async (req) => {
                 price_data: {
                     currency: 'brl',
                     product: product.id,
-                    unit_amount: amount,
+                    unit_amount: finalAmount,
                     recurring: { interval: 'month' },
                 }
             };
@@ -101,9 +140,18 @@ serve(async (req) => {
             expand: ['latest_invoice.payment_intent'],
             metadata: {
                 supabase_user_id: userId,
-                plan_id: priceId
+                plan_id: priceId,
+                ...(validatedCoupon ? { coupon_code: validatedCoupon.code, coupon_id: validatedCoupon.id } : {}),
             }
         });
+
+        // 3.5 Increment coupon used_count
+        if (validatedCoupon) {
+            await supabase
+                .from('discount_coupons')
+                .update({ used_count: (validatedCoupon.used_count || 0) + 1 })
+                .eq('id', validatedCoupon.id);
+        }
 
         // 4. Extract Client Secret from PaymentIntent
         const invoice = subscription.latest_invoice as Stripe.Invoice | null;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Loader2, Users, UserPlus, Shield, Trash2, Info, Phone, Mail, MapPin, Eye, X } from 'lucide-react';
+import { Building2, Loader2, Users, UserPlus, Shield, Trash2, Info, Phone, Mail, MapPin, Eye, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -21,6 +21,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuCheckboxItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { profileService } from '@/services/profile';
@@ -45,7 +51,9 @@ interface TeamMember {
     user_id: string;
     email: string;
     role: Role;
+    roles: Role[];
     created_at: string;
+    cro?: string;
 }
 
 interface TeamInvite {
@@ -202,7 +210,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
             // Load Members
             const { data: membersData } = await (supabase
                 .from('clinic_users') as any)
-                .select('id, user_id, role, created_at')
+                .select('id, user_id, role, roles, created_at')
                 .eq('clinic_id', clinicId)
                 .order('created_at');
 
@@ -232,7 +240,9 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
 
             const mappedMembers = ((membersData || []) as any[]).map(m => ({
                 ...m,
-                email: profilesMap[m.user_id]?.email || `Usuário ${m.user_id.slice(0, 8)}...`
+                roles: m.roles || [m.role],
+                email: profilesMap[m.user_id]?.email || `Usuário ${m.user_id.slice(0, 8)}...`,
+                cro: profilesMap[m.user_id]?.cro || ''
             })) as TeamMember[];
 
             setMembers(mappedMembers);
@@ -316,20 +326,49 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
         }
     };
 
-    const handleUpdateRole = async (memberId: string, newRole: Role) => {
+    const handleUpdateRoles = async (memberId: string, newRoles: Role[]) => {
+        if (newRoles.length === 0) {
+            toast.error('Selecione pelo menos um cargo');
+            return;
+        }
         try {
-            const { error } = await supabase
-                .from('clinic_users')
-                .update({ role: newRole })
-                .eq('id', memberId);
+            const { data, error } = await (supabase as any).rpc('update_user_roles', {
+                p_clinic_user_id: memberId,
+                p_roles: newRoles,
+            });
 
             if (error) throw error;
 
-            toast.success('Cargo atualizado');
+            const result = data as { success: boolean; error?: string; message?: string };
+            if (!result.success) {
+                toast.error(result.error || 'Erro ao atualizar cargos');
+                return;
+            }
+
+            toast.success('Cargos atualizados');
             loadTeamData();
         } catch (error) {
-            console.error('Error updating role:', error);
-            toast.error('Erro ao atualizar cargo');
+            console.error('Error updating roles:', error);
+            toast.error('Erro ao atualizar cargos');
+        }
+    };
+
+    const toggleRole = (member: TeamMember, toggledRole: Role) => {
+        const current = member.roles || [member.role];
+        const newRoles = current.includes(toggledRole)
+            ? current.filter(r => r !== toggledRole)
+            : [...current, toggledRole];
+        handleUpdateRoles(member.id, newRoles as Role[]);
+    };
+
+    const handleUpdateCRO = async (userId: string, cro: string) => {
+        try {
+            await profileService.updateMemberCRO(userId, cro);
+            toast.success('CRO atualizado');
+            loadTeamData();
+        } catch (error) {
+            console.error('Error updating CRO:', error);
+            toast.error('Erro ao atualizar CRO');
         }
     };
 
@@ -533,40 +572,75 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                             ) : (
                                 <div className="space-y-2">
                                     {members.map(member => (
-                                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg bg-card gap-2">
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                                    <Users className="w-4 h-4 text-primary" />
+                                        <div key={member.id} className="p-3 border rounded-lg bg-card space-y-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                        <Users className="w-4 h-4 text-primary" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-medium truncate">{member.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium truncate">{member.email}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="outline" className="w-[130px] h-8 text-xs justify-between">
+                                                                <span className="truncate">
+                                                                    {(member.roles || [member.role]).map(r => ROLE_CONFIG[r]?.label || r).join(', ')}
+                                                                </span>
+                                                                <ChevronDown className="w-3 h-3 ml-1 shrink-0 opacity-50" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuCheckboxItem
+                                                                checked={(member.roles || []).includes('admin')}
+                                                                onCheckedChange={() => toggleRole(member, 'admin')}
+                                                            >
+                                                                Administrador
+                                                            </DropdownMenuCheckboxItem>
+                                                            <DropdownMenuCheckboxItem
+                                                                checked={(member.roles || []).includes('dentist')}
+                                                                onCheckedChange={() => toggleRole(member, 'dentist')}
+                                                            >
+                                                                Dentista
+                                                            </DropdownMenuCheckboxItem>
+                                                            <DropdownMenuCheckboxItem
+                                                                checked={(member.roles || []).includes('assistant')}
+                                                                onCheckedChange={() => toggleRole(member, 'assistant')}
+                                                            >
+                                                                Secretaria
+                                                            </DropdownMenuCheckboxItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    {members.length > 1 && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleRemoveMember(member.id)}
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Select
-                                                    value={member.role}
-                                                    onValueChange={(value) => handleUpdateRole(member.id, value as Role)}
-                                                >
-                                                    <SelectTrigger className="w-[130px] h-8 text-xs">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="admin">Administrador</SelectItem>
-                                                        <SelectItem value="dentist">Dentista</SelectItem>
-                                                        <SelectItem value="assistant">Secretária</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {members.length > 1 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleRemoveMember(member.id)}
-                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            {(member.roles || [member.role]).includes('dentist') && (
+                                                <div className="flex items-center gap-2 ml-11">
+                                                    <Label className="text-xs text-muted-foreground shrink-0">CRO:</Label>
+                                                    <Input
+                                                        className="h-7 text-xs max-w-[160px]"
+                                                        placeholder="SP 12345"
+                                                        defaultValue={member.cro || ''}
+                                                        onBlur={(e) => {
+                                                            const val = e.target.value.trim();
+                                                            if (val !== (member.cro || '')) {
+                                                                handleUpdateCRO(member.user_id, val);
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -605,7 +679,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                     </TabsContent>
 
                     {isAdmin && (
-                        <TabsContent value="audit" className="mt-4 h-[400px]">
+                        <TabsContent value="audit" className="mt-4 max-h-[400px] overflow-y-auto">
                             {loadingAudit ? (
                                 <div className="flex justify-center py-8">
                                     <Loader2 className="w-8 h-8 animate-spin text-[#a03f3d]" />

@@ -9,6 +9,7 @@ import { getShortToothId, calculateBudgetStatus, type ToothEntry } from '@/utils
 import type { BudgetInsert, BudgetWithItems } from '@/types/database';
 import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
+import { LocationsModal } from '@/components/profile/LocationsModal';
 
 interface NewBudgetDialogProps {
     patientId: string;
@@ -28,6 +29,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const [location, setLocation] = useState('');
     const [locations, setLocations] = useState<Location[]>([]);
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
+
+    const [locationsModalOpen, setLocationsModalOpen] = useState(false);
 
     const isEditing = !!budget;
 
@@ -80,6 +83,13 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
             setLocations(data);
         } catch (error) {
             console.error('Error loading locations:', error);
+        }
+    };
+
+    const handleLocationsModalChange = (open: boolean) => {
+        setLocationsModalOpen(open);
+        if (!open) {
+            loadLocations();
         }
     };
 
@@ -205,6 +215,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                         editingIndex={editingItemIndex}
                         onCancelEdit={handleCancelEdit}
                         toothEntries={teethList}
+                        onAddLocation={() => setLocationsModalOpen(true)}
                     />
 
                     {/* Right Column: Summary */}
@@ -219,6 +230,11 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     />
                 </div>
             </DialogContent>
+
+            <LocationsModal
+                open={locationsModalOpen}
+                onOpenChange={handleLocationsModalChange}
+            />
         </Dialog>
     );
 }

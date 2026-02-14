@@ -1,412 +1,357 @@
-# 🔐 Avaliação de Segurança - SmileHub / Organiza Odonto
+# Avaliação de Segurança - Smile Care Hub
 
-**Data:** 24/12/2024  
-**Última atualização:** 05/01/2026 16:12
-
----
-
-## Mapeamento OWASP - 9 Vulnerabilidades Principais
-
-| # | Vulnerabilidade | Status no Projeto | Nível |
-|---|-----------------|-------------------|-------|
-| 1 | Injeção de Código (SQL/NoSQL) | ✅ Protegido | Baixo |
-| 2 | Cross-Site Scripting (XSS) | ✅ Protegido | Baixo |
-| 3 | Validação de Upload de Arquivos | ✅ Corrigido | Baixo |
-| 4 | Autenticação e Sessão | ✅ Melhorado | Baixo |
-| 5 | Exposição de APIs/Dados Sensíveis | ✅ Corrigido | Baixo |
-| 6 | CSRF (Cross-Site Request Forgery) | ✅ Protegido | Baixo |
-| 7 | Componentes com Vulnerabilidades | ✅ Verificado | Baixo |
-| 8 | Misconfiguration | ✅ Melhorado | Baixo |
-| 9 | Monitoramento e Logging | ✅ Implementado | Baixo |
+**Data**: 13/02/2026  
+**Versão avaliada**: 1.0.5 (build 16)  
+**Escopo**: Aplicação mobile (React Native/Expo), Backend (Supabase), Edge Functions, Web
 
 ---
 
-## 1️⃣ Injeção de Código (SQL/NoSQL/Command Injection)
+## Resumo Executivo
 
-### Status: ✅ PROTEGIDO
+A aplicação possui uma base de segurança razoável com uso de armazenamento seguro de tokens, criptografia de dados sensíveis (CPF/RG) e políticas RLS habilitadas. No entanto, foram identificadas **vulnerabilidades críticas** que precisam de atenção imediata, especialmente em relação a isolamento multi-tenant e validação de dados.
 
-**O que verificamos:**
-- ❌ Não há uso de `eval()` no código
-- ✅ Supabase SDK usa prepared statements automaticamente
-- ✅ Validação com Zod schemas em `src/lib/validation.ts`
-- ✅ Queries via Supabase Client (não há SQL raw)
+### Contagem de Vulnerabilidades
 
-**Por que está protegido:**
-```typescript
-// Todas as queries usam o Supabase SDK que usa prepared statements
-const { data } = await supabase
-  .from('patients')
-  .select('*')
-  .eq('clinic_id', clinicId);  // Parâmetro escapado automaticamente
+| Severidade | Quantidade | Status |
+|-----------|-----------|--------|
+| 🔴 CRÍTICO | 6 | Requer ação imediata |
+| 🟠 ALTO | 7 | Requer ação em curto prazo |
+| 🟡 MÉDIO | 6 | Requer ação planejada |
+| 🟢 BAIXO | 5 | Melhorias recomendadas |
+| **Total** | **24** | |
+
+---
+
+## 🔴 VULNERABILIDADES CRÍTICAS
+
+### C1. Credenciais reais no arquivo `.env` (se comprometido)
+
+**Arquivos**: `.env`, `mobile/.env`  
+**Status Git**: Estão no `.gitignore` e NÃO estão rastreados no git ✅  
+**Risco**: Se o repositório for tornado público ou compartilhado, credenciais podem vazar.
+
+**Credenciais expostas localmente**:
+- Supabase URL e Anon Key
+- Stripe LIVE Publishable Key (`pk_live_...`)
+- Sentry DSN
+- Evolution API Key
+
+**Ações necessárias**:
+- [ ] Verificar que `.env` nunca foi commitado no histórico (`git log --all -- .env`)
+- [ ] Considerar rotação periódica de chaves
+- [ ] Usar EAS Secrets para builds em produção ao invés de `.env` local
+- [ ] Manter `.env.example` sem valores reais
+
+---
+
+### C2. Credenciais hardcoded no `docker-compose.yml`
+
+**Arquivo**: `docker-compose.yml`  
+**Detalhes**:
+```
+AUTHENTICATION_API_KEY=minhaChaveSecreta123
+POSTGRES_PASSWORD=postgres
+DATABASE_CONNECTION_URI=postgresql://postgres:postgres@...
 ```
 
-**Recomendações adicionais:**
-- [x] Ativar `STRICT_VALIDATION = true` em `validation.ts` ✅ FEITO (26/12/2024)
-- [ ] Adicionar validação server-side via Supabase Edge Functions
+**Ações necessárias**:
+- [ ] Mover credenciais para variáveis de ambiente
+- [ ] Usar `.env` não rastreado para valores do docker-compose
+- [ ] Alterar senha padrão "postgres"
 
 ---
 
-## 2️⃣ Cross-Site Scripting (XSS)
+### C3. Políticas RLS com `WITH CHECK (true)` - Sem isolamento de dados
 
-### Status: ✅ PROTEGIDO
+**Tabelas afetadas** (qualquer usuário autenticado pode inserir dados em qualquer clínica):
+- `patient_documents` → `FOR ALL USING (true)` ⚠️ Mais grave
+- `exams` → INSERT `WITH CHECK (true)`
+- `locations` → INSERT e UPDATE `WITH CHECK (true)`
+- `financial_transactions` → INSERT `WITH CHECK (true)`
+- `patients` → INSERT `WITH CHECK (true)`
+- `appointments` → INSERT `WITH CHECK (true)`
+- `procedures` → INSERT `WITH CHECK (true)`
+- `budgets` → INSERT `WITH CHECK (true)`
+- `anamneses` → INSERT `WITH CHECK (true)`
 
-**O que verificamos:**
-- ✅ React escapa automaticamente outputs por padrão
-- ✅ Único uso de `dangerouslySetInnerHTML` é controlado (CSS interno em `chart.tsx`)
-- ✅ Não há interpolação de HTML de usuário
-- ✅ Security headers configurados em `vercel.json` (26/12/2024)
+**Impacto**: Um usuário autenticado de uma clínica pode inserir dados em outra clínica. Se houver trigger para definir `clinic_id`, há proteção parcial, mas se o trigger falhar, dados ficam órfãos.
 
-**Proteções do React:**
-```jsx
-// React escapa automaticamente - seguro
-<div>{userInput}</div>
-
-// Único dangerouslySetInnerHTML - CSS interno, não vem do usuário
-<style dangerouslySetInnerHTML={{ __html: cssVariables }} />
-```
-
-**Headers de segurança implementados:**
-- [x] `X-Content-Type-Options: nosniff`
-- [x] `X-Frame-Options: DENY`
-- [x] `X-XSS-Protection: 1; mode=block`
-- [x] `Referrer-Policy: strict-origin-when-cross-origin`
-- [x] `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+**Ações necessárias**:
+- [ ] Substituir `WITH CHECK (true)` por `WITH CHECK (clinic_id = get_user_clinic_id())`
+- [ ] Ou manter trigger mas adicionar constraint `NOT NULL` em `clinic_id`
+- [ ] Remover política `FOR ALL USING (true)` de `patient_documents`
+- [ ] Testar todas as operações de INSERT após a mudança
 
 ---
 
-## 3️⃣ Falta de Validação de Entrada (Upload de Arquivos)
+### C4. `STRICT_VALIDATION` desabilitado
 
-### Status: ✅ CORRIGIDO (26/12/2024)
+**Arquivo**: `mobile/src/lib/validation.ts:12`  
+**Detalhes**: `STRICT_VALIDATION = false` - Schemas de validação existem mas NÃO são aplicados.
 
-**O que verificamos:**
-- ✅ Uploads vão para Supabase Storage (fora do webroot)
-- ✅ Arquivos são armazenados com UUIDs (não nomes originais)
-- ✅ Validação de MIME type implementada (26/12/2024)
-- ✅ Limite de tamanho: 10MB
+**Impacto**: Dados inválidos (CPF errado, email inválido, telefone incorreto) são salvos no banco.
 
-**Validação implementada em:**
-- `src/services/documents.ts` (web)
-- `mobile/src/services/exams.ts` (mobile)
-
-**Tipos permitidos:**
-- Imagens: JPEG, PNG, GIF, WebP, HEIC
-- Documentos: PDF
-
-**Recomendações pendentes:**
-- [x] Validar MIME type real do arquivo
-- [x] Definir whitelist de extensões permitidas
-- [x] Configurar limites de tamanho (10MB)
-- [ ] Adicionar scan de malware (opcional - Supabase não tem nativo)
+**Ações necessárias**:
+- [ ] Habilitar `STRICT_VALIDATION = true`
+- [ ] Testar todos os formulários com validação habilitada
+- [ ] Garantir que mensagens de erro são claras para o usuário
 
 ---
 
-## 4️⃣ Autenticação e Gerenciamento de Sessão
+### C5. Formulários sem validação antes de salvar
 
-### Status: ✅ MELHORADO (26/12/2024)
+**Arquivos afetados**:
+- `mobile/src/components/patients/EditPatientModal.tsx` → Só verifica `name` e `phone`
+- `mobile/app/(tabs)/patients.tsx` (NewPatientModal) → Sem validação
+- `mobile/src/components/financial/NewExpenseModal.tsx` → Só verifica `description`
 
-**O que está BOM:**
-| Aspecto | Status |
-|---------|--------|
-| Login com email/senha | ✅ Supabase Auth |
-| Hash de senhas | ✅ bcrypt (Supabase) |
-| Tokens JWT | ✅ Gerados pelo Supabase |
-| Refresh Token | ✅ `autoRefreshToken: true` |
-| Sessão persistida | ✅ SecureStore (mobile), localStorage (web) |
-| Recuperação de senha | ✅ Via email |
-| Rate limiting login | ✅ 5 tentativas, bloqueio 15min |
+**Impacto**: Dados financeiros e de pacientes podem ser salvos sem validação de formato.
 
-**Rate Limiting implementado (26/12/2024):**
-- Arquivos: `src/lib/rateLimit.ts`, `mobile/src/lib/rateLimit.ts`
-- Configuração: 5 tentativas máximas, bloqueio de 15 minutos
-- Avisos ao usuário: a partir de 2 tentativas restantes
-
-> [!NOTE]
-> **Implementação atual é frontend-only** (localStorage/AsyncStorage).
-> Protege contra ataques simples de força bruta, mas pode ser bypassada por atacantes mais sofisticados.
-> 
-> **Recomendado para o futuro:** Migrar para Supabase Edge Function com Redis ou tabela de rate limiting no banco para proteção server-side.
-
-**O que ainda FALTA:**
-| Aspecto | Status |
-|---------|--------|
-| 2FA/MFA | ❌ Não implementado |
-| Política de senha complexa | ⚠️ Só mínimo 6 caracteres |
-| Cookies HttpOnly | ⚠️ Supabase usa localStorage |
-| Expiração curta de sessão | ⚠️ Padrão Supabase (1h JWT, 1 semana refresh) |
-
-**Recomendações pendentes:**
-- [ ] Implementar 2FA com Supabase Auth (SMS ou TOTP)
-- [ ] Exigir senha com maiúscula, número e símbolo
-- [ ] Migrar rate limiting para server-side (Edge Function)
+**Ações necessárias**:
+- [ ] Integrar `safeValidate()` com schemas do `validation.ts` em todos os formulários
+- [ ] Validar CPF, telefone e email antes de salvar pacientes
+- [ ] Validar valor, data e categoria antes de salvar transações financeiras
 
 ---
 
-## 5️⃣ Exposição de Informações Sensíveis e APIs Inseguras
+### C6. Ausência de filtro `clinic_id` explícito nas queries do serviço
 
-### Status: ✅ CORRIGIDO (24/12/2024)
+**Arquivos afetados**:
+- `mobile/src/services/appointments.ts` → `getByDate()` sem filtro `clinic_id`
+- `mobile/src/services/financial.ts` → `getTransactions()` filtra por `user_id` mas não `clinic_id`
+- `mobile/src/services/patients.ts` → `getPatients()` sem filtro `clinic_id`
 
-**Problema original:**
-- Credenciais Supabase hardcoded no código-fonte
+**Impacto**: Depende 100% do RLS para isolamento. Se RLS falhar ou for reconfigurada incorretamente, dados de outras clínicas podem ser expostos.
 
-**Correções aplicadas:**
-- ✅ Removido fallback hardcoded de `src/lib/supabase.ts`
-- ✅ Removido fallback hardcoded de `mobile/src/lib/supabase.ts`
-- ✅ Adicionada validação que exige variáveis de ambiente
-- ✅ Configuradas variáveis na Vercel (Production, Preview, Development)
-- ✅ Verificado `.env` local (web e mobile)
-
-**Código atualizado:**
-```typescript
-// Agora exige variáveis de ambiente - erro claro se não configuradas
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-if (!supabaseUrl) {
-    throw new Error('Missing Supabase environment variables...');
-}
-```
-
-**Proteções ativas:**
-- ✅ RLS (Row Level Security) impede acesso a dados de outras clínicas
-- ✅ anon key só funciona com RLS ativo
-- ✅ HTTPS forçado pelo Supabase
-- ✅ Variáveis de ambiente obrigatórias
-
-**Próximos passos (opcionais):**
-- [x] Remover fallback hardcoded das credenciais
-- [x] Usar apenas variáveis de ambiente
-- [x] ~~Regenerar a anon key~~ ✅ FEITO (05/01/2026) - Migrado para Publishable Keys + chaves legadas desativadas
-- [ ] Implementar rate limiting via Supabase Edge Functions
+**Ações necessárias**:
+- [ ] Adicionar `.eq('clinic_id', clinicId)` em todas as queries de serviço
+- [ ] Criar helper `getCurrentClinicId()` para uso consistente
+- [ ] Implementar defesa em profundidade (RLS + filtro na query)
 
 ---
 
-## 6️⃣ CSRF (Cross-Site Request Forgery)
+## 🟠 VULNERABILIDADES DE ALTA SEVERIDADE
 
-### Status: ✅ PROTEGIDO
+### A1. Rate limiting apenas no client-side
 
-**Por que está protegido:**
-- ✅ Supabase usa Bearer Token (JWT) para autenticação
-- ✅ Tokens não são enviados automaticamente como cookies
-- ✅ SPA (Single Page Application) com fetch/axios
+**Arquivo**: `mobile/src/lib/rateLimit.ts`  
+**Detalhes**: Usa `AsyncStorage` (não criptografado) para controlar tentativas. Pode ser contornado reinstalando o app ou limpando o cache.
 
-**Explicação:**
-CSRF explora cookies enviados automaticamente. Como Supabase usa:
-```typescript
-// Token vai no header Authorization, não em cookie
-headers: {
-  'Authorization': `Bearer ${session.access_token}`
-}
-```
-Requisições de outros sites não terão o token.
+**Ações necessárias**:
+- [ ] Implementar rate limiting no servidor (Supabase Auth config ou Edge Function)
+- [ ] Manter rate limiting client-side apenas como UX
 
 ---
 
-## 7️⃣ Componentes com Vulnerabilidades Conhecidas
+### A2. Sem rate limiting no signup
 
-### Status: ✅ VERIFICADO (24/12/2024)
+**Arquivo**: `mobile/app/signup.tsx`  
+**Impacto**: Possibilidade de spam de criação de contas.
 
-**Resultado do npm audit:**
-
-| Projeto | Critical | High | Moderate | Low |
-|---------|----------|------|----------|-----|
-| Web | 0 | 0 | 2 | 0 |
-| Mobile | 0 | 0 | 0 | 0 |
-
-**Vulnerabilidades encontradas (Web):**
-- `esbuild` + `vite`: Moderate - afeta apenas servidor de desenvolvimento
-- ⚠️ Fix requer Vite v7 (major update) - não urgente
-
-**Configurações implementadas:**
-- ✅ Dependabot configurado (`.github/dependabot.yml`)
-- ✅ Verifica atualizações toda segunda-feira às 9h
-- ✅ Monitora projeto web e mobile separadamente
-
-**Próximos passos:**
-- [x] Rodar `npm audit` regularmente
-- [x] Configurar GitHub Dependabot
-- [ ] Usar Snyk ou OWASP Dependency-Check (opcional)
-- [ ] Criar política de atualização mensal
+**Ações necessárias**:
+- [ ] Adicionar rate limiting no fluxo de signup
+- [ ] Considerar verificação de email obrigatória
 
 ---
 
-## 8️⃣ Misconfiguration (Configurações Incorretas)
+### A3. Mensagens de erro do Supabase expostas diretamente
 
-### Status: ✅ MELHORADO (27/12/2024)
+**Arquivo**: `mobile/src/contexts/AuthContext.tsx`  
+**Detalhes**: Erros do Supabase são mostrados ao usuário sem sanitização.
 
-**Problemas corrigidos:**
+**Impacto**: Pode revelar informações sobre emails válidos ou detalhes do sistema.
 
-| Configuração | Status | Problema |
-|--------------|--------|----------|
-| `.env` no `.gitignore` | ✅ OK | - |
-| Credenciais hardcoded | ✅ CORRIGIDO | Removido fallback |
-| Storage policies | ✅ CORRIGIDO | Isolamento por clinic_id |
-| Validação strict | ✅ CORRIGIDO | Ativada |
-| Audit triggers | ✅ CORRIGIDO | 18 triggers ativos |
-
-**Storage policies implementadas (27/12/2024):**
-- SQL: `supabase-storage-policies-by-clinic.sql`
-- Código atualizado para usar path `{clinicId}/{filename}`
-- Usuários só podem acessar arquivos da própria clínica
-
-> [!NOTE]
-> O bucket `clinic-assets` permanece público para leitura (logos são públicos em relatórios).
-> A gestão de arquivos está isolada por clínica.
-
-**Recomendações pendentes:**
-- [x] Ativar `STRICT_VALIDATION = true`
-- [x] Ativar triggers de auditoria
-- [x] Implementar storage policies por clínica
-- [ ] Fazer checklist de segurança antes de deploy
+**Ações necessárias**:
+- [ ] Usar mensagens genéricas: "Email ou senha incorretos"
+- [ ] Logar erros detalhados apenas em ferramentas de monitoramento (Sentry)
 
 ---
 
-## 9️⃣ Monitoramento e Logging
+### A4. Função `SECURITY DEFINER` com privilégios elevados
 
-### Status: ✅ IMPLEMENTADO (24/12/2024)
+**Arquivo**: `supabase-multi-tenant-schema.sql`  
+**Detalhes**: `get_user_clinic_id()` roda com permissões do dono da função.
 
-**O que foi configurado:**
-- ✅ Tabela `audit_logs` criada
-- ✅ Função `log_audit_action()` implementada
-- ✅ RLS na tabela de logs (usuário só vê da sua clínica)
-- ✅ **18 triggers ativos** monitorando ações críticas
+**Impacto**: Se explorada, poderia bypassar RLS.
 
-**Triggers ativados:**
-
-| Tabela | INSERT | UPDATE | DELETE |
-|--------|--------|--------|--------|
-| `patients` | ✅ | ✅ | ✅ |
-| `budgets` | ✅ | ✅ | ✅ |
-| `financial_transactions` | ✅ | ✅ | ✅ |
-| `procedures` | ✅ | ✅ | ✅ |
-| `exams` | ✅ | ✅ | ✅ |
-| `anamneses` | ✅ | ✅ | ✅ |
-
-**SQL aplicado:** `supabase-enable-audit-triggers.sql`
-
-**Status atual:**
-- [x] Ativar triggers para tabelas críticas
-- [x] Logs disponíveis no Supabase Dashboard → Table Editor → `audit_logs`
-- [ ] Alertas automáticos (para implementar no futuro)
-
-**Opções de alertas para o futuro:**
-
-| Opção | Complexidade | Custo | Recomendação |
-|-------|--------------|-------|--------------|
-| Dashboard manual | Já funciona | Gratuito | ✅ Usar agora |
-| Email diário resumo | Baixa | Gratuito | Para quando tiver mais usuários |
-| Edge Function + Webhook | Média | Gratuito | Automação completa |
-| Ferramenta externa | Alta | Pago | Apps grandes |
-
-> [!TIP]
-> **Para verificar logs agora:** Supabase Dashboard → Table Editor → `audit_logs`
-> Filtre por `action_type = 'DELETE'` para ver exclusões.
+**Ações necessárias**:
+- [ ] Auditar a função para garantir que não pode ser manipulada
+- [ ] Considerar `SECURITY INVOKER` onde possível
 
 ---
 
-## 📊 Resumo Comparativo
+### A5. `clinic_id` pode ser NULL em algumas tabelas
 
-| Vulnerabilidade | Vídeo | Projeto | Gap |
-|-----------------|-------|---------|-----|
-| 1. SQL Injection | Crítico | ✅ OK | - |
-| 2. XSS | Crítico | ✅ OK | Falta CSP |
-| 3. Upload Files | Alto | ⚠️ Parcial | Validação MIME |
-| 4. Auth/Session | Alto | ⚠️ Parcial | Falta 2FA |
-| 5. API/Data Exposure | Crítico | 🔴 Crítico | **Chaves expostas** |
-| 6. CSRF | Médio | ✅ OK | - |
-| 7. Dependencies | Alto | ⚠️ ? | Não auditado |
-| 8. Misconfiguration | Alto | ⚠️ Parcial | Storage público |
-| 9. Logging | Alto | ⚠️ Parcial | Triggers off |
+**Arquivo**: `supabase-fix-exams.sql`  
+**Detalhes**: `ALTER TABLE exams ALTER COLUMN clinic_id DROP NOT NULL`
+
+**Impacto**: Registros sem `clinic_id` podem não ser filtrados pelo RLS e ficar "invisíveis" ou acessíveis por qualquer pessoa.
+
+**Ações necessárias**:
+- [ ] Auditar tabelas para registros com `clinic_id` NULL
+- [ ] Adicionar constraint `NOT NULL` em `clinic_id` para todas as tabelas principais
+- [ ] Preencher registros existentes com NULL
 
 ---
 
-## 🎯 Plano de Ação Priorizado
+### A6. `console.log` com dados sensíveis em produção
 
-### 🔴 URGENTE (fazer agora)
-- [x] 1. ~~**Remover credenciais hardcoded**~~ ✅ FEITO (24/12/2024)
-- [x] 2. ~~**Regenerar anon key**~~ ✅ FEITO (05/01/2026) - Migrado para novas Publishable Keys
-- [x] 3. ~~**Rodar `npm audit`**~~ ✅ FEITO - 2 moderate (dev only)
+**Arquivos**:
+- `mobile/app/secretary.tsx:628` → Loga `clinicId, messageContent`
+- `mobile/src/services/secretary.ts:1265` → Loga dados de mensagens
+- Diversos arquivos de serviço → Logs de debug
 
-### ⚠️ ALTO (próxima semana)
-- [x] 4. ~~Ativar `STRICT_VALIDATION = true`~~ ✅ FEITO (26/12/2024)
-- [x] 5. ~~Ativar triggers de auditoria no banco~~ ✅ FEITO - 18 triggers ativos
-- [x] 6. ~~Implementar validação de MIME type em uploads~~ ✅ FEITO (26/12/2024)
-- [x] 7. ~~Adicionar rate limiting para login~~ ✅ FEITO (26/12/2024) - 5 tentativas, bloqueio 15min
+**Impacto**: Dados de clínica e pacientes podem ser expostos em logs.
 
-### 📋 MÉDIO (próximo mês)
-- [ ] 8. Implementar 2FA (Supabase Auth suporta)
-- [x] 9. ~~Adicionar CSP headers~~ ✅ FEITO (26/12/2024) - `vercel.json`
-- [x] 10. ~~Configurar Dependabot no GitHub~~ ✅ FEITO - `.github/dependabot.yml`
-- [x] 11. ~~Revisar storage policies por clínica~~ ✅ FEITO (27/12/2024)
-
-### 📝 BAIXO (backlog) - Notas
-
-#### 12. Análise de logs
-- Já temos `audit_logs` funcionando
-- Por agora: usar Supabase Dashboard manualmente
-- Futuro: implementar email diário com resumo
-
-#### 13. Alertas de segurança
-- Opções documentadas na seção de Monitoramento
-- Dashboard manual já funciona (gratuito)
-
-#### 14. Pentest profissional
-- Custo: R$ 5-25k dependendo do escopo
-- **Recomendação:** Fazer quando tiver clientes pagando e orçamento
-- O que já temos cobre 90% das vulnerabilidades OWASP
-- "Pentest caseiro" já realizado nesta avaliação
-
-#### 15. Scan de malware em uploads
-- Risco baixo: usuários são funcionários conhecidos
-- Não é app público de compartilhamento
-- MIME type + tamanho máximo já implementados
-- Opcional para o futuro se tiver clientes corporativos exigentes
+**Ações necessárias**:
+- [ ] Remover ou condicionar todos os `console.log` a ambiente de desenvolvimento
+- [ ] Usar serviço de logging que sanitiza dados sensíveis
 
 ---
 
-## ✅ Checklist de Verificações Realizadas
+### A7. Políticas de Storage permissivas
 
-### Injeção de Código
-- [x] Busca por `eval()` - não encontrado
-- [x] Verificação de prepared statements - Supabase SDK
-- [x] Validação de schemas Zod
+**Arquivo**: `supabase-exams.sql`  
+**Detalhes**: Qualquer usuário autenticado pode acessar o bucket `exams`.
 
-### XSS
-- [x] Busca por `dangerouslySetInnerHTML` - 1 uso controlado
-- [x] Verificação de escape em outputs - React automático
-- [x] CSP configurada ✅ (26/12/2024)
+**Impacto**: Documentos de exames de outras clínicas podem ser acessados.
 
-### Upload de Arquivos
-- [x] Arquivos em storage externo (Supabase)
-- [x] Nomes aleatórios (UUID)
-- [x] Validação de MIME type ✅ (26/12/2024)
-- [x] Limite de tamanho ✅ (26/12/2024) - 10MB
+**Ações necessárias**:
+- [ ] Restringir políticas de storage por `clinic_id` ou pasta
 
-### Autenticação
-- [x] Hash de senhas (bcrypt via Supabase)
-- [x] Tokens JWT
-- [x] Refresh token
-- [ ] 2FA/MFA
-- [x] Rate limiting ✅ (26/12/2024) - 5 tentativas, 15min bloqueio
+---
 
-### APIs e Dados
-- [x] RLS implementado
-- [x] HTTPS
-- [x] Credenciais em variáveis de ambiente apenas ✅ (24/12/2024)
-- [x] Rate limiting ✅ (26/12/2024)
+## 🟡 VULNERABILIDADES MÉDIAS
 
-### CSRF
-- [x] Bearer token (não cookies)
-- [x] SPA architecture
+### M1. Fallback para AsyncStorage (não criptografado) durante migração de tokens
 
-### Dependências
-- [x] npm audit executado ✅ (24/12/2024)
-- [x] Dependabot configurado ✅ (24/12/2024)
+**Arquivo**: `mobile/src/lib/secureStorage.ts`  
+**Detalhes**: Se a migração de SecureStore não foi concluída, tokens podem ser lidos de `AsyncStorage`.
 
-### Configurações
-- [x] .env no .gitignore
-- [x] Validação strict ativa ✅ (26/12/2024)
-- [x] Storage policies por clínica ✅ (27/12/2024)
+**Ações**: Definir prazo para remover fallback.
 
-### Logging
-- [x] Tabela audit_logs
-- [x] Função de logging
-- [x] Triggers ativos ✅ (24/12/2024)
-- [ ] Alertas configurados
+---
+
+### M2. Inconsistência na sanitização de dados
+
+**Arquivo**: `mobile/src/services/patients.ts`  
+**Detalhes**: Apenas alguns campos são sanitizados (`address`, `allergies`), outros não (`name`, `email`, `cpf`).
+
+**Ações**: Sanitizar todos os campos de texto antes de salvar.
+
+---
+
+### M3. Múltiplos arquivos SQL com políticas conflitantes
+
+**Arquivos**: `supabase-multi-tenant-rls.sql`, `supabase-complete-data-isolation.sql`, `supabase-fix-insert-policies.sql`  
+**Impacto**: Não é claro quais políticas estão ativas no banco.
+
+**Ações**: Criar um script único que representa o estado atual das políticas.
+
+---
+
+### M4. JSON.parse sem tratamento de erros consistente
+
+**Arquivos**: `NewBudgetModal.tsx`, `NewProcedureModal.tsx`  
+**Impacto**: App pode crashar com dados malformados.
+
+**Ações**: Envolver todas as chamadas JSON.parse em try-catch.
+
+---
+
+### M5. Schemas de validação existem mas não são utilizados
+
+**Arquivo**: `mobile/src/lib/validation.ts`  
+**Detalhes**: Schemas completos (`patientSchema`, `financialTransactionSchema`, `cpfSchema`, etc.) foram criados mas quase nenhum formulário os importa.
+
+**Ações**: Integrar schemas em todos os handlers de submit.
+
+---
+
+### M6. Funções RPC podem ignorar RLS
+
+**Arquivos**: `mobile/src/services/budgets.ts`, `TeamManagementModal.tsx`  
+**Detalhes**: Chamadas `supabase.rpc()` podem rodar com `SECURITY DEFINER`.
+
+**Ações**: Auditar todas as funções RPC no Supabase.
+
+---
+
+## 🟢 VULNERABILIDADES BAIXAS
+
+### B1. Toggle de visibilidade de senha
+Risco de "shoulder surfing". Aceitável como UX feature.
+
+### B2. Variáveis `EXPO_PUBLIC_*` visíveis no bundle
+Esperado para chaves públicas (anon key). RLS deve compensar.
+
+### B3. Supabase client usa queries parametrizadas
+Sem risco significativo de SQL injection via SDK.
+
+### B4. Sem uso de `dangerouslySetInnerHTML`
+Risco de XSS baixo em React Native (sem DOM).
+
+### B5. Logs de console desabilitados em produção no `_layout.tsx`
+Boa prática, mas alguns logs manuais escapam.
+
+---
+
+## Práticas Positivas Encontradas ✅
+
+| Prática | Arquivo | Status |
+|---------|---------|--------|
+| Armazenamento seguro de tokens (Keychain/EncryptedSharedPreferences) | `secureStorage.ts` | ✅ |
+| Configuração `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` | `secureStorage.ts` | ✅ |
+| Auto-refresh de tokens com tratamento de erro | `supabase.ts` | ✅ |
+| Validação forte de senha (12+ chars, mista) | `signup.tsx` | ✅ |
+| Criptografia de CPF/RG no banco | Migration SQL | ✅ |
+| Edge Functions sanitizam logs e erros | `errorHandler.ts` | ✅ |
+| `.env` no `.gitignore` | `.gitignore` | ✅ |
+| Proteção de rotas por autenticação | `_layout.tsx` | ✅ |
+| Audit logging implementado | Supabase | ✅ |
+| Dependabot configurado | GitHub | ✅ |
+
+---
+
+## Plano de Ação Priorizado
+
+### Fase 1 - Imediata (1-2 dias)
+1. 🔴 Verificar que `.env` nunca foi commitado no histórico git
+2. 🔴 Remover credenciais hardcoded do `docker-compose.yml`
+3. 🔴 Habilitar `STRICT_VALIDATION = true` e testar formulários
+4. 🟠 Remover/condicionar `console.log` com dados sensíveis
+
+### Fase 2 - Curto Prazo (1 semana)
+5. 🔴 Substituir `WITH CHECK (true)` por checks com `clinic_id`
+6. 🔴 Adicionar `NOT NULL` constraint em `clinic_id` de todas as tabelas
+7. 🔴 Adicionar filtro `clinic_id` explícito em todas as queries de serviço
+8. 🟠 Implementar rate limiting server-side
+
+### Fase 3 - Médio Prazo (2-4 semanas)
+9. 🟠 Sanitizar mensagens de erro exibidas ao usuário
+10. 🟠 Restringir políticas de Storage por clínica
+11. 🟡 Integrar schemas de validação em todos os formulários
+12. 🟡 Consolidar scripts SQL em um estado único de políticas
+13. 🟡 Auditar funções RPC e `SECURITY DEFINER`
+
+### Fase 4 - Longo Prazo (1-2 meses)
+14. 🟡 Implementar pre-commit hooks para prevenir commit de `.env`
+15. 🟢 Adicionar scanning de segurança automatizado no CI/CD
+16. 🟢 Implementar gestão de secrets (EAS Secrets para mobile, Supabase Secrets)
+
+---
+
+## Classificação Geral de Segurança
+
+| Área | Nota | Comentário |
+|------|------|-----------|
+| Autenticação | ⭐⭐⭐⭐ | Boa, com SecureStore e validação de senha forte |
+| Autorização (RLS) | ⭐⭐ | Existe mas com políticas permissivas demais |
+| Isolamento Multi-Tenant | ⭐⭐ | Triggers ajudam, mas defesa em profundidade ausente |
+| Validação de Dados | ⭐⭐ | Schemas criados mas não aplicados |
+| Criptografia | ⭐⭐⭐⭐ | CPF/RG criptografados, tokens em SecureStore |
+| Gerenciamento de Secrets | ⭐⭐⭐ | `.gitignore` correto, mas docker-compose expõe |
+| Logging e Monitoramento | ⭐⭐⭐ | Sentry configurado, mas logs manuais vazam dados |
+| Dependências | ⭐⭐⭐ | Dependabot ativo, poucas vulnerabilidades |
+
+**Nota geral**: **6/10** - A aplicação tem fundamentos de segurança bons, mas precisa de reforço no isolamento multi-tenant e na validação de dados para estar pronta para produção com múltiplas clínicas.

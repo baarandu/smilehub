@@ -102,12 +102,13 @@ serve(async (req) => {
     // Verify user is admin of the clinic
     const { data: clinicUser, error: clinicUserError } = await supabase
       .from("clinic_users")
-      .select("role, clinic_id, user_id")
+      .select("role, roles, clinic_id, user_id")
       .eq("clinic_id", clinic_id)
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (clinicUserError || !clinicUser || clinicUser.role !== "admin") {
+    const userRoles: string[] = clinicUser?.roles || (clinicUser?.role ? [clinicUser.role] : []);
+    if (clinicUserError || !clinicUser || !userRoles.includes("admin")) {
       throw new Error("Unauthorized");
     }
 

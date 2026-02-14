@@ -410,7 +410,7 @@ export default function DentistAgentScreen() {
                     <Text className="text-lg font-bold text-gray-900 flex-1">Conversas</Text>
                     <TouchableOpacity
                         onPress={startNewConversation}
-                        className="bg-teal-700 p-2 rounded-full"
+                        className="bg-[#c4605e] p-2 rounded-full"
                     >
                         <Plus size={20} color="#FFFFFF" />
                     </TouchableOpacity>

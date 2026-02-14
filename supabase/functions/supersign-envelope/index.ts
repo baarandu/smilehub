@@ -94,12 +94,13 @@ async function handleCreate(
   // Verify user belongs to clinic
   const { data: clinicUser } = await supabase
     .from("clinic_users")
-    .select("role")
+    .select("role, roles")
     .eq("user_id", user.id)
     .eq("clinic_id", clinicId)
     .single();
 
-  if (!clinicUser || !["admin", "dentist"].includes(clinicUser.role)) {
+  const userRoles: string[] = clinicUser?.roles || (clinicUser?.role ? [clinicUser.role] : []);
+  if (!clinicUser || !userRoles.some((r: string) => ["admin", "dentist"].includes(r))) {
     throw new Error("Apenas dentistas e administradores");
   }
 

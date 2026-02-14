@@ -16,18 +16,19 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, ArrowRight, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
-import type { ProsthesisOrder, ProsthesisChecklist } from '@/types/prosthesis';
+import { ArrowLeft, ArrowRight, Pencil, Trash2, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import type { ProsthesisOrder } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
-import { getStatusLabel, getNextStatus, getPreviousStatus, calculateMargin, getChecklistItems } from '@/utils/prosthesis';
+import { getStatusLabel, getNextStatus, getPreviousStatus } from '@/utils/prosthesis';
 import { useUpdateOrder, useDeleteOrder } from '@/hooks/useProsthesis';
 import { StatusTimeline } from './StatusTimeline';
 import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { budgetsService } from '@/services/budgets';
+import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 
 interface OrderDetailDialogProps {
   open: boolean;
@@ -51,23 +52,39 @@ export function OrderDetailDialog({
   const deleteOrder = useDeleteOrder();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Fetch linked budget if exists
+  const budgetQuery = useQuery({
+    queryKey: ['budget', order?.budget_id],
+    queryFn: () => budgetsService.getById(order!.budget_id!),
+    enabled: !!order?.budget_id,
+  });
+
   if (!order) return null;
 
   const nextStatus = getNextStatus(order.status);
   const prevStatus = getPreviousStatus(order.status);
-  const margin = calculateMargin(order);
-  const checklistItems = getChecklistItems(order);
 
-  const handleChecklistToggle = async (key: keyof ProsthesisChecklist) => {
+
+  // Parse linked budget item info
+  let linkedBudgetInfo: { toothName: string; treatments: string; value: string; date: string } | null = null;
+  if (order.budget_id && order.budget_tooth_index != null && budgetQuery.data) {
     try {
-      await updateOrder.mutateAsync({
-        id: order.id,
-        updates: { [key]: !order[key] },
-      });
-    } catch {
-      toast({ title: 'Erro ao atualizar checklist', variant: 'destructive' });
-    }
-  };
+      const parsed = JSON.parse(budgetQuery.data.notes || '{}');
+      const teeth = parsed.teeth as ToothEntry[];
+      if (teeth && teeth[order.budget_tooth_index]) {
+        const tooth = teeth[order.budget_tooth_index];
+        const itemValue = Object.values(tooth.values).reduce(
+          (sum, val) => sum + (parseInt(val as string) || 0) / 100, 0
+        );
+        linkedBudgetInfo = {
+          toothName: getToothDisplayName(tooth.tooth, false),
+          treatments: tooth.treatments.join(', '),
+          value: formatMoney(itemValue),
+          date: formatDisplayDate(budgetQuery.data.date),
+        };
+      }
+    } catch { /* ignore parse errors */ }
+  }
 
   const handleDelete = async () => {
     try {
@@ -99,6 +116,17 @@ export function OrderDetailDialog({
                   )}
                 </div>
               </div>
+              <Button
+                size="sm"
+                className="bg-[#a03f3d] hover:bg-[#8b3634] text-white mr-6"
+                onClick={() => {
+                  onOpenChange(false);
+                  onEdit(order);
+                }}
+              >
+                <Pencil className="w-4 h-4 mr-1" />
+                Editar
+              </Button>
             </div>
           </DialogHeader>
 
@@ -123,10 +151,6 @@ export function OrderDetailDialog({
                 <div>
                   <p className="text-muted-foreground text-xs">Cor</p>
                   <p className="font-medium">{order.color || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Cimentação</p>
-                  <p className="font-medium">{order.cementation_type || '—'}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Previsão de Entrega</p>
@@ -160,7 +184,7 @@ export function OrderDetailDialog({
               <Separator />
               <div>
                 <h4 className="text-sm font-semibold mb-2">Financeiro</h4>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="bg-muted/50 rounded-lg p-3 text-center">
                     <p className="text-xs text-muted-foreground">Custo Lab</p>
                     <p className="font-semibold text-sm">{formatCurrency(order.lab_cost)}</p>
@@ -169,38 +193,41 @@ export function OrderDetailDialog({
                     <p className="text-xs text-muted-foreground">Valor Paciente</p>
                     <p className="font-semibold text-sm">{formatCurrency(order.patient_price)}</p>
                   </div>
-                  <div className="bg-muted/50 rounded-lg p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Margem</p>
-                    {margin ? (
-                      <p className={`font-semibold text-sm ${margin.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatCurrency(margin.value)} ({margin.percentage.toFixed(0)}%)
-                      </p>
-                    ) : (
-                      <p className="font-semibold text-sm text-muted-foreground">—</p>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              {/* Checklist */}
-              <Separator />
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Checklist de Envio</h4>
-                <div className="space-y-2">
-                  {checklistItems.map(item => (
-                    <div key={item.key} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`detail-${item.key}`}
-                        checked={item.checked}
-                        onCheckedChange={() => handleChecklistToggle(item.key)}
-                      />
-                      <Label htmlFor={`detail-${item.key}`} className="text-sm cursor-pointer">
-                        {item.label}
-                      </Label>
+              {/* Linked Budget */}
+              {linkedBudgetInfo && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-purple-600" />
+                      Orçamento Vinculado
+                    </h4>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-purple-600 text-xs">Dente</span>
+                          <p className="font-medium">{linkedBudgetInfo.toothName}</p>
+                        </div>
+                        <div>
+                          <span className="text-purple-600 text-xs">Tratamentos</span>
+                          <p className="font-medium">{linkedBudgetInfo.treatments}</p>
+                        </div>
+                        <div>
+                          <span className="text-purple-600 text-xs">Valor</span>
+                          <p className="font-medium">R$ {linkedBudgetInfo.value}</p>
+                        </div>
+                        <div>
+                          <span className="text-purple-600 text-xs">Data</span>
+                          <p className="font-medium">{linkedBudgetInfo.date}</p>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
 
               {/* Timeline */}
               <Separator />
@@ -231,17 +258,6 @@ export function OrderDetailDialog({
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onEdit(order);
-                  }}
-                >
-                  <Pencil className="w-4 h-4 mr-1" />
-                  Editar
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"

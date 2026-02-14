@@ -311,18 +311,22 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             || nameLower.includes('encaminhamento') || nameLower.includes('declaração') || nameLower.includes('declaracao');
 
         let dentistName = 'Responsável Técnico';
+        let dentistCRO = '';
         if (!isConsentForm) {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
                     const { data: profile } = await supabase
                         .from('profiles')
-                        .select('full_name, gender')
+                        .select('full_name, gender, cro')
                         .eq('id', user.id)
                         .maybeSingle() as any;
                     if (profile?.full_name) {
                         const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
                         dentistName = `${prefix} ${profile.full_name}`;
+                    }
+                    if (profile?.cro) {
+                        dentistCRO = profile.cro;
                     }
                 }
             } catch (e) {
@@ -340,6 +344,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             signatureHtml = `
                 <div class="signature">
                     <div class="signature-line">${dentistName}</div>
+                    ${dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : ''}
                 </div>`;
         } else {
             signatureHtml = `
@@ -349,6 +354,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                     </div>
                     <div class="signature">
                         <div class="signature-line">${dentistName}</div>
+                        ${dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : ''}
                     </div>
                 </div>`;
         }
