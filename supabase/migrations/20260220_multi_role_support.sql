@@ -466,11 +466,11 @@ BEGIN
 
   ELSE
     -- New user: Create new clinic + trial subscription
-    IF new.raw_user_meta_data->>'account_type' = 'clinic' THEN
-      clinic_display_name := COALESCE(new.raw_user_meta_data->>'clinic_name', 'Minha Clínica');
-    ELSE
-      clinic_display_name := COALESCE(new.raw_user_meta_data->>'full_name', 'Meu Consultório');
-    END IF;
+    clinic_display_name := COALESCE(
+      NULLIF(TRIM(new.raw_user_meta_data->>'clinic_name'), ''),
+      new.raw_user_meta_data->>'full_name',
+      'Meu Consultório'
+    );
 
     INSERT INTO public.clinics (name)
     VALUES (clinic_display_name)

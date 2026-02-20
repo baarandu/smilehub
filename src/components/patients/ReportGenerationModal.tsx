@@ -121,7 +121,6 @@ export function ReportGenerationModal({
                 notes: notes.trim(),
                 clinicName: metadata.clinic_name || 'Organiza Odonto',
                 dentistName: metadata.full_name || '',
-                accountType: (metadata.account_type as 'solo' | 'clinic') || 'solo',
                 dentistCRO,
                 clinicPhone,
                 clinicEmail,

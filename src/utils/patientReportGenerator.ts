@@ -9,8 +9,6 @@ interface ReportOptions {
     clinicName?: string;
     clinicLogo?: string;
     dentistName?: string;
-    accountType?: 'solo' | 'clinic';
-    // New fields
     dentistCRO?: string;
     clinicAddress?: string;
     clinicPhone?: string;
@@ -27,7 +25,6 @@ export const generatePatientReport = async ({
     clinicName = 'Organiza Odonto',
     clinicLogo,
     dentistName,
-    accountType = 'solo',
     dentistCRO,
     clinicAddress,
     clinicPhone,

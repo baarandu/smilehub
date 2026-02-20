@@ -13,7 +13,7 @@ type AuthContextType = {
     isTrialExpired: boolean;
     trialDaysLeft: number | null;
     signIn: (email: string, password: string) => Promise<void>;
-    signUp: (email: string, password: string, name?: string, accountType?: 'solo' | 'clinic', clinicName?: string, gender?: 'male' | 'female') => Promise<void>;
+    signUp: (email: string, password: string, name?: string, clinicName?: string, gender?: 'male' | 'female') => Promise<void>;
     signOut: () => Promise<void>;
     resetPassword: (email: string) => Promise<void>;
     refreshSubscription: () => Promise<void>;
@@ -134,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: string,
         password: string,
         name?: string,
-        accountType: 'solo' | 'clinic' = 'solo',
         clinicName?: string,
         gender?: 'male' | 'female'
     ) => {
@@ -146,7 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 options: {
                     data: {
                         full_name: name,
-                        account_type: accountType,
                         clinic_name: clinicName,
                         gender: gender,
                     }

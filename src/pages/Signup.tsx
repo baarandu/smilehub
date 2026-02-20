@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Building2, Stethoscope, ArrowRight, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Building2, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { passwordSchema, getPasswordStrength } from '@/lib/validation';
 
-type AccountType = 'solo' | 'clinic';
 type Gender = 'male' | 'female';
 
 export default function Signup() {
@@ -18,7 +18,6 @@ export default function Signup() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [accountType, setAccountType] = useState<AccountType>('solo');
     const [gender, setGender] = useState<Gender>('male');
     const [clinicName, setClinicName] = useState('');
     const [loading, setLoading] = useState(false);
@@ -43,11 +42,6 @@ export default function Signup() {
             return;
         }
 
-        if (accountType === 'clinic' && !clinicName) {
-            toast.error('Informe o nome da clínica');
-            return;
-        }
-
         setLoading(true);
         try {
             const { error } = await supabase.auth.signUp({
@@ -56,7 +50,6 @@ export default function Signup() {
                 options: {
                     data: {
                         full_name: name,
-                        account_type: accountType,
                         clinic_name: clinicName || undefined,
                         gender: gender,
                     }
@@ -82,7 +75,7 @@ export default function Signup() {
                 <div className="text-center mb-8">
                     <img
                         src="/logo-login.png"
-                        alt="Smile Care Hub"
+                        alt="Organiza Odonto"
                         className="w-24 h-24 mx-auto mb-4 object-contain rounded-2xl"
                     />
                     <h1 className="text-2xl font-bold text-gray-900">Criar Conta</h1>
@@ -92,90 +85,6 @@ export default function Signup() {
                 {/* Form Card */}
                 <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                     <form onSubmit={handleSignup} className="space-y-5">
-                        {/* Account Type Selection */}
-                        <div className="space-y-2">
-                            <Label>Tipo de Conta</Label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    type="button"
-                                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'solo'
-                                        ? 'border-red-500 bg-red-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                    onClick={() => setAccountType('solo')}
-                                >
-                                    <Stethoscope className={`w-6 h-6 ${accountType === 'solo' ? 'text-[#a03f3d]' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${accountType === 'solo' ? 'text-[#a03f3d]' : 'text-gray-600'}`}>
-                                        Dentista Autônomo
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 transition-colors ${accountType === 'clinic'
-                                        ? 'border-red-500 bg-red-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                    onClick={() => setAccountType('clinic')}
-                                >
-                                    <Building2 className={`w-6 h-6 ${accountType === 'clinic' ? 'text-[#a03f3d]' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${accountType === 'clinic' ? 'text-[#a03f3d]' : 'text-gray-600'}`}>
-                                        Clínica
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Gender Selection */}
-                        <div className="space-y-2">
-                            <Label>Sexo</Label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    type="button"
-                                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-colors ${gender === 'male'
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                    onClick={() => setGender('male')}
-                                >
-                                    <span className="text-xl">👨‍⚕️</span>
-                                    <span className={`text-sm font-medium ${gender === 'male' ? 'text-blue-600' : 'text-gray-600'}`}>
-                                        Masculino
-                                    </span>
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-colors ${gender === 'female'
-                                        ? 'border-pink-500 bg-pink-50'
-                                        : 'border-gray-200 hover:border-gray-300'
-                                        }`}
-                                    onClick={() => setGender('female')}
-                                >
-                                    <span className="text-xl">👩‍⚕️</span>
-                                    <span className={`text-sm font-medium ${gender === 'female' ? 'text-pink-600' : 'text-gray-600'}`}>
-                                        Feminino
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Clinic Name (conditional) */}
-                        {accountType === 'clinic' && (
-                            <div className="space-y-2">
-                                <Label htmlFor="clinicName">Nome da Clínica</Label>
-                                <div className="relative">
-                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                    <Input
-                                        id="clinicName"
-                                        type="text"
-                                        placeholder="Ex: Odonto Smile Centro"
-                                        className="pl-10"
-                                        value={clinicName}
-                                        onChange={(e) => setClinicName(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
                         <div className="space-y-2">
                             <Label htmlFor="name">Seu Nome Completo</Label>
                             <div className="relative">
@@ -187,6 +96,34 @@ export default function Signup() {
                                     className="pl-10"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="gender">Sexo</Label>
+                            <Select value={gender} onValueChange={(value: Gender) => setGender(value)}>
+                                <SelectTrigger id="gender">
+                                    <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="male">Masculino</SelectItem>
+                                    <SelectItem value="female">Feminino</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="clinicName">Nome do Consultório / Clínica <span className="text-gray-400 font-normal">(opcional)</span></Label>
+                            <div className="relative">
+                                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                <Input
+                                    id="clinicName"
+                                    type="text"
+                                    placeholder="Ex: Odonto Smile Centro"
+                                    className="pl-10"
+                                    value={clinicName}
+                                    onChange={(e) => setClinicName(e.target.value)}
                                 />
                             </div>
                         </div>
