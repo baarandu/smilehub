@@ -1,3 +1,4 @@
+import { Receipt, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingOrder } from '@/types/materials';
@@ -56,6 +57,41 @@ export function OrderDetailDialog({
                             ))}
                         </div>
                     </div>
+                    {order.invoice_url && (
+                        <div>
+                            <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                                <Receipt className="w-4 h-4" />
+                                Nota Fiscal
+                            </h4>
+                            {order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
+                                <div className="space-y-2">
+                                    <img
+                                        src={order.invoice_url}
+                                        alt="Nota Fiscal"
+                                        className="max-h-64 w-full object-contain rounded-lg border border-border"
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 w-full"
+                                        onClick={() => window.open(order.invoice_url!, '_blank')}
+                                    >
+                                        <ExternalLink className="w-3 h-3" />
+                                        Abrir em nova aba
+                                    </Button>
+                                </div>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    className="gap-2 w-full"
+                                    onClick={() => window.open(order.invoice_url!, '_blank')}
+                                >
+                                    <ExternalLink className="w-4 h-4" />
+                                    Abrir Nota Fiscal (PDF)
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <DialogFooter>
                     <Button onClick={() => onOpenChange(false)}>Fechar</Button>

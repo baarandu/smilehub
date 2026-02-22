@@ -16,5 +16,6 @@ export interface ShoppingOrder {
     created_by: string | null;
     created_by_name?: string | null;
     location: string | null;
+    invoice_url: string | null;
     created_at: string;
 }

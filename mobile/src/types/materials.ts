@@ -13,5 +13,6 @@ export interface ShoppingOrder {
     total_amount: number;
     status: 'pending' | 'completed';
     completed_at: string | null;
+    invoice_url: string | null;
     created_at: string;
 }

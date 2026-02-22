@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
@@ -7,7 +7,7 @@ import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 import { ShoppingItem, ShoppingOrder } from '@/types/materials';
 import { formatCurrency, formatDate } from '@/utils/materials';
-import { AddItemDialog, CheckoutDialog, OrderDetailDialog } from '@/components/materials';
+import { AddItemDialog, CheckoutDialog, OrderDetailDialog, ImportMaterialsDialog } from '@/components/materials';
 import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/materials/ExpensePaymentDialog';
 import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
 
@@ -37,6 +37,14 @@ export default function Materials() {
     unpurchasedTotal: number;
     shoppingOrderId: string | null;
   } | null>(null);
+
+  // Import Modal State
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [clinicId, setClinicId] = useState<string | null>(null);
+
+  // Invoice State
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
 
   // Other State
   const [loading, setLoading] = useState(false);
@@ -68,6 +76,8 @@ export default function Materials() {
         return;
       }
 
+      setClinicId((clinicUser as any).clinic_id);
+
       const { data: pending } = await (supabase
         .from('shopping_orders') as any)
         .select('*')
@@ -89,6 +99,7 @@ export default function Materials() {
         const firstOrder = pending[0];
         setCurrentOrderId(firstOrder.id);
         setItems(firstOrder.items || []);
+        setInvoiceUrl(firstOrder.invoice_url || null);
       }
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -135,6 +146,44 @@ export default function Materials() {
     setAddItemModalVisible(true);
   };
 
+  const handleImportItems = (newItems: ShoppingItem[], importedInvoiceUrl?: string) => {
+    setItems(prev => [...prev, ...newItems]);
+    if (importedInvoiceUrl) {
+      setInvoiceUrl(importedInvoiceUrl);
+    }
+  };
+
+  const handleManualInvoiceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !clinicId) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo 10MB.');
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Formato não suportado. Use JPG, PNG, WebP ou PDF.');
+      return;
+    }
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('fiscal-documents').upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
+      setInvoiceUrl(urlData.publicUrl);
+      toast.success('Nota fiscal anexada!');
+    } catch (err) {
+      console.error('Error uploading invoice:', err);
+      toast.error('Erro ao anexar nota fiscal');
+    }
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
   // Order Handlers
   const handleSaveList = async () => {
     if (items.length === 0) {
@@ -157,7 +206,7 @@ export default function Materials() {
 
       if (currentOrderId) {
         await (supabase.from('shopping_orders') as any)
-          .update({ items: items, total_amount: currentTotal })
+          .update({ items: items, total_amount: currentTotal, invoice_url: invoiceUrl })
           .eq('id', currentOrderId);
       } else {
         await (supabase.from('shopping_orders') as any)
@@ -166,7 +215,8 @@ export default function Materials() {
             items: items,
             total_amount: currentTotal,
             status: 'pending',
-            created_by: user.id
+            created_by: user.id,
+            invoice_url: invoiceUrl
           }]);
       }
 
@@ -207,7 +257,8 @@ export default function Materials() {
             status: 'completed',
             completed_at: new Date().toISOString(),
             items: purchasedItems,
-            total_amount: purchasedTotal
+            total_amount: purchasedTotal,
+            invoice_url: invoiceUrl
           })
           .eq('id', currentOrderId);
         shoppingOrderId = currentOrderId;
@@ -219,7 +270,8 @@ export default function Materials() {
             total_amount: purchasedTotal,
             status: 'completed',
             created_by: user.id,
-            completed_at: new Date().toISOString()
+            completed_at: new Date().toISOString(),
+            invoice_url: invoiceUrl
           }])
           .select('id')
           .single();
@@ -332,6 +384,7 @@ export default function Materials() {
 
       setItems([]);
       setCurrentOrderId(null);
+      setInvoiceUrl(null);
       loadOrders();
 
     } catch (error) {
@@ -370,12 +423,14 @@ export default function Materials() {
     } else {
       setCurrentOrderId(order.id);
       setItems(order.items || []);
+      setInvoiceUrl(order.invoice_url || null);
     }
   };
 
   const handleNewOrder = () => {
     setItems([]);
     setCurrentOrderId(null);
+    setInvoiceUrl(null);
   };
 
   const handleToggleExcludedItem = (itemId: string) => {
@@ -438,10 +493,43 @@ export default function Materials() {
                     </p>
                   </div>
                 </div>
-                <Button onClick={() => setAddItemModalVisible(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Item
-                </Button>
+                <div className="flex gap-2">
+                  <input
+                    ref={invoiceInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={handleManualInvoiceUpload}
+                    className="hidden"
+                  />
+                  {invoiceUrl ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-green-600 border-green-600/30 hover:bg-green-50"
+                      onClick={() => window.open(invoiceUrl, '_blank')}
+                    >
+                      <Receipt className="w-4 h-4" />
+                      NF Anexada
+                      <X
+                        className="w-3 h-3 ml-1 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setInvoiceUrl(null); }}
+                      />
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={() => invoiceInputRef.current?.click()} className="gap-2">
+                      <Receipt className="w-4 h-4" />
+                      Anexar NF
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => setImportModalVisible(true)} className="gap-2">
+                    <FileUp className="w-4 h-4" />
+                    Importar
+                  </Button>
+                  <Button onClick={() => setAddItemModalVisible(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Adicionar Item
+                  </Button>
+                </div>
               </div>
 
               {items.length === 0 ? (
@@ -630,6 +718,15 @@ export default function Materials() {
         onOpenChange={setDetailModalVisible}
         order={selectedOrder}
       />
+
+      {clinicId && (
+        <ImportMaterialsDialog
+          open={importModalVisible}
+          onOpenChange={setImportModalVisible}
+          onImportItems={handleImportItems}
+          clinicId={clinicId}
+        />
+      )}
 
       <ExpensePaymentDialog
         open={showPaymentModal}
