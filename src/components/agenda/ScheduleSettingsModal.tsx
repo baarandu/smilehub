@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { Location } from '@/services/locations';
@@ -313,17 +318,31 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
                               </Button>
                             </div>
                             {showLocationField && (
-                              <div className="flex flex-wrap gap-3 pl-1">
-                                {locations.map(loc => (
-                                  <label key={loc.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                                    <Checkbox
-                                      checked={slot.location_ids.includes(loc.id)}
-                                      onCheckedChange={() => toggleSlotLocation(day.day_of_week, slot.id, loc.id)}
-                                    />
-                                    {loc.name}
-                                  </label>
-                                ))}
-                              </div>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full justify-start font-normal">
+                                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {slot.location_ids.length === 0
+                                        ? 'Selecionar locais'
+                                        : slot.location_ids.map(id => locations.find(l => l.id === id)?.name).filter(Boolean).join(' / ')}
+                                    </span>
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-56 p-2" align="start">
+                                  <div className="space-y-1">
+                                    {locations.map(loc => (
+                                      <label key={loc.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer">
+                                        <Checkbox
+                                          checked={slot.location_ids.includes(loc.id)}
+                                          onCheckedChange={() => toggleSlotLocation(day.day_of_week, slot.id, loc.id)}
+                                        />
+                                        <span className="text-sm">{loc.name}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             )}
                           </div>
                         ))}
