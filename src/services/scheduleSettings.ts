@@ -11,10 +11,11 @@ export interface ScheduleSetting {
   is_active: boolean;
 }
 
+const table = () => supabase.from('schedule_settings') as any;
+
 export const scheduleSettingsService = {
   async getByClinic(clinicId: string): Promise<ScheduleSetting[]> {
-    const { data, error } = await supabase
-      .from('schedule_settings')
+    const { data, error } = await table()
       .select('*')
       .eq('clinic_id', clinicId)
       .order('professional_id')
@@ -25,8 +26,7 @@ export const scheduleSettingsService = {
   },
 
   async getByProfessional(clinicId: string, professionalId: string): Promise<ScheduleSetting[]> {
-    const { data, error } = await supabase
-      .from('schedule_settings')
+    const { data, error } = await table()
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('professional_id', professionalId)
@@ -39,15 +39,14 @@ export const scheduleSettingsService = {
 
   async upsert(clinicId: string, professionalId: string, settings: Omit<ScheduleSetting, 'id' | 'clinic_id' | 'professional_id'>[]): Promise<void> {
     // Delete existing settings for this professional
-    const { error: deleteError } = await supabase
-      .from('schedule_settings')
+    const { error: deleteError } = await table()
       .delete()
       .eq('clinic_id', clinicId)
       .eq('professional_id', professionalId);
 
     if (deleteError) throw deleteError;
 
-    // Insert new settings (only active days)
+    // Insert new settings (only active slots)
     const toInsert = settings
       .filter(s => s.is_active)
       .map(s => ({
@@ -61,8 +60,7 @@ export const scheduleSettingsService = {
       }));
 
     if (toInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('schedule_settings')
+      const { error: insertError } = await table()
         .insert(toInsert);
 
       if (insertError) throw insertError;
@@ -70,8 +68,8 @@ export const scheduleSettingsService = {
   },
 
   async getDentists(clinicId: string): Promise<{ id: string; name: string; specialty: string }[]> {
-    const { data, error } = await supabase
-      .from('clinic_professionals')
+    const { data, error } = await (supabase
+      .from('clinic_professionals') as any)
       .select('id, name, specialty')
       .eq('clinic_id', clinicId)
       .eq('is_active', true)

@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS schedule_settings (
   interval_minutes int NOT NULL DEFAULT 30,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
   -- Multiple slots per day allowed (e.g. 7h-9h and 12h-14h)
 );
 

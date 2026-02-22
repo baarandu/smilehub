@@ -490,6 +490,8 @@ export default function Agenda() {
             preSelectedPatient={preSelectedPatient}
             dentists={dentists}
             showDentistField={dentists.length > 1}
+            clinicId={clinicId}
+            existingAppointments={appointments}
           />
         </div>
       </div>

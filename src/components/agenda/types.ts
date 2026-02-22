@@ -48,6 +48,8 @@ export interface NewAppointmentDialogProps {
   preSelectedPatient?: Patient | null;
   dentists?: { id: string; name: string }[];
   showDentistField?: boolean;
+  clinicId?: string;
+  existingAppointments?: AppointmentWithPatient[];
 }
 
 export const STATUS_CONFIG = {

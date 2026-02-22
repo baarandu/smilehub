@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Search, X, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, X, ExternalLink, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,13 +19,44 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { NewAppointmentDialogProps } from './types';
+
+function generateTimeSlots(
+  settings: ScheduleSetting[],
+  dayOfWeek: number,
+  bookedTimes: string[],
+): string[] {
+  const daySettings = settings.filter(s => s.day_of_week === dayOfWeek && s.is_active);
+  if (daySettings.length === 0) return [];
+
+  const slots: string[] = [];
+  for (const setting of daySettings) {
+    const [startH, startM] = setting.start_time.slice(0, 5).split(':').map(Number);
+    const [endH, endM] = setting.end_time.slice(0, 5).split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const interval = setting.interval_minutes;
+
+    for (let m = startMinutes; m + interval <= endMinutes; m += interval) {
+      const hh = String(Math.floor(m / 60)).padStart(2, '0');
+      const mm = String(m % 60).padStart(2, '0');
+      slots.push(`${hh}:${mm}`);
+    }
+  }
+
+  // Sort and deduplicate
+  const unique = [...new Set(slots)].sort();
+  // Filter out booked times
+  return unique.filter(t => !bookedTimes.includes(t));
+}
 
 export function NewAppointmentDialog({
   open,
   onOpenChange,
   patients,
   locations,
+  selectedDate,
   onAdd,
   onUpdate,
   appointmentToEdit,
@@ -33,6 +64,8 @@ export function NewAppointmentDialog({
   preSelectedPatient,
   dentists = [],
   showDentistField = false,
+  clinicId,
+  existingAppointments = [],
 }: NewAppointmentDialogProps) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -47,6 +80,8 @@ export function NewAppointmentDialog({
   });
   const [patientSearch, setPatientSearch] = useState('');
   const [showPatientList, setShowPatientList] = useState(false);
+  const [scheduleSettings, setScheduleSettings] = useState<ScheduleSetting[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -83,6 +118,20 @@ export function NewAppointmentDialog({
     }
   }, [preSelectedPatient]);
 
+  // Load schedule settings when dentist changes
+  useEffect(() => {
+    const dentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
+    if (!dentistId || !clinicId) {
+      setScheduleSettings([]);
+      return;
+    }
+    setLoadingSlots(true);
+    scheduleSettingsService.getByProfessional(clinicId, dentistId)
+      .then(data => setScheduleSettings(data))
+      .catch(() => setScheduleSettings([]))
+      .finally(() => setLoadingSlots(false));
+  }, [form.dentistId, clinicId, dentists]);
+
   useEffect(() => {
     const handleClickOutside = () => {
       if (showPatientList) {
@@ -95,6 +144,22 @@ export function NewAppointmentDialog({
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [showPatientList]);
+
+  // Compute available slots
+  const dateForSlots = appointmentToEdit ? form.date : selectedDate;
+  const dateObj = dateForSlots ? new Date(dateForSlots + 'T00:00:00') : null;
+  const dayOfWeek = dateObj ? dateObj.getDay() : -1;
+
+  const activeDentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
+  const bookedTimes = existingAppointments
+    .filter(a => (!activeDentistId || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
+    .map(a => a.time?.slice(0, 5) || '');
+
+  const availableSlots = dayOfWeek >= 0
+    ? generateTimeSlots(scheduleSettings, dayOfWeek, bookedTimes)
+    : [];
+
+  const hasScheduleForDay = scheduleSettings.some(s => s.day_of_week === dayOfWeek && s.is_active);
 
   const filteredPatients = patientSearch.length > 0
     ? patients.filter(p =>
@@ -117,10 +182,6 @@ export function NewAppointmentDialog({
     }
     setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: '' });
     setPatientSearch('');
-  };
-
-  const handleCreateNew = () => {
-    onOpenChange(true);
   };
 
   return (
@@ -229,7 +290,7 @@ export function NewAppointmentDialog({
               <Label>Dentista *</Label>
               <Select
                 value={form.dentistId}
-                onValueChange={(v) => setForm({ ...form, dentistId: v })}
+                onValueChange={(v) => setForm({ ...form, dentistId: v, time: '' })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o dentista" />
@@ -250,18 +311,46 @@ export function NewAppointmentDialog({
               <Input
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                onChange={(e) => setForm({ ...form, date: e.target.value, time: '' })}
               />
             </div>
           )}
+
+          {/* Time selection */}
           <div className="space-y-2">
             <Label>Horário *</Label>
-            <Input
-              type="time"
-              value={form.time}
-              onChange={(e) => setForm({ ...form, time: e.target.value })}
-            />
+            {loadingSlots ? (
+              <p className="text-xs text-muted-foreground py-2">Carregando horários...</p>
+            ) : hasScheduleForDay && availableSlots.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setForm({ ...form, time: slot })}
+                    className={cn(
+                      "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors",
+                      form.time === slot
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card border-border text-foreground hover:border-primary/50 hover:bg-primary/5"
+                    )}
+                  >
+                    <Clock className="w-3 h-3" />
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            ) : hasScheduleForDay && availableSlots.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2">Todos os horários estão ocupados neste dia.</p>
+            ) : (
+              <Input
+                type="time"
+                value={form.time}
+                onChange={(e) => setForm({ ...form, time: e.target.value })}
+              />
+            )}
           </div>
+
           <div className="space-y-2">
             <Label>Procedimento</Label>
             <Input
