@@ -12,7 +12,8 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone)
+        patients (name, phone),
+        clinic_professionals (name)
       `)
       .order('date')
       .order('time');
@@ -26,7 +27,8 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone)
+        patients (name, phone),
+        clinic_professionals (name)
       `)
       .eq('date', date)
       .order('time');

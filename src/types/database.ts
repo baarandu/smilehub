@@ -977,6 +977,7 @@ export type Database = {
           clinic_id: string | null
           created_at: string | null
           date: string
+          dentist_id: string | null
           id: string
           location: string | null
           notes: string | null
@@ -991,6 +992,7 @@ export type Database = {
           clinic_id?: string | null
           created_at?: string | null
           date: string
+          dentist_id?: string | null
           id?: string
           location?: string | null
           notes?: string | null
@@ -1005,6 +1007,7 @@ export type Database = {
           clinic_id?: string | null
           created_at?: string | null
           date?: string
+          dentist_id?: string | null
           id?: string
           location?: string | null
           notes?: string | null
@@ -3419,6 +3422,7 @@ export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
   patients: Pick<Patient, 'name' | 'phone'>
+  clinic_professionals?: { name: string } | null
 }
 
 export type ConsultationWithPatient = Consultation & {

@@ -31,6 +31,8 @@ export function NewAppointmentDialog({
   appointmentToEdit,
   onRequestCreatePatient,
   preSelectedPatient,
+  dentists = [],
+  showDentistField = false,
 }: NewAppointmentDialogProps) {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -41,6 +43,7 @@ export function NewAppointmentDialog({
     location: '',
     notes: '',
     procedure: '',
+    dentistId: '',
   });
   const [patientSearch, setPatientSearch] = useState('');
   const [showPatientList, setShowPatientList] = useState(false);
@@ -56,9 +59,11 @@ export function NewAppointmentDialog({
           location: appointmentToEdit.location || '',
           notes: appointmentToEdit.notes || '',
           procedure: appointmentToEdit.procedure_name || '',
+          dentistId: appointmentToEdit.dentist_id || '',
         });
       } else {
-        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '' });
+        const defaultDentistId = dentists.length === 1 ? dentists[0].id : '';
+        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: defaultDentistId });
       }
       setPatientSearch('');
       setShowPatientList(false);
@@ -110,7 +115,7 @@ export function NewAppointmentDialog({
     } else {
       onAdd(form);
     }
-    setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '' });
+    setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: '' });
     setPatientSearch('');
   };
 
@@ -219,6 +224,26 @@ export function NewAppointmentDialog({
               </div>
             )}
           </div>
+          {showDentistField && dentists.length > 1 && (
+            <div className="space-y-2">
+              <Label>Dentista *</Label>
+              <Select
+                value={form.dentistId}
+                onValueChange={(v) => setForm({ ...form, dentistId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o dentista" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dentists.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {appointmentToEdit && (
             <div className="space-y-2">
               <Label>Data *</Label>

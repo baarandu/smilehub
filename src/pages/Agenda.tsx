@@ -3,7 +3,9 @@ import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentsService } from '@/services/appointments';
 import { locationsService, type Location } from '@/services/locations';
+import { scheduleSettingsService } from '@/services/scheduleSettings';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
+import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -31,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { NewAppointmentDialog } from '@/components/agenda';
+import { ScheduleSettingsModal } from '@/components/agenda/ScheduleSettingsModal';
 import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG = {
@@ -45,6 +48,7 @@ const STATUS_CONFIG = {
 export default function Agenda() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { clinicId } = useClinic();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
@@ -62,6 +66,8 @@ export default function Agenda() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const [dentists, setDentists] = useState<{ id: string; name: string; specialty: string }[]>([]);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
 
   // React Query hooks for patients
   const { data: patients = [] } = usePatients();
@@ -81,7 +87,8 @@ export default function Agenda() {
 
   useEffect(() => {
     loadLocations();
-  }, []);
+    loadDentists();
+  }, [clinicId]);
 
   // Auto-open new appointment dialog when navigating from prosthesis center
   useEffect(() => {
@@ -168,6 +175,16 @@ export default function Agenda() {
     }
   };
 
+  const loadDentists = async () => {
+    if (!clinicId) return;
+    try {
+      const data = await scheduleSettingsService.getDentists(clinicId);
+      setDentists(data);
+    } catch (error) {
+      console.error('Error loading dentists:', error);
+    }
+  };
+
   const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   // Filter appointments by status only (search is now global)
@@ -190,15 +207,16 @@ export default function Agenda() {
     }
   };
 
-  const handleAddAppointment = async (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => {
+  const handleAddAppointment = async (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string }) => {
     if (!data.patientId || !data.time) {
       toast.error('Selecione um paciente e horário');
       return;
     }
 
-    // Check for time conflict
+    // Check for time conflict (per dentist if specified)
     const timeConflict = appointments.find(
-      apt => apt.time?.slice(0, 5) === data.time.slice(0, 5)
+      apt => apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
+        (!data.dentistId || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
       toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);
@@ -214,6 +232,7 @@ export default function Agenda() {
         location: data.location || null,
         notes: data.notes || null,
         procedure_name: data.procedure || null,
+        dentist_id: data.dentistId || null,
       });
 
       setDialogOpen(false);
@@ -226,10 +245,11 @@ export default function Agenda() {
     }
   };
 
-  const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => {
-    // Check for time conflict (exclude current appointment)
+  const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string }) => {
+    // Check for time conflict per dentist (exclude current appointment)
     const timeConflict = appointments.find(
-      apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5)
+      apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
+        (!data.dentistId || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
       toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);
@@ -245,6 +265,7 @@ export default function Agenda() {
         location: data.location || null,
         notes: data.notes || null,
         procedure_name: data.procedure || null,
+        dentist_id: data.dentistId || null,
       });
 
       setDialogOpen(false);
@@ -443,6 +464,12 @@ export default function Agenda() {
             </Button>
           </div>
 
+          {/* Schedule Settings Button */}
+          <Button variant="outline" className="h-10 gap-2" onClick={() => setSettingsModalOpen(true)}>
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Configurar Horários</span>
+          </Button>
+
           {/* New Appointment Button */}
           <NewAppointmentDialog
             open={dialogOpen}
@@ -461,6 +488,8 @@ export default function Agenda() {
             appointmentToEdit={editingAppointment}
             onRequestCreatePatient={handleRequestCreatePatient}
             preSelectedPatient={preSelectedPatient}
+            dentists={dentists}
+            showDentistField={dentists.length > 1}
           />
         </div>
       </div>
@@ -474,7 +503,7 @@ export default function Agenda() {
               <h2 className="font-semibold text-foreground">Calendário</h2>
               <p className="text-sm text-muted-foreground">Selecione um dia para ver a agenda.</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSettingsModalOpen(true)}>
               <Settings className="w-4 h-4" />
             </Button>
           </div>
@@ -611,6 +640,11 @@ export default function Agenda() {
                           {appointment.procedure_name}
                         </p>
                       )}
+                      {appointment.clinic_professionals?.name && (
+                        <p className="text-xs text-muted-foreground/70 truncate">
+                          Dr(a). {appointment.clinic_professionals.name}
+                        </p>
+                      )}
                       {appointment.notes && (
                         <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
                           {appointment.notes}
@@ -689,6 +723,16 @@ export default function Agenda() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Schedule Settings Modal */}
+      {clinicId && (
+        <ScheduleSettingsModal
+          open={settingsModalOpen}
+          onOpenChange={setSettingsModalOpen}
+          clinicId={clinicId}
+          dentists={dentists}
+        />
+      )}
 
       {/* Quick Patient Creation Dialog */}
       <AlertDialog open={patientDialogOpen} onOpenChange={setPatientDialogOpen}>

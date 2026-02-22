@@ -25,17 +25,29 @@ export interface AppointmentCardProps {
   onDelete?: (appointment: AppointmentWithPatient) => void;
 }
 
+export interface AppointmentFormData {
+  patientId: string;
+  date: string;
+  time: string;
+  location: string;
+  notes: string;
+  procedure: string;
+  dentistId: string;
+}
+
 export interface NewAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patients: Patient[];
   locations: Location[];
   selectedDate: string;
-  onAdd: (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => void;
-  onUpdate?: (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string }) => void;
+  onAdd: (data: AppointmentFormData) => void;
+  onUpdate?: (id: string, data: AppointmentFormData) => void;
   appointmentToEdit?: AppointmentWithPatient | null;
   onRequestCreatePatient?: (prefillName: string) => void;
   preSelectedPatient?: Patient | null;
+  dentists?: { id: string; name: string }[];
+  showDentistField?: boolean;
 }
 
 export const STATUS_CONFIG = {
