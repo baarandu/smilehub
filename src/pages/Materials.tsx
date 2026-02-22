@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt, X } from 'lucide-react';
+import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
@@ -548,6 +548,7 @@ export default function Materials() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        title="Excluir nota fiscal"
                         onClick={() => {
                           if (confirm('Excluir a nota fiscal anexada?')) {
                             const match = invoiceUrl?.match(/fiscal-documents\/(.+)$/);
@@ -559,7 +560,7 @@ export default function Materials() {
                           }
                         }}
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   ) : (
