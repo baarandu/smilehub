@@ -293,13 +293,13 @@ serve(async (req) => {
       conversationId = newConv.id;
     }
 
-    // Get conversation history (last 50 messages — enough for several tool rounds)
+    // Get conversation history (last 20 messages — balances context vs token usage)
     const { data: history, error: historyError } = await supabase
       .from("dentist_agent_messages")
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
-      .limit(50);
+      .limit(20);
 
     if (historyError) throw historyError;
 
@@ -408,7 +408,11 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY not configured");
     }
 
-    log.debug(`Pre-OpenAI: ${Date.now() - t0}ms, messages: ${openaiMessages.length}`);
+    // Use gpt-4o-mini for the first call (tool routing) when patient context is present
+    // to stay within TPM rate limits. gpt-4o is used for the final clinical response.
+    const firstCallModel = patient_id ? "gpt-4o-mini" : "gpt-4o";
+
+    log.debug(`Pre-OpenAI: ${Date.now() - t0}ms, messages: ${openaiMessages.length}, model: ${firstCallModel}`);
 
     const openaiResponse = await fetchWithTimeout(
       "https://api.openai.com/v1/chat/completions",
@@ -419,7 +423,7 @@ serve(async (req) => {
           Authorization: `Bearer ${openaiApiKey}`,
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: firstCallModel,
           messages: openaiMessages,
           tools: getOpenAITools(),
           temperature: 0.3,
@@ -434,9 +438,18 @@ serve(async (req) => {
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
       logError("dentist-agent", `OpenAI API error (${openaiResponse.status})`, errorText);
+      console.error(`[dentist-agent] OpenAI status=${openaiResponse.status}, body=${errorText.substring(0, 500)}`);
       if (openaiResponse.status === 429) {
+        // Parse to check if it's quota vs rate limit
+        let detail = "";
+        try {
+          const errJson = JSON.parse(errorText);
+          detail = errJson?.error?.type || errJson?.error?.code || "";
+        } catch {}
         throw new Error(
-          "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
+          detail === "insufficient_quota"
+            ? "Créditos da API OpenAI esgotados. Verifique o saldo em platform.openai.com."
+            : "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
         );
       }
       if (openaiResponse.status === 401) {
@@ -444,7 +457,7 @@ serve(async (req) => {
           "Erro de configuração do serviço de IA. Contacte o suporte."
         );
       }
-      throw new Error("Erro no serviço de IA. Tente novamente.");
+      throw new Error(`Erro no serviço de IA (${openaiResponse.status}). Tente novamente.`);
     }
 
     const openaiData = await openaiResponse.json();
@@ -466,6 +479,45 @@ serve(async (req) => {
           arguments: JSON.parse(tc.function.arguments),
         });
       }
+    }
+
+    // If mini was used for tool routing but no tools were called,
+    // re-call with gpt-4o for quality clinical response (no tools = fewer tokens)
+    if (firstCallModel === "gpt-4o-mini" && toolCalls.length === 0) {
+      log.debug(`Mini returned no tools, re-calling with gpt-4o: ${Date.now() - t0}ms`);
+      try {
+        const qualityResponse = await fetchWithTimeout(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${openaiApiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              messages: openaiMessages,
+              temperature: 0.3,
+              max_tokens: validatedImageUrls.length > 0 ? 4000 : 2500,
+            }),
+          },
+          validatedImageUrls.length > 0 ? 60000 : 45000
+        );
+
+        if (qualityResponse.ok) {
+          const qualityData = await qualityResponse.json();
+          const qualityChoice = qualityData.choices?.[0];
+          if (qualityChoice?.message?.content) {
+            responseText = qualityChoice.message.content;
+          }
+        } else {
+          // Fallback: use mini response if gpt-4o is rate-limited
+          log.debug(`Quality re-call failed (${qualityResponse.status}), using mini response`);
+        }
+      } catch (err) {
+        log.debug(`Quality re-call error, using mini response: ${err}`);
+      }
+      log.debug(`Quality re-call done: ${Date.now() - t0}ms`);
     }
 
     // If there are tool calls, execute them
@@ -588,9 +640,17 @@ serve(async (req) => {
       if (!secondResponse.ok) {
         const errText = await secondResponse.text();
         logError("dentist-agent", `Second OpenAI call error (${secondResponse.status})`, errText);
+        console.error(`[dentist-agent] 2nd OpenAI status=${secondResponse.status}, body=${errText.substring(0, 500)}`);
         if (secondResponse.status === 429) {
+          let detail = "";
+          try {
+            const errJson = JSON.parse(errText);
+            detail = errJson?.error?.type || errJson?.error?.code || "";
+          } catch {}
           throw new Error(
-            "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
+            detail === "insufficient_quota"
+              ? "Créditos da API OpenAI esgotados. Verifique o saldo em platform.openai.com."
+              : "O serviço de IA está temporariamente indisponível. Tente novamente em alguns minutos."
           );
         }
         throw new Error("Erro no serviço de IA. Tente novamente.");

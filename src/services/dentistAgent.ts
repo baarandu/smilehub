@@ -37,7 +37,18 @@ export const dentistAgentService = {
       throw new Error(error.error || "Failed to send message");
     }
 
-    return response.json();
+    const data = await response.json();
+
+    // Handle consent-required response (no conversation was created)
+    if (data.consent_required) {
+      const error = new Error(
+        data.response || "Paciente sem consentimento para IA."
+      ) as Error & { consent_required: boolean };
+      error.consent_required = true;
+      throw error;
+    }
+
+    return data;
   },
 
   // Get all conversations for a clinic

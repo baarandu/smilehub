@@ -17,7 +17,7 @@ import { useDentistChat } from "@/hooks/useDentistChat";
 import { useCurrentClinic } from "@/hooks/useCurrentClinic";
 import { useClinic } from "@/contexts/ClinicContext";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
+
 
 export default function DentistAgent() {
   const { currentClinic } = useCurrentClinic();
@@ -102,8 +102,8 @@ export default function DentistAgent() {
         setCurrentConversationId(response.conversation_id);
       }
     } catch (error) {
+      // Error already handled by useDentistChat onError callback (toast shown there)
       console.error("Error sending message:", error);
-      toast.error("Erro ao enviar mensagem");
     }
   };
 
@@ -124,6 +124,10 @@ export default function DentistAgent() {
   };
 
   const handleSelectPatient = (id: string, name: string, age: number | null) => {
+    // Start a new conversation when switching patients to avoid mixing contexts
+    if (id !== patientId) {
+      setCurrentConversationId(null);
+    }
     setPatientId(id);
     setPatientName(name);
     setPatientAge(age);

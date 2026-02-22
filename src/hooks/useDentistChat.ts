@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dentistAgentService } from "@/services/dentistAgent";
 import { toast } from "sonner";
@@ -22,6 +22,14 @@ export function useDentistChat(
         : Promise.resolve([]),
     enabled: !!conversationId,
   });
+
+  // Clear optimistic messages when real data loads (replaces them)
+  const dataUpdatedAt = messagesQuery.dataUpdatedAt;
+  useEffect(() => {
+    if (dataUpdatedAt && optimisticMessages.length > 0) {
+      setOptimisticMessages([]);
+    }
+  }, [dataUpdatedAt]);
 
   const sendMessage = useMutation({
     mutationFn: async ({
@@ -54,7 +62,15 @@ export function useDentistChat(
       return response;
     },
     onSuccess: (response) => {
-      setOptimisticMessages([]);
+      // Add assistant response as optimistic message (shown until query refreshes)
+      const optimisticAssistantMessage: DentistMessage = {
+        id: `temp-assistant-${Date.now()}`,
+        conversation_id: response.conversation_id,
+        role: "assistant",
+        content: response.response,
+        created_at: new Date().toISOString(),
+      };
+      setOptimisticMessages((prev) => [...prev, optimisticAssistantMessage]);
 
       queryClient.invalidateQueries({
         queryKey: ["dentist-messages", response.conversation_id],
@@ -66,9 +82,13 @@ export function useDentistChat(
         });
       }
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { consent_required?: boolean }) => {
       setOptimisticMessages([]);
-      toast.error(`Erro ao enviar mensagem: ${error.message}`);
+      if (error.consent_required) {
+        toast.warning(error.message);
+      } else {
+        toast.error(error.message);
+      }
     },
   });
 
