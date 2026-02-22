@@ -9,6 +9,7 @@ export interface PendingReturn {
 
 /**
  * Get procedures with pending returns
+ * Excludes procedures where the patient already has a newer completed procedure
  */
 export async function getPendingReturns(): Promise<PendingReturn[]> {
     const thirtyDaysAgo = new Date();
@@ -37,7 +38,34 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
         throw error;
     }
 
-    return (data || []).map((item: any) => ({
+    if (!data || data.length === 0) return [];
+
+    // Get unique patient IDs to check for newer completed procedures
+    const patientIds = [...new Set(data.map((item: any) => item.patient_id))];
+
+    const { data: completedData } = await supabase
+        .from('procedures')
+        .select('patient_id, date')
+        .eq('status', 'completed')
+        .in('patient_id', patientIds)
+        .order('date', { ascending: false });
+
+    // Map of latest completed procedure date per patient
+    const latestCompletedByPatient = new Map<string, string>();
+    for (const proc of (completedData || [])) {
+        if (!latestCompletedByPatient.has(proc.patient_id)) {
+            latestCompletedByPatient.set(proc.patient_id, proc.date);
+        }
+    }
+
+    // Exclude procedures where the patient has a completed procedure dated after the stale one
+    const filtered = data.filter((item: any) => {
+        const latestCompleted = latestCompletedByPatient.get(item.patient_id);
+        if (!latestCompleted) return true;
+        return latestCompleted < item.date;
+    });
+
+    return filtered.map((item: any) => ({
         procedure: {
             id: item.id,
             patient_id: item.patient_id,
@@ -71,18 +99,13 @@ export async function markProcedureCompleted(procedureId: string): Promise<void>
 }
 
 /**
- * Get count of pending returns
+ * Get count of pending returns (uses same filtering logic as getPendingReturns)
  */
 export async function getPendingReturnsCount(): Promise<number> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
-
-    const { count, error } = await supabase
-        .from('procedures')
-        .select('*', { count: 'exact', head: true })
-        .or(`status.eq.pending,and(status.eq.in_progress,updated_at.lt.${thirtyDaysAgoStr})`);
-
-    if (error) return 0;
-    return count || 0;
+    try {
+        const returns = await getPendingReturns();
+        return returns.length;
+    } catch {
+        return 0;
+    }
 }
