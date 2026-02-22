@@ -131,8 +131,13 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         fetchClinicData();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-            fetchClinicData();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+            // Only refetch on meaningful auth changes (login/logout).
+            // Ignore TOKEN_REFRESHED and INITIAL_SESSION to avoid unnecessary
+            // re-renders that can disrupt open modals and forms.
+            if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+                fetchClinicData();
+            }
         });
 
         return () => subscription.unsubscribe();

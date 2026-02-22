@@ -143,12 +143,14 @@ export function AppLayout({ children }: AppLayoutProps) {
     // Initial check
     checkAdmin();
 
-    // Listen for auth changes (login, logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        checkAdmin();
-      } else {
-        setIsSuperAdmin(false);
+    // Listen for auth changes (login, logout only — not token refreshes)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        if (session?.user) {
+          checkAdmin();
+        } else {
+          setIsSuperAdmin(false);
+        }
       }
     });
 

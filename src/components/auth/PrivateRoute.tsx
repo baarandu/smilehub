@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
@@ -12,6 +12,11 @@ export function PrivateRoute() {
     const [isAllowed, setIsAllowed] = useState(false);
     const [isTrialExpired, setIsTrialExpired] = useState(false);
 
+    // Track whether the initial auth check has completed.
+    // After that, we NEVER show the loading spinner again — all subsequent
+    // re-checks happen silently in the background so modals/forms stay mounted.
+    const initialCheckDone = useRef(false);
+
     useEffect(() => {
         let mounted = true;
 
@@ -23,11 +28,14 @@ export function PrivateRoute() {
                     setSession(null);
                     setLoading(false);
                     setIsChecking(false);
+                    initialCheckDone.current = true;
                 }
                 return;
             }
 
-            setSession(session);
+            if (mounted) {
+                setSession(session);
+            }
 
             // 1. Check Super Admin
             const { data: profile } = await supabase
@@ -42,6 +50,7 @@ export function PrivateRoute() {
                     setIsTrialExpired(false);
                     setLoading(false);
                     setIsChecking(false);
+                    initialCheckDone.current = true;
                 }
                 return;
             }
@@ -104,6 +113,7 @@ export function PrivateRoute() {
                 if (mounted) {
                     setLoading(false);
                     setIsChecking(false);
+                    initialCheckDone.current = true;
                 }
             } else {
                 if (mounted) {
@@ -111,17 +121,28 @@ export function PrivateRoute() {
                     setIsTrialExpired(false);
                     setLoading(false);
                     setIsChecking(false);
+                    initialCheckDone.current = true;
                 }
             }
         };
 
         checkAccess();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (mounted) {
-                setLoading(true); // Reset loading on auth change to re-verify
-                checkAccess();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, _session) => {
+            if (!mounted) return;
+
+            // After the initial check is done, NEVER set loading/isChecking to true.
+            // This prevents unmounting the component tree (and losing modals/forms)
+            // when Supabase refreshes the token on tab switch.
+            if (event === 'SIGNED_OUT') {
+                // User explicitly signed out — clear session immediately
+                setSession(null);
+                return;
             }
+
+            // For all other events (TOKEN_REFRESHED, SIGNED_IN, INITIAL_SESSION, etc.),
+            // silently re-check access in the background without touching loading state.
+            checkAccess();
         });
 
         return () => {
