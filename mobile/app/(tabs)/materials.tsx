@@ -16,7 +16,7 @@ import { ExpensePaymentModal, ExpensePaymentTransaction } from '../../src/compon
 
 // Types, Utils and Styles
 import { ShoppingItem, ShoppingOrder } from '../../src/types/materials';
-import { formatCurrency, getLocalDateString } from '../../src/utils/materials';
+import { formatCurrency, getLocalDateString, migrateItems } from '../../src/utils/materials';
 import { materialsStyles as styles } from '../../src/styles/materials';
 import { generateUUID } from '../../src/utils/expense';
 
@@ -95,7 +95,7 @@ export default function Materials() {
             if (pending) {
                 setPendingOrders(pending.map((o: any) => ({
                     ...o,
-                    items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
+                    items: migrateItems(typeof o.items === 'string' ? JSON.parse(o.items) : o.items)
                 })));
             }
 
@@ -111,7 +111,7 @@ export default function Materials() {
             if (completed) {
                 setHistoryOrders(completed.map((o: any) => ({
                     ...o,
-                    items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items
+                    items: migrateItems(typeof o.items === 'string' ? JSON.parse(o.items) : o.items)
                 })));
             }
         } catch (error) {
@@ -491,7 +491,7 @@ export default function Materials() {
 
             // Create expenses for each transaction
             const itemsDesc = purchasedItems.map(i =>
-                `${i.name} (${i.quantity}x ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
+                `${i.name} (${i.quantity}x ${formatCurrency(i.unitPrice)}) Marca: ${i.brand}`
             ).join(' | ');
 
             for (let i = 0; i < transactions.length; i++) {
@@ -598,7 +598,7 @@ export default function Materials() {
                                         <Text style={styles.itemName}>{item.name}</Text>
                                         <View style={styles.supplierRow}>
                                             <Store size={14} color="#6B7280" />
-                                            <Text style={styles.supplierText}>{item.supplier}</Text>
+                                            <Text style={styles.supplierText}>{item.brand}</Text>
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', gap: 4 }}>

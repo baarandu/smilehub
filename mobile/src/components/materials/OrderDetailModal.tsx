@@ -83,7 +83,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 </View>
                                 <View style={styles.supplierRow}>
                                     <Store size={14} color="#6B7280" />
-                                    <Text style={styles.supplierText}>{item.supplier}</Text>
+                                    <Text style={styles.supplierText}>{item.brand}</Text>
                                 </View>
                             </View>
                         ))}

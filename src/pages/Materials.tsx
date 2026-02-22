@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 import { ShoppingItem, ShoppingOrder } from '@/types/materials';
-import { formatCurrency, formatDate } from '@/utils/materials';
+import { formatCurrency, formatDate, migrateItems } from '@/utils/materials';
 import { AddItemDialog, CheckoutDialog, OrderDetailDialog, ImportMaterialsDialog } from '@/components/materials';
 import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/materials/ExpensePaymentDialog';
 import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
@@ -92,13 +92,13 @@ export default function Materials() {
         .eq('status', 'completed')
         .order('completed_at', { ascending: false });
 
-      setPendingOrders(pending || []);
-      setHistoryOrders(completed || []);
+      setPendingOrders((pending || []).map((o: any) => ({ ...o, items: migrateItems(o.items) })));
+      setHistoryOrders((completed || []).map((o: any) => ({ ...o, items: migrateItems(o.items) })));
 
       if (pending && pending.length > 0) {
         const firstOrder = pending[0];
         setCurrentOrderId(firstOrder.id);
-        setItems(firstOrder.items || []);
+        setItems(migrateItems(firstOrder.items));
         setInvoiceUrl(firstOrder.invoice_url || null);
       }
     } catch (error) {
@@ -328,7 +328,7 @@ export default function Materials() {
 
       // Create expenses for each transaction
       const itemsDesc = purchasedItems.map(i =>
-        `${i.name} (${i.quantity}x R$ ${formatCurrency(i.unitPrice)}) Forn: ${i.supplier}`
+        `${i.name} (${i.quantity}x R$ ${formatCurrency(i.unitPrice)}) Marca: ${i.brand}`
       ).join(' | ');
 
       for (let i = 0; i < transactions.length; i++) {
@@ -547,7 +547,7 @@ export default function Materials() {
                         <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{item.quantity}</span>
                           <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{formatCurrency(item.unitPrice)}</span>
-                          <span className="flex items-center gap-1"><Store className="w-3 h-3" />{item.supplier}</span>
+                          <span className="flex items-center gap-1"><Store className="w-3 h-3" />{item.brand}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

@@ -4,7 +4,7 @@ export interface ShoppingItem {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
-    supplier: string;
+    brand: string;
 }
 
 export interface ShoppingOrder {

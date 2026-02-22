@@ -186,7 +186,7 @@ export function ImportMaterialsDialog({
         quantity: item.quantity || 1,
         unitPrice: item.unitPrice || 0,
         totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-        supplier: item.supplier || 'Não informado',
+        brand: item.brand || 'Sem marca',
       }));
 
       onImportItems(shoppingItems, invoiceUrl);
@@ -368,11 +368,11 @@ export function ImportMaterialsDialog({
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground">Fornecedor</label>
+                      <label className="text-xs text-muted-foreground">Marca</label>
                       <Input
-                        value={item.supplier || ''}
-                        onChange={(e) => handleUpdateParsedItem(index, 'supplier', e.target.value)}
-                        placeholder="Fornecedor"
+                        value={item.brand || ''}
+                        onChange={(e) => handleUpdateParsedItem(index, 'brand', e.target.value)}
+                        placeholder="Marca"
                       />
                     </div>
                   </div>

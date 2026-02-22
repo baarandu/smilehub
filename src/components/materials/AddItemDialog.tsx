@@ -27,7 +27,7 @@ export function AddItemDialog({
     const [name, setName] = useState('');
     const [quantity, setQuantity] = useState('');
     const [unitPrice, setUnitPrice] = useState('');
-    const [supplier, setSupplier] = useState('');
+    const [brand, setSupplier] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     useEffect(() => {
@@ -35,7 +35,7 @@ export function AddItemDialog({
             setName(editingItem.name);
             setQuantity(editingItem.quantity.toString());
             setUnitPrice(editingItem.unitPrice.toString());
-            setSupplier(editingItem.supplier === 'Não informado' ? '' : editingItem.supplier);
+            setSupplier(editingItem.brand === 'Sem marca' ? '' : editingItem.brand);
         } else if (!open) {
             resetForm();
         }
@@ -72,7 +72,7 @@ export function AddItemDialog({
                 quantity: qty,
                 unitPrice: price,
                 totalPrice: total,
-                supplier: supplier.trim() || 'Não informado',
+                brand: brand.trim() || 'Sem marca',
             });
             toast.success('Item atualizado!');
         } else {
@@ -82,7 +82,7 @@ export function AddItemDialog({
                 quantity: qty,
                 unitPrice: price,
                 totalPrice: total,
-                supplier: supplier.trim() || 'Não informado',
+                brand: brand.trim() || 'Sem marca',
             });
             toast.success('Item adicionado!');
         }
@@ -147,10 +147,10 @@ export function AddItemDialog({
                         </div>
                     </div>
                     <div>
-                        <label className="text-sm font-medium text-foreground mb-2 block">Fornecedor</label>
+                        <label className="text-sm font-medium text-foreground mb-2 block">Marca</label>
                         <Input
-                            placeholder="Nome do fornecedor"
-                            value={supplier}
+                            placeholder="Ex: TDV, 3M, Dentsply"
+                            value={brand}
                             onChange={(e) => setSupplier(e.target.value)}
                         />
                     </div>

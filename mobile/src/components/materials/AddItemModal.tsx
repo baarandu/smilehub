@@ -27,8 +27,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     const [unitPrice, setUnitPrice] = useState(
         editingItem?.unitPrice ? editingItem.unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''
     );
-    const [supplier, setSupplier] = useState(
-        editingItem?.supplier === 'Não informado' ? '' : (editingItem?.supplier || '')
+    const [brand, setSupplier] = useState(
+        editingItem?.brand === 'Sem marca' ? '' : (editingItem?.brand || '')
     );
     const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -40,7 +40,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             setUnitPrice(
                 editingItem?.unitPrice ? editingItem.unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''
             );
-            setSupplier(editingItem?.supplier === 'Não informado' ? '' : (editingItem?.supplier || ''));
+            setSupplier(editingItem?.brand === 'Sem marca' ? '' : (editingItem?.brand || ''));
         }
     }, [visible, editingItem]);
 
@@ -65,7 +65,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 quantity: qty,
                 unitPrice: uPrice,
                 totalPrice: total,
-                supplier: supplier.trim() || 'Não informado',
+                brand: brand.trim() || 'Sem marca',
             });
         } else {
             onAdd({
@@ -73,7 +73,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 quantity: qty,
                 unitPrice: uPrice,
                 totalPrice: total,
-                supplier: supplier.trim() || 'Não informado',
+                brand: brand.trim() || 'Sem marca',
             });
         }
 
@@ -189,11 +189,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                             </Text>
                         </View>
 
-                        <Text style={styles.inputLabel}>Fornecedor</Text>
+                        <Text style={styles.inputLabel}>Marca</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Ex: Dental Cremer"
-                            value={supplier}
+                            placeholder="Ex: TDV, 3M, Dentsply"
+                            value={brand}
                             onChangeText={setSupplier}
                         />
 
