@@ -5,20 +5,19 @@
 
 const PRODUCTION_ORIGINS = [
   'https://organizaodonto.vercel.app',
+  'https://organizaodonto.app',
 ];
 
 const DEV_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:8080',
+  'http://localhost:8081',
   'http://localhost:8082',
 ];
 
-// In production (Deno Deploy), exclude localhost origins
-const isProduction = !!Deno.env.get('DENO_DEPLOYMENT_ID');
-const ALLOWED_ORIGINS = isProduction
-  ? PRODUCTION_ORIGINS
-  : [...PRODUCTION_ORIGINS, ...DEV_ORIGINS];
+// Include all origins — real security is handled by JWT auth
+const ALLOWED_ORIGINS = [...PRODUCTION_ORIGINS, ...DEV_ORIGINS];
 
 export function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('origin') || '';
