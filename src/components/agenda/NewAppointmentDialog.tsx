@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, X, ExternalLink, Clock } from 'lucide-react';
+import { Plus, Search, X, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -322,24 +322,21 @@ export function NewAppointmentDialog({
             {loadingSlots ? (
               <p className="text-xs text-muted-foreground py-2">Carregando horários...</p>
             ) : hasScheduleForDay && availableSlots.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setForm({ ...form, time: slot })}
-                    className={cn(
-                      "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors",
-                      form.time === slot
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border text-foreground hover:border-primary/50 hover:bg-primary/5"
-                    )}
-                  >
-                    <Clock className="w-3 h-3" />
-                    {slot}
-                  </button>
-                ))}
-              </div>
+              <Select
+                value={form.time}
+                onValueChange={(v) => setForm({ ...form, time: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o horário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : hasScheduleForDay && availableSlots.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">Todos os horários estão ocupados neste dia.</p>
             ) : (
