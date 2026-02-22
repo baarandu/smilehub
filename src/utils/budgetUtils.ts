@@ -64,6 +64,7 @@ export const TREATMENTS = [
     'Raspagem Subgengival',
     'Raspagem Supragengival',
     'Restauração',
+    'Retratamento de Canal',
     'Sedação consciente',
     'Selante resinoso',
     'Splintagem',
