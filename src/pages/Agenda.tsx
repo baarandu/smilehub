@@ -7,7 +7,7 @@ import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock, Mic } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -419,25 +419,6 @@ export default function Agenda() {
             )}
           </div>
 
-          {/* Voice Consultation */}
-          <Button
-            variant="outline"
-            onClick={() => navigate('/consulta-voz')}
-            className="gap-2 hidden sm:flex"
-          >
-            <Mic className="w-4 h-4" />
-            Consulta por Voz
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate('/consulta-voz')}
-            className="sm:hidden h-10 w-10"
-            title="Consulta por Voz"
-          >
-            <Mic className="w-4 h-4" />
-          </Button>
-
           {/* Day Navigation */}
           <div className="flex items-center gap-1">
             <Button variant="outline" size="icon" onClick={() => handleDayChange(-1)} className="h-10 w-10">
@@ -650,15 +631,6 @@ export default function Agenda() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        title="Consulta por Voz"
-                        onClick={() => navigate(`/consulta-voz/${appointment.id}`)}
-                      >
-                        <Mic className="w-4 h-4" />
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

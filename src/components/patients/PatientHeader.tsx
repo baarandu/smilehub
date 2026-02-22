@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Mic, Stethoscope, Download } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Stethoscope, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,18 +143,30 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
       const { data, error } = await supabase.functions.invoke('patient-data-export', {
         body: { patientId: patient.id, clinicId: patient.clinic_id },
       });
-      if (error) throw error;
 
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
+      if (error) {
+        console.error('Export function error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Nenhum dado retornado');
+      }
+
+      const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
       const a = document.createElement('a');
-      a.href = url;
+      a.style.display = 'none';
+      a.href = dataUrl;
       a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
       toast.success('Dados exportados com sucesso');
-    } catch (error) {
-      toast.error('Erro ao exportar dados do paciente');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      const msg = error?.message || error?.context?.body || String(error);
+      toast.error(`Erro ao exportar: ${msg}`);
     } finally {
       setExporting(false);
     }
@@ -221,15 +233,6 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   </Tooltip>
                 </TooltipProvider>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => navigate(`/consulta-voz?patientId=${patient.id}`)}
-                >
-                  <Mic className="w-4 h-4" />
-                  <span className="hidden sm:inline">Consulta Voz</span>
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"

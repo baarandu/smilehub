@@ -449,35 +449,48 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     </View>
                                 )}
 
-                                {/* Modelos pré-definidos - sempre visíveis */}
-                                <View className="gap-3">
-                                    <Text className="text-gray-500 text-sm font-medium">Modelos pré-definidos:</Text>
-                                    {DEFAULT_TEMPLATES.map((template, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            onPress={async () => {
-                                                try {
-                                                    await documentTemplatesService.create(template);
-                                                    loadData();
-                                                    Alert.alert('Sucesso', `"${template.name}" adicionado!`);
-                                                } catch (error) {
-                                                    Alert.alert('Erro', 'Falha ao adicionar modelo');
-                                                }
-                                            }}
-                                            className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex-row items-center justify-between"
-                                        >
-                                            <View className="flex-1">
-                                                <Text className="font-medium text-gray-700">{template.name}</Text>
-                                                <Text className="text-gray-400 text-xs mt-1" numberOfLines={1}>
-                                                    {template.content.substring(0, 50)}...
-                                                </Text>
-                                            </View>
-                                            <View className="bg-white p-2 rounded-lg ml-3 border border-gray-200">
-                                                <Plus size={16} color="#6B7280" />
-                                            </View>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
+                                {/* Modelos pré-definidos - só mostra os que ainda não foram adicionados */}
+                                {(() => {
+                                    const existingNames = templates.map(t => t.name.toLowerCase());
+                                    const available = DEFAULT_TEMPLATES.filter(
+                                        dt => !existingNames.includes(dt.name.toLowerCase())
+                                    );
+                                    if (available.length === 0) return null;
+                                    return (
+                                        <View className="gap-3">
+                                            <Text className="text-gray-500 text-sm font-medium">Modelos pré-definidos:</Text>
+                                            {available.map((template, index) => (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    onPress={async () => {
+                                                        if (templates.some(t => t.name.toLowerCase() === template.name.toLowerCase())) {
+                                                            Alert.alert('Aviso', 'Modelo já existe');
+                                                            return;
+                                                        }
+                                                        try {
+                                                            await documentTemplatesService.create(template);
+                                                            loadData();
+                                                            Alert.alert('Sucesso', `"${template.name}" adicionado!`);
+                                                        } catch (error) {
+                                                            Alert.alert('Erro', 'Falha ao adicionar modelo');
+                                                        }
+                                                    }}
+                                                    className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex-row items-center justify-between"
+                                                >
+                                                    <View className="flex-1">
+                                                        <Text className="font-medium text-gray-700">{template.name}</Text>
+                                                        <Text className="text-gray-400 text-xs mt-1" numberOfLines={1}>
+                                                            {template.content.substring(0, 50)}...
+                                                        </Text>
+                                                    </View>
+                                                    <View className="bg-white p-2 rounded-lg ml-3 border border-gray-200">
+                                                        <Plus size={16} color="#6B7280" />
+                                                    </View>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    );
+                                })()}
                             </View>
                         )}
 

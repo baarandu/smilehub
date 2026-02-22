@@ -503,7 +503,7 @@ export const generatePatientReport = async ({
                         <tr>
                             <th>Data</th>
                             <th>Procedimento</th>
-                            <th>Observações</th>
+                            <th>Descrição</th>
                         </tr>
                     </thead>
                     <tbody>

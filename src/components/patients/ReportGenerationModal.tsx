@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -14,10 +14,14 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Calendar, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { useProcedures } from '@/hooks/useProcedures';
 import { useExams } from '@/hooks/useExams';
 import { generatePatientReport } from '@/utils/patientReportGenerator';
+import { budgetsService } from '@/services/budgets';
+import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 import type { Patient } from '@/types/database';
+import type { BudgetLink } from '@/services/procedures';
 import { format } from 'date-fns';
 
 interface ReportGenerationModalProps {
@@ -33,6 +37,39 @@ export function ReportGenerationModal({
 }: ReportGenerationModalProps) {
     const { data: procedures = [], isLoading: loadingProcedures } = useProcedures(patient.id);
     const { data: exams = [], isLoading: loadingExams } = useExams(patient.id);
+    const { data: budgets = [] } = useQuery({
+        queryKey: ['budgets', patient.id],
+        queryFn: () => budgetsService.getByPatient(patient.id),
+        enabled: !!patient.id,
+    });
+
+    // Resolve procedure names from budget links for display
+    const procedureNameMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        const budgetMap = new Map(budgets.map((b) => [b.id, b]));
+
+        for (const proc of procedures) {
+            const links = (proc as any).budget_links as BudgetLink[] | null;
+            if (!links || links.length === 0) continue;
+
+            const names: string[] = [];
+            for (const link of links) {
+                const budget = budgetMap.get(link.budgetId);
+                if (!budget?.notes) continue;
+                try {
+                    const parsed = JSON.parse(budget.notes);
+                    const teeth = parsed.teeth as ToothEntry[];
+                    if (!teeth || !teeth[link.toothIndex]) continue;
+                    const tooth = teeth[link.toothIndex];
+                    const toothName = getToothDisplayName(tooth.tooth, false);
+                    const treatments = tooth.treatments.join(', ');
+                    names.push(`${treatments} - ${toothName}`);
+                } catch { /* skip */ }
+            }
+            if (names.length > 0) map[proc.id] = names.join('; ');
+        }
+        return map;
+    }, [procedures, budgets]);
 
     const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
@@ -126,6 +163,7 @@ export function ReportGenerationModal({
                 clinicEmail,
                 clinicAddress,
                 reportNumber,
+                procedureNames: procedureNameMap,
             });
             onOpenChange(false);
         } catch (error) {
@@ -227,8 +265,13 @@ export function ReportGenerationModal({
                                                 />
                                                 <div className="flex-1 space-y-1">
                                                     <p className="font-medium text-sm text-slate-900 leading-tight">
-                                                        {sanitizeDescription(proc.description)}
+                                                        {procedureNameMap[proc.id] || sanitizeDescription(proc.description)}
                                                     </p>
+                                                    {procedureNameMap[proc.id] && proc.description && (
+                                                        <p className="text-xs text-slate-500 line-clamp-1">
+                                                            {proc.description.startsWith('Obs: ') ? proc.description.substring(5) : proc.description}
+                                                        </p>
+                                                    )}
                                                     <div className="flex items-center gap-3 text-xs text-slate-500">
                                                         <span className="flex items-center gap-1">
                                                             <Calendar className="w-3 h-3" />

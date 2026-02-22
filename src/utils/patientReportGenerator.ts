@@ -14,6 +14,8 @@ interface ReportOptions {
     clinicPhone?: string;
     clinicEmail?: string;
     reportNumber?: string;
+    /** Map of procedure ID → resolved procedure name from budget links */
+    procedureNames?: Record<string, string>;
 }
 
 export const generatePatientReport = async ({
@@ -29,7 +31,8 @@ export const generatePatientReport = async ({
     clinicAddress,
     clinicPhone,
     clinicEmail,
-    reportNumber
+    reportNumber,
+    procedureNames = {},
 }: ReportOptions) => {
 
     const formatDate = (date: string) => new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -512,61 +515,57 @@ export const generatePatientReport = async ({
                         <tr>
                             <th>Data</th>
                             <th>Procedimento</th>
-                            <th>Observações</th>
+                            <th>Descrição</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${procedures.flatMap((p) => {
+                        ${procedures.map((p) => {
+                            // Use resolved procedure name from budget links if available
+                            const resolvedName = procedureNames[p.id] || '';
                             const description = p.description || '';
-                            // Split potential Obs part
-                            const parts = description.split('\n\nObs: ');
-                            const itemsPart = parts[0];
-                            let obsPart = parts.length > 1 ? parts[1] : '';
 
-                            // Handle descriptions that are purely observational (start with "Obs:")
-                            if (!obsPart && itemsPart.startsWith('Obs: ')) {
-                                obsPart = itemsPart.substring(5);
+                            // Clean description for observations column
+                            let obs = description;
+                            if (obs.startsWith('Obs: ')) obs = obs.substring(5);
+
+                            // If no resolved name, try to extract from description (legacy format)
+                            let procName = resolvedName;
+                            if (!procName && description) {
+                                const parts = description.split('\n\nObs: ');
+                                const itemsPart = parts[0];
+                                if (!itemsPart.startsWith('Obs:')) {
+                                    const lines = itemsPart.split('\n');
+                                    const procedureLines: string[] = [];
+                                    lines.forEach(line => {
+                                        const cleanLine = line.trim().replace(/^•\s*/, '');
+                                        if (!cleanLine || cleanLine.startsWith('Obs:')) return;
+                                        let sections = cleanLine.split(' | ');
+                                        if (sections.length < 3) sections = cleanLine.split(' - ');
+                                        if (sections.length >= 3) {
+                                            procedureLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+                                        } else {
+                                            procedureLines.push(cleanLine);
+                                        }
+                                    });
+                                    if (procedureLines.length > 0) {
+                                        procName = procedureLines.join(', ');
+                                        obs = parts.length > 1 ? parts[1] : '';
+                                    }
+                                }
                             }
 
-                            // Process procedure lines
-                            const lines = itemsPart.split('\n');
-                            const procedureLines: string[] = [];
-
-                            lines.forEach(line => {
-                                const cleanLine = line.trim().replace(/^•\s*/, '');
-                                if (!cleanLine || cleanLine.startsWith('Obs:')) return;
-
-                                let sections = cleanLine.split(' | ');
-                                if (sections.length < 3) {
-                                    sections = cleanLine.split(' - ');
-                                }
-
-                                if (sections.length >= 3) {
-                                    procedureLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
-                                } else {
-                                    procedureLines.push(cleanLine);
-                                }
-                            });
-
-                            // If only one procedure line, put obs in same row
-                            if (procedureLines.length <= 1) {
-                                return [`
-                                <tr>
-                                    <td class="date-col">${formatDate(p.date)}</td>
-                                    <td class="proc-col">${procedureLines[0] || '-'}</td>
-                                    <td class="obs-col">${obsPart || '-'}</td>
-                                </tr>
-                                `];
+                            // If we have a resolved name, use description as observations
+                            if (resolvedName) {
+                                obs = description.startsWith('Obs: ') ? description.substring(5) : description;
                             }
 
-                            // Multiple procedure lines - first row gets obs, others get empty obs
-                            return procedureLines.map((line, index) => `
+                            return `
                             <tr>
                                 <td class="date-col">${formatDate(p.date)}</td>
-                                <td class="proc-col">${line}</td>
-                                <td class="obs-col">${index === 0 ? (obsPart || '-') : '-'}</td>
+                                <td class="proc-col">${procName || '-'}</td>
+                                <td class="obs-col">${obs || '-'}</td>
                             </tr>
-                            `);
+                            `;
                         }).join('')}
                     </tbody>
                 </table>

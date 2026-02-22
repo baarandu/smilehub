@@ -224,7 +224,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const handleAddAllDefaults = async () => {
         try {
             setSaving(true);
-            for (const template of DEFAULT_TEMPLATES) {
+            const existingNames = templates.map(t => t.name.toLowerCase());
+            const toAdd = DEFAULT_TEMPLATES.filter(
+                dt => !existingNames.includes(dt.name.toLowerCase())
+            );
+            if (toAdd.length === 0) {
+                toast({ title: 'Todos os modelos já foram adicionados' });
+                return;
+            }
+            for (const template of toAdd) {
                 await documentTemplatesService.create(template);
             }
             toast({ title: 'Modelos padrão adicionados!' });
@@ -237,6 +245,11 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     };
 
     const handleAddDefaultTemplate = async (template: { name: string; content: string }) => {
+        const exists = templates.some(t => t.name.toLowerCase() === template.name.toLowerCase());
+        if (exists) {
+            toast({ title: 'Modelo já existe', variant: 'destructive' });
+            return;
+        }
         try {
             await documentTemplatesService.create(template);
             toast({ title: `"${template.name}" adicionado!` });
@@ -637,30 +650,39 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                                     </div>
                                 )}
 
-                                {/* Modelos pré-definidos - sempre visíveis */}
-                                <div className="space-y-2 pt-2 border-t">
-                                    <p className="text-sm text-gray-500 font-medium">Modelos pré-definidos:</p>
-                                    {DEFAULT_TEMPLATES.map((template, index) => (
-                                        <div
-                                            key={index}
-                                            className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100"
-                                        >
-                                            <div className="flex-1">
-                                                <p className="font-medium text-sm text-gray-700">{template.name}</p>
-                                                <p className="text-xs text-gray-400 line-clamp-1">
-                                                    {template.content.substring(0, 60)}...
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleAddDefaultTemplate(template)}
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </Button>
+                                {/* Modelos pré-definidos - só mostra os que ainda não foram adicionados */}
+                                {(() => {
+                                    const existingNames = templates.map(t => t.name.toLowerCase());
+                                    const available = DEFAULT_TEMPLATES.filter(
+                                        dt => !existingNames.includes(dt.name.toLowerCase())
+                                    );
+                                    if (available.length === 0) return null;
+                                    return (
+                                        <div className="space-y-2 pt-2 border-t">
+                                            <p className="text-sm text-gray-500 font-medium">Modelos pré-definidos:</p>
+                                            {available.map((template, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="flex items-center justify-between p-3 bg-gray-50 border rounded-lg hover:bg-gray-100"
+                                                >
+                                                    <div className="flex-1">
+                                                        <p className="font-medium text-sm text-gray-700">{template.name}</p>
+                                                        <p className="text-xs text-gray-400 line-clamp-1">
+                                                            {template.content.substring(0, 60)}...
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleAddDefaultTemplate(template)}
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>

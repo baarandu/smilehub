@@ -19,7 +19,6 @@ import {
   HelpCircle,
   Settings,
   Calculator,
-  Mic,
   Layers
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,13 +29,6 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { subscriptionService } from '@/services/subscription';
 import { planHasFeature, getFeaturesForPlan } from '@/lib/planFeatures';
 
-// Beta testers emails loaded from environment variable (comma-separated)
-// Example: VITE_AI_SECRETARY_BETA_EMAILS=email1@test.com,email2@test.com
-const AI_SECRETARY_ALLOWED_EMAILS = (import.meta.env.VITE_AI_SECRETARY_BETA_EMAILS || '')
-  .split(',')
-  .map((email: string) => email.trim().toLowerCase())
-  .filter(Boolean);
-
 interface AppLayoutProps {
   children: ReactNode;
 }
@@ -45,7 +37,6 @@ const navItems = [
   { to: '/inicio', icon: LayoutDashboard, label: 'Início' },
   { to: '/pacientes', icon: Users, label: 'Pacientes' },
   { to: '/agenda', icon: Calendar, label: 'Agenda' },
-  { to: '/consulta-voz', icon: Mic, label: 'Consulta por Voz' },
   { to: '/materiais', icon: Package, label: 'Materiais' },
   { to: '/protese', icon: Layers, label: 'Central de Prótese' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
@@ -77,9 +68,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       if (item.to === '/financeiro' || item.to === '/imposto-de-renda') {
         return isAdmin && planHasFeature(planFeatureKeys, 'financeiro');
       }
-      if (item.to === '/consulta-voz') {
-        return planHasFeature(planFeatureKeys, 'consulta_voz');
-      }
       if (item.to === '/materiais') {
         return planHasFeature(planFeatureKeys, 'estoque');
       }
@@ -90,13 +78,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     });
   }, [isAdmin, isDentist, planFeatureKeys]);
 
-  // Check if user has access to AI Secretary:
-  // 1. Has secretaria_ia feature in plan, OR
-  // 2. Is in the beta testers email list (fallback), OR
-  // 3. Is super admin
-  const hasAISecretaryAccess = planHasFeature(planFeatureKeys, 'secretaria_ia')
-    || (userEmail && AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase()))
-    || isSuperAdmin;
+  // AI Secretary: only visible for super admin while feature is under development
+  const hasAISecretaryAccess = isSuperAdmin;
 
   // Filter AI nav items based on role and plan features
   const filteredAiNavItems = useMemo(() => {

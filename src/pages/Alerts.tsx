@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
-import { subscriptionService } from '@/services/subscription';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,14 +21,6 @@ import { useNavigate } from 'react-router-dom';
 
 import { useReminders, useTemplates, useWhatsAppMessaging, AlertAccordion } from './alerts/index';
 
-// Beta testers emails loaded from environment variable
-const AI_SECRETARY_ALLOWED_EMAILS = (import.meta.env.VITE_AI_SECRETARY_BETA_EMAILS || '')
-  .split(',')
-  .map((email: string) => email.trim().toLowerCase())
-  .filter(Boolean);
-
-// Plan slugs that have access to AI Secretary
-const AI_SECRETARY_ALLOWED_PLANS = ['enterprise'];
 
 export default function Alerts() {
   const navigate = useNavigate();
@@ -71,12 +62,9 @@ export default function Alerts() {
   // AI Secretary Access Control
   const { clinicId } = useClinic();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [planSlug, setPlanSlug] = useState<string | null>(null);
 
-  const hasEnterprisePlan = planSlug && AI_SECRETARY_ALLOWED_PLANS.includes(planSlug.toLowerCase());
-  const isInBetaList = userEmail && AI_SECRETARY_ALLOWED_EMAILS.includes(userEmail.toLowerCase());
-  const hasAISecretaryAccess = hasEnterprisePlan || isInBetaList || isSuperAdmin;
+  // AI Secretary: only visible for super admin while feature is under development
+  const hasAISecretaryAccess = isSuperAdmin;
 
   // Persist accordion state
   useEffect(() => {
@@ -88,21 +76,11 @@ export default function Alerts() {
     reminders.loadReminders();
   }, []);
 
-  // Fetch subscription plan when clinicId is available
-  useEffect(() => {
-    if (clinicId) {
-      subscriptionService.getCurrentSubscription(clinicId).then(({ plan }) => {
-        setPlanSlug(plan?.slug || null);
-      }).catch(console.error);
-    }
-  }, [clinicId]);
-
-  // Check if user is super admin and get email
+  // Check if user is super admin
   useEffect(() => {
     const checkUserAccess = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUserEmail(user.email || '');
         const { data: profile } = await supabase
           .from('profiles')
           .select('is_super_admin')
