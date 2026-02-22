@@ -98,7 +98,23 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
     medications: sanitizeForDisplay(formData.medications) || null,
     medical_history: sanitizeForDisplay(formData.medicalHistory) || null,
     notes: sanitizeForDisplay(formData.notes) || null,
-  };
+    // Child patient fields
+    patient_type: formData.patientType || 'adult',
+    gender: formData.gender || null,
+    birthplace: formData.birthplace || null,
+    school: formData.school || null,
+    school_grade: formData.schoolGrade || null,
+    mother_name: formData.motherName || null,
+    mother_occupation: formData.motherOccupation || null,
+    mother_phone: formData.motherPhone || null,
+    father_name: formData.fatherName || null,
+    father_occupation: formData.fatherOccupation || null,
+    father_phone: formData.fatherPhone || null,
+    legal_guardian: formData.legalGuardian || null,
+    has_siblings: formData.hasSiblings || false,
+    siblings_count: formData.siblingsCount || null,
+    siblings_ages: formData.siblingsAges || null,
+  } as any;
 
   return createPatient(patient);
 }
@@ -148,7 +164,23 @@ export async function updatePatientFromForm(id: string, formData: PatientFormDat
     medications: sanitizeForDisplay(formData.medications) || null,
     medical_history: sanitizeForDisplay(formData.medicalHistory) || null,
     notes: sanitizeForDisplay(formData.notes) || null,
-  };
+    // Child patient fields
+    patient_type: formData.patientType || 'adult',
+    gender: formData.gender || null,
+    birthplace: formData.birthplace || null,
+    school: formData.school || null,
+    school_grade: formData.schoolGrade || null,
+    mother_name: formData.motherName || null,
+    mother_occupation: formData.motherOccupation || null,
+    mother_phone: formData.motherPhone || null,
+    father_name: formData.fatherName || null,
+    father_occupation: formData.fatherOccupation || null,
+    father_phone: formData.fatherPhone || null,
+    legal_guardian: formData.legalGuardian || null,
+    has_siblings: formData.hasSiblings || false,
+    siblings_count: formData.siblingsCount || null,
+    siblings_ages: formData.siblingsAges || null,
+  } as any;
 
   return updatePatient(id, patient);
 }
@@ -205,6 +237,7 @@ export async function toggleReturnAlert(patientId: string, active: boolean, days
 
 // Convert Patient to PatientFormData
 export function patientToFormData(patient: Patient): PatientFormData {
+  const p = patient as any;
   return {
     name: patient.name,
     phone: patient.phone,
@@ -225,5 +258,20 @@ export function patientToFormData(patient: Patient): PatientFormData {
     medications: patient.medications || '',
     medicalHistory: patient.medical_history || '',
     notes: patient.notes || '',
+    patientType: p.patient_type || 'adult',
+    gender: p.gender || '',
+    birthplace: p.birthplace || '',
+    school: p.school || '',
+    schoolGrade: p.school_grade || '',
+    motherName: p.mother_name || '',
+    motherOccupation: p.mother_occupation || '',
+    motherPhone: p.mother_phone || '',
+    fatherName: p.father_name || '',
+    fatherOccupation: p.father_occupation || '',
+    fatherPhone: p.father_phone || '',
+    legalGuardian: p.legal_guardian || '',
+    hasSiblings: p.has_siblings || false,
+    siblingsCount: p.siblings_count || '',
+    siblingsAges: p.siblings_ages || '',
   };
 }

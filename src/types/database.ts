@@ -3455,6 +3455,22 @@ export type PatientFormData = {
   medications: string
   medicalHistory: string
   notes: string
+  // Child patient (odontopediatria) fields
+  patientType: string
+  gender: string
+  birthplace: string
+  school: string
+  schoolGrade: string
+  motherName: string
+  motherOccupation: string
+  motherPhone: string
+  fatherName: string
+  fatherOccupation: string
+  fatherPhone: string
+  legalGuardian: string
+  hasSiblings: boolean
+  siblingsCount: string
+  siblingsAges: string
 }
 
 // Document Templates

@@ -2,16 +2,18 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl, TextInput, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle, Baby } from 'lucide-react-native';
 import { deletePatient, patientsService } from '../../src/services/patients';
-import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal, ProcedureViewModal } from '../../src/components/patients';
+import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal, ProcedureViewModal, NewChildAnamneseModal, ChildAnamneseSummaryModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
 import type { Anamnese, BudgetWithItems, Procedure, Exam } from '../../src/types/database';
+import type { ChildAnamnesis } from '../../src/types/childAnamnesis';
 import type { PJSource } from '../../src/types/incomeTax';
 import { usePatientData } from '../../src/hooks/usePatientData';
 import { usePatientPayments } from '../../src/hooks/usePatientPayments';
 import { usePatientHandlers } from '../../src/hooks/usePatientHandlers';
-import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab } from '../../src/components/patients/tabs';
+import { childAnamnesesService } from '../../src/services/childAnamneses';
+import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab, ChildAnamneseTab } from '../../src/components/patients/tabs';
 import { useClinic } from '../../src/contexts/ClinicContext';
 import { incomeTaxService } from '../../src/services/incomeTax';
 import * as Linking from 'expo-linking';
@@ -40,8 +42,8 @@ export default function PatientDetail() {
     }, [isSecretary]);
 
     const {
-        patient, anamneses, budgets, procedures, exams, loading,
-        loadPatient, loadAnamneses, loadBudgets, loadProcedures, loadExams,
+        patient, anamneses, childAnamneses, budgets, procedures, exams, loading,
+        loadPatient, loadAnamneses, loadChildAnamneses, loadBudgets, loadProcedures, loadExams,
     } = usePatientData(id);
 
     const { getAllPaymentItems, handleConfirmPayment, handleConfirmPaymentMultiple, getLocationRate } = usePatientPayments(budgets, patient, loadBudgets);
@@ -54,6 +56,10 @@ export default function PatientDetail() {
     const [showAnamneseModal, setShowAnamneseModal] = useState(false);
     const [showAnamneseSummaryModal, setShowAnamneseSummaryModal] = useState(false);
     const [summaryAnamnese, setSummaryAnamnese] = useState<Anamnese | null>(null);
+    const [showChildAnamneseModal, setShowChildAnamneseModal] = useState(false);
+    const [showChildAnamneseSummaryModal, setShowChildAnamneseSummaryModal] = useState(false);
+    const [selectedChildAnamnese, setSelectedChildAnamnese] = useState<ChildAnamnesis | null>(null);
+    const [summaryChildAnamnese, setSummaryChildAnamnese] = useState<ChildAnamnesis | null>(null);
     const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
     const [selectedBudget, setSelectedBudget] = useState<BudgetWithItems | null>(null);
@@ -84,13 +90,14 @@ export default function PatientDetail() {
         await Promise.all([
             loadPatient(),
             loadAnamneses(),
+            loadChildAnamneses(),
             loadBudgets(),
             loadProcedures(),
             loadExams(),
             incomeTaxService.getPJSources().then(setPjSources).catch(() => []),
         ]);
         setRefreshing(false);
-    }, [loadPatient, loadAnamneses, loadBudgets, loadProcedures, loadExams]);
+    }, [loadPatient, loadAnamneses, loadChildAnamneses, loadBudgets, loadProcedures, loadExams]);
 
     // Load PJ sources on mount
     useEffect(() => {
@@ -123,6 +130,18 @@ export default function PatientDetail() {
     const handleAddAnamnese = () => { setSelectedAnamnese(null); setShowAnamneseModal(true); };
     const handleEditAnamnese = (anamnese: Anamnese) => { setSelectedAnamnese(anamnese); setShowAnamneseModal(true); };
     const handleViewAnamnese = (anamnese: Anamnese) => { setSummaryAnamnese(anamnese); setShowAnamneseSummaryModal(true); };
+    const handleAddChildAnamnese = () => { setSelectedChildAnamnese(null); setShowChildAnamneseModal(true); };
+    const handleEditChildAnamnese = (anamnesis: ChildAnamnesis) => { setSelectedChildAnamnese(anamnesis); setShowChildAnamneseModal(true); };
+    const handleViewChildAnamnese = (anamnesis: ChildAnamnesis) => { setSummaryChildAnamnese(anamnesis); setShowChildAnamneseSummaryModal(true); };
+    const handleDeleteChildAnamnese = (anamnesis: ChildAnamnesis) => {
+        Alert.alert('Excluir Anamnese Infantil', 'Tem certeza que deseja excluir esta anamnese?', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Excluir', style: 'destructive', onPress: async () => {
+                try { await childAnamnesesService.delete(anamnesis.id); loadChildAnamneses(); }
+                catch (error) { console.error('Error deleting child anamnese:', error); Alert.alert('Erro', 'Não foi possível excluir a anamnese'); }
+            }},
+        ]);
+    };
     const handleAddBudget = () => { setSelectedBudget(null); setShowBudgetModal(true); };
     const handleEditBudget = (budget: BudgetWithItems) => { setSelectedBudget(budget); setShowBudgetModal(true); };
     const handleViewBudget = (budget: BudgetWithItems) => { setViewBudget(budget); setShowBudgetViewModal(true); };
@@ -314,7 +333,7 @@ export default function PatientDetail() {
                     <View className="flex-row bg-gray-100 rounded-xl p-1">
                         {availableTabs.map((t) => (
                             <TouchableOpacity key={t} onPress={() => setActiveTab(t)} className={`flex-1 py-4 rounded-lg items-center ${activeTab === t ? 'bg-white' : ''}`}>
-                                {t === 'anamnese' && <ClipboardList size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
+                                {t === 'anamnese' && ((patient as any).patient_type === 'child' ? <Baby size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} /> : <ClipboardList size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />)}
                                 {t === 'budgets' && <Calculator size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
                                 {t === 'procedures' && <Hospital size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
                                 {t === 'exams' && <FileText size={18} color={activeTab === t ? '#b94a48' : '#6B7280'} />}
@@ -328,7 +347,11 @@ export default function PatientDetail() {
                 </View>
 
                 {/* Tab Contents */}
-                {activeTab === 'anamnese' && !isSecretary && <AnamneseTab anamneses={anamneses} onAdd={handleAddAnamnese} onEdit={handleEditAnamnese} onDelete={handleDeleteAnamnese} onView={handleViewAnamnese} />}
+                {activeTab === 'anamnese' && !isSecretary && (
+                    (patient as any).patient_type === 'child'
+                        ? <ChildAnamneseTab anamneses={childAnamneses} onAdd={handleAddChildAnamnese} onEdit={handleEditChildAnamnese} onDelete={handleDeleteChildAnamnese} onView={handleViewChildAnamnese} />
+                        : <AnamneseTab anamneses={anamneses} onAdd={handleAddAnamnese} onEdit={handleEditAnamnese} onDelete={handleDeleteAnamnese} onView={handleViewAnamnese} />
+                )}
                 {activeTab === 'budgets' && <BudgetsTab budgets={budgets} onAdd={handleAddBudget} onEdit={handleEditBudget} onDelete={handleDeleteBudget} onView={handleViewBudget} />}
                 {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onView={handleViewProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
                 {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} />}
@@ -362,6 +385,8 @@ export default function PatientDetail() {
             <EditPatientModal visible={showEditModal} patient={patient} onClose={() => setShowEditModal(false)} onSuccess={loadPatient} />
             <NewAnamneseModal visible={showAnamneseModal} patientId={patient.id} onClose={() => { setShowAnamneseModal(false); setSelectedAnamnese(null); }} onSuccess={loadAnamneses} anamnese={selectedAnamnese} />
             <AnamneseSummaryModal visible={showAnamneseSummaryModal} anamnese={summaryAnamnese} onClose={() => { setShowAnamneseSummaryModal(false); setSummaryAnamnese(null); }} />
+            <NewChildAnamneseModal visible={showChildAnamneseModal} patientId={patient.id} onClose={() => { setShowChildAnamneseModal(false); setSelectedChildAnamnese(null); }} onSuccess={loadChildAnamneses} anamnesis={selectedChildAnamnese} />
+            <ChildAnamneseSummaryModal visible={showChildAnamneseSummaryModal} anamnesis={summaryChildAnamnese} onClose={() => { setShowChildAnamneseSummaryModal(false); setSummaryChildAnamnese(null); }} />
             <NewBudgetModal visible={showBudgetModal} patientId={patient.id} onClose={() => { setShowBudgetModal(false); setSelectedBudget(null); }} onSuccess={loadBudgets} budget={selectedBudget} />
             <PaymentMethodModal
                 visible={showPaymentModal}

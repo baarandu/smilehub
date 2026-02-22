@@ -14,6 +14,7 @@ interface EditPatientDialogProps {
 export function EditPatientDialog({ patient, open, onClose, onSuccess }: EditPatientDialogProps) {
   const updatePatient = useUpdatePatient();
 
+  const p = patient as any;
   const initialData: Partial<PatientFormData> = {
     name: patient.name,
     phone: patient.phone,
@@ -34,6 +35,21 @@ export function EditPatientDialog({ patient, open, onClose, onSuccess }: EditPat
     medications: patient.medications || '',
     medicalHistory: patient.medical_history || '',
     notes: patient.notes || '',
+    patientType: p.patient_type || 'adult',
+    gender: p.gender || '',
+    birthplace: p.birthplace || '',
+    school: p.school || '',
+    schoolGrade: p.school_grade || '',
+    motherName: p.mother_name || '',
+    motherOccupation: p.mother_occupation || '',
+    motherPhone: p.mother_phone || '',
+    fatherName: p.father_name || '',
+    fatherOccupation: p.father_occupation || '',
+    fatherPhone: p.father_phone || '',
+    legalGuardian: p.legal_guardian || '',
+    hasSiblings: p.has_siblings || false,
+    siblingsCount: p.siblings_count || '',
+    siblingsAges: p.siblings_ages || '',
   };
 
   const handleSubmit = async (data: PatientFormData) => {

@@ -8,3 +8,5 @@ export { NewProcedureModal } from './NewProcedureModal';
 export { ProcedureViewModal } from './ProcedureViewModal';
 export { NewExamModal } from './NewExamModal';
 export { ReportGenerationModal } from './ReportGenerationModal';
+export { NewChildAnamneseModal } from './NewChildAnamneseModal';
+export { ChildAnamneseSummaryModal } from './ChildAnamneseSummaryModal';

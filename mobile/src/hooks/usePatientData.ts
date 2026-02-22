@@ -6,13 +6,16 @@ import { appointmentsService } from '../services/appointments';
 import { anamnesesService } from '../services/anamneses';
 import { budgetsService } from '../services/budgets';
 import { proceduresService } from '../services/procedures';
+import { childAnamnesesService } from '../services/childAnamneses';
 import type { Patient, AppointmentWithPatient, Anamnese, BudgetWithItems, Procedure, Exam } from '../types/database';
+import type { ChildAnamnesis } from '../types/childAnamnesis';
 
 interface UsePatientDataReturn {
     // Data
     patient: Patient | null;
     appointments: AppointmentWithPatient[];
     anamneses: Anamnese[];
+    childAnamneses: ChildAnamnesis[];
     budgets: BudgetWithItems[];
     procedures: Procedure[];
     exams: Exam[];
@@ -22,6 +25,7 @@ interface UsePatientDataReturn {
     loadPatient: () => Promise<void>;
     loadAppointments: () => Promise<void>;
     loadAnamneses: () => Promise<void>;
+    loadChildAnamneses: () => Promise<void>;
     loadBudgets: () => Promise<void>;
     loadProcedures: () => Promise<void>;
     loadExams: () => Promise<void>;
@@ -33,6 +37,7 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
     const [patient, setPatient] = useState<Patient | null>(null);
     const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
     const [anamneses, setAnamneses] = useState<Anamnese[]>([]);
+    const [childAnamneses, setChildAnamneses] = useState<ChildAnamnesis[]>([]);
     const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
     const [procedures, setProcedures] = useState<Procedure[]>([]);
     const [exams, setExams] = useState<Exam[]>([]);
@@ -77,6 +82,16 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
         }
     }, [patientId]);
 
+    const loadChildAnamneses = useCallback(async () => {
+        if (!patientId) return;
+        try {
+            const data = await childAnamnesesService.getByPatient(patientId);
+            if (isMounted.current) setChildAnamneses(data);
+        } catch (error) {
+            console.error('Error loading child anamneses:', error);
+        }
+    }, [patientId]);
+
     const loadBudgets = useCallback(async () => {
         if (!patientId) return;
         try {
@@ -112,11 +127,12 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
             loadPatient(),
             loadAppointments(),
             loadAnamneses(),
+            loadChildAnamneses(),
             loadBudgets(),
             loadProcedures(),
             loadExams(),
         ]);
-    }, [loadPatient, loadAppointments, loadAnamneses, loadBudgets, loadProcedures, loadExams]);
+    }, [loadPatient, loadAppointments, loadAnamneses, loadChildAnamneses, loadBudgets, loadProcedures, loadExams]);
 
     // Initial load
     useEffect(() => {
@@ -129,6 +145,7 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
         patient,
         appointments,
         anamneses,
+        childAnamneses,
         budgets,
         procedures,
         exams,
@@ -136,6 +153,7 @@ export function usePatientData(patientId: string | undefined): UsePatientDataRet
         loadPatient,
         loadAppointments,
         loadAnamneses,
+        loadChildAnamneses,
         loadBudgets,
         loadProcedures,
         loadExams,

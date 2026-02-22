@@ -14,6 +14,7 @@ import {
   ExamsTab,
   EditPatientDialog,
   AnamneseTab,
+  ChildAnamneseTab,
   BudgetsTab
 } from '@/components/patients';
 import { SignaturesPanel } from '@/components/patients/SignaturesPanel';
@@ -118,7 +119,7 @@ export default function PatientDetail() {
           )}
           <TabsTrigger value="budgets" className="gap-2">
             <Calculator className="w-4 h-4" />
-            <span className="hidden sm:inline">Orçamentos</span>
+            <span className="hidden sm:inline">Plano de Tratamento</span>
           </TabsTrigger>
           <TabsTrigger value="procedures" className="gap-2">
             <Hospital className="w-4 h-4" />
@@ -136,7 +137,10 @@ export default function PatientDetail() {
 
         {!isSecretary && (
           <TabsContent value="anamnese" className="mt-6">
-            <AnamneseTab patientId={patient.id} />
+            {(patient as any).patient_type === 'child'
+              ? <ChildAnamneseTab patientId={patient.id} />
+              : <AnamneseTab patientId={patient.id} />
+            }
           </TabsContent>
         )}
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw, AlertTriangle } from 'lucide-react-native';
+import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw, AlertTriangle, Baby } from 'lucide-react-native';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { budgetsService } from '../../src/services/budgets';
 import { DocumentsModal } from '../../components/DocumentsModal';
@@ -54,6 +54,21 @@ const emptyForm: PatientFormData = {
     medications: '',
     medicalHistory: '',
     notes: '',
+    patientType: 'adult',
+    gender: '',
+    birthplace: '',
+    school: '',
+    schoolGrade: '',
+    motherName: '',
+    motherOccupation: '',
+    motherPhone: '',
+    fatherName: '',
+    fatherOccupation: '',
+    fatherPhone: '',
+    legalGuardian: '',
+    hasSiblings: false,
+    siblingsCount: '',
+    siblingsAges: '',
 };
 
 export default function Patients() {
@@ -141,8 +156,17 @@ export default function Patients() {
     }, [pendingBudgets]);
 
     const handleSave = async () => {
-        if (!form.name || !form.phone) {
-            alert('Nome e telefone são obrigatórios');
+        if (!form.name) {
+            Alert.alert('Erro', 'Nome é obrigatório');
+            return;
+        }
+        if (form.patientType === 'child') {
+            if (!form.motherPhone && !form.fatherPhone) {
+                Alert.alert('Erro', 'Informe o telefone de pelo menos um responsável (mãe ou pai)');
+                return;
+            }
+        } else if (!form.phone) {
+            Alert.alert('Erro', 'Nome e telefone são obrigatórios');
             return;
         }
         try {
@@ -399,12 +423,37 @@ export default function Patients() {
 
 
                         <ScrollView className="flex-1 px-4 py-4">
-                            <View className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-6">
+                            <View className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-4">
                                 <Text className="text-blue-800 text-sm">
-                                    Campos marcados com <Text className="font-bold">*</Text> são obrigatórios.
+                                    Campos marcados com <Text className="font-bold">*</Text> são obrigatórios
+                                    {form.patientType === 'child'
+                                        ? ' (Nome e Telefone de pelo menos um responsável).'
+                                        : ' (Nome e Telefone).'}
                                 </Text>
                             </View>
 
+                            {/* Patient Type Selector */}
+                            <View className="flex-row bg-gray-100 rounded-xl p-1 mb-6">
+                                <TouchableOpacity
+                                    onPress={() => setForm({ ...form, patientType: 'adult' })}
+                                    className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-lg"
+                                    style={form.patientType !== 'child' ? { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
+                                >
+                                    <Users size={16} color={form.patientType !== 'child' ? '#374151' : '#9CA3AF'} />
+                                    <Text className={form.patientType !== 'child' ? 'font-medium text-gray-900' : 'text-gray-400'}>Adulto</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setForm({ ...form, patientType: 'child' })}
+                                    className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-lg"
+                                    style={form.patientType === 'child' ? { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : undefined}
+                                >
+                                    <Baby size={16} color={form.patientType === 'child' ? '#374151' : '#9CA3AF'} />
+                                    <Text className={form.patientType === 'child' ? 'font-medium text-gray-900' : 'text-gray-400'}>Criança</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {form.patientType !== 'child' ? (
+                            /* ===== ADULT FORM ===== */
                             <View className="gap-6">
                                 {/* Pessoal */}
                                 <View className="gap-4">
@@ -612,6 +661,250 @@ export default function Patients() {
                                     </View>
                                 </View>
                             </View>
+                            ) : (
+                            /* ===== CHILD FORM ===== */
+                            <View className="gap-6">
+                                {/* Identificação */}
+                                <View className="gap-4">
+                                    <Text className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-2">
+                                        Identificação da Criança
+                                    </Text>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Nome completo *</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome da criança"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.name}
+                                            onChangeText={(text) => setForm({ ...form, name: text })}
+                                        />
+                                    </View>
+
+                                    <View className="flex-row gap-4">
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Data de Nascimento</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="DD/MM/AAAA"
+                                                placeholderTextColor="#9CA3AF"
+                                                keyboardType="numeric"
+                                                maxLength={10}
+                                                value={form.birthDate}
+                                                onChangeText={(text) => setForm({ ...form, birthDate: formatDateInput(text) })}
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Sexo</Text>
+                                            <View className="flex-row bg-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                                                <TouchableOpacity
+                                                    onPress={() => setForm({ ...form, gender: 'masculino' })}
+                                                    className={`flex-1 py-3 items-center ${form.gender === 'masculino' ? 'bg-[#b94a48]' : ''}`}
+                                                >
+                                                    <Text className={form.gender === 'masculino' ? 'text-white font-medium text-sm' : 'text-gray-500 text-sm'}>Masc.</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={() => setForm({ ...form, gender: 'feminino' })}
+                                                    className={`flex-1 py-3 items-center ${form.gender === 'feminino' ? 'bg-[#b94a48]' : ''}`}
+                                                >
+                                                    <Text className={form.gender === 'feminino' ? 'text-white font-medium text-sm' : 'text-gray-500 text-sm'}>Fem.</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    <View className="flex-row gap-4">
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">CPF</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="000.000..."
+                                                placeholderTextColor="#9CA3AF"
+                                                keyboardType="numeric"
+                                                maxLength={14}
+                                                value={form.cpf || ''}
+                                                onChangeText={(text) => setForm({ ...form, cpf: formatCPF(text) })}
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Naturalidade</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="São Paulo - SP"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.birthplace || ''}
+                                                onChangeText={(text) => setForm({ ...form, birthplace: text })}
+                                            />
+                                        </View>
+                                    </View>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Endereço</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Rua, número, bairro, cidade - UF"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.address || ''}
+                                            onChangeText={(text) => setForm({ ...form, address: text })}
+                                        />
+                                    </View>
+
+                                    <View className="flex-row gap-4">
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Escola / Creche</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Nome da escola"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.school || ''}
+                                                onChangeText={(text) => setForm({ ...form, school: text })}
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Série / Ano</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Ex: 3º ano"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.schoolGrade || ''}
+                                                onChangeText={(text) => setForm({ ...form, schoolGrade: text })}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Mãe */}
+                                <View className="gap-4">
+                                    <Text className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-2">
+                                        Mãe
+                                    </Text>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Nome</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome da mãe"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.motherName || ''}
+                                            onChangeText={(text) => setForm({ ...form, motherName: text })}
+                                        />
+                                    </View>
+
+                                    <View className="flex-row gap-4">
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Profissão</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Profissão"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.motherOccupation || ''}
+                                                onChangeText={(text) => setForm({ ...form, motherOccupation: text })}
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Telefone {!form.fatherPhone ? '*' : ''}</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="(11) 99999-9999"
+                                                placeholderTextColor="#9CA3AF"
+                                                keyboardType="phone-pad"
+                                                value={form.motherPhone || ''}
+                                                onChangeText={(text) => setForm({ ...form, motherPhone: formatPhone(text) })}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Pai */}
+                                <View className="gap-4">
+                                    <Text className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-2">
+                                        Pai
+                                    </Text>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Nome</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome do pai"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.fatherName || ''}
+                                            onChangeText={(text) => setForm({ ...form, fatherName: text })}
+                                        />
+                                    </View>
+
+                                    <View className="flex-row gap-4">
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Profissão</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Profissão"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.fatherOccupation || ''}
+                                                onChangeText={(text) => setForm({ ...form, fatherOccupation: text })}
+                                            />
+                                        </View>
+                                        <View className="flex-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Telefone {!form.motherPhone ? '*' : ''}</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="(11) 99999-9999"
+                                                placeholderTextColor="#9CA3AF"
+                                                keyboardType="phone-pad"
+                                                value={form.fatherPhone || ''}
+                                                onChangeText={(text) => setForm({ ...form, fatherPhone: formatPhone(text) })}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Responsável Legal */}
+                                <View className="gap-4">
+                                    <Text className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-2">
+                                        Responsável Legal
+                                    </Text>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Responsável (se diferente dos pais)</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome do responsável legal"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.legalGuardian || ''}
+                                            onChangeText={(text) => setForm({ ...form, legalGuardian: text })}
+                                        />
+                                    </View>
+                                </View>
+
+                                {/* Plano de Saúde */}
+                                <View className="gap-4">
+                                    <Text className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-2">
+                                        Plano de Saúde
+                                    </Text>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Convênio</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome do convênio"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.healthInsurance || ''}
+                                            onChangeText={(text) => setForm({ ...form, healthInsurance: text })}
+                                        />
+                                    </View>
+
+                                    <View>
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Número da Carteirinha</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="00000000"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={form.healthInsuranceNumber || ''}
+                                            onChangeText={(text) => setForm({ ...form, healthInsuranceNumber: text })}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                            )}
 
                             <View className="h-8" />
                         </ScrollView>

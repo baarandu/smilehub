@@ -83,7 +83,23 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
     medications: sanitizeForDisplay(formData.medications) || null,
     medical_history: sanitizeForDisplay(formData.medicalHistory) || null,
     notes: sanitizeForDisplay(formData.notes) || null,
-  };
+    // Child patient fields
+    patient_type: formData.patientType || 'adult',
+    gender: formData.gender || null,
+    birthplace: formData.birthplace || null,
+    school: formData.school || null,
+    school_grade: formData.schoolGrade || null,
+    mother_name: formData.motherName || null,
+    mother_occupation: formData.motherOccupation || null,
+    mother_phone: formData.motherPhone || null,
+    father_name: formData.fatherName || null,
+    father_occupation: formData.fatherOccupation || null,
+    father_phone: formData.fatherPhone || null,
+    legal_guardian: formData.legalGuardian || null,
+    has_siblings: formData.hasSiblings || false,
+    siblings_count: formData.siblingsCount || null,
+    siblings_ages: formData.siblingsAges || null,
+  } as any;
 
   return createPatient(patient);
 }

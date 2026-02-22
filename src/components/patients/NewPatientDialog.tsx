@@ -21,7 +21,16 @@ export function NewPatientDialog({ onAdd, isLoading }: NewPatientDialogProps) {
   const [open, setOpen] = useState(false);
 
   const handleSubmit = async (formData: PatientFormData) => {
-    if (!formData.name || !formData.phone) {
+    if (!formData.name) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    if (formData.patientType === 'child') {
+      if (!formData.motherPhone && !formData.fatherPhone) {
+        toast.error('Informe o telefone de pelo menos um responsável (mãe ou pai)');
+        return;
+      }
+    } else if (!formData.phone) {
       toast.error('Nome e telefone são obrigatórios');
       return;
     }
