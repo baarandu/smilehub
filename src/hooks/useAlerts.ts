@@ -22,6 +22,24 @@ export function useProsthesisSchedulingAlerts() {
     });
 }
 
+export function useImportantReturnAlerts() {
+    return useQuery({
+        queryKey: ['alerts', 'important-returns'],
+        queryFn: async () => {
+            const { supabase } = await import('@/lib/supabase');
+            const { data, error } = await supabase
+                .from('patients')
+                .select('id, name, phone, return_alert_date')
+                .eq('return_alert_flag', true)
+                .not('return_alert_date', 'is', null)
+                .order('return_alert_date', { ascending: true });
+
+            if (error) throw error;
+            return (data || []) as { id: string; name: string; phone: string; return_alert_date: string }[];
+        },
+    });
+}
+
 export function useDismissAlert() {
     const queryClient = useQueryClient();
 

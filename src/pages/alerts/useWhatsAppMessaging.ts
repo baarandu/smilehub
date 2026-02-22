@@ -19,13 +19,8 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
 
     const checkWhatsappStatus = useCallback(async () => {
         try {
-            const isHealthy = await evolutionApi.healthCheck();
-            if (!isHealthy) {
-                setWhatsappConnected(false);
-                return;
-            }
-            const state = await evolutionApi.getConnectionState();
-            setWhatsappConnected(state.instance?.state === 'open');
+            const result = await evolutionApi.getStatus();
+            setWhatsappConnected(result.status === 'connected');
         } catch {
             setWhatsappConnected(false);
         }
@@ -61,7 +56,7 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
             const messageId = `${cleanPhone}-${Date.now()}`;
             setIsSendingWhatsapp(messageId);
             try {
-                await evolutionApi.sendText(cleanPhone, message);
+                await evolutionApi.sendTest(cleanPhone, message);
                 toast.success('Mensagem enviada via WhatsApp!');
 
                 if (alertInfo) {
@@ -114,7 +109,7 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
             const messageId = `${cleanPhone}-${Date.now()}`;
             setIsSendingWhatsapp(messageId);
             try {
-                await evolutionApi.sendText(cleanPhone, message);
+                await evolutionApi.sendTest(cleanPhone, message);
                 toast.success(`Mensagem enviada para ${firstName}!`);
             } catch (error) {
                 console.error('Error sending WhatsApp:', error);
