@@ -1,0 +1,401 @@
+import { useState, useEffect } from 'react';
+import { Calendar, Bell, FileText, AlertTriangle, HeartPulse, CheckCircle } from 'lucide-react';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
+import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
+import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpensesChart';
+import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
+import { BudgetStatusChart } from '@/components/dashboard-preview/BudgetStatusChart';
+import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
+import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
+import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
+import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
+import { useBirthdayAlerts, useProcedureReminders, useImportantReturnAlerts } from '@/hooks/useAlerts';
+import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePendingReturns';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import { budgetsService } from '@/services/budgets';
+import { remindersService } from '@/services/reminders';
+import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
+
+export default function DashboardPreview() {
+  const navigate = useNavigate();
+  const { data: analytics, isLoading } = useDashboardAnalytics();
+
+  // Same hooks as current Dashboard for the 5 top cards
+  const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
+  const { data: todayCount, isLoading: loadingTodayCount } = useTodayAppointmentsCount();
+  const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
+  const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
+  const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
+  const { data: importantReturns, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
+  const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
+  const { data: pendingReturnsList, isLoading: loadingPendingList, refetch: refetchPendingReturns } = usePendingReturnsList();
+  const markCompleted = useMarkProcedureCompleted();
+
+  // Reminders
+  const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+  const [loadingReminders, setLoadingReminders] = useState(true);
+
+  // Pending Budgets
+  const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
+  const [loadingBudgets, setLoadingBudgets] = useState(true);
+
+  // Modals
+  const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
+  const [showBudgetsModal, setShowBudgetsModal] = useState(false);
+  const [showImportantReturnsModal, setShowImportantReturnsModal] = useState(false);
+
+  useEffect(() => {
+    remindersService.getActiveCount()
+      .then(setActiveRemindersCount)
+      .catch(() => {})
+      .finally(() => setLoadingReminders(false));
+
+    budgetsService.getPendingPatientsCount()
+      .then(setPendingBudgetsCount)
+      .catch(() => {})
+      .finally(() => setLoadingBudgets(false));
+  }, []);
+
+  const isLoadingAlerts = loadingReturns || loadingBirthdays || loadingProcedures;
+
+  const recentAlerts: RecentAlert[] = [
+    ...(birthdayAlerts || []).map(a => ({
+      id: `b-${a.patient.id}`,
+      type: 'birthday' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: 'Aniversário hoje',
+      urgency: 'urgent' as const,
+    })),
+    ...(procedureAlerts || []).map(a => ({
+      id: `p-${a.patient.id}`,
+      type: 'procedure_return' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: `${a.daysSince} dias sem vir`,
+      urgency: 'urgent' as const,
+    })),
+    ...(returnAlerts || []).map(a => ({
+      id: `r-${a.patient_id}`,
+      type: 'scheduled' as const,
+      patientName: a.patient_name,
+      patientPhone: a.phone,
+      date: a.suggested_return_date,
+      subtitle: `Retorno em ${a.days_until_return} dias`,
+      urgency: (a.days_until_return <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal',
+    })),
+  ].slice(0, 6);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Dashboard Analytics</h1>
+        <p className="text-muted-foreground mt-1">Visão geral da clínica</p>
+      </div>
+
+      {/* Stats Cards — same 5 as current Dashboard */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {loadingReminders ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : (
+          <div onClick={() => navigate('/alertas')} className="cursor-pointer">
+            <StatsCard
+              title="Lembretes Ativos"
+              value={activeRemindersCount}
+              icon={<Bell className="w-6 h-6" />}
+              variant="primary"
+            />
+          </div>
+        )}
+        {loadingTodayCount ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : (
+          <StatsCard
+            title="Consultas Hoje"
+            value={todayCount || 0}
+            icon={<Calendar className="w-6 h-6" />}
+            variant="success"
+          />
+        )}
+        {loadingPending ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : (
+          <div onClick={() => setShowPendingReturnsModal(true)} className="cursor-pointer">
+            <StatsCard
+              title="Retornos Pendentes"
+              value={pendingReturnsList?.length || pendingReturns || 0}
+              icon={<AlertTriangle className="w-6 h-6" />}
+              variant="warning"
+            />
+          </div>
+        )}
+        {loadingBudgets ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : (
+          <div onClick={() => setShowBudgetsModal(true)} className="cursor-pointer">
+            <StatsCard
+              title="Orçamentos Pendentes"
+              value={pendingBudgetsCount}
+              icon={<FileText className="w-6 h-6" />}
+              variant="default"
+            />
+          </div>
+        )}
+        {loadingImportantReturns ? (
+          <Skeleton className="h-32 rounded-xl" />
+        ) : (
+          <div onClick={() => setShowImportantReturnsModal(true)} className="cursor-pointer">
+            <StatsCard
+              title="Retorno Importante"
+              value={importantReturns?.length || 0}
+              icon={<HeartPulse className="w-6 h-6" />}
+              variant="warning"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Today Appointments + Alerts */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <TodayAppointments
+          appointments={todayAppointments || []}
+          isLoading={loadingAppointments}
+        />
+        <RecentAlertsList
+          alerts={recentAlerts}
+          isLoading={isLoadingAlerts}
+        />
+      </div>
+
+      {/* Charts Row 1: Revenue + Weekly */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <RevenueExpensesChart />
+        </div>
+        <div>
+          <WeeklyAppointmentsChart />
+        </div>
+      </div>
+
+      {/* Charts Row 2: Budgets + Prosthesis */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {isLoading ? (
+          <>
+            <Skeleton className="h-[380px] rounded-xl" />
+            <Skeleton className="h-[380px] rounded-xl" />
+          </>
+        ) : (
+          <>
+            <BudgetStatusChart data={analytics?.budgetsByStatus || []} />
+            <ProsthesisStatusChart data={analytics?.prosthesisByStatus || []} />
+          </>
+        )}
+      </div>
+
+      {/* Pending Budgets Modal */}
+      <PendingBudgetsDialog
+        open={showBudgetsModal}
+        onClose={() => {
+          setShowBudgetsModal(false);
+          budgetsService.getPendingPatientsCount().then(setPendingBudgetsCount).catch(() => {});
+        }}
+      />
+
+      {/* Pending Returns Modal */}
+      <Dialog open={showPendingReturnsModal} onOpenChange={setShowPendingReturnsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+              Retornos Pendentes ({pendingReturnsList?.length || 0})
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-4">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-lg text-sm border border-amber-100 mb-4">
+              <p className="font-semibold mb-1">Como funciona esta lista?</p>
+              Ela exibe procedimentos que estão <strong>Em andamento</strong> mas não tiveram nenhuma atualização nos últimos <strong>30 dias</strong>.
+              O objetivo é lembrar de pacientes que podem ter "sumido" antes de concluir o tratamento.
+            </div>
+            {loadingPendingList ? (
+              <div className="py-8 text-center">
+                <Skeleton className="h-20 w-full rounded-lg" />
+              </div>
+            ) : (pendingReturnsList || []).length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
+                Nenhum tratamento com retorno pendente
+              </div>
+            ) : (
+              (pendingReturnsList || []).map(item => (
+                <div
+                  key={item.procedure.id}
+                  className="p-4 border rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{item.patient?.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">{item.procedure.description}</p>
+                    </div>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                      {item.daysSinceUpdate} dias
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t">
+                    <div className="flex gap-2">
+                      {item.patient?.phone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          onClick={() => {
+                            const phone = item.patient.phone.replace(/\D/g, '');
+                            const message = encodeURIComponent(`Olá ${item.patient.name}, tudo bem? Estamos entrando em contato sobre seu tratamento.`);
+                            window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                          </svg>
+                          Mensagem
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setShowPendingReturnsModal(false);
+                          navigate('/agenda');
+                        }}
+                      >
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Agendar
+                      </Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={async () => {
+                        await markCompleted.mutateAsync(item.procedure.id);
+                        refetchPendingReturns();
+                      }}
+                      disabled={markCompleted.isPending}
+                    >
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Marcar OK
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Important Returns Modal */}
+      <Dialog open={showImportantReturnsModal} onOpenChange={setShowImportantReturnsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HeartPulse className="w-5 h-5 text-amber-600" />
+              Retornos Importantes ({importantReturns?.length || 0})
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-4">
+            <div className="bg-amber-50 text-amber-800 p-4 rounded-lg text-sm border border-amber-100 mb-4">
+              <p className="font-semibold mb-1">O que é esta lista?</p>
+              Pacientes sinalizados manualmente com <strong>retorno importante</strong> e suas respectivas datas de retorno.
+            </div>
+            {(importantReturns || []).length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg">
+                Nenhum paciente sinalizado com retorno importante
+              </div>
+            ) : (
+              (importantReturns || []).map(patient => {
+                const returnDate = new Date(patient.return_alert_date + 'T00:00:00');
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = diffDays < 0;
+                const isToday = diffDays === 0;
+
+                return (
+                  <div
+                    key={patient.id}
+                    className="p-4 border rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setShowImportantReturnsModal(false);
+                      navigate(`/pacientes/${patient.id}`);
+                    }}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{patient.name}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Retorno: {returnDate.toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        isOverdue
+                          ? 'bg-red-100 text-red-700'
+                          : isToday
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {isOverdue
+                          ? `${Math.abs(diffDays)} dia${Math.abs(diffDays) !== 1 ? 's' : ''} atrasado`
+                          : isToday
+                            ? 'Hoje'
+                            : `em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+                    {patient.phone && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const phone = patient.phone.replace(/\D/g, '');
+                            const message = encodeURIComponent(`Olá ${patient.name}, tudo bem? Estamos entrando em contato sobre seu retorno.`);
+                            window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                          }}
+                        >
+                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                          </svg>
+                          Mensagem
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowImportantReturnsModal(false);
+                            navigate('/agenda');
+                          }}
+                        >
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Agendar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
