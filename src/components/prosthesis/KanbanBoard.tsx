@@ -314,27 +314,27 @@ export function KanbanBoard() {
                               {order.tooth_numbers?.join(', ')}
                             </p>
                             {order.status === 'in_clinic' && (
-                              <div className="mt-1.5 flex flex-col gap-1.5">
+                              <div className="mt-1.5 flex gap-1.5">
                                 <div
-                                  className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
+                                  className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
                                   }}
                                 >
-                                  <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                  <span className="text-[10px] font-medium text-amber-700">Agendar com paciente</span>
+                                  <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+                                  <span className="text-[9px] font-medium text-amber-700">Agendar</span>
                                 </div>
                                 {order.patient_phone && (
                                   <a
                                     href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-green-100 transition-colors"
+                                    className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <MessageCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                                    <span className="text-[10px] font-medium text-green-700">WhatsApp do paciente</span>
+                                    <MessageCircle className="w-3 h-3 text-green-600 shrink-0" />
+                                    <span className="text-[9px] font-medium text-green-700">WhatsApp</span>
                                   </a>
                                 )}
                               </div>
