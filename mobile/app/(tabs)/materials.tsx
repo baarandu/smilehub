@@ -273,6 +273,34 @@ export default function Materials() {
         }
     };
 
+    const handleDeleteInvoice = async (orderId: string) => {
+        try {
+            const order = [...pendingOrders, ...historyOrders].find(o => o.id === orderId);
+            if (!order?.invoice_url) return;
+
+            const match = order.invoice_url.match(/fiscal-documents\/(.+)$/);
+            if (match) {
+                await supabase.storage.from('fiscal-documents').remove([match[1]]);
+            }
+
+            await (supabase.from('shopping_orders') as any)
+                .update({ invoice_url: null })
+                .eq('id', orderId);
+
+            if (selectedOrder?.id === orderId) {
+                setSelectedOrder({ ...selectedOrder, invoice_url: null });
+            }
+            if (currentOrderId === orderId) {
+                setInvoiceUrl(null);
+            }
+            loadOrders();
+            Alert.alert('Sucesso', 'Nota fiscal excluída');
+        } catch (error) {
+            console.error('Error deleting invoice:', error);
+            Alert.alert('Erro', 'Falha ao excluir nota fiscal');
+        }
+    };
+
     const handleOpenOrder = (order: ShoppingOrder) => {
         setItems(order.items);
         setCurrentOrderId(order.id);
@@ -818,6 +846,7 @@ export default function Materials() {
                 }}
                 order={selectedOrder}
                 onReopenOrder={handleReopenOrder}
+                onDeleteInvoice={handleDeleteInvoice}
                 hasExpense={hasExpense}
                 checkingExpense={checkingExpense}
             />

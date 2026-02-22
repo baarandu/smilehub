@@ -1,4 +1,4 @@
-import { Receipt, ExternalLink } from 'lucide-react';
+import { Receipt, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingOrder } from '@/types/materials';
@@ -8,12 +8,14 @@ interface OrderDetailDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     order: ShoppingOrder | null;
+    onDeleteInvoice?: (orderId: string) => void;
 }
 
 export function OrderDetailDialog({
     open,
     onOpenChange,
-    order
+    order,
+    onDeleteInvoice
 }: OrderDetailDialogProps) {
     if (!order) return null;
 
@@ -59,10 +61,27 @@ export function OrderDetailDialog({
                     </div>
                     {order.invoice_url && (
                         <div>
-                            <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                                <Receipt className="w-4 h-4" />
-                                Nota Fiscal
-                            </h4>
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                                    <Receipt className="w-4 h-4" />
+                                    Nota Fiscal
+                                </h4>
+                                {onDeleteInvoice && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="gap-1 text-destructive hover:text-destructive"
+                                        onClick={() => {
+                                            if (confirm('Excluir a nota fiscal deste pedido?')) {
+                                                onDeleteInvoice(order.id);
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                        Excluir
+                                    </Button>
+                                )}
+                            </div>
                             {order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
                                 <div className="space-y-2">
                                     <img

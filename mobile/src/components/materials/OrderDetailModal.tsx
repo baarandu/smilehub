@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator, Image, Linking } from 'react-native';
-import { X, Store, Package, Receipt, ExternalLink } from 'lucide-react-native';
+import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator, Image, Linking, Alert } from 'react-native';
+import { X, Store, Package, Receipt, ExternalLink, Trash2 } from 'lucide-react-native';
 import { ShoppingOrder } from '../../types/materials';
 import { formatCurrency, formatDate } from '../../utils/materials';
 import { materialsStyles as styles } from '../../styles/materials';
@@ -10,6 +10,7 @@ interface OrderDetailModalProps {
     onClose: () => void;
     order: ShoppingOrder | null;
     onReopenOrder?: (order: ShoppingOrder) => Promise<void>;
+    onDeleteInvoice?: (orderId: string) => void;
     hasExpense?: boolean;
     checkingExpense?: boolean;
 }
@@ -19,6 +20,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     onClose,
     order,
     onReopenOrder,
+    onDeleteInvoice,
     hasExpense = false,
     checkingExpense = false
 }) => {
@@ -91,9 +93,25 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         {/* Invoice Section */}
                         {order.invoice_url && (
                             <View style={styles.invoiceSection}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                    <Receipt size={18} color="#111827" />
-                                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Nota Fiscal</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Receipt size={18} color="#111827" />
+                                        <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Nota Fiscal</Text>
+                                    </View>
+                                    {onDeleteInvoice && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                Alert.alert('Excluir Nota Fiscal', 'Tem certeza que deseja excluir a nota fiscal?', [
+                                                    { text: 'Cancelar', style: 'cancel' },
+                                                    { text: 'Excluir', style: 'destructive', onPress: () => onDeleteInvoice(order.id) },
+                                                ]);
+                                            }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, padding: 4 }}
+                                        >
+                                            <Trash2 size={14} color="#EF4444" />
+                                            <Text style={{ color: '#EF4444', fontSize: 13, fontWeight: '500' }}>Excluir</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                                 {order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
                                     <View>

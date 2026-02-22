@@ -433,6 +433,38 @@ export default function Materials() {
     setInvoiceUrl(null);
   };
 
+  const handleDeleteInvoice = async (orderId: string) => {
+    try {
+      // Find the order to get the URL
+      const order = [...pendingOrders, ...historyOrders].find(o => o.id === orderId);
+      if (!order?.invoice_url) return;
+
+      // Extract storage path from public URL
+      const match = order.invoice_url.match(/fiscal-documents\/(.+)$/);
+      if (match) {
+        await supabase.storage.from('fiscal-documents').remove([match[1]]);
+      }
+
+      // Update DB
+      await (supabase.from('shopping_orders') as any)
+        .update({ invoice_url: null })
+        .eq('id', orderId);
+
+      // Update local state
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, invoice_url: null });
+      }
+      if (currentOrderId === orderId) {
+        setInvoiceUrl(null);
+      }
+      loadOrders();
+      toast.success('Nota fiscal excluída');
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      toast.error('Erro ao excluir nota fiscal');
+    }
+  };
+
   const handleToggleExcludedItem = (itemId: string) => {
     setExcludedItemIds(prev => {
       const newSet = new Set(prev);
@@ -717,6 +749,7 @@ export default function Materials() {
         open={detailModalVisible}
         onOpenChange={setDetailModalVisible}
         order={selectedOrder}
+        onDeleteInvoice={handleDeleteInvoice}
       />
 
       {clinicId && (
