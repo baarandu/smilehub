@@ -30,6 +30,7 @@ export const FACES = [
 // Lista de tratamentos
 export const TREATMENTS = [
     'Aparelho ortopédico',
+    'Aparelho Ortodôntico',
     'Aplicação tópica de flúor',
     'Ataque com verniz fluoretado',
     'Avaliação',
@@ -61,10 +62,12 @@ export const TREATMENTS = [
     'Punção aspirativa',
     'Radiografia',
     'Raspagem Subgengival',
+    'Raspagem Supragengival',
     'Restauração',
     'Sedação consciente',
     'Selante resinoso',
     'Splintagem',
+    'Toxina Botulínica',
     'Ulectomia',
 ];
 
