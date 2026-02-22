@@ -24,7 +24,7 @@ import type { NewAppointmentDialogProps } from './types';
 
 interface SlotInfo {
   time: string;
-  locationId: string;
+  locationIds: string[]; // possible locations for this slot
 }
 
 function generateTimeSlots(
@@ -35,7 +35,7 @@ function generateTimeSlots(
   const daySettings = settings.filter(s => s.day_of_week === dayOfWeek && s.is_active);
   if (daySettings.length === 0) return [];
 
-  const slotsMap = new Map<string, string>(); // time -> locationId
+  const slotsMap = new Map<string, Set<string>>(); // time -> set of locationIds
   for (const setting of daySettings) {
     const [startH, startM] = setting.start_time.slice(0, 5).split(':').map(Number);
     const [endH, endM] = setting.end_time.slice(0, 5).split(':').map(Number);
@@ -43,20 +43,22 @@ function generateTimeSlots(
     const endMinutes = endH * 60 + endM;
     const interval = setting.interval_minutes;
 
+    const ids = setting.location_ids ? setting.location_ids.split(',') : setting.location_id ? [setting.location_id] : [];
+
     for (let m = startMinutes; m + interval <= endMinutes; m += interval) {
       const hh = String(Math.floor(m / 60)).padStart(2, '0');
       const mm = String(m % 60).padStart(2, '0');
       const time = `${hh}:${mm}`;
-      if (!slotsMap.has(time)) {
-        slotsMap.set(time, setting.location_id || '');
-      }
+      if (!slotsMap.has(time)) slotsMap.set(time, new Set());
+      const set = slotsMap.get(time)!;
+      ids.forEach(id => set.add(id));
     }
   }
 
   return [...slotsMap.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .filter(([t]) => !bookedTimes.includes(t))
-    .map(([time, locationId]) => ({ time, locationId }));
+    .map(([time, locSet]) => ({ time, locationIds: [...locSet] }));
 }
 
 export function NewAppointmentDialog({
@@ -168,6 +170,12 @@ export function NewAppointmentDialog({
     : [];
 
   const hasScheduleForDay = scheduleSettings.some(s => s.day_of_week === dayOfWeek && s.is_active);
+
+  // Filter locations based on selected time slot's configured locations
+  const selectedSlot = form.time ? availableSlots.find(s => s.time === form.time) : null;
+  const filteredLocations = selectedSlot && selectedSlot.locationIds.length > 0
+    ? locations.filter(l => selectedSlot.locationIds.includes(l.id))
+    : locations;
 
   const filteredPatients = patientSearch.length > 0
     ? patients.filter(p =>
@@ -334,8 +342,9 @@ export function NewAppointmentDialog({
                 value={form.time}
                 onValueChange={(v) => {
                   const slot = availableSlots.find(s => s.time === v);
-                  const locationName = slot?.locationId
-                    ? locations.find(l => l.id === slot.locationId)?.name || form.location
+                  // Auto-fill location if slot has exactly 1 configured location
+                  const locationName = slot?.locationIds.length === 1
+                    ? locations.find(l => l.id === slot.locationIds[0])?.name || form.location
                     : form.location;
                   setForm({ ...form, time: v, location: locationName });
                 }}
@@ -380,7 +389,7 @@ export function NewAppointmentDialog({
                 <SelectValue placeholder="Selecione o local" />
               </SelectTrigger>
               <SelectContent>
-                {locations.map((loc) => (
+                {filteredLocations.map((loc) => (
                   <SelectItem key={loc.id} value={loc.name}>
                     {loc.name}
                   </SelectItem>

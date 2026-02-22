@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { Location } from '@/services/locations';
 import { toast } from 'sonner';
@@ -36,7 +37,7 @@ interface TimeSlot {
   start_time: string;
   end_time: string;
   interval_minutes: number;
-  location_id: string;
+  location_ids: string[]; // array of location IDs
 }
 
 interface DayConfig {
@@ -51,7 +52,7 @@ function newSlotId() {
 }
 
 function createDefaultSlot(): TimeSlot {
-  return { id: newSlotId(), start_time: '08:00', end_time: '12:00', interval_minutes: 30, location_id: '' };
+  return { id: newSlotId(), start_time: '08:00', end_time: '12:00', interval_minutes: 30, location_ids: [] };
 }
 
 interface ScheduleSettingsModalProps {
@@ -106,7 +107,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
               start_time: s.start_time.slice(0, 5),
               end_time: s.end_time.slice(0, 5),
               interval_minutes: s.interval_minutes,
-              location_id: s.location_id || '',
+              location_ids: s.location_ids ? s.location_ids.split(',') : s.location_id ? [s.location_id] : [],
             })),
           };
         }
@@ -138,7 +139,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
       if (d.day_of_week !== dayOfWeek) return d;
       const lastSlot = d.slots[d.slots.length - 1];
       const newSlot: TimeSlot = lastSlot
-        ? { id: newSlotId(), start_time: lastSlot.end_time, end_time: '18:00', interval_minutes: lastSlot.interval_minutes, location_id: lastSlot.location_id }
+        ? { id: newSlotId(), start_time: lastSlot.end_time, end_time: '18:00', interval_minutes: lastSlot.interval_minutes, location_ids: [...lastSlot.location_ids] }
         : createDefaultSlot();
       return { ...d, slots: [...d.slots, newSlot] };
     }));
@@ -149,6 +150,20 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
       if (d.day_of_week !== dayOfWeek) return d;
       const newSlots = d.slots.filter(s => s.id !== slotId);
       return { ...d, slots: newSlots, is_active: newSlots.length > 0 };
+    }));
+  };
+
+  const toggleSlotLocation = (dayOfWeek: number, slotId: string, locationId: string) => {
+    setDays(prev => prev.map(d => {
+      if (d.day_of_week !== dayOfWeek) return d;
+      return {
+        ...d,
+        slots: d.slots.map(s => {
+          if (s.id !== slotId) return s;
+          const has = s.location_ids.includes(locationId);
+          return { ...s, location_ids: has ? s.location_ids.filter(id => id !== locationId) : [...s.location_ids, locationId] };
+        }),
+      };
     }));
   };
 
@@ -172,7 +187,8 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
           start_time: slot.start_time,
           end_time: slot.end_time,
           interval_minutes: slot.interval_minutes,
-          location_id: slot.location_id || null,
+          location_id: slot.location_ids[0] || null,
+          location_ids: slot.location_ids.length > 0 ? slot.location_ids.join(',') : null,
           is_active: true,
         });
       }
@@ -297,21 +313,17 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
                               </Button>
                             </div>
                             {showLocationField && (
-                              <Select
-                                value={slot.location_id}
-                                onValueChange={(v) => updateSlot(day.day_of_week, slot.id, 'location_id', v)}
-                              >
-                                <SelectTrigger className="h-8 text-sm">
-                                  <SelectValue placeholder="Local de atendimento" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {locations.map(loc => (
-                                    <SelectItem key={loc.id} value={loc.id}>
-                                      {loc.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex flex-wrap gap-3 pl-1">
+                                {locations.map(loc => (
+                                  <label key={loc.id} className="flex items-center gap-1.5 text-xs cursor-pointer">
+                                    <Checkbox
+                                      checked={slot.location_ids.includes(loc.id)}
+                                      onCheckedChange={() => toggleSlotLocation(day.day_of_week, slot.id, loc.id)}
+                                    />
+                                    {loc.name}
+                                  </label>
+                                ))}
+                              </div>
                             )}
                           </div>
                         ))}

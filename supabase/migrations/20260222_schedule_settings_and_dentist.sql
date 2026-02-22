@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS schedule_settings (
   end_time time NOT NULL,
   interval_minutes int NOT NULL DEFAULT 30,
   location_id uuid REFERENCES locations(id) ON DELETE SET NULL,
+  location_ids text, -- comma-separated location IDs for multi-location slots
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()

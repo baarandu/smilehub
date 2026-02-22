@@ -9,6 +9,7 @@ export interface ScheduleSetting {
   end_time: string;
   interval_minutes: number;
   location_id?: string | null;
+  location_ids?: string | null; // comma-separated location IDs
   is_active: boolean;
 }
 
@@ -58,6 +59,7 @@ export const scheduleSettingsService = {
         end_time: s.end_time,
         interval_minutes: s.interval_minutes,
         location_id: s.location_id || null,
+        location_ids: s.location_ids || null,
         is_active: true,
       }));
 
