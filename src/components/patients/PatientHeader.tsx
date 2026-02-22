@@ -11,6 +11,7 @@ import { toggleReturnAlert } from '@/services/patients';
 import { toast } from 'sonner';
 import { ReportGenerationModal } from './ReportGenerationModal';
 import { PatientAiConsent } from './PatientAiConsent';
+import { useClinic } from '@/contexts/ClinicContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ interface PatientHeaderProps {
 
 export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientHeaderProps) {
   const navigate = useNavigate();
+  const { isAdmin } = useClinic();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAlertConfirm, setShowAlertConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -254,7 +256,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   <Edit className="w-4 h-4" />
                   <span className="hidden sm:inline">Editar</span>
                 </Button>
-                {onDelete && (
+                {onDelete && isAdmin && (
                   <Button
                     variant="destructive"
                     size="sm"
