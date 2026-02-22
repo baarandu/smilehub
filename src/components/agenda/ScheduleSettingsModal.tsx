@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
+import type { Location } from '@/services/locations';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = [
@@ -31,10 +32,11 @@ const DAYS_OF_WEEK = [
 ];
 
 interface TimeSlot {
-  id: string; // local unique key
+  id: string;
   start_time: string;
   end_time: string;
   interval_minutes: number;
+  location_id: string;
 }
 
 interface DayConfig {
@@ -49,7 +51,7 @@ function newSlotId() {
 }
 
 function createDefaultSlot(): TimeSlot {
-  return { id: newSlotId(), start_time: '08:00', end_time: '12:00', interval_minutes: 30 };
+  return { id: newSlotId(), start_time: '08:00', end_time: '12:00', interval_minutes: 30, location_id: '' };
 }
 
 interface ScheduleSettingsModalProps {
@@ -57,13 +59,16 @@ interface ScheduleSettingsModalProps {
   onOpenChange: (open: boolean) => void;
   clinicId: string;
   dentists: { id: string; name: string; specialty: string }[];
+  locations: Location[];
 }
 
-export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }: ScheduleSettingsModalProps) {
+export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, locations }: ScheduleSettingsModalProps) {
   const [selectedDentist, setSelectedDentist] = useState<string>('');
   const [days, setDays] = useState<DayConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const showLocationField = locations.length > 1;
 
   // Auto-select first dentist
   useEffect(() => {
@@ -83,7 +88,6 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
     try {
       const data = await scheduleSettingsService.getByProfessional(clinicId, selectedDentist);
 
-      // Group by day_of_week (multiple slots per day)
       const byDay = new Map<number, ScheduleSetting[]>();
       for (const row of data) {
         const existing = byDay.get(row.day_of_week) || [];
@@ -102,6 +106,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
               start_time: s.start_time.slice(0, 5),
               end_time: s.end_time.slice(0, 5),
               interval_minutes: s.interval_minutes,
+              location_id: s.location_id || '',
             })),
           };
         }
@@ -131,10 +136,9 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
   const addSlot = (dayOfWeek: number) => {
     setDays(prev => prev.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
-      // Default new slot starts after last slot
       const lastSlot = d.slots[d.slots.length - 1];
       const newSlot: TimeSlot = lastSlot
-        ? { id: newSlotId(), start_time: lastSlot.end_time, end_time: '18:00', interval_minutes: lastSlot.interval_minutes }
+        ? { id: newSlotId(), start_time: lastSlot.end_time, end_time: '18:00', interval_minutes: lastSlot.interval_minutes, location_id: lastSlot.location_id }
         : createDefaultSlot();
       return { ...d, slots: [...d.slots, newSlot] };
     }));
@@ -159,7 +163,6 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
   };
 
   const handleSave = async () => {
-    // Flatten all active day slots into the format the service expects
     const allSlots: Omit<ScheduleSetting, 'id' | 'clinic_id' | 'professional_id'>[] = [];
     for (const day of days) {
       if (!day.is_active) continue;
@@ -169,6 +172,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
           start_time: slot.start_time,
           end_time: slot.end_time,
           interval_minutes: slot.interval_minutes,
+          location_id: slot.location_id || null,
           is_active: true,
         });
       }
@@ -251,45 +255,64 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
                     {day.is_active && (
                       <div className="space-y-2">
                         {day.slots.map((slot, idx) => (
-                          <div key={slot.id} className="flex items-end gap-2">
-                            <div className="flex-1 space-y-1">
-                              {idx === 0 && <Label className="text-xs text-muted-foreground">Início</Label>}
-                              <Input
-                                type="time"
-                                value={slot.start_time}
-                                onChange={(e) => updateSlot(day.day_of_week, slot.id, 'start_time', e.target.value)}
-                                className="h-8 text-sm"
-                              />
+                          <div key={slot.id} className="space-y-1.5">
+                            <div className="flex items-end gap-2">
+                              <div className="flex-1 space-y-1">
+                                {idx === 0 && <Label className="text-xs text-muted-foreground">Início</Label>}
+                                <Input
+                                  type="time"
+                                  value={slot.start_time}
+                                  onChange={(e) => updateSlot(day.day_of_week, slot.id, 'start_time', e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                {idx === 0 && <Label className="text-xs text-muted-foreground">Fim</Label>}
+                                <Input
+                                  type="time"
+                                  value={slot.end_time}
+                                  onChange={(e) => updateSlot(day.day_of_week, slot.id, 'end_time', e.target.value)}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div className="w-20 space-y-1">
+                                {idx === 0 && <Label className="text-xs text-muted-foreground">Duração</Label>}
+                                <Input
+                                  type="number"
+                                  min={5}
+                                  max={480}
+                                  step={5}
+                                  value={slot.interval_minutes}
+                                  onChange={(e) => updateSlot(day.day_of_week, slot.id, 'interval_minutes', parseInt(e.target.value) || 30)}
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
+                                onClick={() => removeSlot(day.day_of_week, slot.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
-                            <div className="flex-1 space-y-1">
-                              {idx === 0 && <Label className="text-xs text-muted-foreground">Fim</Label>}
-                              <Input
-                                type="time"
-                                value={slot.end_time}
-                                onChange={(e) => updateSlot(day.day_of_week, slot.id, 'end_time', e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="w-20 space-y-1">
-                              {idx === 0 && <Label className="text-xs text-muted-foreground">Duração</Label>}
-                              <Input
-                                type="number"
-                                min={5}
-                                max={480}
-                                step={5}
-                                value={slot.interval_minutes}
-                                onChange={(e) => updateSlot(day.day_of_week, slot.id, 'interval_minutes', parseInt(e.target.value) || 30)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive flex-shrink-0"
-                              onClick={() => removeSlot(day.day_of_week, slot.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            {showLocationField && (
+                              <Select
+                                value={slot.location_id}
+                                onValueChange={(v) => updateSlot(day.day_of_week, slot.id, 'location_id', v)}
+                              >
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Local de atendimento" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {locations.map(loc => (
+                                    <SelectItem key={loc.id} value={loc.id}>
+                                      {loc.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           </div>
                         ))}
 

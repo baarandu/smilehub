@@ -733,6 +733,7 @@ export default function Agenda() {
           onOpenChange={setSettingsModalOpen}
           clinicId={clinicId}
           dentists={dentists}
+          locations={locations}
         />
       )}
 

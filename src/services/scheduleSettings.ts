@@ -8,6 +8,7 @@ export interface ScheduleSetting {
   start_time: string;
   end_time: string;
   interval_minutes: number;
+  location_id?: string | null;
   is_active: boolean;
 }
 
@@ -56,6 +57,7 @@ export const scheduleSettingsService = {
         start_time: s.start_time,
         end_time: s.end_time,
         interval_minutes: s.interval_minutes,
+        location_id: s.location_id || null,
         is_active: true,
       }));
 
