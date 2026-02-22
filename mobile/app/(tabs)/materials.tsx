@@ -666,6 +666,12 @@ export default function Materials() {
                                             <Store size={14} color="#6B7280" />
                                             <Text style={styles.supplierText}>{item.brand}</Text>
                                         </View>
+                                        {(item.type || item.code) && (
+                                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 2 }}>
+                                                {item.type ? <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Tipo: {item.type}</Text> : null}
+                                                {item.code ? <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Cód: {item.code}</Text> : null}
+                                            </View>
+                                        )}
                                     </View>
                                     <View style={{ flexDirection: 'row', gap: 4 }}>
                                         <TouchableOpacity onPress={() => handleEditItem(item)} style={{ padding: 8 }}>

@@ -5,6 +5,8 @@ export interface ShoppingItem {
     unitPrice: number;
     totalPrice: number;
     brand: string;
+    type?: string;
+    code?: string;
 }
 
 export interface ShoppingOrder {

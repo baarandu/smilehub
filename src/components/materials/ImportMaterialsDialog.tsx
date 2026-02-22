@@ -187,6 +187,8 @@ export function ImportMaterialsDialog({
         unitPrice: item.unitPrice || 0,
         totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
         brand: item.brand || 'Sem marca',
+        type: item.type || '',
+        code: item.code || '',
       }));
 
       onImportItems(shoppingItems, invoiceUrl);
@@ -373,6 +375,24 @@ export function ImportMaterialsDialog({
                         value={item.brand || ''}
                         onChange={(e) => handleUpdateParsedItem(index, 'brand', e.target.value)}
                         placeholder="Marca"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Tipo</label>
+                      <Input
+                        value={item.type || ''}
+                        onChange={(e) => handleUpdateParsedItem(index, 'type', e.target.value)}
+                        placeholder="Tipo/categoria"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Código</label>
+                      <Input
+                        value={item.code || ''}
+                        onChange={(e) => handleUpdateParsedItem(index, 'code', e.target.value)}
+                        placeholder="Código"
                       />
                     </div>
                   </div>

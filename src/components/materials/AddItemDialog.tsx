@@ -28,6 +28,8 @@ export function AddItemDialog({
     const [quantity, setQuantity] = useState('');
     const [unitPrice, setUnitPrice] = useState('');
     const [brand, setSupplier] = useState('');
+    const [type, setType] = useState('');
+    const [code, setCode] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     useEffect(() => {
@@ -36,6 +38,8 @@ export function AddItemDialog({
             setQuantity(editingItem.quantity.toString());
             setUnitPrice(editingItem.unitPrice.toString());
             setSupplier(editingItem.brand === 'Sem marca' ? '' : editingItem.brand);
+            setType(editingItem.type || '');
+            setCode(editingItem.code || '');
         } else if (!open) {
             resetForm();
         }
@@ -46,6 +50,8 @@ export function AddItemDialog({
         setQuantity('');
         setUnitPrice('');
         setSupplier('');
+        setType('');
+        setCode('');
         setShowSuggestions(false);
     };
 
@@ -73,6 +79,8 @@ export function AddItemDialog({
                 unitPrice: price,
                 totalPrice: total,
                 brand: brand.trim() || 'Sem marca',
+                type: type.trim(),
+                code: code.trim(),
             });
             toast.success('Item atualizado!');
         } else {
@@ -83,6 +91,8 @@ export function AddItemDialog({
                 unitPrice: price,
                 totalPrice: total,
                 brand: brand.trim() || 'Sem marca',
+                type: type.trim(),
+                code: code.trim(),
             });
             toast.success('Item adicionado!');
         }
@@ -153,6 +163,24 @@ export function AddItemDialog({
                             value={brand}
                             onChange={(e) => setSupplier(e.target.value)}
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">Tipo</label>
+                            <Input
+                                placeholder="Ex: Resina, Broca"
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-foreground mb-2 block">Código</label>
+                            <Input
+                                placeholder="Ex: SKU, Ref."
+                                value={code}
+                                onChange={(e) => setCode(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
                 <DialogFooter>

@@ -58,7 +58,11 @@ export function OrderDetailDialog({
                                         <span className="text-muted-foreground">Unit: {formatCurrency(item.unitPrice)}</span>
                                         <span className="font-semibold text-foreground">{formatCurrency(item.totalPrice)}</span>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">Marca: {item.brand}</p>
+                                    <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground mt-1">
+                                        <span>Marca: {item.brand}</span>
+                                        {item.type && <span>Tipo: {item.type}</span>}
+                                        {item.code && <span>Cód: {item.code}</span>}
+                                    </div>
                                 </div>
                             ))}
                         </div>

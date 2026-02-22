@@ -3,11 +3,13 @@ import { ShoppingItem } from '@/types/materials';
 export const formatCurrency = (val: number) =>
     val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-/** Migrates old items with `supplier` field to `brand` */
+/** Migrates old items with `supplier` field to `brand` and ensures type/code */
 export const migrateItems = (items: any[]): ShoppingItem[] =>
     (items || []).map((item: any) => ({
         ...item,
         brand: item.brand || item.supplier || 'Sem marca',
+        type: item.type || '',
+        code: item.code || '',
     }));
 
 export const getNumericValue = (text: string) => {

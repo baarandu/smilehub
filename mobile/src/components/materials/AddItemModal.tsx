@@ -30,6 +30,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     const [brand, setSupplier] = useState(
         editingItem?.brand === 'Sem marca' ? '' : (editingItem?.brand || '')
     );
+    const [type, setType] = useState(editingItem?.type || '');
+    const [code, setCode] = useState(editingItem?.code || '');
     const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Reset form when modal opens/closes or editingItem changes
@@ -41,6 +43,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 editingItem?.unitPrice ? editingItem.unitPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''
             );
             setSupplier(editingItem?.brand === 'Sem marca' ? '' : (editingItem?.brand || ''));
+            setType(editingItem?.type || '');
+            setCode(editingItem?.code || '');
         }
     }, [visible, editingItem]);
 
@@ -66,6 +70,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 unitPrice: uPrice,
                 totalPrice: total,
                 brand: brand.trim() || 'Sem marca',
+                type: type.trim(),
+                code: code.trim(),
             });
         } else {
             onAdd({
@@ -74,6 +80,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 unitPrice: uPrice,
                 totalPrice: total,
                 brand: brand.trim() || 'Sem marca',
+                type: type.trim(),
+                code: code.trim(),
             });
         }
 
@@ -85,6 +93,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
         setQuantity('');
         setUnitPrice('');
         setSupplier('');
+        setType('');
+        setCode('');
         setShowSuggestions(false);
         onClose();
     };
@@ -196,6 +206,27 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                             value={brand}
                             onChangeText={setSupplier}
                         />
+
+                        <View style={styles.inputRow}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.inputLabel}>Tipo</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Ex: Resina, Broca"
+                                    value={type}
+                                    onChangeText={setType}
+                                />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 16 }}>
+                                <Text style={styles.inputLabel}>Código</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Ex: SKU, Ref."
+                                    value={code}
+                                    onChangeText={setCode}
+                                />
+                            </View>
+                        </View>
 
                         <TouchableOpacity onPress={handleSubmit} style={styles.addItemButton}>
                             {editingItem ? <Check size={20} color="white" /> : <Plus size={20} color="white" />}

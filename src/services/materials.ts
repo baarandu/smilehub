@@ -9,6 +9,8 @@ export interface ParsedMaterialItem {
   quantity: number;
   unitPrice: number;
   brand: string;
+  type?: string;
+  code?: string;
 }
 
 export interface ParseMaterialsResponse {

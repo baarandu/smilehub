@@ -21,6 +21,8 @@ REGRAS:
 5. Se o valor unitário não estiver especificado, use 0.
 6. Se a marca do produto estiver mencionada (em qualquer lugar do texto), preencha para todos os itens.
 7. Identifique a marca/fabricante se mencionada (ex: "TDV", "3M", "Dentsply", etc.).
+8. Extraia o tipo/categoria do produto se mencionado (ex: "Resina", "Anestésico", "Broca", "Cimento", etc.).
+9. Extraia o código do produto se mencionado (ex: "SKU", código de referência, número do produto, etc.).
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -29,7 +31,9 @@ FORMATO DE SAÍDA (JSON):
       "name": "Nome do produto",
       "quantity": 1,
       "unitPrice": 12.50,
-      "brand": "Marca/fabricante ou vazio"
+      "brand": "Marca/fabricante ou vazio",
+      "type": "Tipo/categoria do produto ou vazio",
+      "code": "Código do produto ou vazio"
     }
   ],
   "supplier": "Fornecedor principal (se identificado)" ou null
@@ -45,6 +49,8 @@ REGRAS:
 5. Extraia a forma de pagamento se visível (Dinheiro, Cartão Crédito, Cartão Débito, Pix, Boleto, etc.).
 6. Extraia o valor total da NF.
 7. NUNCA invente dados — extraia apenas o que está visível no documento.
+8. Extraia o tipo/categoria de cada produto se visível (ex: "Resina", "Anestésico", "Broca", etc.).
+9. Extraia o código de cada produto se visível (código NCM, SKU, referência, etc.).
 
 FORMATO DE SAÍDA (JSON):
 {
@@ -53,7 +59,9 @@ FORMATO DE SAÍDA (JSON):
       "name": "Nome do produto",
       "quantity": 1,
       "unitPrice": 12.50,
-      "brand": "Marca/fabricante do produto"
+      "brand": "Marca/fabricante do produto",
+      "type": "Tipo/categoria do produto ou vazio",
+      "code": "Código do produto ou vazio"
     }
   ],
   "supplier": "Nome do emitente/fornecedor",

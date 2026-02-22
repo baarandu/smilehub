@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt } from 'lucide-react';
+import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt, Tag, Barcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabase';
@@ -621,10 +621,12 @@ export default function Materials() {
                     <div key={item.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{item.name}</p>
-                        <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1"><Hash className="w-3 h-3" />{item.quantity}</span>
                           <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{formatCurrency(item.unitPrice)}</span>
                           <span className="flex items-center gap-1"><Store className="w-3 h-3" />{item.brand}</span>
+                          {item.type && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />{item.type}</span>}
+                          {item.code && <span className="flex items-center gap-1"><Barcode className="w-3 h-3" />{item.code}</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
