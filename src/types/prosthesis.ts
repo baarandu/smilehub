@@ -167,5 +167,6 @@ export const PROSTHESIS_MATERIAL_LABELS: Record<string, string> = {
   emax: 'E-max',
   acrilico: 'Acrílico',
   metalceramica: 'Metalocerâmica',
+  fibra_vidro: 'Fibra de Vidro',
   outro: 'Outro',
 };

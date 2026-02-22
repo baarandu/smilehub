@@ -359,7 +359,10 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                             <CommandItem
                                                 key={treatment}
                                                 value={treatment}
-                                                onSelect={() => toggleTreatment(treatment)}
+                                                onSelect={() => {
+                                                    toggleTreatment(treatment);
+                                                    setTreatmentsOpen(false);
+                                                }}
                                                 className="cursor-pointer"
                                             >
                                                 <div className={cn(
