@@ -318,7 +318,7 @@ export function KanbanBoard() {
                                 className="mt-1.5 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate('/agenda');
+                                  navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
                                 }}
                               >
                                 <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />

@@ -6,7 +6,7 @@ import { locationsService, type Location } from '@/services/locations';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,7 @@ const STATUS_CONFIG = {
 
 export default function Agenda() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
@@ -81,6 +82,19 @@ export default function Agenda() {
   useEffect(() => {
     loadLocations();
   }, []);
+
+  // Auto-open new appointment dialog when navigating from prosthesis center
+  useEffect(() => {
+    const state = location.state as { openNewAppointment?: boolean; patientId?: string; patientName?: string } | null;
+    if (state?.openNewAppointment) {
+      if (state.patientId && state.patientName) {
+        setPreSelectedPatient({ id: state.patientId, name: state.patientName } as Patient);
+      }
+      setDialogOpen(true);
+      // Clear the state so it doesn't re-trigger on navigation
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state]);
 
   // Global search
   useEffect(() => {
