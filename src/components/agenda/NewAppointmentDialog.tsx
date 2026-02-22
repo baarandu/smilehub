@@ -152,7 +152,7 @@ export function NewAppointmentDialog({
 
   const activeDentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
   const bookedTimes = existingAppointments
-    .filter(a => (!activeDentistId || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
+    .filter(a => (!activeDentistId || !a.dentist_id || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
     .map(a => a.time?.slice(0, 5) || '');
 
   const availableSlots = dayOfWeek >= 0

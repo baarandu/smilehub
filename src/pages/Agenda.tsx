@@ -213,10 +213,10 @@ export default function Agenda() {
       return;
     }
 
-    // Check for time conflict (per dentist if specified)
+    // Check for time conflict (per dentist if specified, include unassigned)
     const timeConflict = appointments.find(
       apt => apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
-        (!data.dentistId || apt.dentist_id === data.dentistId)
+        (!data.dentistId || !apt.dentist_id || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
       toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);
@@ -246,10 +246,10 @@ export default function Agenda() {
   };
 
   const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string }) => {
-    // Check for time conflict per dentist (exclude current appointment)
+    // Check for time conflict per dentist (exclude current appointment, include unassigned)
     const timeConflict = appointments.find(
       apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
-        (!data.dentistId || apt.dentist_id === data.dentistId)
+        (!data.dentistId || !apt.dentist_id || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
       toast.error(`Já existe uma consulta agendada às ${data.time.slice(0, 5)} com ${timeConflict.patients?.name || 'outro paciente'}`);

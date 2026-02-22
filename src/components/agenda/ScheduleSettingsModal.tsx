@@ -179,9 +179,9 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists }
       await scheduleSettingsService.upsert(clinicId, selectedDentist, allSlots);
       toast.success('Horários salvos com sucesso!');
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving schedule settings:', error);
-      toast.error('Erro ao salvar configurações');
+      toast.error(`Erro ao salvar: ${error?.message || JSON.stringify(error)}`);
     } finally {
       setSaving(false);
     }
