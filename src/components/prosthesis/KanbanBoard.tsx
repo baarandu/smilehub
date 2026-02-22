@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Building2, ArrowRight, CalendarClock, RotateCw } from 'lucide-react';
+import { Plus, Building2, ArrowRight, CalendarClock, RotateCw, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -314,15 +314,29 @@ export function KanbanBoard() {
                               {order.tooth_numbers?.join(', ')}
                             </p>
                             {order.status === 'in_clinic' && (
-                              <div
-                                className="mt-1.5 flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
-                                }}
-                              >
-                                <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                <span className="text-[10px] font-medium text-amber-700">Agendar com paciente</span>
+                              <div className="mt-1.5 flex flex-col gap-1.5">
+                                <div
+                                  className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-amber-100 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
+                                  }}
+                                >
+                                  <CalendarClock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                  <span className="text-[10px] font-medium text-amber-700">Agendar com paciente</span>
+                                </div>
+                                {order.patient_phone && (
+                                  <a
+                                    href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-md px-2 py-1.5 cursor-pointer hover:bg-green-100 transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                                    <span className="text-[10px] font-medium text-green-700">WhatsApp do paciente</span>
+                                  </a>
+                                )}
                               </div>
                             )}
                             <div className="mt-2 flex gap-1.5">

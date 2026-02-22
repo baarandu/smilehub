@@ -12,7 +12,7 @@ import { getStatusDateField } from '@/utils/prosthesis';
 
 const ORDER_SELECT = `
   *,
-  patients!inner(name),
+  patients!inner(name, phone),
   profiles!prosthesis_orders_dentist_id_fkey(full_name),
   prosthesis_labs(name)
 `;
@@ -21,6 +21,7 @@ function mapOrder(row: any): ProsthesisOrder {
   return {
     ...row,
     patient_name: row.patients?.name,
+    patient_phone: row.patients?.phone ?? null,
     dentist_name: row.profiles?.full_name,
     lab_name: row.prosthesis_labs?.name ?? null,
     patients: undefined,

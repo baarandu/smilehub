@@ -50,6 +50,7 @@ export interface ProsthesisOrder {
   budget_tooth_index: number | null;
   // Joined fields
   patient_name?: string;
+  patient_phone?: string | null;
   dentist_name?: string;
   lab_name?: string;
 }
