@@ -1,4 +1,5 @@
-import { Receipt, ExternalLink, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
+import { Receipt, ExternalLink, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingOrder } from '@/types/materials';
@@ -9,14 +10,17 @@ interface OrderDetailDialogProps {
     onOpenChange: (open: boolean) => void;
     order: ShoppingOrder | null;
     onDeleteInvoice?: (orderId: string) => void;
+    onAttachInvoice?: (orderId: string, file: File) => void;
 }
 
 export function OrderDetailDialog({
     open,
     onOpenChange,
     order,
-    onDeleteInvoice
+    onDeleteInvoice,
+    onAttachInvoice
 }: OrderDetailDialogProps) {
+    const fileInputRef = useRef<HTMLInputElement>(null);
     if (!order) return null;
 
     return (
@@ -109,6 +113,31 @@ export function OrderDetailDialog({
                                     Abrir Nota Fiscal (PDF)
                                 </Button>
                             )}
+                        </div>
+                    )}
+                    {!order.invoice_url && onAttachInvoice && (
+                        <div>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,application/pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        onAttachInvoice(order.id, file);
+                                    }
+                                    e.target.value = '';
+                                }}
+                            />
+                            <Button
+                                variant="outline"
+                                className="gap-2 w-full"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload className="w-4 h-4" />
+                                Anexar Nota Fiscal
+                            </Button>
                         </div>
                     )}
                 </div>

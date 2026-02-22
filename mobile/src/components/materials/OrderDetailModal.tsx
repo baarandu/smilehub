@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator, Image, Linking, Alert } from 'react-native';
-import { X, Store, Package, Receipt, ExternalLink, Trash2 } from 'lucide-react-native';
+import { X, Store, Package, Receipt, ExternalLink, Trash2, Upload } from 'lucide-react-native';
 import { ShoppingOrder } from '../../types/materials';
 import { formatCurrency, formatDate } from '../../utils/materials';
 import { materialsStyles as styles } from '../../styles/materials';
@@ -11,6 +11,7 @@ interface OrderDetailModalProps {
     order: ShoppingOrder | null;
     onReopenOrder?: (order: ShoppingOrder) => Promise<void>;
     onDeleteInvoice?: (orderId: string) => void;
+    onAttachInvoice?: (orderId: string) => void;
     hasExpense?: boolean;
     checkingExpense?: boolean;
 }
@@ -21,6 +22,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     order,
     onReopenOrder,
     onDeleteInvoice,
+    onAttachInvoice,
     hasExpense = false,
     checkingExpense = false
 }) => {
@@ -138,6 +140,17 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                     </TouchableOpacity>
                                 )}
                             </View>
+                        )}
+
+                        {/* Attach Invoice Button - Only when no invoice */}
+                        {!order.invoice_url && onAttachInvoice && (
+                            <TouchableOpacity
+                                onPress={() => onAttachInvoice(order.id)}
+                                style={[styles.invoiceOpenButton, { marginBottom: 8 }]}
+                            >
+                                <Upload size={16} color="white" />
+                                <Text style={styles.invoiceOpenButtonText}>Anexar Nota Fiscal</Text>
+                            </TouchableOpacity>
                         )}
 
                         {/* Reopen Order Button - Only for completed orders */}

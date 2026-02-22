@@ -465,6 +465,35 @@ export default function Materials() {
     }
   };
 
+  const handleAttachInvoiceToOrder = async (orderId: string, file: File) => {
+    if (!clinicId) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo 10MB.');
+      return;
+    }
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('fiscal-documents').upload(path, file);
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
+      const url = urlData.publicUrl;
+
+      await (supabase.from('shopping_orders') as any)
+        .update({ invoice_url: url })
+        .eq('id', orderId);
+
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, invoice_url: url });
+      }
+      loadOrders();
+      toast.success('Nota fiscal anexada!');
+    } catch (error) {
+      console.error('Error attaching invoice:', error);
+      toast.error('Erro ao anexar nota fiscal');
+    }
+  };
+
   const handleToggleExcludedItem = (itemId: string) => {
     setExcludedItemIds(prev => {
       const newSet = new Set(prev);
@@ -766,6 +795,7 @@ export default function Materials() {
         onOpenChange={setDetailModalVisible}
         order={selectedOrder}
         onDeleteInvoice={handleDeleteInvoice}
+        onAttachInvoice={handleAttachInvoiceToOrder}
       />
 
       {clinicId && (

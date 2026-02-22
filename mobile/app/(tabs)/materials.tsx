@@ -301,6 +301,44 @@ export default function Materials() {
         }
     };
 
+    const handleAttachInvoiceToOrder = async (orderId: string) => {
+        if (!clinicId) return;
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+        });
+        if (result.canceled || !result.assets?.[0]) return;
+
+        const asset = result.assets[0];
+        try {
+            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+            const ext = asset.uri.split('.').pop() || 'jpg';
+            const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+            const arrayBuffer = decodeBase64(base64);
+            const mimeType = asset.mimeType || 'image/jpeg';
+
+            const { error } = await supabase.storage.from('fiscal-documents').upload(path, arrayBuffer, { contentType: mimeType });
+            if (error) throw error;
+
+            const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
+            const url = urlData.publicUrl;
+
+            await (supabase.from('shopping_orders') as any)
+                .update({ invoice_url: url })
+                .eq('id', orderId);
+
+            if (selectedOrder?.id === orderId) {
+                setSelectedOrder({ ...selectedOrder, invoice_url: url });
+            }
+            loadOrders();
+            Alert.alert('Sucesso', 'Nota fiscal anexada!');
+        } catch (err) {
+            console.error('Error attaching invoice:', err);
+            Alert.alert('Erro', 'Falha ao anexar nota fiscal.');
+        }
+    };
+
     const handleOpenOrder = (order: ShoppingOrder) => {
         setItems(order.items);
         setCurrentOrderId(order.id);
@@ -847,6 +885,7 @@ export default function Materials() {
                 order={selectedOrder}
                 onReopenOrder={handleReopenOrder}
                 onDeleteInvoice={handleDeleteInvoice}
+                onAttachInvoice={handleAttachInvoiceToOrder}
                 hasExpense={hasExpense}
                 checkingExpense={checkingExpense}
             />
