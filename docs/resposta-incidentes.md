@@ -1,6 +1,6 @@
 # Procedimento de Resposta a Incidentes de Segurança
 
-**Sistema:** Smile Care Hub
+**Sistema:** Organiza Odonto
 **Data:** 11/02/2026
 **Versão:** 1.0
 **Base Legal:** LGPD Art. 48 (comunicação de incidentes)
@@ -15,7 +15,7 @@ Estabelecer procedimentos operacionais para identificação, contenção, resolu
 
 ## 2. Definição de Incidente
 
-Um incidente de segurança é qualquer evento que comprometa a **confidencialidade, integridade ou disponibilidade** de dados pessoais processados pelo Smile Care Hub. Inclui:
+Um incidente de segurança é qualquer evento que comprometa a **confidencialidade, integridade ou disponibilidade** de dados pessoais processados pelo Organiza Odonto. Inclui:
 
 - Acesso não autorizado a dados de pacientes
 - Vazamento ou exposição de dados pessoais
@@ -238,7 +238,7 @@ Conforme Art. 48, Lei 13.709/2018 (LGPD)
    Razão Social: [Nome da clínica]
    CNPJ: [CNPJ]
    Encarregado (DPO): [Nome e contato]
-   Sistema: Smile Care Hub
+   Sistema: Organiza Odonto
 
 2. DESCRIÇÃO DO INCIDENTE
    Data de ocorrência: [DD/MM/AAAA HH:MM]

@@ -1,4 +1,4 @@
-# 📋 Avaliação geral e sugestões de melhoria para o **Smile Care Hub**
+# 📋 Avaliação geral e sugestões de melhoria para o **Organiza Odonto**
 
 ## 1️⃣ Segurança
 | Área | Status | Problema / Oportunidade | Sugestão |

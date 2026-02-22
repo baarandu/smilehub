@@ -25,10 +25,10 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
     const [paymentBatch, setPaymentBatch] = useState<{ indices: number[]; teeth: ToothEntry[]; totalValue: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const autoCreateProsthesisOrder = async (tooth: ToothEntry, toothIndex: number, budgetId: string) => {
-        if (!clinicId) return;
-        if (!isProstheticTreatment(tooth.treatments)) return;
-        if (!hasLabTreatment(tooth)) return;
+    const autoCreateProsthesisOrder = async (tooth: ToothEntry, toothIndex: number, budgetId: string): Promise<boolean> => {
+        if (!clinicId) return false;
+        if (!isProstheticTreatment(tooth.treatments)) return false;
+        if (!hasLabTreatment(tooth)) return false;
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -74,8 +74,11 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             });
 
             queryClient.invalidateQueries({ queryKey: ['prosthesis-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['budgets'] });
+            return true;
         } catch (err) {
             console.error('Erro ao criar ordem de prótese automaticamente:', err);
+            return false;
         }
     };
 
@@ -240,9 +243,14 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             });
 
             // Auto-create prosthesis order if item is prosthetic with lab
-            await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
+            const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
 
-            toast({ title: "Pagamento Registrado", description: "O item foi marcado como pago e lançado no financeiro." });
+            toast({
+                title: "Pagamento Registrado",
+                description: prosthesisCreated
+                    ? "Ordem de prótese criada! Acesse a Central de Prótese para configurar o envio ao laboratório."
+                    : "O item foi marcado como pago e lançado no financeiro.",
+            });
             onSuccess();
         } catch (error) {
             console.error(error);
@@ -370,11 +378,18 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             });
 
             // Auto-create prosthesis orders for prosthetic items with lab
+            let prosthesisCount = 0;
             for (const idx of indices) {
-                await autoCreateProsthesisOrder(currentTeeth[idx], idx, budget.id);
+                const created = await autoCreateProsthesisOrder(currentTeeth[idx], idx, budget.id);
+                if (created) prosthesisCount++;
             }
 
-            toast({ title: "Pagamento Registrado", description: `${indices.length} item(ns) marcado(s) como pago(s) e lançado(s) no financeiro.` });
+            toast({
+                title: "Pagamento Registrado",
+                description: prosthesisCount > 0
+                    ? `${indices.length} item(ns) pago(s). ${prosthesisCount} ordem(ns) de prótese criada(s)! Acesse a Central de Prótese para configurar o envio.`
+                    : `${indices.length} item(ns) marcado(s) como pago(s) e lançado(s) no financeiro.`,
+            });
             onSuccess();
         } catch (error) {
             console.error(error);

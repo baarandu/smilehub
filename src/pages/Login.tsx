@@ -87,7 +87,7 @@ export default function Login() {
                 <div className="text-center mb-8">
                     <img
                         src="/logo-login.png"
-                        alt="Smile Care Hub"
+                        alt="Organiza Odonto"
                         className="w-24 h-24 mx-auto mb-4 object-contain rounded-2xl"
                     />
                     <h1 className="text-2xl font-bold text-gray-900">Organiza Odonto</h1>

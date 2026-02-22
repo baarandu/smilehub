@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { FileDown, FileSpreadsheet, CheckCircle2, FileText, User, Building, TrendingUp, Receipt, ArrowUpRight } from 'lucide-react';
+import { FileDown, FileSpreadsheet, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -138,126 +137,76 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
   return (
     <div className="space-y-6">
       {/* Summary Overview */}
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-rose-100 rounded-lg">
-                <FileText className="w-5 h-5 text-[#a03f3d]" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Resumo Anual - {year}</CardTitle>
-                <CardDescription className="text-sm">Visão geral para declaração de Imposto de Renda</CardDescription>
-              </div>
-            </div>
-            <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-              Tudo em dia
-            </Badge>
-          </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Resumo Anual - {year}</CardTitle>
+          <CardDescription>Visao geral para declaracao de Imposto de Renda</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-            <div className="p-4 bg-white border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Receita PF</p>
-                <div className="p-1.5 bg-rose-100 rounded">
-                  <User className="w-3.5 h-3.5 text-[#a03f3d]" />
-                </div>
-              </div>
-              <p className="text-lg font-bold">R$</p>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">Receita PF</p>
               <p className="text-xl font-bold text-[#a03f3d]">
-                {summary.total_income_pf.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(summary.total_income_pf)}
               </p>
             </div>
-            <div className="p-4 bg-white border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Receita PJ</p>
-                <div className="p-1.5 bg-blue-100 rounded">
-                  <Building className="w-3.5 h-3.5 text-blue-600" />
-                </div>
-              </div>
-              <p className="text-lg font-bold">R$</p>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">Receita PJ</p>
               <p className="text-xl font-bold text-blue-600">
-                {summary.total_income_pj.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(summary.total_income_pj)}
               </p>
             </div>
-            <div className="p-4 bg-white border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Receita Total</p>
-                <div className="p-1.5 bg-gray-100 rounded">
-                  <TrendingUp className="w-3.5 h-3.5 text-gray-600" />
-                </div>
-              </div>
-              <p className="text-lg font-bold">R$</p>
-              <p className="text-xl font-bold">
-                {summary.total_income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">Receita Total</p>
+              <p className="text-xl font-bold">{formatCurrency(summary.total_income)}</p>
             </div>
-            <div className="p-4 bg-white border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">IRRF Retido</p>
-                <div className="p-1.5 bg-amber-100 rounded">
-                  <Receipt className="w-3.5 h-3.5 text-amber-600" />
-                </div>
-              </div>
-              <p className="text-lg font-bold">R$</p>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">IRRF Retido</p>
               <p className="text-xl font-bold text-amber-600">
-                {summary.total_irrf.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(summary.total_irrf)}
               </p>
             </div>
-            <div className="p-4 bg-white border rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Despesas Dedutíveis</p>
-                <div className="p-1.5 bg-green-100 rounded">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                </div>
-              </div>
-              <p className="text-lg font-bold">R$</p>
-              <p className="text-xl font-bold text-green-600">
-                {summary.total_expenses_deductible.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">Despesas Dedutiveis</p>
+              <p className="text-xl font-bold text-red-600">
+                {formatCurrency(summary.total_expenses_deductible)}
               </p>
             </div>
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-[#a03f3d]">Resultado Líquido</p>
-                <div className="p-1.5 bg-rose-100 rounded">
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[#a03f3d]" />
-                </div>
-              </div>
-              <p className="text-lg font-bold text-[#a03f3d]">R$</p>
-              <p className="text-xl font-bold text-[#a03f3d]">
-                {summary.net_result.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-[#8b3634]">Resultado Liquido</p>
+              <p className="text-xl font-bold text-[#8b3634]">
+                {formatCurrency(summary.net_result)}
               </p>
             </div>
-          </div>
-
-          {/* Actions inside the card */}
-          <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t">
-            <Button onClick={handleValidate} disabled={validating} variant="outline">
-              {validating ? (
-                'Validando...'
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Validar Dados
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleExportPdf}
-              disabled={exporting || hasErrors}
-              className="bg-[#a03f3d] hover:bg-[#8b3634]"
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Gerar PDF (Dossiê IR)
-            </Button>
-            <Button onClick={handleExportExcel} disabled={exporting} variant="outline">
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Exportar CSV
-            </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Actions */}
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={handleValidate} disabled={validating} variant="outline">
+          {validating ? (
+            'Validando...'
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Validar Dados
+            </>
+          )}
+        </Button>
+        <Button
+          onClick={handleExportPdf}
+          disabled={exporting || hasErrors}
+          className="bg-[#a03f3d] hover:bg-[#8b3634]"
+        >
+          <FileDown className="w-4 h-4 mr-2" />
+          Gerar PDF (Dossie IR)
+        </Button>
+        <Button onClick={handleExportExcel} disabled={exporting} variant="outline">
+          <FileSpreadsheet className="w-4 h-4 mr-2" />
+          Exportar CSV
+        </Button>
+      </div>
 
       {/* Validation Warnings */}
       {validationIssues.length > 0 && (
@@ -277,17 +226,9 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         </TabsList>
 
         <TabsContent value="monthly">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-gray-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Receitas por Mês</CardTitle>
-                  <CardDescription>Acompanhe a evolução ao longo do ano</CardDescription>
-                </div>
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Receitas por Mes</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -348,17 +289,12 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         </TabsContent>
 
         <TabsContent value="payers_pf">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-rose-100 rounded-lg">
-                  <User className="w-5 h-5 text-[#a03f3d]" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Relação de Pagadores Pessoa Física</CardTitle>
-                  <CardDescription>Lista de pacientes e terceiros que efetuaram pagamentos</CardDescription>
-                </div>
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Relacao de Pagadores Pessoa Física</CardTitle>
+              <CardDescription>
+                Lista de pacientes e terceiros que efetuaram pagamentos
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {summary.payers_pf.length === 0 ? (
@@ -394,17 +330,10 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         </TabsContent>
 
         <TabsContent value="payers_pj">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Relação de Fontes Pagadoras PJ</CardTitle>
-                  <CardDescription>Convênios e empresas que efetuaram pagamentos</CardDescription>
-                </div>
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Relacao de Fontes Pagadoras PJ</CardTitle>
+              <CardDescription>Convenios e empresas que efetuaram pagamentos</CardDescription>
             </CardHeader>
             <CardContent>
               {summary.payers_pj.length === 0 ? (
@@ -446,17 +375,10 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
         </TabsContent>
 
         <TabsContent value="expenses">
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <Receipt className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Despesas Dedutíveis por Categoria</CardTitle>
-                  <CardDescription>Resumo do Livro Caixa</CardDescription>
-                </div>
-              </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Despesas Dedutiveis por Categoria</CardTitle>
+              <CardDescription>Resumo do Livro Caixa</CardDescription>
             </CardHeader>
             <CardContent>
               {summary.expenses_by_category.length === 0 ? (

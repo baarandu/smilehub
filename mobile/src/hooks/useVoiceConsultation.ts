@@ -14,6 +14,7 @@ interface UseVoiceConsultationProps {
   userId: string;
   patientId?: string;
   isNewPatient: boolean;
+  extractionType?: 'adult' | 'child';
 }
 
 interface UseVoiceConsultationReturn {
@@ -35,6 +36,7 @@ export function useVoiceConsultation({
   userId,
   patientId,
   isNewPatient,
+  extractionType,
 }: UseVoiceConsultationProps): UseVoiceConsultationReturn {
   const [phase, setPhase] = useState<ConsultationPhase>('consent');
   const [processingStep, setProcessingStep] = useState<ProcessingStep | null>(null);
@@ -100,6 +102,7 @@ export function useVoiceConsultation({
         null,
         session.id,
         clinicId,
+        extractionType,
       );
       setExtractionResult(extractionResponse.data);
 
@@ -122,7 +125,7 @@ export function useVoiceConsultation({
         }).catch(console.error);
       }
     }
-  }, [session, recorder, clinicId, isNewPatient]);
+  }, [session, recorder, clinicId, isNewPatient, extractionType]);
 
   const discard = useCallback(async () => {
     if (!session) return;

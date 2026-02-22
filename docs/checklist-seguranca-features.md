@@ -1,6 +1,6 @@
 # Checklist de Segurança para Novas Features
 
-**Sistema:** Smile Care Hub
+**Sistema:** Organiza Odonto
 **Data:** 11/02/2026
 **Versão:** 1.0
 

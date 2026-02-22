@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ interface BudgetsTabProps {
 
 export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: BudgetsTabProps) {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBudget, setSelectedBudget] = useState<BudgetWithItems | null>(null);
@@ -158,14 +160,25 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                                 <span className="font-semibold text-base">{getToothDisplayName(tooth.tooth)}</span>
                                                 <span className="text-sm opacity-90">{tooth.treatments.join(', ')}</span>
                                                 {isProsthetic && prostheticItem && prostheticItem.existingOrderId && (
-                                                    <Badge variant="outline" className={`mt-1 text-[10px] w-fit ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.color || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.bgColor || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.borderColor || ''}`}>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`mt-1 text-[10px] w-fit cursor-pointer hover:opacity-80 transition-opacity ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.color || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.bgColor || ''} ${getKanbanColumn(prostheticItem.existingOrderStatus!)?.borderColor || ''}`}
+                                                        onClick={(e) => { e.stopPropagation(); navigate('/protese'); }}
+                                                    >
                                                         <Wrench className="w-3 h-3 mr-0.5" />
                                                         {getStatusLabel(prostheticItem.existingOrderStatus!)}
+                                                        <ExternalLink className="w-2.5 h-2.5 ml-1 opacity-60" />
                                                     </Badge>
                                                 )}
                                                 {isProsthetic && !prostheticItem?.existingOrderId && (
-                                                    <Badge variant="outline" className="mt-1 text-[10px] w-fit text-gray-500 bg-gray-50 border-gray-200">
-                                                        Envio Pendente
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="mt-1 text-[10px] w-fit cursor-pointer hover:opacity-80 transition-opacity text-amber-600 bg-amber-50 border-amber-200"
+                                                        onClick={(e) => { e.stopPropagation(); navigate('/protese'); }}
+                                                    >
+                                                        <Wrench className="w-3 h-3 mr-0.5" />
+                                                        Aguardando envio
+                                                        <ExternalLink className="w-2.5 h-2.5 ml-1 opacity-60" />
                                                     </Badge>
                                                 )}
                                             </div>

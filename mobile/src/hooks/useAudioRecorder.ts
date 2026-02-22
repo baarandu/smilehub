@@ -1,6 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Audio } from 'expo-av';
 import { Alert, Platform } from 'react-native';
+
+// Lazy-load expo-av to prevent crash when native module isn't available
+let Audio: typeof import('expo-av').Audio | null = null;
+try {
+  Audio = require('expo-av').Audio;
+} catch {
+  console.warn('expo-av not available — voice recording disabled');
+}
 
 interface UseAudioRecorderReturn {
   isRecording: boolean;
@@ -43,6 +50,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   const startRecording = useCallback(async () => {
+    if (!Audio) {
+      Alert.alert('Erro', 'Módulo de áudio não disponível. Reconstrua o app com expo-av.');
+      throw new Error('expo-av not available');
+    }
     try {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
@@ -106,9 +117,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
       if (!uri) throw new Error('No recording URI');
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-      });
+      if (Audio) {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+        });
+      }
 
       return uri;
     } catch (err) {

@@ -28,6 +28,9 @@ const AccountingAgent = lazy(() => import("./pages/AccountingAgent"));
 const VoiceConsultation = lazy(() => import("./pages/VoiceConsultation"));
 const DentistAgent = lazy(() => import("./pages/DentistAgent"));
 const ProsthesisCenter = lazy(() => import("./pages/ProsthesisCenter"));
+const DashboardPreview = lazy(() => import("./pages/DashboardPreview"));
+const DashboardV2 = lazy(() => import("./pages/DashboardV2"));
+const LandingV2 = lazy(() => import("./pages/LandingV2"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -83,6 +86,7 @@ const AppContent = () => (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
+      <Route path="/v2" element={<LandingV2 />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -106,6 +110,8 @@ const AppContent = () => (
         <Route path="/protese" element={<AppLayout><ProsthesisCenter /></AppLayout>} />
         <Route path="/consulta-voz" element={<AppLayout><VoiceConsultation /></AppLayout>} />
         <Route path="/consulta-voz/:appointmentId" element={<AppLayout><VoiceConsultation /></AppLayout>} />
+        <Route path="/dashboard-preview" element={<AppLayout><DashboardPreview /></AppLayout>} />
+        <Route path="/dashboard-v2" element={<AppLayout><DashboardV2 /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>

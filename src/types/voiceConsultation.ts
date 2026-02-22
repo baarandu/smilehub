@@ -140,6 +140,107 @@ export interface ExtractedAnamnesisData {
   observations: string | null;
 }
 
+// Extracted child anamnesis data from AI
+export interface ExtractedChildAnamnesisData {
+  pregnancyType: string | null;
+  birthType: string | null;
+  pregnancyComplications: AnamnesisCondition;
+  pregnancyMedications: AnamnesisCondition;
+  birthWeight: string | null;
+  exclusiveBreastfeedingDuration: string | null;
+  totalBreastfeedingDuration: string | null;
+  currentHealth: string | null;
+  chronicDisease: AnamnesisCondition;
+  hospitalized: AnamnesisCondition;
+  surgery: AnamnesisCondition;
+  respiratoryProblems: AnamnesisCondition;
+  cardiopathy: AnamnesisCondition;
+  continuousMedication: AnamnesisCondition;
+  frequentAntibiotics: AnamnesisCondition;
+  drugAllergy: AnamnesisCondition;
+  foodAllergy: AnamnesisCondition;
+  previousDentist: boolean | null;
+  firstVisitAge: string | null;
+  lastDentalVisit: string | null;
+  lastVisitReason: string | null;
+  previousProcedures: string[] | null;
+  localAnesthesia: boolean | null;
+  anesthesiaGoodReaction: boolean | null;
+  anesthesiaAdverseReaction: string | null;
+  frequentCankerSores: boolean | null;
+  dentalTrauma: AnamnesisCondition;
+  traumaAffectedTooth: string | null;
+  traumaReceivedTreatment: string | null;
+  chiefComplaint: string | null;
+  brushingBy: string | null;
+  brushingFrequency: string | null;
+  brushingStartAge: string | null;
+  hygieneInstruction: boolean | null;
+  fluorideToothpaste: boolean | null;
+  toothpasteBrand: string | null;
+  dentalFloss: AnamnesisCondition;
+  mouthwash: AnamnesisCondition;
+  wasBreastfed: boolean | null;
+  usedBottle: AnamnesisCondition;
+  currentlyUsesBottle: boolean | null;
+  usesPacifier: boolean | null;
+  sugarFrequency: string | null;
+  sugarBeforeBed: boolean | null;
+  sleepsAfterSugarLiquid: boolean | null;
+  nailBiting: boolean | null;
+  objectBiting: boolean | null;
+  thumbSucking: boolean | null;
+  prolongedPacifier: boolean | null;
+  teethGrinding: AnamnesisCondition;
+  mouthBreathing: boolean | null;
+  behavior: string | null;
+  managementTechniques: AnamnesisCondition;
+  dentition: string | null;
+  plaqueIndex: string | null;
+  cariesLesions: string | null;
+  visibleBiofilm: string | null;
+  gingivalChanges: string | null;
+  mucosaChanges: string | null;
+  occlusalChanges: string | null;
+  radiographyNeeded: string | null;
+  treatmentPlan: string | null;
+  facialSymmetry: string | null;
+  facialProfile: string | null;
+  lipCompetence: string | null;
+  palpableLymphNodes: AnamnesisCondition;
+  atm: string | null;
+  breathingType: string | null;
+  labialFrenum: string | null;
+  lingualFrenum: string | null;
+  jugalMucosa: string | null;
+  jugalMucosaDetails: string | null;
+  lips: string | null;
+  gingiva: string | null;
+  palate: string | null;
+  tongue: string | null;
+  tongueDetails: string | null;
+  oropharynxTonsils: string | null;
+  observedHygiene: string | null;
+  deglutition: string | null;
+  alteredPhonation: boolean | null;
+  facialPattern: string | null;
+  angleClass: string | null;
+  crossbite: string | null;
+  openBite: string | null;
+  overjet: string | null;
+  overbite: string | null;
+  midlineDeviation: boolean | null;
+  observations: string | null;
+}
+
+// Child extraction result from GPT
+export interface ChildExtractionResult {
+  childAnamnesis: ExtractedChildAnamnesisData;
+  confidence: {
+    childAnamnesis: ConfidenceLevel;
+  };
+}
+
 // Extracted consultation data from AI
 export interface ExtractedConsultationData {
   chiefComplaint: string | null;

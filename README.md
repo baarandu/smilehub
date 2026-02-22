@@ -1,4 +1,4 @@
-# 🦷 Organiza Odonto (Smile Care Hub)
+# 🦷 Organiza Odonto
 
 Sistema completo para gestão de clínicas odontológicas com suporte multi-tenant, controle financeiro, agendamento e muito mais.
 

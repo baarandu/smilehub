@@ -17,6 +17,7 @@ interface UseVoiceConsultationProps {
   isNewPatient: boolean;
   existingPatientData?: Record<string, unknown> | null;
   existingAnamnesisData?: Record<string, unknown> | null;
+  extractionType?: 'adult' | 'child';
 }
 
 interface UseVoiceConsultationReturn {
@@ -58,6 +59,7 @@ export function useVoiceConsultation({
   isNewPatient,
   existingPatientData,
   existingAnamnesisData,
+  extractionType,
 }: UseVoiceConsultationProps): UseVoiceConsultationReturn {
   const [phase, setPhase] = useState<ConsultationPhase>('consent');
   const [processingStep, setProcessingStep] = useState<ProcessingStep | null>(null);
@@ -130,6 +132,7 @@ export function useVoiceConsultation({
         existingAnamnesisData,
         session.id,
         clinicId,
+        extractionType,
       );
       setExtractionResult(extractionResponse.data);
 
@@ -153,7 +156,7 @@ export function useVoiceConsultation({
         }).catch(console.error);
       }
     }
-  }, [session, recorder, clinicId, isNewPatient, existingPatientData, existingAnamnesisData]);
+  }, [session, recorder, clinicId, isNewPatient, existingPatientData, existingAnamnesisData, extractionType]);
 
   const saveAll = useCallback(
     async (

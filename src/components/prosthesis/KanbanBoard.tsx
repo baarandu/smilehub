@@ -78,8 +78,10 @@ export function KanbanBoard() {
     orders.forEach(o => {
       if (grouped[o.status]) grouped[o.status].push(o);
     });
-    // Sort each column by position
-    Object.values(grouped).forEach(arr => arr.sort((a, b) => a.position - b.position));
+    // Sort each column by newest first (updated_at so moved cards also go to top)
+    Object.values(grouped).forEach(arr => arr.sort((a, b) =>
+      new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    ));
     return grouped;
   }, [orders]);
 

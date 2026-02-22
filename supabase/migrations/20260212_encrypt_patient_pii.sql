@@ -1,6 +1,6 @@
 -- =============================================
 -- Phase 3.1: Encryption of Patient PII (CPF and RG)
--- LGPD Compliance — Smile Care Hub
+-- LGPD Compliance — Organiza Odonto
 -- =============================================
 -- NOTE: Already applied to production. This file is for reference.
 -- Encryption key is stored in _encryption_config table (not in code).

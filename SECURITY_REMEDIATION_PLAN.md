@@ -1,4 +1,4 @@
-# Plano de Remediação de Segurança — Smile Care Hub
+# Plano de Remediação de Segurança — Organiza Odonto
 
 **Data da Auditoria:** 11/02/2026
 **Última Atualização:** 13/02/2026

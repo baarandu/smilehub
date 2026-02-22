@@ -130,6 +130,142 @@ FORMATO DE SAÍDA (JSON):
   }
 }`;
 
+const CHILD_EXTRACTION_PROMPT = `Você é um assistente de IA para uma clínica odontológica pediátrica brasileira. Sua tarefa é extrair dados estruturados de uma transcrição de anamnese odontopediátrica.
+
+REGRAS CRÍTICAS:
+1. Extraia APENAS informações que foram EXPLICITAMENTE mencionadas na transcrição.
+2. Use null para qualquer campo não mencionado — NUNCA invente dados.
+3. Para campos booleanos:
+   - true = responsável CONFIRMOU a condição
+   - false = responsável NEGOU a condição
+   - null = condição NÃO FOI perguntada/mencionada
+4. A conversa é tipicamente entre dentista e responsável (mãe/pai) sobre a criança.
+5. Para campos com opções fixas (select), use EXATAMENTE os valores permitidos listados.
+
+REGRAS PARA CAMPOS SELECT:
+- pregnancyType: "a_termo" | "prematuro" | "pos_termo" | null
+- birthType: "normal" | "cesarea" | null
+- brushingBy: "crianca" | "pais" | "ambos" | null
+- brushingFrequency: "1x" | "2x" | "3x_ou_mais" | null
+- sugarFrequency: "raramente" | "1x_dia" | "2_3x_dia" | "varias_vezes" | null
+- behavior: "cooperativo" | "ansioso" | "medroso" | "choroso" | "nao_cooperativo" | null
+- dentition: "decidua" | "mista" | "permanente" | null
+- facialSymmetry: "simetrica" | "assimetria" | null
+- facialProfile: "convexo" | "reto" | "concavo" | null
+- lipCompetence: "adequado" | "incompetente" | null
+- breathingType: "nasal" | "bucal" | "mista" | null
+- labialFrenum: "normal" | "alterado" | null
+- lingualFrenum: "normal" | "curto_anquiloglossia" | null
+- jugalMucosa: "normal" | "alterada" | null
+- lips: "normais" | "alterados" | null
+- gingiva: "saudavel" | "inflamada" | "sangramento" | null
+- palate: "normal" | "atresico" | "ogival" | null
+- tongue: "normal" | "saburrosa" | "geografica" | "outra" | null
+- deglutition: "tipica" | "atipica" | null
+- facialPattern: "mesofacial" | "dolico" | "braquifacial" | null
+- angleClass: "I" | "II" | "III" | null
+- crossbite: "nao" | "anterior" | "posterior" | null
+- openBite: "nao" | "anterior" | "posterior" | null
+- previousProcedures: array de "restauracao","extracao","endodontia","selante","fluor","ortodontia"
+
+FORMATO DE SAÍDA (JSON):
+{
+  "childAnamnesis": {
+    "pregnancyType": string|null,
+    "birthType": string|null,
+    "pregnancyComplications": { "value": bool|null, "details": string|null },
+    "pregnancyMedications": { "value": bool|null, "details": string|null },
+    "birthWeight": string|null,
+    "exclusiveBreastfeedingDuration": string|null,
+    "totalBreastfeedingDuration": string|null,
+    "currentHealth": string|null,
+    "chronicDisease": { "value": bool|null, "details": string|null },
+    "hospitalized": { "value": bool|null, "details": string|null },
+    "surgery": { "value": bool|null, "details": string|null },
+    "respiratoryProblems": { "value": bool|null, "details": string|null },
+    "cardiopathy": { "value": bool|null, "details": string|null },
+    "continuousMedication": { "value": bool|null, "details": string|null },
+    "frequentAntibiotics": { "value": bool|null, "details": string|null },
+    "drugAllergy": { "value": bool|null, "details": string|null },
+    "foodAllergy": { "value": bool|null, "details": string|null },
+    "previousDentist": bool|null,
+    "firstVisitAge": string|null,
+    "lastDentalVisit": string|null,
+    "lastVisitReason": string|null,
+    "previousProcedures": string[]|null,
+    "localAnesthesia": bool|null,
+    "anesthesiaGoodReaction": bool|null,
+    "anesthesiaAdverseReaction": string|null,
+    "frequentCankerSores": bool|null,
+    "dentalTrauma": { "value": bool|null, "details": string|null },
+    "traumaAffectedTooth": string|null,
+    "traumaReceivedTreatment": string|null,
+    "chiefComplaint": string|null,
+    "brushingBy": string|null,
+    "brushingFrequency": string|null,
+    "brushingStartAge": string|null,
+    "hygieneInstruction": bool|null,
+    "fluorideToothpaste": bool|null,
+    "toothpasteBrand": string|null,
+    "dentalFloss": { "value": bool|null, "details": string|null },
+    "mouthwash": { "value": bool|null, "details": string|null },
+    "wasBreastfed": bool|null,
+    "usedBottle": { "value": bool|null, "details": string|null },
+    "currentlyUsesBottle": bool|null,
+    "usesPacifier": bool|null,
+    "sugarFrequency": string|null,
+    "sugarBeforeBed": bool|null,
+    "sleepsAfterSugarLiquid": bool|null,
+    "nailBiting": bool|null,
+    "objectBiting": bool|null,
+    "thumbSucking": bool|null,
+    "prolongedPacifier": bool|null,
+    "teethGrinding": { "value": bool|null, "details": string|null },
+    "mouthBreathing": bool|null,
+    "behavior": string|null,
+    "managementTechniques": { "value": bool|null, "details": string|null },
+    "dentition": string|null,
+    "plaqueIndex": string|null,
+    "cariesLesions": string|null,
+    "visibleBiofilm": string|null,
+    "gingivalChanges": string|null,
+    "mucosaChanges": string|null,
+    "occlusalChanges": string|null,
+    "radiographyNeeded": string|null,
+    "treatmentPlan": string|null,
+    "facialSymmetry": string|null,
+    "facialProfile": string|null,
+    "lipCompetence": string|null,
+    "palpableLymphNodes": { "value": bool|null, "details": string|null },
+    "atm": string|null,
+    "breathingType": string|null,
+    "labialFrenum": string|null,
+    "lingualFrenum": string|null,
+    "jugalMucosa": string|null,
+    "jugalMucosaDetails": string|null,
+    "lips": string|null,
+    "gingiva": string|null,
+    "palate": string|null,
+    "tongue": string|null,
+    "tongueDetails": string|null,
+    "oropharynxTonsils": string|null,
+    "observedHygiene": string|null,
+    "deglutition": string|null,
+    "alteredPhonation": bool|null,
+    "facialPattern": string|null,
+    "angleClass": string|null,
+    "crossbite": string|null,
+    "openBite": string|null,
+    "overjet": string|null,
+    "overbite": string|null,
+    "midlineDeviation": bool|null,
+    "observations": string|null
+  },
+  "confidence": {
+    "childAnamnesis": "high" | "medium" | "low"
+  }
+}`;
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -168,7 +304,10 @@ serve(async (req) => {
       existing_anamnesis_data,
       session_id,
       clinic_id,
+      extraction_type,
     } = body;
+
+    const isChildExtraction = extraction_type === "child";
 
     // Validate inputs
     validateRequired(transcription, "transcription");
@@ -230,6 +369,7 @@ serve(async (req) => {
     userMessage += `\n\nTIPO: ${is_new_patient ? "Paciente NOVO — extraia todos os dados mencionados" : "Paciente EXISTENTE — retorne apenas dados novos ou alterados"}`;
 
     // Call GPT-4o-mini
+    const systemPrompt = isChildExtraction ? CHILD_EXTRACTION_PROMPT : EXTRACTION_PROMPT;
     const gptResponse = await fetch(
       "https://api.openai.com/v1/chat/completions",
       {
@@ -241,7 +381,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: "gpt-4o-mini",
           messages: [
-            { role: "system", content: EXTRACTION_PROMPT },
+            { role: "system", content: systemPrompt },
             { role: "user", content: userMessage },
           ],
           response_format: { type: "json_object" },
@@ -286,7 +426,7 @@ serve(async (req) => {
     log.audit(supabase, {
       action: "AI_REQUEST", table_name: "VoiceExtraction", record_id: session_id,
       user_id: user.id, clinic_id,
-      details: { model: "gpt-4o-mini", tokens_used: tokensUsed, is_new_patient },
+      details: { model: "gpt-4o-mini", tokens_used: tokensUsed, is_new_patient, extraction_type: extraction_type || "adult" },
     });
 
     return new Response(

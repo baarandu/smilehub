@@ -65,6 +65,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
+  const [preLabCount, setPreLabCount] = useState(0);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
@@ -179,6 +180,23 @@ export function AppLayout({ children }: AppLayoutProps) {
     };
   }, []);
 
+  // Pre-lab prosthesis count (depends on clinicId)
+  useEffect(() => {
+    if (!clinicId) return;
+
+    const loadPreLabCount = async () => {
+      try {
+        const { prosthesisService } = await import('@/services/prosthesis');
+        const count = await prosthesisService.getPreLabCount(clinicId);
+        setPreLabCount(count);
+      } catch (e) { console.error(e); }
+    };
+    loadPreLabCount();
+
+    const interval = setInterval(loadPreLabCount, 60000);
+    return () => clearInterval(interval);
+  }, [clinicId]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
@@ -238,6 +256,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                 {item.label === 'Alertas' && activeRemindersCount > 0 && (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white animate-pulse">
                     {activeRemindersCount > 9 ? '9+' : activeRemindersCount}
+                  </span>
+                )}
+                {item.to === '/protese' && preLabCount > 0 && (
+                  <span className="flex h-5 min-w-5 px-1 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+                    {preLabCount > 9 ? '9+' : preLabCount}
                   </span>
                 )}
               </NavLink>

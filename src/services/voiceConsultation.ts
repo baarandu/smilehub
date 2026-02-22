@@ -88,6 +88,7 @@ export const voiceConsultationService = {
     existingAnamnesisData?: Record<string, unknown> | null,
     sessionId?: string,
     clinicId?: string,
+    extractionType?: 'adult' | 'child',
   ): Promise<ExtractionResponse> {
     const token = await getAccessToken();
 
@@ -106,6 +107,7 @@ export const voiceConsultationService = {
           existing_anamnesis_data: existingAnamnesisData || null,
           session_id: sessionId,
           clinic_id: clinicId,
+          extraction_type: extractionType || 'adult',
         }),
       },
     );

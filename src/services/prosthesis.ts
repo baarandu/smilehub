@@ -89,6 +89,17 @@ export const prosthesisService = {
     if (error) throw error;
   },
 
+  async getPreLabCount(clinicId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from('prosthesis_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('clinic_id', clinicId)
+      .eq('status', 'pre_lab');
+
+    if (error) throw error;
+    return count || 0;
+  },
+
   // ==================== Orders ====================
 
   async getOrders(clinicId: string, filters?: ProsthesisOrderFilters): Promise<ProsthesisOrder[]> {

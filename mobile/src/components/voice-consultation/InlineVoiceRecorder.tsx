@@ -9,6 +9,7 @@ import type { ExtractionResult, ProcessingStep } from '../../types/voiceConsulta
 interface InlineVoiceRecorderProps {
   patientId?: string;
   onResult: (result: ExtractionResult) => void;
+  extractionType?: 'adult' | 'child';
 }
 
 type Phase = 'idle' | 'consent' | 'recording' | 'processing' | 'done';
@@ -25,7 +26,7 @@ const PROCESSING_STEPS: { key: ProcessingStep; label: string }[] = [
   { key: 'preparing', label: 'Preparando formulário...' },
 ];
 
-export function InlineVoiceRecorder({ patientId, onResult }: InlineVoiceRecorderProps) {
+export function InlineVoiceRecorder({ patientId, onResult, extractionType }: InlineVoiceRecorderProps) {
   const { clinicId } = useClinic();
   const [userId, setUserId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -36,6 +37,7 @@ export function InlineVoiceRecorder({ patientId, onResult }: InlineVoiceRecorder
     userId: userId || '',
     patientId,
     isNewPatient: false,
+    extractionType,
   });
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-# Agente de Contabilidade IA — Smile Care Hub
+# Agente de Contabilidade IA — Organiza Odonto
 
 ## Status Geral
 

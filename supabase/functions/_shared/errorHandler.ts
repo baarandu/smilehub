@@ -8,6 +8,7 @@
 import { ValidationError } from "./validation.ts";
 import { RateLimitError } from "./rateLimit.ts";
 import { ConsentError } from "./consent.ts";
+import { AIInjectionError } from "./aiSanitizer.ts";
 
 const SENSITIVE_PATTERNS = [
   /sk-[a-zA-Z0-9_]{20,}/g, // OpenAI keys
@@ -70,6 +71,17 @@ export function createErrorResponse(
     );
   }
 
+  // AI injection errors → 400
+  if (error instanceof AIInjectionError) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
   // Validation errors are safe to return as-is (user input errors)
   if (error instanceof ValidationError) {
     return new Response(
@@ -99,6 +111,16 @@ export function createErrorResponse(
     "Falha ao gerar o segredo de pagamento",
     // Email
     "Erro ao enviar email de convite",
+    // Voice Consultation
+    "Erro no serviço de transcrição. Tente novamente.",
+    "Erro no serviço de extração. Tente novamente.",
+    "No content in GPT response",
+    "No audio file provided",
+    // Evolution Proxy
+    "Evolution API não configurada no servidor.",
+    "Apenas administradores podem gerenciar o WhatsApp",
+    "Missing action parameter",
+    "Missing phone or message",
   ];
 
   const isSafeMessage = safeMessages.some((safe) => message.includes(safe));

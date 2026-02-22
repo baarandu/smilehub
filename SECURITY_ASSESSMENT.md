@@ -1,4 +1,4 @@
-# Avaliação de Segurança - Smile Care Hub
+# Avaliação de Segurança - Organiza Odonto
 
 **Data**: 13/02/2026  
 **Versão avaliada**: 1.0.5 (build 16)  

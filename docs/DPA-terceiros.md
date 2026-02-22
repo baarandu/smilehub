@@ -1,6 +1,6 @@
 # Acordo de Processamento de Dados com Terceiros (DPA)
 
-**Sistema:** Smile Care Hub
+**Sistema:** Organiza Odonto
 **Data:** 11/02/2026
 **Versão:** 1.0
 **Base Legal:** LGPD Art. 26 (compartilhamento), Art. 39 (responsabilidade do operador)
@@ -9,12 +9,12 @@
 
 ## 1. Introdução
 
-Este documento descreve os fluxos de dados pessoais compartilhados entre o Smile Care Hub (controlador) e os operadores terceirizados que processam dados em nome do sistema. O objetivo é assegurar conformidade com a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018) e estabelecer obrigações contratuais claras.
+Este documento descreve os fluxos de dados pessoais compartilhados entre o Organiza Odonto (controlador) e os operadores terceirizados que processam dados em nome do sistema. O objetivo é assegurar conformidade com a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018) e estabelecer obrigações contratuais claras.
 
 **Escopo:** Aplica-se a todos os dados pessoais e dados sensíveis de saúde processados pelo sistema, incluindo dados de pacientes, profissionais e administrativos.
 
 **Definições:**
-- **Controlador:** Clínica odontológica que utiliza o Smile Care Hub
+- **Controlador:** Clínica odontológica que utiliza o Organiza Odonto
 - **Operador:** Terceiro que processa dados em nome do controlador
 - **Titular:** Paciente ou usuário cujos dados são processados
 - **DPO:** Encarregado de Proteção de Dados da clínica
