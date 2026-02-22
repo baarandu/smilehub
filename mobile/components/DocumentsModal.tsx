@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Modal, ActivityIndicator, Alert, Image, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     X,
@@ -11,12 +11,16 @@ import {
     FileDown,
     Search,
     ChevronRight,
-    Save
+    Save,
+    Upload,
+    Image as ImageIcon
 } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import { documentTemplatesService } from '../src/services/documentTemplates';
 import { getPatients } from '../src/services/patients';
+import { profileService } from '../src/services/profile';
 import type { DocumentTemplate, Patient } from '../src/types/database';
 
 
@@ -128,11 +132,79 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [previewContent, setPreviewContent] = useState('');
 
+    // Letterhead
+    const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
+    const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
+    const [useLetterhead, setUseLetterhead] = useState(false);
+    const [paperWidthMm, setPaperWidthMm] = useState(210);
+    const [paperHeightMm, setPaperHeightMm] = useState(297);
+
     useEffect(() => {
         if (visible) {
             loadData();
+            loadLetterhead();
         }
     }, [visible]);
+
+    const loadLetterhead = async () => {
+        try {
+            const info = await profileService.getClinicInfo();
+            setLetterheadUrl(info.letterheadUrl);
+            setPaperWidthMm(info.letterheadWidthMm);
+            setPaperHeightMm(info.letterheadHeightMm);
+        } catch (error) {
+            console.error('Error loading letterhead:', error);
+        }
+    };
+
+    const handleUploadLetterhead = async () => {
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                quality: 0.9,
+            });
+            if (result.canceled || !result.assets?.[0]) return;
+
+            const asset = result.assets[0];
+            if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+                Alert.alert('Erro', 'Arquivo muito grande (máx 5MB)');
+                return;
+            }
+
+            setUploadingLetterhead(true);
+            const response = await fetch(asset.uri);
+            const blob = await response.blob();
+            const ext = asset.uri.split('.').pop() || 'jpg';
+            const file = new File([blob], `letterhead.${ext}`, { type: `image/${ext}` });
+            const url = await profileService.uploadLetterhead(file);
+            setLetterheadUrl(url);
+            Alert.alert('Sucesso', 'Papel timbrado enviado!');
+        } catch (error) {
+            console.error('Error uploading letterhead:', error);
+            Alert.alert('Erro', 'Falha ao enviar papel timbrado');
+        } finally {
+            setUploadingLetterhead(false);
+        }
+    };
+
+    const handleRemoveLetterhead = () => {
+        Alert.alert('Confirmar', 'Remover papel timbrado?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Remover',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await profileService.removeLetterhead();
+                        setLetterheadUrl(null);
+                        setUseLetterhead(false);
+                    } catch (error) {
+                        Alert.alert('Erro', 'Falha ao remover');
+                    }
+                }
+            }
+        ]);
+    };
 
     const loadData = async () => {
         try {
@@ -219,6 +291,7 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
         setSelectedPatient(null);
         setDocumentDate(new Date().toISOString().split('T')[0]);
         setPreviewContent('');
+        setUseLetterhead(!!letterheadUrl);
         setView('generate');
     };
 
@@ -238,6 +311,16 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const getPDFHTML = () => {
         if (!selectedTemplate || !selectedPatient) return '';
 
+        const letterheadCss = useLetterhead && letterheadUrl ? `
+                    body {
+                        background-image: url('${letterheadUrl}');
+                        background-size: 100% 100%;
+                        background-repeat: no-repeat;
+                        background-position: center;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }` : '';
+
         return `
             <!DOCTYPE html>
             <html>
@@ -245,12 +328,13 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                 <meta charset="UTF-8">
                 <title>${selectedTemplate.name}</title>
                 <style>
-                    @page { size: A4; margin: 20mm; }
+                    @page { size: ${useLetterhead ? `${paperWidthMm}mm ${paperHeightMm}mm` : 'A4'}; margin: 20mm; }
                     body {
                         font-family: Arial, sans-serif;
                         padding: 40px;
                         color: #000;
                     }
+                    ${letterheadCss}
                     h1 {
                         text-align: center;
                         margin-bottom: 30px;
@@ -406,6 +490,67 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                     </Text>
                                 </View>
 
+                                {/* Letterhead Management */}
+                                <View className="bg-white rounded-xl p-4 border border-gray-100 gap-3">
+                                    <View className="flex-row items-center gap-2">
+                                        <ImageIcon size={16} color="#b94a48" />
+                                        <Text className="text-sm font-medium text-gray-900">Papel Timbrado</Text>
+                                    </View>
+                                    {letterheadUrl ? (
+                                        <View className="gap-3">
+                                            <View className="bg-gray-50 rounded-lg p-2 items-center">
+                                                <Image
+                                                    source={{ uri: letterheadUrl }}
+                                                    style={{ width: 105, height: 148.5, resizeMode: 'contain' }}
+                                                />
+                                            </View>
+                                            <View className="flex-row gap-2">
+                                                <TouchableOpacity
+                                                    onPress={handleUploadLetterhead}
+                                                    disabled={uploadingLetterhead}
+                                                    className="flex-1 py-2.5 bg-gray-100 rounded-lg flex-row items-center justify-center gap-1"
+                                                >
+                                                    {uploadingLetterhead ? (
+                                                        <ActivityIndicator size="small" color="#6B7280" />
+                                                    ) : (
+                                                        <>
+                                                            <Upload size={14} color="#6B7280" />
+                                                            <Text className="text-gray-700 text-sm font-medium">Substituir</Text>
+                                                        </>
+                                                    )}
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={handleRemoveLetterhead}
+                                                    className="py-2.5 px-4 bg-[#fef2f2] rounded-lg flex-row items-center justify-center gap-1"
+                                                >
+                                                    <X size={14} color="#EF4444" />
+                                                    <Text className="text-red-500 text-sm font-medium">Remover</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View className="gap-2">
+                                            <Text className="text-xs text-gray-500">
+                                                Envie uma imagem para usar como fundo dos documentos. Recomendado: 2480×3508px (A4 300dpi). Máx 5MB. Para enviar PDF, use o app web.
+                                            </Text>
+                                            <TouchableOpacity
+                                                onPress={handleUploadLetterhead}
+                                                disabled={uploadingLetterhead}
+                                                className="py-2.5 bg-gray-100 rounded-lg flex-row items-center justify-center gap-2"
+                                            >
+                                                {uploadingLetterhead ? (
+                                                    <ActivityIndicator size="small" color="#6B7280" />
+                                                ) : (
+                                                    <>
+                                                        <Upload size={16} color="#6B7280" />
+                                                        <Text className="text-gray-700 text-sm font-medium">Enviar Papel Timbrado</Text>
+                                                    </>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </View>
+
                                 {templates.length === 0 && (
                                     <View className="bg-white rounded-xl p-4 items-center mb-3">
                                         <FileText size={40} color="#D1D5DB" />
@@ -557,6 +702,21 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                                         <View className="bg-white border border-gray-200 rounded-xl p-4 min-h-[150px]">
                                             <Text className="text-gray-900 text-sm">{previewContent}</Text>
                                         </View>
+                                    </View>
+                                )}
+
+                                {/* Letterhead Checkbox */}
+                                {letterheadUrl && selectedPatient && (
+                                    <View className="flex-row items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-3">
+                                        <View className="flex-row items-center gap-2">
+                                            <ImageIcon size={16} color="#b94a48" />
+                                            <Text className="text-sm text-gray-900">Usar Papel Timbrado</Text>
+                                        </View>
+                                        <Switch
+                                            value={useLetterhead}
+                                            onValueChange={setUseLetterhead}
+                                            trackColor={{ false: '#D1D5DB', true: '#b94a48' }}
+                                        />
                                     </View>
                                 )}
 

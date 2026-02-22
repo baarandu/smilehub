@@ -182,6 +182,64 @@ serve(async (req: Request) => {
 
     logger.info("Envelope completed successfully", { signatureId: sig.id, examId });
 
+    // Notify dentist via email when patient has signed
+    if (sig.patient_status) {
+      try {
+        const resendKey = Deno.env.get("RESEND_API_KEY");
+        if (resendKey) {
+          const { data: dentist } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", sig.created_by)
+            .single();
+
+          const { data: patient } = await supabase
+            .from("patients")
+            .select("name")
+            .eq("id", sig.patient_id)
+            .single();
+
+          if (dentist?.email) {
+            const dentistName = dentist.full_name || "Doutor(a)";
+            const patientName = patient?.name || "Paciente";
+            const downloadUrl = signedPdfUrl || "";
+
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${resendKey}`,
+              },
+              body: JSON.stringify({
+                from: "Organiza Odonto <onboarding@resend.dev>",
+                to: [dentist.email],
+                subject: `Documento assinado: ${sig.title}`,
+                html: `
+                  <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2>Olá, ${dentistName}!</h2>
+                    <p>O paciente <strong>${patientName}</strong> assinou o documento <strong>${sig.title}</strong>.</p>
+                    <p>O documento foi concluído com todas as assinaturas necessárias.</p>
+                    ${downloadUrl ? `
+                    <a href="${downloadUrl}" style="background-color: #0D9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">
+                      Baixar PDF Assinado
+                    </a>
+                    ` : ""}
+                    <p style="margin-top: 32px; color: #666; font-size: 14px;">
+                      Este é um email automático do Organiza Odonto.
+                    </p>
+                  </div>
+                `,
+              }),
+            });
+
+            logger.info("Dentist notification email sent", { to: dentist.email, signatureId: sig.id });
+          }
+        }
+      } catch (emailErr) {
+        logger.warn("Failed to send dentist notification email", { error: String(emailErr) });
+      }
+    }
+
     return new Response(
       JSON.stringify({ received: true, processed: true }),
       { status: 200, headers: { "Content-Type": "application/json" } }

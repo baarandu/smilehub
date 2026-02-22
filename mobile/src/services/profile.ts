@@ -15,6 +15,8 @@ export interface ClinicInfo {
     isClinic: boolean;
     logoUrl: string | null;
     letterheadUrl: string | null;
+    letterheadWidthMm: number;
+    letterheadHeightMm: number;
     address: string | null;
     city: string | null;
     state: string | null;
@@ -109,7 +111,7 @@ export const profileService = {
         // Get letterhead from clinic_settings
         const { data: settings, error: settingsError } = await (supabase
             .from('clinic_settings') as any)
-            .select('letterhead_url')
+            .select('letterhead_url, letterhead_width_mm, letterhead_height_mm')
             .eq('user_id', user.id)
             .maybeSingle();
 
@@ -118,6 +120,8 @@ export const profileService = {
         }
 
         const letterheadUrl = settings?.letterhead_url || null;
+        const letterheadWidthMm = settings?.letterhead_width_mm ? Number(settings.letterhead_width_mm) : 210;
+        const letterheadHeightMm = settings?.letterhead_height_mm ? Number(settings.letterhead_height_mm) : 297;
 
         // Get dentist name, gender and CRO from profiles
         const { data: profile } = await (supabase
@@ -151,6 +155,8 @@ export const profileService = {
             isClinic,
             logoUrl,
             letterheadUrl,
+            letterheadWidthMm,
+            letterheadHeightMm,
             address,
             city,
             state,

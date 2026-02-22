@@ -13,6 +13,8 @@ export interface ClinicInfo {
     isClinic: boolean;
     logoUrl: string | null;
     letterheadUrl: string | null;
+    letterheadWidthMm: number;
+    letterheadHeightMm: number;
     clinicId: string | null;
     address: string | null;
     city: string | null;
@@ -50,6 +52,8 @@ export const profileService = {
                 isClinic: false,
                 logoUrl: null,
                 letterheadUrl: null,
+                letterheadWidthMm: 210,
+                letterheadHeightMm: 297,
                 clinicId: null,
                 address: null,
                 city: null,
@@ -124,13 +128,17 @@ export const profileService = {
 
         // Get letterhead from clinic_settings
         let letterheadUrl: string | null = null;
+        let letterheadWidthMm = 210;
+        let letterheadHeightMm = 297;
         try {
             const { data: settings } = await supabase
                 .from('clinic_settings')
-                .select('letterhead_url')
+                .select('letterhead_url, letterhead_width_mm, letterhead_height_mm')
                 .eq('user_id', user.id)
                 .maybeSingle() as any;
             letterheadUrl = settings?.letterhead_url || null;
+            if (settings?.letterhead_width_mm) letterheadWidthMm = Number(settings.letterhead_width_mm);
+            if (settings?.letterhead_height_mm) letterheadHeightMm = Number(settings.letterhead_height_mm);
         } catch {
             // Settings might not exist
         }
@@ -141,6 +149,8 @@ export const profileService = {
             isClinic,
             logoUrl,
             letterheadUrl,
+            letterheadWidthMm,
+            letterheadHeightMm,
             clinicId,
             address,
             city,
@@ -279,6 +289,78 @@ export const profileService = {
         });
 
         if (error) throw error;
+    },
+
+    async uploadLetterhead(file: File, widthMm = 210, heightMm = 297): Promise<string | null> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .maybeSingle() as any;
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const clinicId = clinicUser.clinic_id;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${clinicId}/letterhead.${fileExt}`;
+
+        const { error } = await supabase.storage
+            .from('clinic-logos')
+            .upload(fileName, file, { upsert: true });
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+            .from('clinic-logos')
+            .getPublicUrl(fileName);
+
+        const letterheadUrl = urlData.publicUrl;
+
+        // Upsert into clinic_settings
+        const { error: upsertError } = await (supabase
+            .from('clinic_settings') as any)
+            .upsert(
+                {
+                    user_id: user.id,
+                    letterhead_url: letterheadUrl,
+                    letterhead_width_mm: widthMm,
+                    letterhead_height_mm: heightMm,
+                },
+                { onConflict: 'user_id' }
+            );
+
+        if (upsertError) {
+            console.error('Error updating clinic_settings with letterhead:', upsertError);
+            throw upsertError;
+        }
+
+        return letterheadUrl;
+    },
+
+    async updateLetterheadPaperSize(widthMm: number, heightMm: number): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await (supabase
+            .from('clinic_settings') as any)
+            .update({ letterhead_width_mm: widthMm, letterhead_height_mm: heightMm })
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+    },
+
+    async removeLetterhead(): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // Remove from clinic_settings
+        await (supabase
+            .from('clinic_settings') as any)
+            .update({ letterhead_url: null })
+            .eq('user_id', user.id);
     },
 
     async updateClinicName(name: string): Promise<void> {

@@ -11,12 +11,38 @@ import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
 import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save, PenTool, AlertCircle } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save, PenTool, AlertCircle, Upload, Image, X, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useCreateSignature } from '@/hooks/useDigitalSignatures';
 import { SigningModal } from './SigningModal';
 import type { DeliveryMethod } from '@/types/digitalSignature';
 import { useClinic } from '@/contexts/ClinicContext';
+import { profileService } from '@/services/profile';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.mjs',
+    import.meta.url
+).toString();
+
+async function pdfToImage(file: File): Promise<File> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+    const scale = 3508 / page.getViewport({ scale: 1 }).height; // A4 300dpi height
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), 'image/png')
+    );
+    return new File([blob], 'letterhead.png', { type: 'image/png' });
+}
 
 interface DocumentsModalProps {
     open: boolean;
@@ -24,6 +50,14 @@ interface DocumentsModalProps {
 }
 
 type View = 'list' | 'create' | 'edit' | 'generate';
+
+const PAPER_SIZES = [
+    { label: 'A4 (210×297mm)', width: 210, height: 297 },
+    { label: 'A5 (148×210mm)', width: 148, height: 210 },
+    { label: 'Receituário (150×210mm)', width: 150, height: 210 },
+    { label: 'Meia folha (148×105mm)', width: 148, height: 105 },
+    { label: 'Personalizado', width: 0, height: 0 },
+];
 
 const DEFAULT_TEMPLATES = [
     {
@@ -97,10 +131,7 @@ Eu, _________________________________, portador(a) do CPF ___________________, n
 
 Declaro estar ciente dos procedimentos a serem realizados e que fui informado(a) sobre os riscos e benefícios do tratamento.
 
-Data: {{data}}
-
-_________________________________
-Assinatura do Responsável Legal`
+Data: {{data}}`
     }
 ];
 
@@ -127,6 +158,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [isSavingExam, setIsSavingExam] = useState(false);
     const [isSavingAsTemplate, setIsSavingAsTemplate] = useState(false);
 
+    // Letterhead
+    const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
+    const [uploadingLetterhead, setUploadingLetterhead] = useState(false);
+    const [useLetterhead, setUseLetterhead] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
+    const [paperWidthMm, setPaperWidthMm] = useState(210);
+    const [paperHeightMm, setPaperHeightMm] = useState(297);
+    const [selectedPaperPreset, setSelectedPaperPreset] = useState('A4 (210×297mm)');
+
     // Digital Signature
     const [digitalSignEnabled, setDigitalSignEnabled] = useState(false);
     const [needsPatientSignature, setNeedsPatientSignature] = useState(true);
@@ -141,8 +181,78 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         if (open) {
             loadTemplates();
             loadPatients();
+            loadLetterhead();
         }
     }, [open]);
+
+    const loadLetterhead = async () => {
+        try {
+            const info = await profileService.getClinicInfo();
+            setLetterheadUrl(info.letterheadUrl);
+            setPaperWidthMm(info.letterheadWidthMm);
+            setPaperHeightMm(info.letterheadHeightMm);
+            // Match to preset
+            const preset = PAPER_SIZES.find(p => p.width === info.letterheadWidthMm && p.height === info.letterheadHeightMm);
+            setSelectedPaperPreset(preset?.label || 'Personalizado');
+        } catch (error) {
+            console.error('Error loading letterhead:', error);
+        }
+    };
+
+    const handleUploadLetterhead = async (file: File) => {
+        if (file.size > 5 * 1024 * 1024) {
+            toast({ title: 'Arquivo muito grande (máx 5MB)', variant: 'destructive' });
+            return;
+        }
+        try {
+            setUploadingLetterhead(true);
+            let uploadFile = file;
+            if (file.type === 'application/pdf') {
+                uploadFile = await pdfToImage(file);
+            }
+            const url = await profileService.uploadLetterhead(uploadFile, paperWidthMm, paperHeightMm);
+            setLetterheadUrl(url);
+            toast({ title: 'Papel timbrado enviado!' });
+        } catch (error) {
+            console.error('Error uploading letterhead:', error);
+            toast({ title: 'Erro ao enviar papel timbrado', variant: 'destructive' });
+        } finally {
+            setUploadingLetterhead(false);
+        }
+    };
+
+    const handlePaperPresetChange = (presetLabel: string) => {
+        setSelectedPaperPreset(presetLabel);
+        const preset = PAPER_SIZES.find(p => p.label === presetLabel);
+        if (preset && preset.width > 0) {
+            setPaperWidthMm(preset.width);
+            setPaperHeightMm(preset.height);
+            // If letterhead already exists, update paper size in DB
+            if (letterheadUrl) {
+                profileService.updateLetterheadPaperSize(preset.width, preset.height).catch(console.error);
+            }
+        }
+    };
+
+    const handleCustomPaperSize = (w: number, h: number) => {
+        setPaperWidthMm(w);
+        setPaperHeightMm(h);
+        if (letterheadUrl) {
+            profileService.updateLetterheadPaperSize(w, h).catch(console.error);
+        }
+    };
+
+    const handleRemoveLetterhead = async () => {
+        if (!confirm('Remover papel timbrado?')) return;
+        try {
+            await profileService.removeLetterhead();
+            setLetterheadUrl(null);
+            setUseLetterhead(false);
+            toast({ title: 'Papel timbrado removido' });
+        } catch (error) {
+            toast({ title: 'Erro ao remover', variant: 'destructive' });
+        }
+    };
 
     const loadTemplates = async () => {
         try {
@@ -264,6 +374,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         setSelectedPatientId('');
         setDocumentDate(new Date().toISOString().split('T')[0]);
         setEditableContent('');
+        setUseLetterhead(!!letterheadUrl);
         setDigitalSignEnabled(false);
         // Default: consent forms need patient signature, prescriptions/certificates don't
         const nameLower = template.name.toLowerCase();
@@ -347,8 +458,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             }
         }
 
+        const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
+
         let signatureHtml = '';
-        if (isConsentForm) {
+        if (isMinorAuth) {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">Responsável Legal</div>
+                </div>`;
+        } else if (isConsentForm) {
             signatureHtml = `
                 <div class="signature">
                     <div class="signature-line">${patient?.name}</div>
@@ -372,6 +490,23 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 </div>`;
         }
 
+        const letterheadCss = useLetterhead && letterheadUrl ? `
+                    body {
+                        background-image: url('${letterheadUrl}');
+                        background-size: 100% 100%;
+                        background-repeat: no-repeat;
+                        background-position: center;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    @media print {
+                        body {
+                            background-image: url('${letterheadUrl}') !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                    }` : '';
+
         const html = `
             <!DOCTYPE html>
             <html>
@@ -379,12 +514,13 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 <meta charset="UTF-8">
                 <title>${templateName}</title>
                 <style>
-                    @page { size: A4; margin: 20mm; }
+                    @page { size: ${useLetterhead ? `${paperWidthMm}mm ${paperHeightMm}mm` : 'A4'}; margin: 20mm; }
                     body {
                         font-family: Arial, sans-serif;
                         padding: 40px;
                         color: #000;
                     }
+                    ${letterheadCss}
                     h1 {
                         text-align: center;
                         margin-bottom: 30px;
@@ -424,7 +560,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             </head>
             <body>
                 <h1>${templateName}</h1>
-                <div class="content">${editableContent}</div>
+                <div class="content">${isMinorAuth ? editableContent.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '') : editableContent}</div>
                 ${signatureHtml}
             </body>
             </html>
@@ -510,7 +646,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 patient.name,
                 selectedTemplate.name,
                 editableContent,
-                dentistName
+                dentistName,
+                useLetterhead ? letterheadUrl ?? undefined : undefined,
+                useLetterhead ? { widthMm: paperWidthMm, heightMm: paperHeightMm } : undefined
             );
 
             // Upload PDF to storage first (avoids large base64 in request body)
@@ -587,6 +725,121 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                                 <Plus className="w-4 h-4 mr-2" />
                                 Novo Modelo
                             </Button>
+                        </div>
+
+                        {/* Letterhead Management */}
+                        <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                            <div className="flex items-center gap-2">
+                                <Image className="w-4 h-4 text-[#a03f3d]" />
+                                <span className="text-sm font-medium">Papel Timbrado</span>
+                            </div>
+
+                            {/* Paper Size Selector - always visible */}
+                            <div>
+                                <Label className="text-xs text-gray-500">Tamanho do papel</Label>
+                                <Select value={selectedPaperPreset} onValueChange={handlePaperPresetChange}>
+                                    <SelectTrigger className="mt-1 h-8 text-sm">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PAPER_SIZES.map(p => (
+                                            <SelectItem key={p.label} value={p.label}>{p.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedPaperPreset === 'Personalizado' && (
+                                    <div className="flex gap-2 mt-2">
+                                        <div className="flex-1">
+                                            <Label className="text-xs text-gray-400">Largura (mm)</Label>
+                                            <Input
+                                                type="number"
+                                                value={paperWidthMm}
+                                                onChange={e => handleCustomPaperSize(Number(e.target.value), paperHeightMm)}
+                                                className="h-8 text-sm"
+                                                min={50}
+                                                max={500}
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <Label className="text-xs text-gray-400">Altura (mm)</Label>
+                                            <Input
+                                                type="number"
+                                                value={paperHeightMm}
+                                                onChange={e => handleCustomPaperSize(paperWidthMm, Number(e.target.value))}
+                                                className="h-8 text-sm"
+                                                min={50}
+                                                max={500}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {letterheadUrl ? (
+                                <div className="space-y-3">
+                                    <div className="relative bg-white border rounded-lg p-2 flex justify-center">
+                                        <img
+                                            src={letterheadUrl}
+                                            alt="Papel timbrado"
+                                            className="max-h-32 object-contain"
+                                            style={{ aspectRatio: `${paperWidthMm}/${paperHeightMm}` }}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={() => {
+                                                const input = document.createElement('input');
+                                                input.type = 'file';
+                                                input.accept = 'image/png,image/jpeg,image/jpg,application/pdf';
+                                                input.onchange = (e) => {
+                                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                                    if (file) handleUploadLetterhead(file);
+                                                };
+                                                input.click();
+                                            }}
+                                            disabled={uploadingLetterhead}
+                                        >
+                                            {uploadingLetterhead ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+                                            Substituir
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleRemoveLetterhead}
+                                        >
+                                            <X className="w-4 h-4 mr-1" />
+                                            Remover
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500">
+                                        Envie uma imagem ou PDF para usar como fundo dos documentos gerados. Máx 5MB.
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.accept = 'image/png,image/jpeg,image/jpg,application/pdf';
+                                            input.onchange = (e) => {
+                                                const file = (e.target as HTMLInputElement).files?.[0];
+                                                if (file) handleUploadLetterhead(file);
+                                            };
+                                            input.click();
+                                        }}
+                                        disabled={uploadingLetterhead}
+                                    >
+                                        {uploadingLetterhead ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                        Enviar Papel Timbrado
+                                    </Button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700 flex items-start gap-2">
@@ -761,20 +1014,72 @@ Nesta data {{data}}, declaro que...`}
                         </div>
 
                         <div>
-                            <Label>Documento</Label>
+                            <div className="flex items-center justify-between mb-1">
+                                <Label>Documento</Label>
+                                {selectedPatientId && editableContent && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowPreview(!showPreview)}
+                                        className="h-7 px-2 text-xs text-gray-500"
+                                    >
+                                        {showPreview ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                                        {showPreview ? 'Editar' : 'Prévia'}
+                                    </Button>
+                                )}
+                            </div>
                             {selectedPatientId ? (
-                                <Textarea
-                                    value={editableContent}
-                                    onChange={e => setEditableContent(e.target.value)}
-                                    className="min-h-[250px] font-mono text-sm"
-                                    placeholder="Selecione um paciente para preencher o documento"
-                                />
+                                showPreview && editableContent ? (
+                                    <div
+                                        className="border rounded-lg overflow-hidden"
+                                        style={{ aspectRatio: `${useLetterhead ? paperWidthMm : 210}/${useLetterhead ? paperHeightMm : 297}`, maxHeight: 500 }}
+                                    >
+                                        <div
+                                            className="w-full h-full overflow-auto p-8 relative"
+                                            style={{
+                                                backgroundImage: useLetterhead && letterheadUrl ? `url(${letterheadUrl})` : undefined,
+                                                backgroundSize: '100% 100%',
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'center',
+                                            }}
+                                        >
+                                            <h2 className="text-center font-bold text-sm uppercase mb-4">
+                                                {selectedTemplate?.name}
+                                            </h2>
+                                            <div className="text-xs leading-relaxed whitespace-pre-wrap text-justify">
+                                                {editableContent}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Textarea
+                                        value={editableContent}
+                                        onChange={e => setEditableContent(e.target.value)}
+                                        className="min-h-[250px] font-mono text-sm"
+                                        placeholder="Selecione um paciente para preencher o documento"
+                                    />
+                                )
                             ) : (
                                 <div className="border rounded-lg p-4 min-h-[200px] bg-gray-50 text-sm text-gray-400">
                                     Selecione um paciente para preencher o documento
                                 </div>
                             )}
                         </div>
+
+                        {/* Letterhead Checkbox */}
+                        {letterheadUrl && selectedPatientId && (
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="use-letterhead"
+                                    checked={useLetterhead}
+                                    onCheckedChange={(checked) => setUseLetterhead(!!checked)}
+                                />
+                                <Label htmlFor="use-letterhead" className="text-sm cursor-pointer flex items-center gap-1.5">
+                                    <Image className="w-4 h-4 text-[#a03f3d]" />
+                                    Usar Papel Timbrado
+                                </Label>
+                            </div>
+                        )}
 
                         {/* Digital Signature Controls */}
                         {selectedPatientId && (

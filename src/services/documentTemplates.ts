@@ -84,15 +84,43 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string): Promise<Blob> {
+    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string, letterheadUrl?: string, paperSize?: { widthMm: number; heightMm: number }): Promise<Blob> {
         const { default: jsPDF } = await import('jspdf');
 
-        const doc = new jsPDF({ format: 'a4' });
+        const doc = new jsPDF({
+            format: paperSize ? [paperSize.widthMm, paperSize.heightMm] : 'a4',
+        });
 
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const margin = 25;
         let y = 40;
+
+        // Helper to add letterhead background to a page
+        const addLetterheadBackground = (letterheadData: string) => {
+            doc.addImage(letterheadData, 'JPEG', 0, 0, pageWidth, pageHeight);
+        };
+
+        // Load letterhead image if provided
+        let letterheadData: string | null = null;
+        if (letterheadUrl) {
+            try {
+                const response = await fetch(letterheadUrl);
+                const blob = await response.blob();
+                letterheadData = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.error('Error loading letterhead image:', e);
+            }
+        }
+
+        // Add letterhead to first page
+        if (letterheadData) {
+            addLetterheadBackground(letterheadData);
+        }
 
         // Title
         doc.setFontSize(18);
@@ -108,6 +136,7 @@ export const documentTemplatesService = {
         for (const line of lines) {
             if (y > pageHeight - 50) {
                 doc.addPage();
+                if (letterheadData) addLetterheadBackground(letterheadData);
                 y = 40;
             }
             doc.text(line, margin, y, { align: 'justify', maxWidth: pageWidth - (margin * 2) });
@@ -125,6 +154,7 @@ export const documentTemplatesService = {
         y += 40;
         if (y > pageHeight - 60) {
             doc.addPage();
+            if (letterheadData) addLetterheadBackground(letterheadData);
             y = 60;
         }
 
