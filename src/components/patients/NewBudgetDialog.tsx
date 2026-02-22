@@ -196,7 +196,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="p-6 border-b shrink-0">
-                    <DialogTitle>{isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
+                    <DialogTitle>{isEditing ? 'Editar Plano de Tratamento' : 'Novo Plano de Tratamento'}</DialogTitle>
                 </DialogHeader>
 
                 <div className="flex flex-1 overflow-hidden">

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Check, Calendar as CalendarIcon, Save, MapPin, FlaskConical } from 'lucide-react';
+import { Plus, Check, Calendar as CalendarIcon, Save, MapPin, FlaskConical, ChevronsUpDown, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -22,6 +22,7 @@ import {
 import { PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
 import { PROSTHETIC_TREATMENTS } from '@/utils/prosthesis';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Odontogram } from './odontogram';
 import { isUpperTooth } from './odontogram/odontogramData';
 
@@ -54,6 +55,9 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     const [customMaterials, setCustomMaterials] = useState<Record<string, string>>({});
     const [labTreatments, setLabTreatments] = useState<Record<string, boolean>>({});
     const [itemLocationRate, setItemLocationRate] = useState<string>('');
+    const [treatmentsOpen, setTreatmentsOpen] = useState(false);
+
+    const sortedTreatments = useMemo(() => [...TREATMENTS].sort((a, b) => a.localeCompare(b, 'pt-BR')), []);
 
     const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
 
@@ -329,20 +333,70 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                 {/* Treatments */}
                 <div className="space-y-3">
                     <Label className="text-base font-semibold">2. Tratamentos</Label>
-                    <div className="flex flex-wrap gap-2">
-                        {TREATMENTS.map(treatment => (
+                    <Popover open={treatmentsOpen} onOpenChange={setTreatmentsOpen}>
+                        <PopoverTrigger asChild>
                             <Button
-                                key={treatment}
-                                variant={selectedTreatments.includes(treatment) ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => toggleTreatment(treatment)}
-                                className={selectedTreatments.includes(treatment) ? "bg-[#a03f3d] hover:bg-[#8b3634]" : ""}
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={treatmentsOpen}
+                                className="w-full justify-between h-auto min-h-10 font-normal"
                             >
-                                {treatment}
-                                {selectedTreatments.includes(treatment) && <Check className="w-3 h-3 ml-2" />}
+                                <span className="text-muted-foreground">
+                                    {selectedTreatments.length === 0
+                                        ? "Selecione os tratamentos..."
+                                        : `${selectedTreatments.length} tratamento${selectedTreatments.length > 1 ? 's' : ''} selecionado${selectedTreatments.length > 1 ? 's' : ''}`}
+                                </span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
-                        ))}
-                    </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start" onWheel={(e) => e.stopPropagation()}>
+                            <Command>
+                                <CommandInput placeholder="Buscar tratamento..." />
+                                <CommandList className="max-h-[250px] overflow-y-auto">
+                                    <CommandEmpty>Nenhum tratamento encontrado.</CommandEmpty>
+                                    <CommandGroup>
+                                        {sortedTreatments.map(treatment => (
+                                            <CommandItem
+                                                key={treatment}
+                                                value={treatment}
+                                                onSelect={() => toggleTreatment(treatment)}
+                                                className="cursor-pointer"
+                                            >
+                                                <div className={cn(
+                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                    selectedTreatments.includes(treatment)
+                                                        ? "bg-[#a03f3d] border-[#a03f3d] text-white"
+                                                        : "opacity-50"
+                                                )}>
+                                                    {selectedTreatments.includes(treatment) && <Check className="h-3 w-3" />}
+                                                </div>
+                                                {treatment}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    {selectedTreatments.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {selectedTreatments.map(treatment => (
+                                <span
+                                    key={treatment}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#a03f3d] text-white"
+                                >
+                                    {treatment}
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleTreatment(treatment)}
+                                        className="hover:bg-white/20 rounded-sm p-0.5"
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Faces (Conditional) */}
@@ -477,7 +531,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         disabled={!selectedTooth || selectedTreatments.length === 0}
                     >
                         <Plus className="w-5 h-5 mr-2" />
-                        Adicionar Item ao Orçamento
+                        Adicionar Item ao Plano
                     </Button>
                 )}
             </div>
