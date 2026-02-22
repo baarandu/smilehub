@@ -18,7 +18,12 @@ REGRAS:
 2. NUNCA invente itens ou valores que não estejam no texto.
 3. Converta valores monetários brasileiros para número decimal: "R$ 12,50" → 12.50, "R$1.500,00" → 1500.00
 4. Se a quantidade não estiver especificada, use 1.
-5. Se o valor unitário não estiver especificado, use 0.
+5. IMPORTANTE para preços:
+   - Se o valor unitário estiver explícito, use-o diretamente.
+   - Se apenas o valor TOTAL do item estiver informado (ex: "10 un - R$ 150,00"), CALCULE o valor unitário dividindo o total pela quantidade (150/10 = 15.00).
+   - Se houver apenas UM valor numérico associado ao item e a quantidade for 1, esse valor É o unitário.
+   - Se houver apenas UM valor numérico e a quantidade for maior que 1, interprete como valor TOTAL e divida pela quantidade para obter o unitário.
+   - Use 0 SOMENTE se não houver NENHUM valor monetário associado ao item.
 6. Se a marca do produto estiver mencionada (em qualquer lugar do texto), preencha para todos os itens.
 7. Identifique a marca/fabricante se mencionada (ex: "TDV", "3M", "Dentsply", etc.).
 8. Extraia o tipo/categoria do produto se mencionado (ex: "Resina", "Anestésico", "Broca", "Cimento", etc.).
@@ -51,6 +56,7 @@ REGRAS:
 7. NUNCA invente dados — extraia apenas o que está visível no documento.
 8. Extraia o tipo/categoria de cada produto se visível (ex: "Resina", "Anestésico", "Broca", etc.).
 9. Extraia o código de cada produto se visível (código NCM, SKU, referência, etc.).
+10. IMPORTANTE para preços: Se a NF mostrar apenas o valor total de um item (VL TOTAL) e a quantidade for maior que 1, CALCULE o valor unitário dividindo o total pela quantidade. NUNCA retorne unitPrice como 0 se houver qualquer valor monetário associado ao item.
 
 FORMATO DE SAÍDA (JSON):
 {
