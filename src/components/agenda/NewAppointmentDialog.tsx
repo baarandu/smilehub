@@ -22,15 +22,20 @@ import { cn } from '@/lib/utils';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { NewAppointmentDialogProps } from './types';
 
+interface SlotInfo {
+  time: string;
+  locationId: string;
+}
+
 function generateTimeSlots(
   settings: ScheduleSetting[],
   dayOfWeek: number,
   bookedTimes: string[],
-): string[] {
+): SlotInfo[] {
   const daySettings = settings.filter(s => s.day_of_week === dayOfWeek && s.is_active);
   if (daySettings.length === 0) return [];
 
-  const slots: string[] = [];
+  const slotsMap = new Map<string, string>(); // time -> locationId
   for (const setting of daySettings) {
     const [startH, startM] = setting.start_time.slice(0, 5).split(':').map(Number);
     const [endH, endM] = setting.end_time.slice(0, 5).split(':').map(Number);
@@ -41,14 +46,17 @@ function generateTimeSlots(
     for (let m = startMinutes; m + interval <= endMinutes; m += interval) {
       const hh = String(Math.floor(m / 60)).padStart(2, '0');
       const mm = String(m % 60).padStart(2, '0');
-      slots.push(`${hh}:${mm}`);
+      const time = `${hh}:${mm}`;
+      if (!slotsMap.has(time)) {
+        slotsMap.set(time, setting.location_id || '');
+      }
     }
   }
 
-  // Sort and deduplicate
-  const unique = [...new Set(slots)].sort();
-  // Filter out booked times
-  return unique.filter(t => !bookedTimes.includes(t));
+  return [...slotsMap.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .filter(([t]) => !bookedTimes.includes(t))
+    .map(([time, locationId]) => ({ time, locationId }));
 }
 
 export function NewAppointmentDialog({
@@ -324,15 +332,21 @@ export function NewAppointmentDialog({
             ) : hasScheduleForDay && availableSlots.length > 0 ? (
               <Select
                 value={form.time}
-                onValueChange={(v) => setForm({ ...form, time: v })}
+                onValueChange={(v) => {
+                  const slot = availableSlots.find(s => s.time === v);
+                  const locationName = slot?.locationId
+                    ? locations.find(l => l.id === slot.locationId)?.name || form.location
+                    : form.location;
+                  setForm({ ...form, time: v, location: locationName });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o horário" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSlots.map((slot) => (
-                    <SelectItem key={slot} value={slot}>
-                      {slot}
+                    <SelectItem key={slot.time} value={slot.time}>
+                      {slot.time}
                     </SelectItem>
                   ))}
                 </SelectContent>
