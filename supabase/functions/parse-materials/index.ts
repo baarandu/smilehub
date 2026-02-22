@@ -125,7 +125,7 @@ serve(async (req) => {
     if (mode === "text") {
       // Text mode: GPT-4o-mini
       validateRequired(text, "text");
-      validateMaxLength(text, 10000, "text");
+      validateMaxLength(text, 50000, "text");
 
       // Check for prompt injection (blocking mode)
       requireSafeInput(text, {
