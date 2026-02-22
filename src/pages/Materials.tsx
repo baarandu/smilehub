@@ -544,7 +544,18 @@ export default function Materials() {
                       NF Anexada
                       <X
                         className="w-3 h-3 ml-1 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); setInvoiceUrl(null); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Excluir a nota fiscal anexada?')) {
+                            // Remove from storage if URL exists
+                            const match = invoiceUrl?.match(/fiscal-documents\/(.+)$/);
+                            if (match) {
+                              supabase.storage.from('fiscal-documents').remove([match[1]]);
+                            }
+                            setInvoiceUrl(null);
+                            toast.success('Nota fiscal excluída');
+                          }
+                        }}
                       />
                     </Button>
                   ) : (
