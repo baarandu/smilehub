@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { X, Store, Package } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, Modal, ScrollView, TouchableOpacity, ActivityIndicator, Image, Linking } from 'react-native';
+import { X, Store, Package, Receipt, ExternalLink } from 'lucide-react-native';
 import { ShoppingOrder } from '../../types/materials';
 import { formatCurrency, formatDate } from '../../utils/materials';
 import { materialsStyles as styles } from '../../styles/materials';
@@ -87,6 +87,40 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                                 </View>
                             </View>
                         ))}
+
+                        {/* Invoice Section */}
+                        {order.invoice_url && (
+                            <View style={styles.invoiceSection}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                    <Receipt size={18} color="#111827" />
+                                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#111827' }}>Nota Fiscal</Text>
+                                </View>
+                                {order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
+                                    <View>
+                                        <Image
+                                            source={{ uri: order.invoice_url }}
+                                            style={styles.invoiceImage}
+                                            resizeMode="contain"
+                                        />
+                                        <TouchableOpacity
+                                            onPress={() => Linking.openURL(order.invoice_url!)}
+                                            style={styles.invoiceOpenButton}
+                                        >
+                                            <ExternalLink size={16} color="white" />
+                                            <Text style={styles.invoiceOpenButtonText}>Abrir em tamanho completo</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        onPress={() => Linking.openURL(order.invoice_url!)}
+                                        style={styles.invoiceOpenButton}
+                                    >
+                                        <ExternalLink size={16} color="white" />
+                                        <Text style={styles.invoiceOpenButtonText}>Abrir Nota Fiscal (PDF)</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
 
                         {/* Reopen Order Button - Only for completed orders */}
                         {showReopenButton && (

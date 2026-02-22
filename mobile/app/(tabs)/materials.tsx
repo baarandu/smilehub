@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, Alert, ActivityIndicator, FlatList, Refre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { financialService } from '../../src/services/financial';
 import { supabase } from '../../src/lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 
 // Icons
-import { Package, Plus, ClipboardList, Clock } from 'lucide-react-native';
+import { Package, Plus, ClipboardList, Clock, Receipt, X as XIcon } from 'lucide-react-native';
 import { Trash2, Pencil, Store, ShoppingCart } from 'lucide-react-native';
 
 // Extracted components
@@ -38,6 +40,10 @@ export default function Materials() {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
     const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+
+    // Invoice & Clinic State
+    const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+    const [clinicId, setClinicId] = useState<string | null>(null);
 
     // Checkout State
     const [loading, setLoading] = useState(false);
@@ -75,6 +81,8 @@ export default function Materials() {
                 setRefreshing(false);
                 return;
             }
+
+            setClinicId((clinicUser as any).clinic_id);
 
             // Load pending orders
             const { data: pending } = await supabase
@@ -163,6 +171,59 @@ export default function Materials() {
         setAddItemModalVisible(true);
     };
 
+    // Base64 decoder for file upload
+    const decodeBase64 = (base64: string): ArrayBuffer => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        const lookup = new Uint8Array(256);
+        for (let i = 0; i < chars.length; i++) lookup[chars.charCodeAt(i)] = i;
+        let bufferLength = base64.length * 0.75;
+        if (base64[base64.length - 1] === '=') bufferLength--;
+        if (base64[base64.length - 2] === '=') bufferLength--;
+        const arraybuffer = new ArrayBuffer(bufferLength);
+        const bytes = new Uint8Array(arraybuffer);
+        let p = 0;
+        for (let i = 0; i < base64.length; i += 4) {
+            const e1 = lookup[base64.charCodeAt(i)];
+            const e2 = lookup[base64.charCodeAt(i + 1)];
+            const e3 = lookup[base64.charCodeAt(i + 2)];
+            const e4 = lookup[base64.charCodeAt(i + 3)];
+            bytes[p++] = (e1 << 2) | (e2 >> 4);
+            bytes[p++] = ((e2 & 15) << 4) | (e3 >> 2);
+            bytes[p++] = ((e3 & 3) << 6) | (e4 & 63);
+        }
+        return arraybuffer;
+    };
+
+    const handleAttachInvoice = async () => {
+        if (!clinicId) return;
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.8,
+        });
+
+        if (result.canceled || !result.assets?.[0]) return;
+
+        const asset = result.assets[0];
+        try {
+            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+            const ext = asset.uri.split('.').pop() || 'jpg';
+            const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+            const arrayBuffer = decodeBase64(base64);
+            const mimeType = asset.mimeType || 'image/jpeg';
+
+            const { error } = await supabase.storage.from('fiscal-documents').upload(path, arrayBuffer, { contentType: mimeType });
+            if (error) throw error;
+
+            const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
+            setInvoiceUrl(urlData.publicUrl);
+            Alert.alert('Sucesso', 'Nota fiscal anexada!');
+        } catch (err) {
+            console.error('Error uploading invoice:', err);
+            Alert.alert('Erro', 'Falha ao anexar nota fiscal.');
+        }
+    };
+
     // Order handlers
     const handleSaveOrder = async () => {
         if (items.length === 0) {
@@ -185,7 +246,7 @@ export default function Materials() {
 
             if (currentOrderId) {
                 await (supabase.from('shopping_orders') as any)
-                    .update({ items: items, total_amount: currentTotal })
+                    .update({ items: items, total_amount: currentTotal, invoice_url: invoiceUrl })
                     .eq('id', currentOrderId);
             } else {
                 await supabase.from('shopping_orders')
@@ -194,13 +255,15 @@ export default function Materials() {
                         items: items,
                         total_amount: currentTotal,
                         status: 'pending',
-                        created_by: user.id
+                        created_by: user.id,
+                        invoice_url: invoiceUrl
                     }] as any);
             }
 
             Alert.alert('Sucesso', 'Pedido salvo!');
             setItems([]);
             setCurrentOrderId(null);
+            setInvoiceUrl(null);
             loadOrders();
         } catch (error) {
             console.error(error);
@@ -213,6 +276,7 @@ export default function Materials() {
     const handleOpenOrder = (order: ShoppingOrder) => {
         setItems(order.items);
         setCurrentOrderId(order.id);
+        setInvoiceUrl(order.invoice_url || null);
     };
 
     const handleDeleteOrder = (orderId: string) => {
@@ -356,7 +420,8 @@ export default function Materials() {
                         status: 'completed',
                         completed_at: new Date().toISOString(),
                         items: purchasedItems,
-                        total_amount: purchasedTotal
+                        total_amount: purchasedTotal,
+                        invoice_url: invoiceUrl
                     })
                     .eq('id', currentOrderId);
                 shoppingOrderId = currentOrderId;
@@ -368,7 +433,8 @@ export default function Materials() {
                         total_amount: purchasedTotal,
                         status: 'completed',
                         completed_at: new Date().toISOString(),
-                        created_by: user?.id
+                        created_by: user?.id,
+                        invoice_url: invoiceUrl
                     }])
                     .select('id')
                     .single();
@@ -481,6 +547,7 @@ export default function Materials() {
 
             setItems([]);
             setCurrentOrderId(null);
+            setInvoiceUrl(null);
             loadOrders();
 
         } catch (error) {
@@ -497,9 +564,28 @@ export default function Materials() {
             return (
                 <View style={{ flex: 1 }}>
                     <View style={styles.editingBanner}>
-                        <Text style={styles.editingBannerText}>
-                            {currentOrderId ? 'Editando Pedido' : 'Novo Pedido'} - {items.length} itens
-                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.editingBannerText}>
+                                {currentOrderId ? 'Editando Pedido' : 'Novo Pedido'} - {items.length} itens
+                            </Text>
+                            {invoiceUrl ? (
+                                <TouchableOpacity
+                                    onPress={() => Alert.alert('Nota Fiscal', 'O que deseja fazer?', [
+                                        { text: 'Cancelar', style: 'cancel' },
+                                        { text: 'Remover NF', style: 'destructive', onPress: () => setInvoiceUrl(null) },
+                                    ])}
+                                    style={[styles.invoiceButton, styles.invoiceButtonAttached]}
+                                >
+                                    <Receipt size={14} color="#059669" />
+                                    <Text style={[styles.invoiceButtonText, styles.invoiceButtonTextAttached]}>NF Anexada</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <TouchableOpacity onPress={handleAttachInvoice} style={styles.invoiceButton}>
+                                    <Receipt size={14} color="#374151" />
+                                    <Text style={styles.invoiceButtonText}>Anexar NF</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
                     <FlatList
                         data={items}
@@ -657,6 +743,7 @@ export default function Materials() {
                             onPress={() => {
                                 setItems([]);
                                 setCurrentOrderId(null);
+                                setInvoiceUrl(null);
                                 setEditingItem(null);
                                 setAddItemModalVisible(true);
                             }}

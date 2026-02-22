@@ -81,4 +81,13 @@ export const materialsStyles = StyleSheet.create({
     detailItemValue: { fontSize: 14, color: '#111827' },
     recreateButton: { padding: 16, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
     recreateButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+    invoiceButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f3f4f6', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+    invoiceButtonAttached: { backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0' },
+    invoiceButtonText: { color: '#374151', fontSize: 13, fontWeight: '500' },
+    invoiceButtonTextAttached: { color: '#059669' },
+    invoiceSection: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginBottom: 16 },
+    invoiceSectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 12, flexDirection: 'row', alignItems: 'center' },
+    invoiceImage: { width: '100%', height: 200, borderRadius: 8, marginBottom: 8 },
+    invoiceOpenButton: { backgroundColor: '#2563eb', padding: 12, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+    invoiceOpenButtonText: { color: 'white', fontWeight: '500', fontSize: 14 },
 });
