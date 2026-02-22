@@ -37,7 +37,7 @@ async function pdfToImage(file: File): Promise<File> {
     const ctx = canvas.getContext('2d')!;
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    await page.render({ canvas, viewport }).promise;
     const blob = await new Promise<Blob>((resolve) =>
         canvas.toBlob((b) => resolve(b!), 'image/png')
     );

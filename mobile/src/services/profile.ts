@@ -297,6 +297,67 @@ export const profileService = {
         return logoUrl;
     },
 
+    async uploadLetterhead(file: File): Promise<string> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const clinicId = clinicUser.clinic_id;
+        const fileExt = file.name?.split('.').pop() || 'jpg';
+        const fileName = `${clinicId}/letterhead.${fileExt}`;
+
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+        const { error } = await supabase.storage
+            .from('clinic-logos')
+            .upload(fileName, decode(base64), {
+                contentType: file.type || `image/${fileExt}`,
+                upsert: true,
+            });
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+            .from('clinic-logos')
+            .getPublicUrl(fileName);
+
+        const letterheadUrl = urlData.publicUrl;
+
+        const { error: upsertError } = await (supabase
+            .from('clinic_settings') as any)
+            .upsert(
+                {
+                    user_id: user.id,
+                    letterhead_url: letterheadUrl,
+                    letterhead_width_mm: 210,
+                    letterhead_height_mm: 297,
+                },
+                { onConflict: 'user_id' }
+            );
+
+        if (upsertError) throw upsertError;
+
+        return letterheadUrl;
+    },
+
+    async removeLetterhead(): Promise<void> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        await (supabase
+            .from('clinic_settings') as any)
+            .update({ letterhead_url: null })
+            .eq('user_id', user.id);
+    },
+
     async removeLogo(): Promise<void> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
