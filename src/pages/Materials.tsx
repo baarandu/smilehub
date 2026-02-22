@@ -534,20 +534,22 @@ export default function Materials() {
                     className="hidden"
                   />
                   {invoiceUrl ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 text-green-600 border-green-600/30 hover:bg-green-50"
-                      onClick={() => window.open(invoiceUrl, '_blank')}
-                    >
-                      <Receipt className="w-4 h-4" />
-                      NF Anexada
-                      <X
-                        className="w-3 h-3 ml-1 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-green-600 border-green-600/30 hover:bg-green-50"
+                        onClick={() => window.open(invoiceUrl, '_blank')}
+                      >
+                        <Receipt className="w-4 h-4" />
+                        NF Anexada
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => {
                           if (confirm('Excluir a nota fiscal anexada?')) {
-                            // Remove from storage if URL exists
                             const match = invoiceUrl?.match(/fiscal-documents\/(.+)$/);
                             if (match) {
                               supabase.storage.from('fiscal-documents').remove([match[1]]);
@@ -556,8 +558,10 @@ export default function Materials() {
                             toast.success('Nota fiscal excluída');
                           }
                         }}
-                      />
-                    </Button>
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   ) : (
                     <Button variant="outline" size="sm" onClick={() => invoiceInputRef.current?.click()} className="gap-2">
                       <Receipt className="w-4 h-4" />
