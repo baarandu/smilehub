@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Shield } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PatientAiConsentProps {
   patientId: string;
@@ -92,17 +93,26 @@ export function PatientAiConsent({ patientId, clinicId }: PatientAiConsentProps)
   if (loading) return null;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border">
-      <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      <Label htmlFor="ai-consent" className="text-sm text-muted-foreground cursor-pointer flex-1">
-        Consentimento IA
-      </Label>
-      <Switch
-        id="ai-consent"
-        checked={hasConsent}
-        onCheckedChange={toggleConsent}
-        disabled={toggling}
-      />
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-muted/50 border border-border">
+            <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <Label htmlFor="ai-consent" className="text-sm text-muted-foreground cursor-pointer flex-1">
+              Consentimento IA
+            </Label>
+            <Switch
+              id="ai-consent"
+              checked={hasConsent}
+              onCheckedChange={toggleConsent}
+              disabled={toggling}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-center">
+          <p>O paciente está ciente do uso de inteligência artificial para auxiliar na análise de dados clínicos, como transcrições de consultas e sugestões de tratamento.</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
