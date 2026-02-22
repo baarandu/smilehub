@@ -172,10 +172,23 @@ serve(async (req) => {
       // Invoice mode: GPT-4o vision
       validateRequired(image_base64, "image_base64");
 
-      const mediaType =
-        file_type === "pdf" ? "application/pdf" :
-        file_type === "png" ? "image/png" :
-        "image/jpeg";
+      // PDFs use "file" content type; images use "image_url"
+      const isPdf = file_type === "pdf";
+      const fileContent = isPdf
+        ? {
+            type: "file",
+            file: {
+              filename: "nota_fiscal.pdf",
+              file_data: `data:application/pdf;base64,${image_base64}`,
+            },
+          }
+        : {
+            type: "image_url",
+            image_url: {
+              url: `data:${file_type === "png" ? "image/png" : "image/jpeg"};base64,${image_base64}`,
+              detail: "high",
+            },
+          };
 
       gptResponse = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -196,13 +209,7 @@ serve(async (req) => {
                     type: "text",
                     text: "Extraia os dados desta nota fiscal.",
                   },
-                  {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:${mediaType};base64,${image_base64}`,
-                      detail: "high",
-                    },
-                  },
+                  fileContent,
                 ],
               },
             ],
