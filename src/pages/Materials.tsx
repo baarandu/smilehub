@@ -509,10 +509,15 @@ export default function Materials() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Materiais</h1>
-          <p className="text-muted-foreground mt-1">Pedidos de compra de materiais</p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <Package className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Materiais</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">Pedidos de compra de materiais</p>
+          </div>
         </div>
         <Button
           variant="outline"

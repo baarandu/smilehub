@@ -110,17 +110,22 @@ export default function Patients() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Pacientes</h1>
-          <p className="text-muted-foreground mt-1">
-            {isLoading
-              ? '...'
-              : isSearching
-                ? `${searchResults?.length || 0} resultados encontrados`
-                : `${currentPatients.length} pacientes listados`
-            }
-          </p>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <Users className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Pacientes</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              {isLoading
+                ? '...'
+                : isSearching
+                  ? `${searchResults?.length || 0} resultados encontrados`
+                  : `${currentPatients.length} pacientes listados`
+              }
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button

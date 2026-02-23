@@ -374,12 +374,17 @@ export default function Agenda() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Agenda</h1>
-          <p className="text-muted-foreground mt-1">
-            {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
-          </p>
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <CalendarIcon className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Agenda</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

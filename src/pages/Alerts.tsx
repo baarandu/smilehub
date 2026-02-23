@@ -126,11 +126,16 @@ export default function Alerts() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Alertas e lembretes</h1>
-          <p className="text-muted-foreground mt-1">
-            Uma visão clara do que exige atenção hoje — com filtros, busca e status.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <Bell className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Alertas e lembretes</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">
+              Uma visão clara do que exige atenção hoje — com filtros, busca e status.
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           {/* Settings Dialog */}

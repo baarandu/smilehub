@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Plus, Building2, ArrowRight, CalendarClock, RotateCw, MessageCircle } from 'lucide-react';
+import { Plus, Building2, ArrowRight, CalendarClock, CalendarCheck, RotateCw, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +35,8 @@ import { OrderFormSheet } from './OrderFormSheet';
 import { OrderDetailDialog } from './OrderDetailDialog';
 import { LabManagementSheet } from './LabManagementSheet';
 import { CompletionDialog } from './CompletionDialog';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export function KanbanBoard() {
   const { clinicId } = useClinic();
@@ -43,6 +45,36 @@ export function KanbanBoard() {
   const [filters, setFilters] = useState<ProsthesisOrderFilters>({});
   const { data: orders = [], isLoading } = useProsthesisOrders(filters.search || filters.dentistId || filters.labId || filters.type ? filters : undefined);
   const { data: labs = [] } = useActiveProsthesisLabs();
+
+  // Fetch future appointments for in_clinic patients
+  const [patientAppointments, setPatientAppointments] = useState<Record<string, string>>({});
+  const inClinicPatientIds = useMemo(
+    () => [...new Set(orders.filter(o => o.status === 'in_clinic').map(o => o.patient_id))],
+    [orders]
+  );
+
+  useEffect(() => {
+    if (inClinicPatientIds.length === 0) {
+      setPatientAppointments({});
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    supabase.from('appointments')
+      .select('patient_id, date')
+      .in('patient_id', inClinicPatientIds)
+      .gte('date', today)
+      .not('status', 'in', '("cancelled","no_show")')
+      .order('date', { ascending: true })
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach(a => {
+          if (!map[a.patient_id]) {
+            map[a.patient_id] = format(parseISO(a.date), "dd/MM", { locale: ptBR });
+          }
+        });
+        setPatientAppointments(map);
+      });
+  }, [inClinicPatientIds]);
   const moveOrder = useMoveOrder();
   const batchUpdatePositions = useBatchUpdatePositions();
 
@@ -223,8 +255,16 @@ export function KanbanBoard() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-foreground">Central de Prótese</h1>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 bg-[#a03f3d]/10 rounded-xl">
+            <Building2 className="w-6 h-6 text-[#a03f3d]" />
+          </div>
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Central de Prótese</h1>
+            <p className="text-muted-foreground mt-0.5 text-sm">Gestão de serviços protéticos</p>
+          </div>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLabSheetOpen(true)}>
             <Building2 className="w-4 h-4 mr-1" />
@@ -259,12 +299,17 @@ export function KanbanBoard() {
               onDragEnd={handleDragEnd}
             >
               <div className="flex gap-3 pb-4">
-                {KANBAN_COLUMNS.map(column => (
+                {KANBAN_COLUMNS.map((column, idx) => (
                   <KanbanColumn
                     key={column.id}
                     column={column}
                     orders={ordersByStatus[column.id]}
                     onCardClick={handleCardClick}
+                    patientAppointments={patientAppointments}
+                    onAdvanceStatus={handleAdvanceStatus}
+                    onRetreatStatus={handleRetreatStatus}
+                    isFirst={idx === 0}
+                    isLast={idx === KANBAN_COLUMNS.length - 1}
                   />
                 ))}
               </div>
@@ -315,16 +360,25 @@ export function KanbanBoard() {
                             </p>
                             {order.status === 'in_clinic' && (
                               <div className="mt-1.5 flex gap-1.5">
-                                <div
-                                  className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
-                                  }}
-                                >
-                                  <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
-                                  <span className="text-[9px] font-medium text-amber-700">Agendar</span>
-                                </div>
+                                {patientAppointments[order.patient_id] ? (
+                                  <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
+                                    <CalendarCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                                    <span className="text-[9px] font-medium text-emerald-700">
+                                      Agendado {patientAppointments[order.patient_id]}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
+                                    }}
+                                  >
+                                    <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+                                    <span className="text-[9px] font-medium text-amber-700">Agendar</span>
+                                  </div>
+                                )}
                                 {order.patient_phone && (
                                   <a
                                     href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}

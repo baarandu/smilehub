@@ -9,9 +9,14 @@ interface KanbanColumnProps {
   column: KanbanColumnType;
   orders: ProsthesisOrder[];
   onCardClick: (order: ProsthesisOrder) => void;
+  patientAppointments?: Record<string, string>;
+  onAdvanceStatus?: (order: ProsthesisOrder) => void;
+  onRetreatStatus?: (order: ProsthesisOrder) => void;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
-export function KanbanColumn({ column, orders, onCardClick }: KanbanColumnProps) {
+export function KanbanColumn({ column, orders, onCardClick, patientAppointments, onAdvanceStatus, onRetreatStatus, isFirst, isLast }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   const orderIds = orders.map(o => o.id);
@@ -33,7 +38,7 @@ export function KanbanColumn({ column, orders, onCardClick }: KanbanColumnProps)
         <ScrollArea className="h-[calc(100vh-220px)]">
           <SortableContext items={orderIds} strategy={verticalListSortingStrategy}>
             <div
-              className={`p-2 space-y-2 min-h-[60px] transition-colors ${
+              className={`p-2 px-3 space-y-2 min-h-[60px] transition-colors ${
                 isOver ? 'bg-primary/5' : ''
               }`}
             >
@@ -45,6 +50,9 @@ export function KanbanColumn({ column, orders, onCardClick }: KanbanColumnProps)
                     key={order.id}
                     order={order}
                     onClick={() => onCardClick(order)}
+                    scheduledDate={patientAppointments?.[order.patient_id]}
+                    onMoveLeft={!isFirst && onRetreatStatus ? () => onRetreatStatus(order) : undefined}
+                    onMoveRight={!isLast && onAdvanceStatus ? () => onAdvanceStatus(order) : undefined}
                   />
                 ))
               )}

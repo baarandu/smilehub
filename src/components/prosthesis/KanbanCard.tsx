@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { CalendarClock, MessageCircle } from 'lucide-react';
+import { CalendarClock, CalendarCheck, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { ProsthesisOrder } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
@@ -11,9 +11,12 @@ interface KanbanCardProps {
   order: ProsthesisOrder;
   onClick: () => void;
   isDragging?: boolean;
+  scheduledDate?: string | null;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }
 
-export function KanbanCard({ order, onClick, isDragging }: KanbanCardProps) {
+export function KanbanCard({ order, onClick, isDragging, scheduledDate, onMoveLeft, onMoveRight }: KanbanCardProps) {
   const navigate = useNavigate();
   const {
     attributes,
@@ -40,9 +43,28 @@ export function KanbanCard({ order, onClick, isDragging }: KanbanCardProps) {
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : 'shadow-sm'
+      className={`group relative bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow ${isDragging ? 'shadow-lg ring-2 ring-primary/20' : 'shadow-sm'
         }`}
     >
+      {/* Move left arrow */}
+      {onMoveLeft && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onMoveLeft(); }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 w-6 h-6 rounded-full bg-white border shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
+      {/* Move right arrow */}
+      {onMoveRight && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onMoveRight(); }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-6 h-6 rounded-full bg-white border shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-opacity"
+        >
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
+
       <div className="flex items-start justify-between gap-2">
         <p className="font-medium text-sm text-foreground truncate flex-1">
           {order.patient_name || 'Paciente'}
@@ -70,16 +92,25 @@ export function KanbanCard({ order, onClick, isDragging }: KanbanCardProps) {
 
       {order.status === 'in_clinic' && (
         <div className="mt-2 flex gap-1.5">
-          <div
-            className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
-            }}
-          >
-            <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
-            <span className="text-[9px] font-medium text-amber-700">Agendar</span>
-          </div>
+          {scheduledDate ? (
+            <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
+              <CalendarCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span className="text-[9px] font-medium text-emerald-700">
+                Agendado {scheduledDate}
+              </span>
+            </div>
+          ) : (
+            <div
+              className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/agenda', { state: { openNewAppointment: true, patientId: order.patient_id, patientName: order.patient_name } });
+              }}
+            >
+              <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+              <span className="text-[9px] font-medium text-amber-700">Agendar</span>
+            </div>
+          )}
           {order.patient_phone && (
             <a
               href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}
