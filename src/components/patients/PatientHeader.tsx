@@ -45,6 +45,21 @@ interface PatientHeaderProps {
   onRefresh?: () => void;
 }
 
+function downloadBlob(content: string, filename: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  // Small delay to ensure download starts before cleanup
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
 export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientHeaderProps) {
   const navigate = useNavigate();
   const { isAdmin } = useClinic();
@@ -178,28 +193,13 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
         throw new Error('Nenhum dado retornado');
       }
 
+      const fileName = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}`;
       if (format === 'csv') {
         const csvStr = typeof data === 'string' ? data : String(data);
-        const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        downloadBlob(csvStr, `${fileName}.csv`, 'text/csv;charset=utf-8');
       } else {
         const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-        const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = dataUrl;
-        a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        downloadBlob(jsonStr, `${fileName}.json`, 'application/json;charset=utf-8');
       }
 
       toast.success('Dados exportados com sucesso');

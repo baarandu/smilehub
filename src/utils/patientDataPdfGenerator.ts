@@ -31,6 +31,7 @@ function formatValue(value: unknown): string {
 }
 
 const FIELD_LABELS: Record<string, string> = {
+  // Paciente
   name: 'Nome',
   phone: 'Telefone',
   email: 'E-mail',
@@ -43,7 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
   zip_code: 'CEP',
   occupation: 'Profissão',
   gender: 'Sexo',
-  patient_type: 'Tipo',
+  patient_type: 'Tipo de Paciente',
   health_insurance: 'Convênio',
   health_insurance_number: 'Carteirinha',
   allergies: 'Alergias',
@@ -53,9 +54,73 @@ const FIELD_LABELS: Record<string, string> = {
   emergency_contact: 'Contato de Emergência',
   emergency_phone: 'Telefone de Emergência',
   mother_name: 'Nome da Mãe',
+  mother_phone: 'Telefone da Mãe',
+  mother_occupation: 'Profissão da Mãe',
   father_name: 'Nome do Pai',
+  father_phone: 'Telefone do Pai',
+  father_occupation: 'Profissão do Pai',
   legal_guardian: 'Responsável Legal',
+  birthplace: 'Naturalidade',
+  school: 'Escola',
+  school_grade: 'Série Escolar',
+  has_siblings: 'Possui Irmãos',
+  siblings_count: 'Quantidade de Irmãos',
+  siblings_ages: 'Idade dos Irmãos',
+  return_alert_flag: 'Alerta de Retorno',
+  return_alert_date: 'Data do Alerta de Retorno',
   created_at: 'Cadastrado em',
+  updated_at: 'Atualizado em',
+  deleted_at: 'Arquivado em',
+  cpf_last4: 'CPF (últimos 4)',
+  // Consultas / Agendamentos
+  date: 'Data',
+  time: 'Horário',
+  status: 'Status',
+  type: 'Tipo',
+  complaint: 'Queixa',
+  diagnosis: 'Diagnóstico',
+  treatment_plan: 'Plano de Tratamento',
+  // Procedimentos
+  procedure_type: 'Tipo de Procedimento',
+  tooth: 'Dente',
+  // Exames
+  exam_type: 'Tipo de Exame',
+  file_url: 'Arquivo',
+  // Financeiro
+  description: 'Descrição',
+  amount: 'Valor',
+  category: 'Categoria',
+  payment_method: 'Forma de Pagamento',
+  value: 'Valor',
+  // Anamnese
+  medical_treatment: 'Em Tratamento Médico',
+  diabetes: 'Diabetes',
+  hypertension: 'Hipertensão',
+  heart_disease: 'Doença Cardíaca',
+  allergy: 'Alergia',
+  pregnant_or_breastfeeding: 'Gestante/Lactante',
+  pacemaker: 'Marcapasso',
+  infectious_disease: 'Doença Infecciosa',
+  anesthesia_reaction: 'Reação a Anestesia',
+  smoker_or_drinker: 'Fumante/Etilista',
+  healing_problems: 'Prob. Cicatrização',
+  current_medication: 'Medicação em Uso',
+  drug_allergy: 'Alergia Medicamentosa',
+  recent_surgery: 'Cirurgia Recente',
+  depression_anxiety_panic: 'Ansiedade/Depressão',
+  seizure_epilepsy: 'Epilepsia',
+  arthritis: 'Artrite/Artrose',
+  gastritis_reflux: 'Gastrite/Refluxo',
+  local_anesthesia_history: 'Histórico Anestesia Local',
+  fasting: 'Jejum',
+  // Voz
+  transcription: 'Transcrição',
+  extracted_data: 'Dados Extraídos',
+  // Genéricos
+  patient_id: 'ID do Paciente',
+  clinic_id: 'ID da Clínica',
+  user_id: 'ID do Usuário',
+  id: 'ID',
 };
 
 function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
@@ -113,7 +178,7 @@ function addTable(doc: jsPDF, items: Record<string, unknown>[], y: number, selec
   doc.setFillColor(245, 245, 245);
   doc.rect(MARGIN, y - 3, tableWidth, 7, 'F');
   keys.forEach((key, i) => {
-    const label = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+    const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     doc.text(label.substring(0, 15), MARGIN + i * colWidth + 1, y + 1);
   });
   y += 7;
@@ -163,7 +228,7 @@ export async function generatePatientDataPDF(data: ExportData, patientName: stri
     ([key, value]) => value !== undefined && value !== null && !['clinic_id', 'user_id', 'id', 'deleted_at', 'cpf_last4'].includes(key)
   );
   for (const [key, value] of relevantFields) {
-    const label = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+    const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     y = addKeyValue(doc, label, formatValue(value), y);
   }
   y += 5;
