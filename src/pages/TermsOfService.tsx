@@ -20,7 +20,7 @@ const TermsOfService = () => {
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 space-y-10">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 space-y-10 text-justify">
           {/* Title */}
           <div className="text-center border-b border-gray-200 pb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -574,6 +574,24 @@ const TermsOfService = () => {
                   Altera&ccedil;&otilde;es significativas ser&atilde;o comunicadas com anteced&ecirc;ncia m&iacute;nima de
                   30 dias. O uso continuado da Plataforma ap&oacute;s as altera&ccedil;&otilde;es constitui
                   aceita&ccedil;&atilde;o dos novos Termos.
+                </p>
+              </div>
+              <div className="border-l-4 border-primary/60 pl-4">
+                <p className="text-sm font-medium text-gray-800">Validade de Documentos Eletr&ocirc;nicos</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Os documentos gerados eletronicamente pela Plataforma, incluindo termos de
+                  consentimento, atestados, receitu&aacute;rios e demais documentos cl&iacute;nicos,
+                  possuem validade jur&iacute;dica nos termos da Medida Provis&oacute;ria n&ordm; 2.200-2/2001,
+                  que institui a Infraestrutura de Chaves P&uacute;blicas Brasileira (ICP-Brasil),
+                  e da Lei n&ordm; 14.063/2020, que disp&otilde;e sobre o uso de assinaturas eletr&ocirc;nicas
+                  em intera&ccedil;&otilde;es com entes p&uacute;blicos e em quest&otilde;es de sa&uacute;de.
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  A aceita&ccedil;&atilde;o eletr&ocirc;nica dos termos de consentimento pelo paciente,
+                  registrada com identifica&ccedil;&atilde;o do usu&aacute;rio, data, hora e endere&ccedil;o IP,
+                  constitui assinatura eletr&ocirc;nica v&aacute;lida conforme o art. 10, &sect;2&ordm; da
+                  MP 2.200-2/2001, equiparando-se &agrave; assinatura manuscrita para todos os
+                  efeitos legais.
                 </p>
               </div>
               <div className="border-l-4 border-primary/60 pl-4">

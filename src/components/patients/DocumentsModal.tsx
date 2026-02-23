@@ -132,6 +132,173 @@ Eu, _________________________________, portador(a) do CPF ___________________, n
 Declaro estar ciente dos procedimentos a serem realizados e que fui informado(a) sobre os riscos e benefícios do tratamento.
 
 Data: {{data}}`
+    },
+    {
+        name: 'TCLE — Implante Dentário',
+        content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
+PROCEDIMENTO: IMPLANTE DENTÁRIO
+
+Eu, {{nome}}, portador(a) do CPF {{cpf}}, declaro que fui devidamente informado(a) pelo(a) cirurgião-dentista sobre o procedimento de instalação de implante(s) dentário(s), tendo compreendido as seguintes informações:
+
+PROCEDIMENTO: Inserção cirúrgica de pino(s) de titânio no osso maxilar/mandibular para substituição de elemento(s) dentário(s) ausente(s), seguida de período de osseointegração e instalação da prótese sobre implante.
+
+RISCOS E COMPLICAÇÕES POSSÍVEIS:
+• Dor, edema (inchaço) e hematoma pós-operatório
+• Infecção no local do implante
+• Sangramento prolongado
+• Lesão temporária ou permanente de nervos (parestesia/dormência)
+• Perfuração de seio maxilar (em implantes superiores)
+• Não osseointegração (rejeição) do implante
+• Fratura do implante ou componentes protéticos
+• Necessidade de enxerto ósseo complementar
+
+ALTERNATIVAS DE TRATAMENTO:
+• Prótese fixa convencional (ponte)
+• Prótese removível parcial ou total
+• Manutenção do espaço sem reabilitação
+
+CUIDADOS PÓS-OPERATÓRIOS:
+Comprometo-me a seguir todas as orientações pós-operatórias, comparecer às consultas de acompanhamento, manter higiene oral adequada e informar o profissional sobre qualquer intercorrência.
+
+Declaro que tive a oportunidade de esclarecer todas as dúvidas e que consinto livremente com a realização do procedimento.
+
+Data: {{data}}`
+    },
+    {
+        name: 'TCLE — Clareamento Dental',
+        content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
+PROCEDIMENTO: CLAREAMENTO DENTAL
+
+Eu, {{nome}}, portador(a) do CPF {{cpf}}, declaro que fui devidamente informado(a) sobre o procedimento de clareamento dental a ser realizado, tendo compreendido as seguintes informações:
+
+PROCEDIMENTO: Aplicação de agente clareador (peróxido de hidrogênio ou peróxido de carbamida) sobre a superfície dental, podendo ser realizado em consultório e/ou com moldeiras para uso domiciliar supervisionado.
+
+RISCOS E COMPLICAÇÕES POSSÍVEIS:
+• Sensibilidade dental temporária (durante e após o tratamento)
+• Irritação gengival por contato com o agente clareador
+• Resultado estético variável conforme a coloração original dos dentes
+• Necessidade de manutenção periódica do clareamento
+• Restaurações, coroas e facetas existentes NÃO clareiam (pode ser necessário substituí-las)
+• Em casos raros, desmineralização do esmalte
+
+CONTRAINDICAÇÕES:
+• Gestantes e lactantes
+• Menores de 16 anos
+• Pacientes com lesões cariosas ativas ou doença periodontal não tratada
+
+CUIDADOS DURANTE O TRATAMENTO:
+Comprometo-me a evitar alimentos e bebidas com corantes (café, vinho tinto, refrigerantes escuros, molhos) durante o período indicado, seguir as instruções de uso das moldeiras (se aplicável) e comparecer às consultas de acompanhamento.
+
+Declaro que tive a oportunidade de esclarecer todas as dúvidas e que consinto livremente com a realização do procedimento.
+
+Data: {{data}}`
+    },
+    {
+        name: 'TCLE — Cirurgia Oral',
+        content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
+PROCEDIMENTO: CIRURGIA ORAL (EXODONTIA / CIRURGIA BUCOMAXILOFACIAL)
+
+Eu, {{nome}}, portador(a) do CPF {{cpf}}, declaro que fui devidamente informado(a) sobre o procedimento cirúrgico oral a ser realizado, tendo compreendido as seguintes informações:
+
+PROCEDIMENTO: ________________________________________________
+(Descrição: exodontia simples, exodontia de terceiro molar incluso/semi-incluso, frenectomia, cirurgia de tecido mole, enxerto ósseo, remoção de lesão, ou outro procedimento cirúrgico.)
+
+RISCOS E COMPLICAÇÕES POSSÍVEIS:
+• Dor, edema (inchaço) e hematoma pós-operatório
+• Sangramento prolongado ou hemorragia
+• Infecção pós-operatória (alveolite, abscesso)
+• Trismo (dificuldade de abertura bucal temporária)
+• Lesão temporária ou permanente de nervos — parestesia (dormência no lábio, língua ou queixo)
+• Comunicação buco-sinusal (em extrações superiores posteriores)
+• Fratura de raiz, osso alveolar ou tuberosidade
+• Danos a dentes adjacentes
+• Necessidade de procedimento cirúrgico adicional
+
+ALTERNATIVAS DE TRATAMENTO:
+• Tratamento conservador (quando aplicável)
+• Acompanhamento e proservação
+• Encaminhamento para centro cirúrgico (em casos complexos)
+
+CUIDADOS PÓS-OPERATÓRIOS:
+Comprometo-me a seguir rigorosamente as orientações de repouso, alimentação, medicação prescrita, higiene do local operado e restrição de esforço físico. Comprometo-me a retornar para remoção de suturas e acompanhamento conforme agendado.
+
+Declaro que tive a oportunidade de esclarecer todas as dúvidas e que consinto livremente com a realização do procedimento.
+
+Data: {{data}}`
+    },
+    {
+        name: 'TCLE — Ortodontia',
+        content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
+PROCEDIMENTO: TRATAMENTO ORTODÔNTICO
+
+Eu, {{nome}}, portador(a) do CPF {{cpf}}, declaro que fui devidamente informado(a) sobre o tratamento ortodôntico a ser realizado, tendo compreendido as seguintes informações:
+
+PROCEDIMENTO: Instalação de aparelho ortodôntico (fixo e/ou removível / alinhadores) para correção de maloclusão e/ou alinhamento dentário, com duração estimada de _____ meses.
+
+RISCOS E COMPLICAÇÕES POSSÍVEIS:
+• Desconforto e dor nos primeiros dias após ajustes
+• Lesões na mucosa (aftas) pelo contato com braquetes/fios
+• Reabsorção radicular (encurtamento das raízes dentárias)
+• Descalcificação do esmalte e cáries por higiene inadequada
+• Inflamação gengival e doença periodontal
+• Recidiva (movimentação após remoção do aparelho)
+• Necessidade de uso de contenção por tempo indeterminado
+• Possibilidade de extrações dentárias como parte do plano de tratamento
+• Necessidade de cirurgia ortognática em casos severos
+• Duração do tratamento pode variar do estimado inicialmente
+
+RESPONSABILIDADES DO PACIENTE:
+• Comparecer às consultas mensais de manutenção
+• Manter higiene oral rigorosa (escovação após cada refeição, uso de fio dental)
+• Evitar alimentos duros, pegajosos ou que possam danificar o aparelho
+• Usar elásticos, contenção ou dispositivos auxiliares conforme orientação
+• Comunicar imediatamente qualquer descolamento de braquete ou quebra de fio
+
+Estou ciente de que a falta de colaboração pode comprometer o resultado do tratamento e/ou prolongar sua duração.
+
+Declaro que tive a oportunidade de esclarecer todas as dúvidas e que consinto livremente com o início do tratamento.
+
+Data: {{data}}`
+    },
+    {
+        name: 'TCLE — Prótese Dentária',
+        content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
+PROCEDIMENTO: PRÓTESE DENTÁRIA
+
+Eu, {{nome}}, portador(a) do CPF {{cpf}}, declaro que fui devidamente informado(a) sobre o tratamento protético a ser realizado, tendo compreendido as seguintes informações:
+
+PROCEDIMENTO:
+( ) Prótese fixa unitária (coroa)
+( ) Prótese fixa plural (ponte)
+( ) Prótese parcial removível
+( ) Prótese total (dentadura)
+( ) Faceta/Lente de contato dental
+( ) Prótese sobre implante
+Material: _______________________________
+
+RISCOS E COMPLICAÇÕES POSSÍVEIS:
+• Sensibilidade dental durante e após o preparo do dente
+• Necessidade de tratamento de canal em dentes preparados
+• Adaptação inicial à prótese (fala, mastigação, estética)
+• Fratura ou deslocamento da prótese
+• Infiltração ou cárie em dentes pilares
+• Alteração na coloração com o tempo
+• Necessidade de ajustes oclusal e estético após cimentação
+• Desgaste ou necessidade de substituição ao longo dos anos
+• Em próteses removíveis: reabsorção óssea progressiva, necessidade de reembasamento periódico
+
+CUIDADOS E MANUTENÇÃO:
+• Higiene adequada com escovação e uso de fio dental (ou escova interdental)
+• Em próteses removíveis: remoção para higiene após refeições, imersão em solução de limpeza
+• Consultas de manutenção semestrais
+• Evitar morder objetos duros ou usar os dentes como ferramenta
+• Uso de placa noturna se indicado (bruxismo)
+
+Estou ciente de que a durabilidade da prótese depende dos cuidados de manutenção e da higiene oral adequada.
+
+Declaro que tive a oportunidade de esclarecer todas as dúvidas e que consinto livremente com a realização do procedimento.
+
+Data: {{data}}`
     }
 ];
 
@@ -378,7 +545,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         setDigitalSignEnabled(false);
         // Default: consent forms need patient signature, prescriptions/certificates don't
         const nameLower = template.name.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza');
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
         setNeedsPatientSignature(isConsentForm);
         setDeliveryMethod('EMAIL');
         setView('generate');
@@ -394,11 +561,19 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         const patient = patients.find(p => p.id === selectedPatientId);
         if (!patient) return;
 
-        const filled = documentTemplatesService.fillTemplate(
+        let filled = documentTemplatesService.fillTemplate(
             selectedTemplate.content,
             patient,
             documentDate
         );
+        // Remove signature lines from consent forms — signature is generated automatically at print
+        const nameLower = selectedTemplate.name.toLowerCase();
+        const isConsent = nameLower.includes('termo') || nameLower.includes('consentimento')
+            || nameLower.includes('autoriza') || nameLower.includes('tcle');
+        if (isConsent) {
+            filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
+            filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
+        }
         setEditableContent(filled);
     }, [selectedPatientId, documentDate, selectedTemplate, patients]);
 
@@ -430,7 +605,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         const templateName = selectedTemplate?.name || '';
         const nameLower = templateName.toLowerCase();
         const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
-            || nameLower.includes('autoriza');
+            || nameLower.includes('autoriza') || nameLower.includes('tcle');
         const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado')
             || nameLower.includes('encaminhamento') || nameLower.includes('declaração') || nameLower.includes('declaracao');
 
@@ -560,7 +735,17 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             </head>
             <body>
                 <h1>${templateName}</h1>
-                <div class="content">${isMinorAuth ? editableContent.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '') : editableContent}</div>
+                <div class="content">${(() => {
+                    let content = editableContent;
+                    if (isMinorAuth) {
+                        content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '');
+                    }
+                    if (isConsentForm) {
+                        content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
+                        content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
+                    }
+                    return content;
+                })()}</div>
                 ${signatureHtml}
             </body>
             </html>
@@ -625,7 +810,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             // Get dentist name for PDF
             let dentistName: string | undefined;
             const nameLower = selectedTemplate.name.toLowerCase();
-            const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza');
+            const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
             if (!isConsentForm) {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {

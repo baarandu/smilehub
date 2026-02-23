@@ -43,3 +43,4 @@ docs/*
 !docs/DPA-terceiros.md
 !docs/resposta-incidentes.md
 !docs/checklist-seguranca-features.md
+!docs/disaster-recovery.md

@@ -2,7 +2,7 @@
 
 > Referência operacional para implementação dos gaps identificados na auditoria de 23/02/2026.
 > Checklist de 73 itens auditados: **55 implementados, 7 parciais, 11 pendentes.**
-> Nota global: **A** — P0 e P1 concluídos.
+> Nota global: **A** — P0, P1 e P2 (8, 10, 11) concluídos.
 
 ---
 
@@ -254,74 +254,67 @@
 
 ## P2 — Melhorias de Conformidade
 
-### 8. Referências legais nos Termos de Uso
+### 8. ~~Referências legais nos Termos de Uso~~ CONCLUÍDO
 
-**Status:** Termos não referenciam MP 2.200-2/2001 nem Lei 14.063/2020
-**Impacto:** Validade jurídica da assinatura eletrônica poderia ser questionada
+**Status:** Implementado em 23/02/2026
+**Impacto:** ~~Validade jurídica da assinatura eletrônica poderia ser questionada~~ Mitigado
 
-**O que fazer:**
-- [ ] Adicionar seção ou parágrafo nos Termos referenciando:
-  - MP 2.200-2/2001 (validade de documentos eletrônicos)
-  - Lei 14.063/2020 (tipos de assinatura eletrônica)
-  - Nível de assinatura utilizado (avançada via SuperSign)
-- [ ] Mencionar que assinatura qualificada (ICP-Brasil) é opcional e pode ser integrada futuramente
+**Implementado:**
+- [x] Seção "Validade de Documentos Eletrônicos" em Disposições Gerais (seção 13)
+- [x] Referência a MP 2.200-2/2001 (ICP-Brasil, documentos eletrônicos)
+- [x] Referência a Lei 14.063/2020 (assinaturas eletrônicas em saúde)
+- [x] Explicação de que aceite registrado com usuário, data, hora e IP constitui assinatura eletrônica válida (Art. 10, §2º MP 2.200-2)
 
-**Arquivos a modificar:**
-- `src/pages/TermsOfService.tsx`
-
----
-
-### 9. MFA (Autenticação Multifator)
-
-**Status:** Não implementado. Supabase Auth suporta nativamente.
-**Impacto:** PSI menciona MFA para acesso administrativo
-
-**O que fazer:**
-- [ ] Habilitar MFA no Supabase Dashboard → Authentication → MFA
-- [ ] Criar componente de enrollment TOTP em Settings
-- [ ] Exigir MFA para role `admin` (opcional para outros)
-- [ ] Adicionar verificação MFA no login flow
-
-**Arquivos a criar/modificar:**
-- Novo componente: `src/components/auth/MFASetup.tsx`
-- `src/pages/Settings.tsx` — card na seção Conta
-- Login flow — verificação de fator adicional
+**Arquivos modificados:**
+- `src/pages/TermsOfService.tsx` — seção 13
 
 ---
 
-### 10. Runbook de Disaster Recovery
+### ~~9. MFA (Autenticação Multifator)~~ REMOVIDO
 
-**Status:** `docs/resposta-incidentes.md` cobre incidentes de segurança, mas não DR.
-**Impacto:** Sem procedimento documentado para recuperação de desastres
-
-**O que fazer:**
-- [ ] Criar `docs/disaster-recovery.md` com:
-  - Cenários cobertos (falha DB, falha provider, ransomware, corrupção)
-  - Procedimento de restauração via Supabase Dashboard
-  - Comandos PITR
-  - Contatos de emergência Supabase
-  - Checklist de validação pós-restauração
-  - RTO: 4h, RPO: minutos (PITR) / 24h (catástrofe)
+**Decisão:** Removido do escopo. PSI ajustada para refletir controle atual (senha forte 12+ chars).
+MFA pode ser implementado futuramente como diferencial, mas não é exigência legal da LGPD.
 
 ---
 
-### 11. TCLE específicos por procedimento
+### 10. ~~Runbook de Disaster Recovery~~ CONCLUÍDO
 
-**Status:** 4 templates genéricos. Sem TCLE para implante, clareamento, ortodontia, etc.
-**Impacto:** CFO recomenda consentimento específico por tipo de procedimento
+**Status:** Implementado em 23/02/2026
+**Impacto:** ~~Sem procedimento documentado para recuperação de desastres~~ Mitigado
 
-**O que fazer:**
-- [ ] Criar templates adicionais no `DocumentsModal.tsx`:
-  - TCLE para implantes dentários
-  - TCLE para clareamento dental
-  - TCLE para procedimentos cirúrgicos
-  - TCLE para ortodontia
-  - TCLE para prótese
-- [ ] Cada template com riscos específicos do procedimento
-- [ ] Variáveis: `{{nome}}`, `{{cpf}}`, `{{dente}}`, `{{procedimento}}`, `{{data}}`
+**Implementado:**
+- [x] `docs/disaster-recovery.md` com 8 seções:
+  1. Objetivo
+  2. Escopo (tabela RPO/RTO por componente)
+  3. Backups (DB automático, PITR, Storage, código-fonte)
+  4. Cenários: Indisponibilidade Supabase, Corrupção de Dados, Comprometimento de Credenciais, Perda de Frontend, Falha em Migration
+  5. Comunicação (responsáveis e canais)
+  6. Testes do Plano (checklist semestral)
+  7. Procedimentos de Contingência Manual
+  8. Documentos Relacionados
 
-**Arquivos a modificar:**
-- `src/components/patients/DocumentsModal.tsx` — adicionar templates
+**Arquivos criados:**
+- `docs/disaster-recovery.md`
+
+---
+
+### 11. ~~TCLE específicos por procedimento~~ CONCLUÍDO
+
+**Status:** Implementado em 23/02/2026
+**Impacto:** ~~CFO recomenda consentimento específico por tipo de procedimento~~ Mitigado
+
+**Implementado:**
+- [x] 5 TCLE específicos adicionados ao `DEFAULT_TEMPLATES`:
+  - TCLE — Implante Dentário (riscos: parestesia, não osseointegração, perfuração seio maxilar)
+  - TCLE — Clareamento Dental (riscos: sensibilidade, irritação gengival, contraindicações)
+  - TCLE — Cirurgia Oral (riscos: hemorragia, alveolite, trismo, comunicação buco-sinusal)
+  - TCLE — Ortodontia (riscos: reabsorção radicular, descalcificação, recidiva)
+  - TCLE — Prótese Dentária (riscos: sensibilidade, necessidade de canal, fratura)
+- [x] Cada template com: procedimento, riscos específicos, alternativas, cuidados, campos de assinatura (paciente + profissional CRO)
+- [x] Variáveis `{{nome}}`, `{{cpf}}`, `{{data_nascimento}}`, `{{data}}`
+
+**Arquivos modificados:**
+- `src/components/patients/DocumentsModal.tsx` — 5 templates adicionados (total: 11 templates)
 
 ---
 
@@ -390,7 +383,7 @@
 
 ## Checklist de Validação Final
 
-Após implementar P0 + P1, rodar esta verificação:
+Após implementar P0 + P1 + P2 parcial, rodar esta verificação:
 
 ```
 [x] npx vite build — compila sem erros
@@ -403,6 +396,9 @@ Após implementar P0 + P1, rodar esta verificação:
 [x] Export funciona em JSON, CSV e PDF — Edge Function deployada (P1)
 [x] Endpoint de anonimização — Edge Function deployada com confirmação dupla (P1)
 [x] RIPD — página com 9 seções ANPD + impressão/PDF (P1)
+[x] Referências legais (MP 2.200-2, Lei 14.063) nos Termos de Uso (P2)
+[x] Runbook de Disaster Recovery documentado (P2)
+[x] 5 TCLEs específicos por procedimento — implante, clareamento, cirurgia, ortodontia, prótese (P2)
 ```
 
 ---
