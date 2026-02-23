@@ -21,6 +21,7 @@ import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal'
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
 import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
+import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpensesChart';
 import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 
 export default function Dashboard() {
@@ -271,6 +272,9 @@ export default function Dashboard() {
           <ProsthesisStatusChart data={analytics?.prosthesisByStatus || []} />
         )}
       </div>
+
+      {/* Revenue vs Expenses */}
+      <RevenueExpensesChart />
 
       {/* Pending Budgets Modal */}
       <PendingBudgetsDialog

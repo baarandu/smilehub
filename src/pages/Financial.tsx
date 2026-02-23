@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,10 +17,20 @@ const MONTH_NAMES = [
 ];
 
 export default function Financial() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const now = new Date();
+  const initialState = location.state as { month?: number; year?: number } | null;
   const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(initialState?.month ?? now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(initialState?.year ?? now.getFullYear());
+
+  // Clear route state after consuming it
+  useEffect(() => {
+    if (initialState) {
+      navigate(location.pathname, { replace: true });
+    }
+  }, []);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);

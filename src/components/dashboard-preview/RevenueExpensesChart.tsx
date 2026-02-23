@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, DollarSign } from "lucide-react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,22 +12,45 @@ import {
   Legend,
 } from "recharts";
 import { useRevenueExpensesChart, type PeriodMode } from "@/hooks/useRevenueExpensesChart";
+import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export function RevenueExpensesChart() {
-  const { mode, changeMode, periodLabel, goBack, goForward, chartData, isLoading } =
+  const navigate = useNavigate();
+  const { mode, changeMode, periodLabel, goBack, goForward, chartData, isLoading, referenceDate, range } =
     useRevenueExpensesChart();
+
+  const handleBarClick = (data: { activeTooltipIndex?: number }) => {
+    const idx = data?.activeTooltipIndex;
+    if (idx == null) return;
+
+    if (mode === "weekly") {
+      // Navigate to the month of the clicked day
+      const clickedDate = new Date(range.start);
+      clickedDate.setDate(clickedDate.getDate() + idx);
+      navigate("/financeiro", { state: { month: clickedDate.getMonth(), year: clickedDate.getFullYear() } });
+    } else if (mode === "monthly") {
+      // Navigate to the current month
+      navigate("/financeiro", { state: { month: referenceDate.getMonth(), year: referenceDate.getFullYear() } });
+    } else {
+      // Yearly: clicked bar is a month index
+      navigate("/financeiro", { state: { month: idx, year: referenceDate.getFullYear() } });
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CardTitle className="text-base">Receita vs Despesas</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            Receita vs Despesas
+          </CardTitle>
 
           {/* Mode toggle */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-            {(["monthly", "yearly"] as PeriodMode[]).map((m) => (
+            {(["weekly", "monthly", "yearly"] as PeriodMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => changeMode(m)}
@@ -38,7 +61,7 @@ export function RevenueExpensesChart() {
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {m === "monthly" ? "Mensal" : "Anual"}
+                {m === "weekly" ? "Semanal" : m === "monthly" ? "Mensal" : "Anual"}
               </button>
             ))}
           </div>
@@ -63,7 +86,7 @@ export function RevenueExpensesChart() {
             <Skeleton className="h-full w-full rounded-lg" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <BarChart data={chartData} onClick={handleBarClick} className="cursor-pointer">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
                   dataKey="label"
@@ -96,23 +119,17 @@ export function RevenueExpensesChart() {
                     value === "receita" ? "Receita" : "Despesas"
                   }
                 />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="receita"
-                  stroke="#10b981"
                   fill="#10b981"
-                  fillOpacity={0.15}
-                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
                 />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="despesas"
-                  stroke="#ef4444"
                   fill="#ef4444"
-                  fillOpacity={0.1}
-                  strokeWidth={2}
+                  radius={[4, 4, 0, 0]}
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>

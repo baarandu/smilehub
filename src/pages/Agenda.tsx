@@ -90,14 +90,20 @@ export default function Agenda() {
     loadDentists();
   }, [clinicId]);
 
-  // Auto-open new appointment dialog when navigating from prosthesis center
+  // Auto-open new appointment dialog or navigate to date when coming from other pages
   useEffect(() => {
-    const state = location.state as { openNewAppointment?: boolean; patientId?: string; patientName?: string } | null;
+    const state = location.state as { openNewAppointment?: boolean; patientId?: string; patientName?: string; selectedDate?: string } | null;
+    if (state?.selectedDate) {
+      setSelectedDate(new Date(state.selectedDate + 'T00:00:00'));
+      setCalendarMonth(new Date(state.selectedDate + 'T00:00:00'));
+    }
     if (state?.openNewAppointment) {
       if (state.patientId && state.patientName) {
         setPreSelectedPatient({ id: state.patientId, name: state.patientName } as Patient);
       }
       setDialogOpen(true);
+    }
+    if (state) {
       // Clear the state so it doesn't re-trigger on navigation
       navigate(location.pathname, { replace: true });
     }

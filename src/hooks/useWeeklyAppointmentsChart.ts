@@ -69,5 +69,5 @@ export function useWeeklyAppointmentsChart() {
   const goBack = () => setReferenceDate((prev) => subWeeks(prev, 1));
   const goForward = () => setReferenceDate((prev) => addWeeks(prev, 1));
 
-  return { chartData, isLoading, periodLabel, goBack, goForward, isCurrentWeek };
+  return { chartData, isLoading, periodLabel, goBack, goForward, isCurrentWeek, weekStart };
 }

@@ -9,6 +9,8 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useNavigate } from "react-router-dom";
+import { Building2 } from "lucide-react";
 
 interface Props {
   data: { status: string; count: number }[];
@@ -22,12 +24,18 @@ const COLORS: Record<string, string> = {
 };
 
 export function ProsthesisStatusChart({ data }: Props) {
+  const navigate = useNavigate();
   const hasData = data.some((d) => d.count > 0);
+
+  const handleClick = () => navigate('/protese');
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Central de Prótese</CardTitle>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-primary" />
+          Central de Prótese
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
@@ -37,7 +45,7 @@ export function ProsthesisStatusChart({ data }: Props) {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} layout="vertical">
+              <BarChart data={data} layout="vertical" onClick={handleClick} className="cursor-pointer">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis type="number" className="text-xs" tick={{ fontSize: 12 }} allowDecimals={false} />
                 <YAxis

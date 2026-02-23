@@ -6,18 +6,24 @@ import {
   endOfMonth,
   startOfYear,
   endOfYear,
+  startOfWeek,
+  endOfWeek,
   subMonths,
   addMonths,
   subYears,
   addYears,
+  subWeeks,
+  addWeeks,
   format,
   getDaysInMonth,
+  eachDayOfInterval,
   isSameMonth,
   isSameYear,
+  isSameDay,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-export type PeriodMode = 'monthly' | 'yearly';
+export type PeriodMode = 'weekly' | 'monthly' | 'yearly';
 
 export interface RevenueExpensesDataPoint {
   label: string;
@@ -30,6 +36,11 @@ export function useRevenueExpensesChart() {
   const [referenceDate, setReferenceDate] = useState(new Date());
 
   const range = useMemo(() => {
+    if (mode === 'weekly') {
+      const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+      const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+      return { start, end };
+    }
     if (mode === 'monthly') {
       return { start: startOfMonth(referenceDate), end: endOfMonth(referenceDate) };
     }
@@ -46,8 +57,30 @@ export function useRevenueExpensesChart() {
   const chartData = useMemo((): RevenueExpensesDataPoint[] => {
     const txs = transactions || [];
 
+    if (mode === 'weekly') {
+      const days = eachDayOfInterval({ start: range.start, end: range.end });
+      const dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+      return days.map((day, idx) => {
+        let receita = 0;
+        let despesas = 0;
+        for (const tx of txs) {
+          if (!tx.date) continue;
+          const txDate = new Date(tx.date);
+          if (!isSameDay(txDate, day)) continue;
+          const amount = Math.abs(tx.amount || 0);
+          if (tx.type === 'income') receita += amount;
+          else if (tx.type === 'expense') despesas += amount;
+        }
+        return {
+          label: dayLabels[idx] || format(day, 'EEE', { locale: ptBR }),
+          receita: Math.round(receita * 100) / 100,
+          despesas: Math.round(despesas * 100) / 100,
+        };
+      });
+    }
+
     if (mode === 'monthly') {
-      // Group by day of the month
       const daysInMonth = getDaysInMonth(referenceDate);
       const dayMap = new Map<number, { receita: number; despesas: number }>();
       for (let d = 1; d <= daysInMonth; d++) {
@@ -99,21 +132,28 @@ export function useRevenueExpensesChart() {
         despesas: Math.round(val.despesas * 100) / 100,
       };
     });
-  }, [transactions, mode, referenceDate]);
+  }, [transactions, mode, referenceDate, range.start, range.end]);
 
   const periodLabel = useMemo(() => {
+    if (mode === 'weekly') {
+      return `${format(range.start, 'dd/MM', { locale: ptBR })} - ${format(range.end, 'dd/MM', { locale: ptBR })}`;
+    }
     if (mode === 'monthly') {
       return format(referenceDate, "MMMM 'de' yyyy", { locale: ptBR });
     }
     return format(referenceDate, 'yyyy');
-  }, [mode, referenceDate]);
+  }, [mode, referenceDate, range.start, range.end]);
 
   const goBack = () => {
-    setReferenceDate((prev) => (mode === 'monthly' ? subMonths(prev, 1) : subYears(prev, 1)));
+    setReferenceDate((prev) =>
+      mode === 'weekly' ? subWeeks(prev, 1) : mode === 'monthly' ? subMonths(prev, 1) : subYears(prev, 1)
+    );
   };
 
   const goForward = () => {
-    setReferenceDate((prev) => (mode === 'monthly' ? addMonths(prev, 1) : addYears(prev, 1)));
+    setReferenceDate((prev) =>
+      mode === 'weekly' ? addWeeks(prev, 1) : mode === 'monthly' ? addMonths(prev, 1) : addYears(prev, 1)
+    );
   };
 
   const changeMode = (newMode: PeriodMode) => {
@@ -129,5 +169,7 @@ export function useRevenueExpensesChart() {
     goForward,
     chartData,
     isLoading,
+    referenceDate,
+    range,
   };
 }
