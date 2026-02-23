@@ -1,25 +1,29 @@
 import { useState } from 'react';
-import { ClipboardList, Plus, Calendar as CalendarIcon, Eye, Edit3, Trash2 } from 'lucide-react';
+import { ClipboardList, Plus, Calendar as CalendarIcon, Eye, SquarePen, Trash2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnamneses, useDeleteAnamnese } from '@/hooks/useAnamneses';
 import { AnamneseSummaryDialog } from './AnamneseSummaryDialog';
 import { NewAnamneseDialog } from './NewAnamneseDialog';
+import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
 
 interface AnamneseTabProps {
     patientId: string;
+    patientName?: string;
+    patientEmail?: string | null;
 }
 
-export function AnamneseTab({ patientId }: AnamneseTabProps) {
+export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTabProps) {
     const { data: anamneses, isLoading } = useAnamneses(patientId);
     const deleteAnamnese = useDeleteAnamnese();
     const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
     const [showSummaryDialog, setShowSummaryDialog] = useState(false);
     const [showAnamneseDialog, setShowAnamneseDialog] = useState(false);
     const [editingAnamnese, setEditingAnamnese] = useState<Anamnese | null>(null);
+    const [signingAnamnese, setSigningAnamnese] = useState<Anamnese | null>(null);
 
     const formatDate = (date: string) => {
         if (!date) return '';
@@ -127,6 +131,7 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
                                                 <span className="font-medium text-foreground">
                                                     {formatDate(anamnese.date)}
                                                 </span>
+                                                <RecordSignatureBadge recordType="anamnesis" recordId={anamnese.id} compact />
                                             </div>
                                             <div className="flex flex-wrap gap-1">
                                                 {getBadges(anamnese).length > 0 ? (
@@ -149,10 +154,22 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
+                                                className="h-8 w-8 text-primary hover:text-primary"
+                                                title="Coletar Assinatura"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSigningAnamnese(anamnese);
+                                                }}
+                                            >
+                                                <PenLine className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
                                                 className="h-8 w-8"
                                                 onClick={(e) => handleEditAnamnese(e, anamnese)}
                                             >
-                                                <Edit3 className="w-4 h-4" />
+                                                <SquarePen className="w-4 h-4" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
@@ -190,6 +207,19 @@ export function AnamneseTab({ patientId }: AnamneseTabProps) {
                 patientId={patientId}
                 anamnese={editingAnamnese}
             />
+
+            {signingAnamnese && (
+                <SignaturePadDialog
+                    open={!!signingAnamnese}
+                    onOpenChange={(open) => { if (!open) setSigningAnamnese(null); }}
+                    patientId={patientId}
+                    patientName={patientName || ''}
+                    patientEmail={patientEmail}
+                    recordType="anamnesis"
+                    recordId={signingAnamnese.id}
+                    record={signingAnamnese as unknown as Record<string, unknown>}
+                />
+            )}
         </>
     );
 }

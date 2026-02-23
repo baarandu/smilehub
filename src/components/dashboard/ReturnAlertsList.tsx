@@ -1,4 +1,4 @@
-import { Phone, MessageCircle, Clock, Gift, AlertTriangle, Bell, ChevronRight, CalendarClock } from 'lucide-react';
+import { Phone, MessageCircle, Clock, Gift, AlertTriangle, Bell, ChevronRight, CalendarClock, Calendar, HeartPulse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface RecentAlert {
   id: string;
-  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder' | 'prosthesis_scheduling';
+  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder' | 'prosthesis_scheduling' | 'confirmation' | 'important_return';
   patientName: string;
   patientPhone: string;
   date: string;
@@ -31,8 +31,11 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
       message = `Parabéns ${name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
     } else if (type === 'procedure_return') {
       message = `Olá ${name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?`;
+    } else if (type === 'confirmation') {
+      message = `Olá ${name}! Passando para confirmar sua consulta de amanhã. Podemos contar com a sua presença?`;
+    } else if (type === 'important_return') {
+      message = `Olá ${name}, tudo bem? Estamos entrando em contato sobre seu retorno importante. Podemos agendar um horário?`;
     } else if (type === 'reminder') {
-      // For generic reminders, maybe just a hello or reusing confirmation
       message = `Olá ${name}!`;
     } else {
       message = `Olá ${name}! Estamos entrando em contato para lembrar sobre sua consulta de retorno. Podemos agendar um horário?`;
@@ -50,6 +53,10 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
         return { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' };
       case 'prosthesis_scheduling':
         return { icon: CalendarClock, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100' };
+      case 'confirmation':
+        return { icon: Calendar, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
+      case 'important_return':
+        return { icon: HeartPulse, color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' };
       case 'reminder':
         return { icon: Bell, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
       default:
@@ -89,7 +96,7 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
           Ver todos
         </Button>
       </div>
-      <div className="divide-y divide-border flex-1 overflow-auto">
+      <div className="divide-y divide-border flex-1 overflow-auto max-h-[350px]">
         {alerts.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center h-40">
             <Bell className="w-10 h-10 mb-2 opacity-40" />

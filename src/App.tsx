@@ -49,6 +49,7 @@ const LGPDRiskMatrix = lazy(() => import("./pages/LGPDRiskMatrix"));
 const ComplianceChecklist = lazy(() => import("./pages/ComplianceChecklist"));
 const RIPD = lazy(() => import("./pages/RIPD"));
 const SessionManagement = lazy(() => import("./pages/SessionManagement"));
+const BatchSignature = lazy(() => import("./pages/BatchSignature"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -132,6 +133,7 @@ const AppContent = () => (
         <Route path="/configuracoes/matriz-risco" element={<AppLayout><LGPDRiskMatrix /></AppLayout>} />
         <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
         <Route path="/configuracoes/ripd" element={<AppLayout><RIPD /></AppLayout>} />
+        <Route path="/assinaturas" element={<AppLayout><BatchSignature /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
 

@@ -139,7 +139,7 @@ export default function PatientDetail() {
           <TabsContent value="anamnese" className="mt-6">
             {(patient as any).patient_type === 'child'
               ? <ChildAnamneseTab patientId={patient.id} />
-              : <AnamneseTab patientId={patient.id} />
+              : <AnamneseTab patientId={patient.id} patientName={patient.name} patientEmail={(patient as any).email} />
             }
           </TabsContent>
         )}
@@ -153,12 +153,12 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="procedures" className="mt-6">
-          <ProceduresTab patientId={patient.id} />
+          <ProceduresTab patientId={patient.id} patientName={patient.name} patientEmail={(patient as any).email} />
         </TabsContent>
 
         <TabsContent value="exams" className="mt-6">
           <SignaturesPanel patientId={patient.id} />
-          <ExamsTab patientId={patient.id} />
+          <ExamsTab patientId={patient.id} patientName={patient.name} patientEmail={(patient as any).email} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">

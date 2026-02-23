@@ -12,7 +12,7 @@ interface AlertAccordionProps {
     description: string;
     count: number;
     loading: boolean;
-    colorScheme: 'pink' | 'amber' | 'red' | 'blue';
+    colorScheme: 'pink' | 'amber' | 'red' | 'blue' | 'teal';
     children: ReactNode;
     emptyMessage?: string;
 }
@@ -49,6 +49,14 @@ const colorStyles = {
         divider: 'border-blue-100',
         divideDivider: 'divide-blue-50',
         badgeActive: 'bg-blue-100 text-blue-700',
+    },
+    teal: {
+        border: 'border-teal-100',
+        trigger: 'hover:bg-teal-50/50',
+        iconBg: 'bg-teal-100',
+        divider: 'border-teal-100',
+        divideDivider: 'divide-teal-50',
+        badgeActive: 'bg-teal-100 text-teal-700',
     },
 };
 

@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCreateExam, useUpdateExam, useDeleteExam } from '@/hooks/useExams';
+import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Exam } from '@/types/database';
@@ -40,6 +41,8 @@ export function NewExamDialog({
   const createExam = useCreateExam();
   const updateExam = useUpdateExam();
   const deleteExam = useDeleteExam();
+  const { data: existingSignatures } = useRecordSignatures('exam', exam?.id);
+  const isSigned = (existingSignatures?.length || 0) > 0;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: '',
@@ -224,6 +227,14 @@ export function NewExamDialog({
             <DialogTitle>{exam ? 'Editar Exame' : 'Novo Exame'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {exam && isSigned && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <span className="text-amber-600 font-medium shrink-0">⚠️ Registro assinado.</span>
+                <span className="text-amber-700">
+                  Editar criará uma nova versão e invalidará a assinatura existente. Uma nova assinatura será necessária.
+                </span>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Exame *</Label>
               <Input

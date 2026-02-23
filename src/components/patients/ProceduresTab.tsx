@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Hospital, Plus, MapPin, Calendar as CalendarIcon, Edit3, Trash2, User, LinkIcon } from 'lucide-react';
+import { Hospital, Plus, MapPin, Calendar as CalendarIcon, SquarePen, Trash2, User, LinkIcon, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProcedures, useDeleteProcedure } from '@/hooks/useProcedures';
 import { locationsService, type Location } from '@/services/locations';
 import { NewProcedureDialog } from './NewProcedureDialog';
 import { ProcedureViewDialog } from './ProcedureViewDialog';
+import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +22,11 @@ import type { Procedure } from '@/types/database';
 
 interface ProceduresTabProps {
   patientId: string;
+  patientName?: string;
+  patientEmail?: string | null;
 }
 
-export function ProceduresTab({ patientId }: ProceduresTabProps) {
+export function ProceduresTab({ patientId, patientName, patientEmail }: ProceduresTabProps) {
   const { data: procedures, isLoading } = useProcedures(patientId);
   const deleteProcedure = useDeleteProcedure();
   const [locations, setLocations] = useState<Location[]>([]);
@@ -33,6 +36,7 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
   const [viewingProcedure, setViewingProcedure] = useState<Procedure | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
+  const [signingProcedure, setSigningProcedure] = useState<Procedure | null>(null);
 
   useEffect(() => {
     loadLocations();
@@ -149,6 +153,7 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                           Vinculado
                         </span>
                       )}
+                      <RecordSignatureBadge recordType="procedure" recordId={procedure.id} compact />
                     </div>
                     <div className="flex items-center gap-4 mb-2 text-sm text-muted-foreground flex-wrap">
                       {procedure.location && (
@@ -179,13 +184,25 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 text-primary hover:text-primary"
+                      title="Coletar Assinatura"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSigningProcedure(procedure);
+                      }}
+                    >
+                      <PenLine className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(procedure);
                       }}
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <SquarePen className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -254,6 +271,20 @@ export function ProceduresTab({ patientId }: ProceduresTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Signature Dialog */}
+      {signingProcedure && (
+        <SignaturePadDialog
+          open={!!signingProcedure}
+          onOpenChange={(open) => { if (!open) setSigningProcedure(null); }}
+          patientId={patientId}
+          patientName={patientName || ''}
+          patientEmail={patientEmail}
+          recordType="procedure"
+          recordId={signingProcedure.id}
+          record={signingProcedure as unknown as Record<string, unknown>}
+        />
+      )}
     </>
   );
 }

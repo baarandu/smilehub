@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { FileText, Plus, Calendar as CalendarIcon, Trash2, Edit } from 'lucide-react';
+import { FileText, Plus, Calendar as CalendarIcon, Trash2, SquarePen, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useExams, useDeleteExam } from '@/hooks/useExams';
 import { NewExamDialog } from './NewExamDialog';
+import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import type { Exam } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -11,13 +12,16 @@ import { getAccessibleUrl } from '@/lib/utils';
 
 interface ExamsTabProps {
   patientId: string;
+  patientName?: string;
+  patientEmail?: string | null;
 }
 
-export function ExamsTab({ patientId }: ExamsTabProps) {
+export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps) {
   const { data: exams, isLoading } = useExams(patientId);
   const deleteExam = useDeleteExam();
   const [showDialog, setShowDialog] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [signingExam, setSigningExam] = useState<Exam | null>(null);
 
   const formatDate = (date: string | null) => {
     if (!date) return '-';
@@ -89,7 +93,10 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <h4 className="font-medium text-foreground mb-2">{exam.name}</h4>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-medium text-foreground">{exam.name}</h4>
+                      <RecordSignatureBadge recordType="exam" recordId={exam.id} compact />
+                    </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4" />
@@ -112,6 +119,18 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 text-primary hover:text-primary"
+                      title="Coletar Assinatura"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSigningExam(exam);
+                      }}
+                    >
+                      <PenLine className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -119,7 +138,7 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
                         setShowDialog(true);
                       }}
                     >
-                      <Edit className="w-4 h-4" />
+                      <SquarePen className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -149,6 +168,19 @@ export function ExamsTab({ patientId }: ExamsTabProps) {
         patientId={patientId}
         exam={editingExam}
       />
+
+      {signingExam && (
+        <SignaturePadDialog
+          open={!!signingExam}
+          onOpenChange={(open) => { if (!open) setSigningExam(null); }}
+          patientId={patientId}
+          patientName={patientName || ''}
+          patientEmail={patientEmail}
+          recordType="exam"
+          recordId={signingExam.id}
+          record={signingExam as unknown as Record<string, unknown>}
+        />
+      )}
     </>
   );
 }

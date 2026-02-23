@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateAnamnese, useUpdateAnamnese } from '@/hooks/useAnamneses';
+import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
 import { ptBR } from 'date-fns/locale';
@@ -89,6 +90,8 @@ export function NewAnamneseDialog({
 }: NewAnamneseDialogProps) {
   const createAnamnese = useCreateAnamnese();
   const updateAnamnese = useUpdateAnamnese();
+  const { data: existingSignatures } = useRecordSignatures('anamnesis', anamnese?.id);
+  const isSigned = (existingSignatures?.length || 0) > 0;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     date: (() => {
@@ -362,6 +365,14 @@ export function NewAnamneseDialog({
 
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-6">
+            {anamnese && isSigned && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <span className="text-amber-600 font-medium shrink-0">⚠️ Registro assinado.</span>
+                <span className="text-amber-700">
+                  Editar criará uma nova versão e invalidará a assinatura existente. Uma nova assinatura será necessária.
+                </span>
+              </div>
+            )}
             {/* Data */}
             <div className="space-y-2">
               <Label>Data da Anamnese *</Label>

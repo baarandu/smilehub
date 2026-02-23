@@ -38,12 +38,13 @@ export function ProsthesisStatusChart({ data }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
+        <div className="h-[300px] overflow-auto">
           {!hasData ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
               Nenhuma ordem de prótese
             </div>
           ) : (
+            <div style={{ height: Math.max(300, data.length * 60) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} layout="vertical" onClick={handleClick} className="cursor-pointer">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -69,6 +70,7 @@ export function ProsthesisStatusChart({ data }: Props) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           )}
         </div>
       </CardContent>

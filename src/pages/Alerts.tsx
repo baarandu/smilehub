@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock } from 'lucide-react';
+import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock, PenLine } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts } from '@/hooks/useAlerts';
+import { useUnsignedRecords } from '@/hooks/useClinicalSignatures';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -34,7 +35,15 @@ export default function Alerts() {
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const { data: prosthesisAlerts, isLoading: loadingProsthesis } = useProsthesisSchedulingAlerts();
+  const { data: unsignedRecords, isLoading: loadingUnsigned } = useUnsignedRecords();
   const dismissAlert = useDismissAlert();
+
+  // Show batch signing alert on the 1st of each month
+  const today = new Date();
+  const isFirstOfMonth = today.getDate() === 1;
+  const previousMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const previousMonthLabel = previousMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const unsignedCount = unsignedRecords?.length || 0;
   const { data: tomorrowAppointments, isLoading: loadingTomorrow } = useAppointmentsByDate(tomorrowStr);
   const updateAppointmentStatus = useUpdateAppointmentStatus();
 
@@ -773,6 +782,41 @@ export default function Alerts() {
                   </div>
                 </div>
               ))}
+            </AlertAccordion>
+          )}
+
+          {/* Batch Signing Alert — shows on 1st of month or when there are unsigned records */}
+          {(isFirstOfMonth || unsignedCount > 0) && (
+            <AlertAccordion
+              open={openAccordions.batchSignatures ?? isFirstOfMonth}
+              onToggle={() => toggleAccordion('batchSignatures')}
+              icon={<PenLine className="w-5 h-5 text-teal-600" />}
+              title={isFirstOfMonth ? `Assinar lote de ${previousMonthLabel}` : 'Prontuários sem assinatura'}
+              description={isFirstOfMonth
+                ? 'Lembre-se de assinar os prontuários do mês anterior com certificado digital'
+                : `${unsignedCount} registro(s) pendente(s) de assinatura ICP-Brasil`
+              }
+              count={unsignedCount}
+              loading={loadingUnsigned}
+              colorScheme="teal"
+              emptyMessage="Todos os registros estão assinados!"
+            >
+              <div className="p-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  {isFirstOfMonth
+                    ? `Você tem ${unsignedCount} registro(s) clínico(s) pendente(s) de assinatura digital (ICP-Brasil) referente(s) ao mês anterior.`
+                    : `${unsignedCount} registro(s) aguardando assinatura em lote com certificado digital.`
+                  }
+                </p>
+                <Button
+                  size="sm"
+                  className="bg-teal-600 hover:bg-teal-700 gap-2 text-white"
+                  onClick={() => navigate('/assinaturas')}
+                >
+                  <PenLine className="w-4 h-4" />
+                  Assinar em Lote
+                </Button>
+              </div>
             </AlertAccordion>
           )}
         </div>

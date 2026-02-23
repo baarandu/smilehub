@@ -47,7 +47,7 @@ export function TodayAppointments({ appointments, isLoading }: TodayAppointments
   }
 
   return (
-    <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden">
+    <div className="bg-card rounded-xl shadow-card border border-border overflow-hidden h-full flex flex-col">
       <div className="p-5 border-b border-border flex items-center justify-between">
         <div>
           <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
@@ -56,7 +56,7 @@ export function TodayAppointments({ appointments, isLoading }: TodayAppointments
           </h3>
           <p className="text-sm text-muted-foreground mt-1">{appointments.length} consultas</p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/agenda')}
           className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1"
         >
@@ -64,7 +64,7 @@ export function TodayAppointments({ appointments, isLoading }: TodayAppointments
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border flex-1 overflow-auto max-h-[350px]">
         {appointments.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <Clock className="w-10 h-10 mx-auto mb-2 opacity-40" />

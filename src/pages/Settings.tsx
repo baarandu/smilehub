@@ -17,7 +17,8 @@ import {
   FileCheck,
   Lock,
   AlertTriangle,
-  ClipboardCheck
+  ClipboardCheck,
+  PenLine
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
@@ -115,6 +116,12 @@ export default function Settings() {
               to="/configuracoes/migracao"
             />
           )}
+          <SettingCard
+            icon={PenLine}
+            title="Assinaturas em Lote"
+            description="Assinatura ICP-Brasil de prontuários"
+            to="/assinaturas"
+          />
         </div>
       </div>
 

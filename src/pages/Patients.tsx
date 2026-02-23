@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, FileClock, Loader2, RefreshCw, UserPlus, Sparkles, ArrowLeft } from 'lucide-react';
+import { Users, FileText, FileClock, Loader2, RefreshCw, UserPlus, Sparkles, ArrowLeft, PenLine } from 'lucide-react';
 import { PatientSearch } from '@/components/patients/PatientSearch';
 import { PatientCard } from '@/components/patients/PatientCard';
 import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
@@ -149,6 +149,10 @@ export default function Patients() {
                 {pendingCount}
               </span>
             )}
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/assinaturas')}>
+            <PenLine className="w-4 h-4 mr-2" />
+            Assinar Prontuários
           </Button>
           <Button variant="outline" onClick={() => setShowDocumentsModal(true)}>
             <FileText className="w-4 h-4 mr-2" />

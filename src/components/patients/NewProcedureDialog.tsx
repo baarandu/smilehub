@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useCreateProcedure, useUpdateProcedure, useDeleteProcedure } from '@/hooks/useProcedures';
+import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { type Location } from '@/services/locations';
 import { budgetsService } from '@/services/budgets';
 import { prosthesisService } from '@/services/prosthesis';
@@ -57,6 +58,8 @@ export function NewProcedureDialog({
   const queryClient = useQueryClient();
 
   const { paidItems } = usePaidBudgetItems(patientId);
+  const { data: existingSignatures } = useRecordSignatures('procedure', procedure?.id);
+  const isSigned = (existingSignatures?.length || 0) > 0;
 
   const [form, setForm] = useState<ProcedureFormState>({
     date: new Date().toISOString().split('T')[0],
@@ -247,6 +250,15 @@ export function NewProcedureDialog({
 
         <div className="flex-1 overflow-y-auto pr-4">
           <form id="procedure-form" onSubmit={handleSubmit} className="space-y-6 mt-2">
+
+            {procedure && isSigned && (
+              <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                <span className="text-amber-600 font-medium shrink-0">⚠️ Registro assinado.</span>
+                <span className="text-amber-700">
+                  Editar criará uma nova versão e invalidará a assinatura existente. Uma nova assinatura será necessária.
+                </span>
+              </div>
+            )}
 
             <ProcedureForm
               form={form}

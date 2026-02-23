@@ -67,7 +67,96 @@ serve(async (req: Request) => {
       return new Response("Missing envelopeId", { status: 400 });
     }
 
-    // Find our record
+    // Check if this is a batch signature envelope (clinical records)
+    const metadata = event.metadata || event.envelope?.metadata;
+    if (metadata?.batch === true) {
+      logger.info("Processing batch signature envelope", { envelopeId, batchId: metadata.batch_id });
+
+      const records = metadata.records || [];
+      const batchNumber = metadata.batch_number || "";
+      const dentistUserId = metadata.dentist_user_id;
+      const clinicId = metadata.clinic_id;
+
+      // Get dentist name
+      let dentistName = "Dentista";
+      if (dentistUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", dentistUserId)
+          .single();
+        if (profile?.full_name) dentistName = profile.full_name;
+      }
+
+      // Create signature records for each clinical record in the batch
+      let created = 0;
+      for (const rec of records) {
+        try {
+          // Look up patient_id from the source record
+          const table = rec.record_type === "procedure" ? "procedures"
+            : rec.record_type === "anamnesis" ? "anamneses" : "exams";
+          const { data: sourceRecord } = await supabase
+            .from(table)
+            .select("patient_id")
+            .eq("id", rec.record_id)
+            .single();
+
+          if (!sourceRecord?.patient_id) {
+            logger.warn("Source record not found for batch item", { record_type: rec.record_type, record_id: rec.record_id });
+            continue;
+          }
+
+          await supabase
+            .from("clinical_record_signatures")
+            .insert({
+              clinic_id: clinicId,
+              patient_id: sourceRecord.patient_id,
+              record_type: rec.record_type,
+              record_id: rec.record_id,
+              signer_type: "dentist",
+              signer_name: dentistName,
+              signer_user_id: dentistUserId,
+              content_hash: rec.content_hash,
+              content_hash_verified: true,
+              batch_document_id: batchNumber,
+              signed_at: new Date().toISOString(),
+            });
+          created++;
+        } catch (insertErr: any) {
+          // Skip duplicates (unique constraint)
+          if (insertErr?.code !== "23505") {
+            logger.warn("Failed to create batch signature record", {
+              record_type: rec.record_type,
+              record_id: rec.record_id,
+              error: String(insertErr),
+            });
+          }
+        }
+      }
+
+      logger.audit(supabase, {
+        action: "BATCH_SIGNATURE_COMPLETED",
+        table_name: "clinical_record_signatures",
+        record_id: metadata.batch_id,
+        user_id: dentistUserId,
+        clinic_id: clinicId,
+        details: {
+          batch_number: batchNumber,
+          envelope_id: envelopeId,
+          records_created: created,
+          total_records: records.length,
+        },
+      });
+
+      logger.info("Batch signature completed", { batchNumber, created, total: records.length });
+
+      return new Response(
+        JSON.stringify({ received: true, processed: true, batch: true, created }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Find our record (non-batch flow)
     const { data: sig, error: sigError } = await supabase
       .from("digital_signatures")
       .select("*")

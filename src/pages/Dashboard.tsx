@@ -4,7 +4,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
 import { ProfileMenu } from '@/components/profile';
-import { useTodayAppointments, useTodayAppointmentsCount } from '@/hooks/useAppointments';
+import { useTodayAppointments, useTodayAppointmentsCount, useAppointmentsByDate } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
 import { useBirthdayAlerts, useProcedureReminders, useProsthesisSchedulingAlerts, useImportantReturnAlerts } from '@/hooks/useAlerts';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
@@ -38,6 +38,12 @@ export default function Dashboard() {
   const { data: prosthesisAlerts } = useProsthesisSchedulingAlerts();
   const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
   const { data: importantReturns, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
+
+  // Tomorrow's appointments for confirmation alerts
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const { data: tomorrowAppointments } = useAppointmentsByDate(tomorrowStr);
 
   // Pending Returns (Procedures) Hooks
   const { data: pendingReturnsList, isLoading: loadingPendingList, refetch: refetchPendingReturns } = usePendingReturnsList();
@@ -152,8 +158,37 @@ export default function Dashboard() {
       date: a.createdAt,
       subtitle: `Agendar prova - ${PROSTHESIS_TYPE_LABELS[a.type] || a.type}${a.toothNumbers.length > 0 ? ` (${a.toothNumbers.join(', ')})` : ''}`,
       urgency: 'urgent' as const
-    }))
-  ].slice(0, 6); // Top 6
+    })),
+    ...(tomorrowAppointments || []).filter(a => a.status !== 'confirmed').map(a => ({
+      id: `conf-${a.id}`,
+      type: 'confirmation' as const,
+      patientName: a.patients?.name || '',
+      patientPhone: a.patients?.phone || '',
+      date: tomorrowStr,
+      subtitle: `Confirmar consulta amanhã às ${a.time?.slice(0, 5) || ''}`,
+      urgency: 'urgent' as const
+    })),
+    ...(importantReturns || []).map(p => {
+      const returnDate = new Date(p.return_alert_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const isOverdue = diffDays < 0;
+      return {
+        id: `imp-${p.id}`,
+        type: 'important_return' as const,
+        patientName: p.name,
+        patientPhone: p.phone || '',
+        date: p.return_alert_date,
+        subtitle: isOverdue
+          ? `Retorno importante — ${Math.abs(diffDays)} dia${Math.abs(diffDays) !== 1 ? 's' : ''} atrasado`
+          : diffDays === 0
+            ? 'Retorno importante — Hoje'
+            : `Retorno importante — em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`,
+        urgency: (isOverdue || diffDays <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal'
+      };
+    })
+  ];
 
   return (
     <div className="space-y-6">
