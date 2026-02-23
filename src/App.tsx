@@ -43,6 +43,10 @@ const Support = lazy(() => import("./pages/Support"));
 const Settings = lazy(() => import("./pages/Settings"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const DPA = lazy(() => import("./pages/DPA"));
+const InformationSecurityPolicy = lazy(() => import("./pages/InformationSecurityPolicy"));
+const LGPDRiskMatrix = lazy(() => import("./pages/LGPDRiskMatrix"));
+const ComplianceChecklist = lazy(() => import("./pages/ComplianceChecklist"));
 const SessionManagement = lazy(() => import("./pages/SessionManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -101,6 +105,8 @@ const AppContent = () => (
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/privacidade" element={<PrivacyPolicy />} />
       <Route path="/termos" element={<TermsOfService />} />
+      <Route path="/dpa" element={<DPA />} />
+      <Route path="/seguranca-informacao" element={<InformationSecurityPolicy />} />
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
         <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
@@ -122,6 +128,8 @@ const AppContent = () => (
         <Route path="/dashboard-preview" element={<AppLayout><DashboardPreview /></AppLayout>} />
         <Route path="/dashboard-v2" element={<AppLayout><DashboardV2 /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
+        <Route path="/configuracoes/matriz-risco" element={<AppLayout><LGPDRiskMatrix /></AppLayout>} />
+        <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
 

@@ -13,7 +13,11 @@ import {
   ShieldCheck,
   ChevronRight,
   Settings as SettingsIcon,
-  Database
+  Database,
+  FileCheck,
+  Lock,
+  AlertTriangle,
+  ClipboardCheck
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
@@ -176,6 +180,34 @@ export default function Settings() {
             description="Condições de uso da plataforma"
             to="/termos"
           />
+          <SettingCard
+            icon={FileCheck}
+            title="DPA"
+            description="Acordo de Processamento de Dados"
+            to="/dpa"
+          />
+          <SettingCard
+            icon={Lock}
+            title="Segurança da Informação"
+            description="Política de segurança e criptografia"
+            to="/seguranca-informacao"
+          />
+          {isAdmin && (
+            <SettingCard
+              icon={AlertTriangle}
+              title="Matriz de Risco LGPD"
+              description="Mapeamento de riscos de privacidade"
+              to="/configuracoes/matriz-risco"
+            />
+          )}
+          {isAdmin && (
+            <SettingCard
+              icon={ClipboardCheck}
+              title="Compliance Anual"
+              description="Checklist de conformidade LGPD"
+              to="/configuracoes/compliance"
+            />
+          )}
         </div>
       </div>
 
