@@ -46,10 +46,16 @@ serve(async (req) => {
     });
 
     const body = await req.json();
-    const { patientId, clinicId } = body;
+    const { patientId, clinicId, format = "json" } = body;
 
     validateUUID(patientId, "patientId");
     validateUUID(clinicId, "clinicId");
+
+    // Validate format
+    const validFormats = ["json", "csv"];
+    if (!validFormats.includes(format)) {
+      throw new Error("Missing required fields");
+    }
 
     // Verify user has access to this clinic
     const { data: clinicUser, error: accessError } = await supabase
@@ -189,8 +195,25 @@ serve(async (req) => {
     log.audit(supabase, {
       action: "EXPORT", table_name: "Patient", record_id: patientId,
       user_id: user.id, clinic_id: clinicId,
-      details: { reason: "LGPD data export request" },
+      details: { reason: "LGPD data export request", format },
     });
+
+    if (format === "csv") {
+      const csvContent = generateCSV(exportData);
+      // BOM for UTF-8 Excel compatibility
+      const bom = "\uFEFF";
+      return new Response(
+        bom + csvContent,
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="patient-data-${patientId.substring(0, 8)}.csv"`,
+          },
+          status: 200,
+        }
+      );
+    }
 
     return new Response(
       JSON.stringify(exportData),
@@ -207,3 +230,65 @@ serve(async (req) => {
     return createErrorResponse(error, corsHeaders, "patient-data-export");
   }
 });
+
+// --- CSV Helpers ---
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  // Escape quotes and wrap in quotes if contains comma, quote, or newline
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+}
+
+function objectToCSVRows(items: Record<string, unknown>[]): string {
+  if (items.length === 0) return "(sem registros)\n";
+  const headers = Object.keys(items[0]);
+  const headerRow = headers.map(csvEscape).join(",");
+  const dataRows = items.map((item) =>
+    headers.map((h) => csvEscape(item[h])).join(",")
+  );
+  return [headerRow, ...dataRows].join("\n") + "\n";
+}
+
+function generateCSV(data: Record<string, unknown>): string {
+  const sections: string[] = [];
+
+  // Metadata
+  sections.push("=== METADADOS DA EXPORTAÇÃO ===");
+  const meta = data.export_metadata as Record<string, unknown>;
+  sections.push(Object.entries(meta).map(([k, v]) => `${k},${csvEscape(v)}`).join("\n"));
+
+  // Patient
+  sections.push("\n=== DADOS DO PACIENTE ===");
+  const patient = data.patient as Record<string, unknown>;
+  sections.push(Object.entries(patient)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k},${csvEscape(v)}`)
+    .join("\n"));
+
+  // Sections with arrays
+  const arraySections: [string, string][] = [
+    ["anamneses", "ANAMNESES"],
+    ["appointments", "CONSULTAS AGENDADAS"],
+    ["consultations", "CONSULTAS"],
+    ["procedures", "PROCEDIMENTOS"],
+    ["exams", "EXAMES"],
+    ["budgets", "ORÇAMENTOS"],
+    ["documents", "DOCUMENTOS"],
+    ["financial_transactions", "TRANSAÇÕES FINANCEIRAS"],
+    ["voice_consultation_sessions", "SESSÕES DE VOZ"],
+  ];
+
+  for (const [key, label] of arraySections) {
+    const items = data[key] as Record<string, unknown>[];
+    if (items && items.length > 0) {
+      sections.push(`\n=== ${label} ===`);
+      sections.push(objectToCSVRows(items));
+    }
+  }
+
+  return sections.join("\n");
+}

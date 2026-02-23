@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Stethoscope, Download } from 'lucide-react';
+import { MessageCircle, Mail, Calendar as CalendarIcon, Clock, Edit, Trash2, FileText, AlertTriangle, Stethoscope, Download, ChevronDown, UserX } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { toggleReturnAlert } from '@/services/patients';
 import { toast } from 'sonner';
 import { ReportGenerationModal } from './ReportGenerationModal';
 import { PatientAiConsent } from './PatientAiConsent';
+import { MinorConsentBadge } from './MinorConsentBadge';
 import { useClinic } from '@/contexts/ClinicContext';
 import {
   AlertDialog,
@@ -22,6 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { generatePatientDataPDF } from '@/utils/patientDataPdfGenerator';
+import { AnonymizePatientDialog } from './AnonymizePatientDialog';
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +53,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
   const [showReportModal, setShowReportModal] = useState(false);
   const [togglingAlert, setTogglingAlert] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showAnonymizeDialog, setShowAnonymizeDialog] = useState(false);
   const [alertDays, setAlertDays] = useState('180');
 
   const getInitials = (name: string) => {
@@ -139,11 +149,24 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     }
   };
 
-  const handleExportData = async () => {
+  const handleExportData = async (format: 'json' | 'csv' | 'pdf') => {
     try {
       setExporting(true);
+
+      if (format === 'pdf') {
+        // Fetch JSON first, then generate PDF client-side
+        const { data, error } = await supabase.functions.invoke('patient-data-export', {
+          body: { patientId: patient.id, clinicId: patient.clinic_id, format: 'json' },
+        });
+        if (error) throw error;
+        if (!data) throw new Error('Nenhum dado retornado');
+        await generatePatientDataPDF(data, patient.name);
+        toast.success('PDF gerado com sucesso');
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('patient-data-export', {
-        body: { patientId: patient.id, clinicId: patient.clinic_id },
+        body: { patientId: patient.id, clinicId: patient.clinic_id, format },
       });
 
       if (error) {
@@ -155,15 +178,30 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
         throw new Error('Nenhum dado retornado');
       }
 
-      const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-      const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = dataUrl;
-      a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      if (format === 'csv') {
+        const csvStr = typeof data === 'string' ? data : String(data);
+        const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        const dataUrl = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = dataUrl;
+        a.download = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
       toast.success('Dados exportados com sucesso');
     } catch (error: any) {
       console.error('Export error:', error);
@@ -248,10 +286,26 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   <FileText className="w-4 h-4" />
                   <span className="hidden sm:inline">Relatório</span>
                 </Button>
-                <Button variant="outline" size="sm" className="gap-2" onClick={handleExportData} disabled={exporting}>
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">{exporting ? 'Exportando...' : 'Exportar Dados'}</span>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2" disabled={exporting}>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">{exporting ? 'Exportando...' : 'Exportar'}</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleExportData('json')}>
+                      JSON (dados brutos)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportData('csv')}>
+                      CSV (planilha)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleExportData('pdf')}>
+                      PDF (relatório)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button variant="outline" size="sm" className="gap-2" onClick={onEdit}>
                   <Edit className="w-4 h-4" />
                   <span className="hidden sm:inline">Editar</span>
@@ -265,6 +319,17 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                   >
                     <Trash2 className="w-4 h-4" />
                     <span className="hidden sm:inline">Arquivar</span>
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => setShowAnonymizeDialog(true)}
+                  >
+                    <UserX className="w-4 h-4" />
+                    <span className="hidden sm:inline">Anonimizar</span>
                   </Button>
                 )}
               </div>
@@ -305,8 +370,15 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
         </div>
 
         {patient.clinic_id && (
-          <div className="pt-4 border-t border-border">
+          <div className="pt-4 border-t border-border space-y-2">
             <PatientAiConsent patientId={patient.id} clinicId={patient.clinic_id} />
+            {(patient as any).patient_type === 'child' && (
+              <MinorConsentBadge
+                patientId={patient.id}
+                clinicId={patient.clinic_id}
+                guardianNameDefault={(patient as any).legal_guardian || (patient as any).mother_name || (patient as any).father_name || ''}
+              />
+            )}
           </div>
         )}
 
@@ -383,6 +455,20 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
         onOpenChange={setShowReportModal}
         patient={patient}
       />
+
+      {patient.clinic_id && (
+        <AnonymizePatientDialog
+          open={showAnonymizeDialog}
+          onOpenChange={setShowAnonymizeDialog}
+          patientId={patient.id}
+          clinicId={patient.clinic_id}
+          patientName={patient.name}
+          onSuccess={() => {
+            if (onRefresh) onRefresh();
+            navigate('/pacientes');
+          }}
+        />
+      )}
     </>
   );
 }

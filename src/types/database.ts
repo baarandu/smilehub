@@ -3475,6 +3475,7 @@ export type PatientFormData = {
   hasSiblings: boolean
   siblingsCount: string
   siblingsAges: string
+  minorConsent?: boolean
 }
 
 // Document Templates

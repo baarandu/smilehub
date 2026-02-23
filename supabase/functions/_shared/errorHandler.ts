@@ -121,6 +121,11 @@ export function createErrorResponse(
     "Apenas administradores podem gerenciar o WhatsApp",
     "Missing action parameter",
     "Missing phone or message",
+    // Patient anonymization
+    "Paciente não encontrado.",
+    "Código de confirmação incorreto.",
+    "retenção legal",
+    "Justificativa de override",
   ];
 
   const isSafeMessage = safeMessages.some((safe) => message.includes(safe));

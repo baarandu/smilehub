@@ -556,6 +556,26 @@ export function PatientForm({
               </div>
             </div>
 
+            {/* Minor Consent (Art. 14 LGPD) */}
+            <div className="border-t pt-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-sm text-amber-800 uppercase tracking-wide">Consentimento do Responsável (Art. 14 LGPD)</h4>
+                <p className="text-xs text-amber-700">
+                  O tratamento de dados pessoais de crianças e adolescentes requer consentimento específico do responsável legal.
+                </p>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="minorConsent"
+                    checked={form.minorConsent || false}
+                    onCheckedChange={(checked) => updateField('minorConsent', checked)}
+                  />
+                  <Label htmlFor="minorConsent" className="text-sm text-amber-900">
+                    O responsável legal autoriza o tratamento de dados deste paciente menor
+                  </Label>
+                </div>
+              </div>
+            </div>
+
             {/* Siblings */}
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide">Irmãos</h4>

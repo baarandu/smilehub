@@ -55,7 +55,7 @@ const PrivacyPolicy = () => {
                 <p className="text-blue-800"><strong>Plataforma:</strong> Organiza Odonto</p>
                 <p className="text-blue-800"><strong>Raz&atilde;o Social:</strong> [Raz&atilde;o Social da Empresa]</p>
                 <p className="text-blue-800"><strong>CNPJ:</strong> [XX.XXX.XXX/XXXX-XX]</p>
-                <p className="text-blue-800"><strong>E-mail:</strong> privacidade@organizaodonto.com.br</p>
+                <p className="text-blue-800"><strong>E-mail:</strong> suporte@organizaodonto.app</p>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4 text-sm space-y-1">
                 <p className="font-semibold text-gray-900 mb-2">Controladora de Dados (Cl&iacute;nica)</p>

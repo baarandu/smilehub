@@ -111,7 +111,43 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
     siblings_ages: formData.siblingsAges || null,
   } as any;
 
-  return createPatient(patient);
+  const created = await createPatient(patient);
+
+  // If child patient with minor consent granted, upsert consent record
+  if (formData.patientType === 'child' && formData.minorConsent) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: clinicUser } = await supabase
+        .from('clinic_users')
+        .select('clinic_id')
+        .eq('user_id', user!.id)
+        .single() as { data: { clinic_id: string } | null };
+
+      if (clinicUser?.clinic_id) {
+        const guardianName = formData.legalGuardian || formData.motherName || formData.fatherName || '';
+        await supabase
+          .from('patient_consents')
+          .upsert({
+            patient_id: created.id,
+            clinic_id: clinicUser.clinic_id,
+            consent_type: 'minor_data_processing',
+            granted: true,
+            granted_by: user!.id,
+            granted_at: new Date().toISOString(),
+            revoked_at: null,
+            guardian_name: guardianName || null,
+            notes: `Consentimento registrado no cadastro do paciente`,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'patient_id,clinic_id,consent_type',
+          });
+      }
+    } catch {
+      // Non-blocking: consent table may not exist yet
+    }
+  }
+
+  return created;
 }
 
 export async function updatePatient(id: string, patient: PatientUpdate): Promise<Patient> {
@@ -225,6 +261,33 @@ export async function toggleReturnAlert(patientId: string, active: boolean, days
 
   if (error) throw error;
   return data as Patient;
+}
+
+export async function anonymizePatient(
+  patientId: string,
+  clinicId: string,
+  confirmationCode: string,
+  overrideRetention?: boolean,
+  overrideReason?: string
+): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('patient-data-anonymize', {
+    body: {
+      patientId,
+      clinicId,
+      confirmationCode,
+      overrideRetention,
+      overrideReason,
+    },
+  });
+
+  if (error) {
+    const msg = error?.message || (error as any)?.context?.body || String(error);
+    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
 }
 
 // Convert Patient to PatientFormData

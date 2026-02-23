@@ -47,6 +47,7 @@ const DPA = lazy(() => import("./pages/DPA"));
 const InformationSecurityPolicy = lazy(() => import("./pages/InformationSecurityPolicy"));
 const LGPDRiskMatrix = lazy(() => import("./pages/LGPDRiskMatrix"));
 const ComplianceChecklist = lazy(() => import("./pages/ComplianceChecklist"));
+const RIPD = lazy(() => import("./pages/RIPD"));
 const SessionManagement = lazy(() => import("./pages/SessionManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -130,6 +131,7 @@ const AppContent = () => (
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/configuracoes/matriz-risco" element={<AppLayout><LGPDRiskMatrix /></AppLayout>} />
         <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
+        <Route path="/configuracoes/ripd" element={<AppLayout><RIPD /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
 

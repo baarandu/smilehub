@@ -208,6 +208,14 @@ export default function Settings() {
               to="/configuracoes/compliance"
             />
           )}
+          {isAdmin && (
+            <SettingCard
+              icon={FileText}
+              title="RIPD"
+              description="Relatório de Impacto à Proteção de Dados"
+              to="/configuracoes/ripd"
+            />
+          )}
         </div>
       </div>
 
