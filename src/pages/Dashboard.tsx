@@ -19,10 +19,14 @@ import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog
 import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
 import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
+import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
+import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { returnToOnboardingIfNeeded } = useOnboarding();
+  const { data: analytics, isLoading: loadingAnalytics } = useDashboardAnalytics();
 
   // const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount(); // Removing patients stats
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
@@ -256,6 +260,16 @@ export default function Dashboard() {
           alerts={recentAlerts}
           isLoading={isLoadingAlerts}
         />
+      </div>
+
+      {/* Charts */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <WeeklyAppointmentsChart />
+        {loadingAnalytics ? (
+          <Skeleton className="h-[380px] rounded-xl" />
+        ) : (
+          <ProsthesisStatusChart data={analytics?.prosthesisByStatus || []} />
+        )}
       </div>
 
       {/* Pending Budgets Modal */}
