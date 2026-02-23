@@ -1,5 +1,11 @@
 import jsPDF from 'jspdf';
 import type { IRSummary } from '@/types/incomeTax';
+import { computePdfHash, generateDocumentId } from '@/utils/pdfHash';
+
+export interface IRPdfResult {
+  hash: string;
+  documentId: string;
+}
 
 const formatCurrency = (value: number) => {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -31,8 +37,9 @@ const calculateCarneLeao = (baseCalculo: number): { aliquota: number; imposto: n
 /**
  * Generate the annual IR Report PDF (Dossie IR)
  */
-export async function generateIRPdf(summary: IRSummary): Promise<void> {
+export async function generateIRPdf(summary: IRSummary): Promise<IRPdfResult> {
   const doc = new jsPDF();
+  const documentId = generateDocumentId();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
@@ -702,13 +709,23 @@ export async function generateIRPdf(summary: IRSummary): Promise<void> {
 
     // Page number
     doc.text(`Pagina ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+
+    // Document ID on first page only
+    if (i === 1) {
+      doc.setFontSize(7);
+      doc.setTextColor(180, 180, 180);
+      doc.text(`ID: ${documentId} | Emitido em: ${new Date().toLocaleString('pt-BR')}`, margin, pageHeight - 5);
+    }
   }
 
   doc.setTextColor(0, 0, 0);
 
-  // Save the PDF
+  // Save the PDF and compute hash
+  const arrayBuffer = doc.output('arraybuffer');
+  const hash = await computePdfHash(arrayBuffer);
   const filename = `dossie-ir-${summary.year}.pdf`;
   doc.save(filename);
+  return { hash, documentId };
 }
 
 /**

@@ -14,7 +14,7 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("voice-consultation-transcribe");
+  const log = createLogger("voice-consultation-transcribe", req);
 
   try {
     // Auth

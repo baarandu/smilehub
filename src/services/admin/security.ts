@@ -23,6 +23,8 @@ export interface AuditLogEntry {
   source: string;
   function_name: string | null;
   request_id: string | null;
+  request_ip: string | null;
+  user_agent: string | null;
   created_at: string;
   user_id: string | null;
   user_email: string | null;

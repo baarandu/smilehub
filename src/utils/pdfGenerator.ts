@@ -1,6 +1,13 @@
 import jsPDF from 'jspdf';
 import type { BudgetWithItems } from '@/types/database';
 import { formatMoney, type ToothEntry } from '@/utils/budgetUtils';
+import { computePdfHash, generateDocumentId } from '@/utils/pdfHash';
+
+export interface PdfResult {
+    blobUrl: string;
+    hash: string;
+    documentId: string;
+}
 
 interface BudgetPDFData {
     budget: BudgetWithItems;
@@ -30,7 +37,7 @@ function drawRoundedRect(doc: jsPDF, x: number, y: number, width: number, height
 }
 
 // Core function that builds the PDF document
-async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
+async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promise<jsPDF> {
     const { budget, patientName, clinicName, dentistName, dentistCRO } = data;
 
     const doc = new jsPDF();
@@ -359,23 +366,38 @@ async function buildPDFDocument(data: BudgetPDFData): Promise<jsPDF> {
         doc.setTextColor(156, 163, 175);
         const footerText = 'Este orçamento tem validade de 30 dias a partir da data de emissão. Os valores podem sofrer alterações após este período.';
         doc.text(footerText, pageWidth / 2, y, { align: 'center', maxWidth: pageWidth - 2 * margin });
+
+        if (documentId) {
+            y += 12;
+            doc.setFontSize(7);
+            doc.setTextColor(180, 180, 180);
+            doc.text(`ID: ${documentId} | Emitido em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: 'center' });
+        }
     }
 
     return doc;
 }
 
-// Generate PDF and return blob URL for preview
-export async function generateBudgetPDFPreview(data: BudgetPDFData): Promise<string> {
-    const doc = await buildPDFDocument(data);
-    const blob = doc.output('blob');
-    return URL.createObjectURL(blob);
+// Generate PDF and return blob URL for preview (with hash)
+export async function generateBudgetPDFPreview(data: BudgetPDFData): Promise<PdfResult> {
+    const documentId = generateDocumentId();
+    const doc = await buildPDFDocument(data, documentId);
+    const arrayBuffer = doc.output('arraybuffer');
+    const hash = await computePdfHash(arrayBuffer);
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+    const blobUrl = URL.createObjectURL(blob);
+    return { blobUrl, hash, documentId };
 }
 
-// Generate PDF and download
-export async function generateBudgetPDF(data: BudgetPDFData): Promise<void> {
-    const doc = await buildPDFDocument(data);
+// Generate PDF and download (with hash)
+export async function generateBudgetPDF(data: BudgetPDFData): Promise<PdfResult> {
+    const documentId = generateDocumentId();
+    const doc = await buildPDFDocument(data, documentId);
+    const arrayBuffer = doc.output('arraybuffer');
+    const hash = await computePdfHash(arrayBuffer);
     const filename = `orcamento_${data.patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
+    return { blobUrl: '', hash, documentId };
 }
 
 // Download from existing blob URL

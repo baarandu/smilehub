@@ -27,7 +27,7 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
-    const log = createLogger("cancel-subscription");
+    const log = createLogger("cancel-subscription", req);
 
     try {
         // Auth

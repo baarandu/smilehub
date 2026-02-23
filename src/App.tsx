@@ -41,6 +41,9 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const TrialExpired = lazy(() => import("./pages/TrialExpired"));
 const Support = lazy(() => import("./pages/Support"));
 const Settings = lazy(() => import("./pages/Settings"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const SessionManagement = lazy(() => import("./pages/SessionManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -96,11 +99,14 @@ const AppContent = () => (
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/privacidade" element={<PrivacyPolicy />} />
+      <Route path="/termos" element={<TermsOfService />} />
       {/* Protected Routes */}
       <Route element={<PrivateRoute />}>
         <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
         <Route path="/suporte" element={<AppLayout><Support /></AppLayout>} />
         <Route path="/configuracoes" element={<AppLayout><Settings /></AppLayout>} />
+        <Route path="/configuracoes/sessoes" element={<AppLayout><SessionManagement /></AppLayout>} />
         <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />
         <Route path="/agenda" element={<AppLayout><Agenda /></AppLayout>} />

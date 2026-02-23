@@ -222,7 +222,12 @@ export default function Signup() {
                 </div>
 
                 {/* Footer */}
-                <div className="text-center text-gray-400 text-sm mt-6 space-y-1">
+                <div className="text-center text-gray-400 text-sm mt-6 space-y-2">
+                    <div className="flex items-center justify-center gap-3 text-xs">
+                        <Link to="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+                        <span className="text-gray-600">·</span>
+                        <Link to="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
+                    </div>
                     <p>© 2026 Organiza Odonto®. Todos os direitos reservados.</p>
                     <p className="text-xs">Desenvolvido por Alqer® - Soluções em Tecnologia</p>
                 </div>

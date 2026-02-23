@@ -181,6 +181,7 @@ export function AuditLogTable() {
                   <th className="p-2">Descrição</th>
                   <th className="p-2">Entidade</th>
                   <th className="p-2">Origem</th>
+                  <th className="p-2">IP</th>
                   <th className="p-2">Usuário</th>
                 </tr>
               </thead>
@@ -214,13 +215,16 @@ export function AuditLogTable() {
                       <td className="p-2 text-xs">
                         {SOURCE_LABELS[log.source] || log.source}
                       </td>
+                      <td className="p-2 text-xs text-muted-foreground truncate max-w-[120px]" title={log.request_ip || ""}>
+                        {log.request_ip || "-"}
+                      </td>
                       <td className="p-2 text-xs truncate max-w-[150px]" title={log.user_email || ""}>
                         {log.user_name || log.user_email || log.user_id?.slice(0, 8) || "-"}
                       </td>
                     </tr>
                     {expandedRow === log.id && (
                       <tr key={`${log.id}-detail`} className="border-b bg-muted/30">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <ExpandedRow log={log} />
                         </td>
                       </tr>
@@ -229,7 +233,7 @@ export function AuditLogTable() {
                 ))}
                 {data?.logs.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       Nenhum log encontrado com os filtros selecionados.
                     </td>
                   </tr>
@@ -271,18 +275,35 @@ export function AuditLogTable() {
   );
 }
 
+function RequestInfo({ log }: { log: AuditLogEntry }) {
+  if (!log.request_ip && !log.user_agent && !log.request_id) return null;
+  return (
+    <div className="flex flex-wrap gap-4 mb-2 text-xs text-muted-foreground">
+      {log.request_id && <span>Request ID: <span className="font-mono">{log.request_id}</span></span>}
+      {log.request_ip && <span>IP: <span className="font-mono">{log.request_ip}</span></span>}
+      {log.user_agent && <span className="truncate max-w-[400px]" title={log.user_agent}>UA: {log.user_agent}</span>}
+    </div>
+  );
+}
+
 function ExpandedRow({ log }: { log: AuditLogEntry }) {
   const oldData = log.old_data;
   const newData = log.new_data;
 
   if ((!oldData || Object.keys(oldData).length === 0) && (!newData || Object.keys(newData).length === 0)) {
-    return <div className="p-3 text-sm text-muted-foreground">Sem dados detalhados.</div>;
+    return (
+      <div className="p-3">
+        <RequestInfo log={log} />
+        <div className="text-sm text-muted-foreground">Sem dados detalhados.</div>
+      </div>
+    );
   }
 
   // For INSERT or DELETE (no diff), show the snapshot
   if (!oldData || Object.keys(oldData).length === 0) {
     return (
       <div className="p-3">
+        <RequestInfo log={log} />
         <p className="text-xs font-medium text-muted-foreground mb-2">Dados do registro:</p>
         <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-48">
           {JSON.stringify(newData, null, 2)}
@@ -294,6 +315,7 @@ function ExpandedRow({ log }: { log: AuditLogEntry }) {
   if (!newData || Object.keys(newData).length === 0) {
     return (
       <div className="p-3">
+        <RequestInfo log={log} />
         <p className="text-xs font-medium text-muted-foreground mb-2">Dados antes da exclusão:</p>
         <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-48">
           {JSON.stringify(oldData, null, 2)}
@@ -308,11 +330,17 @@ function ExpandedRow({ log }: { log: AuditLogEntry }) {
   );
 
   if (changedKeys.length === 0) {
-    return <div className="p-3 text-sm text-muted-foreground">Nenhuma alteração detectada.</div>;
+    return (
+      <div className="p-3">
+        <RequestInfo log={log} />
+        <div className="text-sm text-muted-foreground">Nenhuma alteração detectada.</div>
+      </div>
+    );
   }
 
   return (
     <div className="p-3">
+      <RequestInfo log={log} />
       <p className="text-xs font-medium text-muted-foreground mb-2">Campos alterados:</p>
       <div className="space-y-1">
         {changedKeys.map((key) => (

@@ -20,6 +20,8 @@ interface AuditEvent {
   user_id?: string;
   clinic_id?: string;
   details?: Record<string, unknown>;
+  request_ip?: string;
+  user_agent?: string;
 }
 
 export interface StructuredLogger {
@@ -43,8 +45,25 @@ function formatLog(level: string, functionName: string, requestId: string, messa
   return JSON.stringify(entry);
 }
 
-export function createLogger(functionName: string): StructuredLogger {
+function extractRequestIp(req?: Request): string | null {
+  if (!req) return null;
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    null
+  );
+}
+
+function extractUserAgent(req?: Request): string | null {
+  if (!req) return null;
+  return req.headers.get("user-agent") || null;
+}
+
+export function createLogger(functionName: string, req?: Request): StructuredLogger {
   const requestId = crypto.randomUUID().slice(0, 8);
+  const requestIp = extractRequestIp(req);
+  const userAgent = extractUserAgent(req);
 
   return {
     requestId,
@@ -79,6 +98,8 @@ export function createLogger(functionName: string): StructuredLogger {
           source: "edge_function",
           function_name: functionName,
           request_id: requestId,
+          request_ip: event.request_ip || requestIp,
+          user_agent: event.user_agent || userAgent,
         })
         .then(() => {})
         .catch((err: any) => {

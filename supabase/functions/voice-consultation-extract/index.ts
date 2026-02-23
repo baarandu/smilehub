@@ -273,7 +273,7 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("voice-consultation-extract");
+  const log = createLogger("voice-consultation-extract", req);
 
   try {
     // Auth

@@ -627,7 +627,7 @@ export default function LandingV2() {
             {[
               ['Produto', [['Funcionalidades', '#funcionalidades'], ['Preços', '#precos'], ['Atualizações', '#'], ['Roadmap', '#']]],
               ['Suporte', [['Central de Ajuda', '/suporte'], ['FAQ', '#faq'], ['WhatsApp', 'https://wa.me/5571997118372'], ['Contato', 'mailto:contato@alqer.tech']]],
-              ['Legal', [['Termos de Uso', '#'], ['Privacidade', '#'], ['LGPD', '#']]],
+              ['Legal', [['Termos de Uso', '/termos'], ['Privacidade', '/privacidade'], ['LGPD', '/privacidade']]],
             ].map(([title, links]) => (
               <div key={title as string}>
                 <h4 className="mb-4 text-sm font-semibold text-white">{title as string}</h4>

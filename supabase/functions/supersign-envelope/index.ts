@@ -30,7 +30,7 @@ serve(async (req: Request) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  const logger = createLogger(FUNCTION_NAME);
+  const logger = createLogger(FUNCTION_NAME, req);
 
   try {
     // Auth — use service role key (same pattern as dentist-agent)

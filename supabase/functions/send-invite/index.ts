@@ -92,7 +92,7 @@ const handler = async (request: Request): Promise<Response> => {
         }
 
         // Audit: invite sent (fire-and-forget)
-        const log = createLogger("send-invite");
+        const log = createLogger("send-invite", request);
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
         const supabase = createClient(supabaseUrl, supabaseServiceKey, {

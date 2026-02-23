@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("ai-secretary");
+  const log = createLogger("ai-secretary", req);
 
   try {
     // Auth

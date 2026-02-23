@@ -7,7 +7,10 @@ import {
   FileText,
   CreditCard,
   Key,
+  Smartphone,
   HelpCircle,
+  Scale,
+  ShieldCheck,
   ChevronRight,
   Settings as SettingsIcon,
   Database
@@ -147,6 +150,31 @@ export default function Settings() {
             title="Alterar Senha"
             description="Atualizar credenciais de acesso"
             to="/forgot-password"
+          />
+          <SettingCard
+            icon={Smartphone}
+            title="Sessões Ativas"
+            description="Gerenciar dispositivos conectados"
+            to="/configuracoes/sessoes"
+          />
+        </div>
+      </div>
+
+      {/* Legal */}
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Legal</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <SettingCard
+            icon={ShieldCheck}
+            title="Política de Privacidade"
+            description="Como tratamos seus dados (LGPD)"
+            to="/privacidade"
+          />
+          <SettingCard
+            icon={Scale}
+            title="Termos de Uso"
+            description="Condições de uso da plataforma"
+            to="/termos"
           />
         </div>
       </div>

@@ -47,7 +47,7 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("accounting-agent");
+  const log = createLogger("accounting-agent", req);
 
   try {
     const t0 = Date.now();

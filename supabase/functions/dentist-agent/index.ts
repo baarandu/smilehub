@@ -143,7 +143,7 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("dentist-agent");
+  const log = createLogger("dentist-agent", req);
 
   try {
     const t0 = Date.now();

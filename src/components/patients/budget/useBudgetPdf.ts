@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { profileService } from '@/services/profile';
-import { generateBudgetPDFPreview, downloadPDFFromBlob } from '@/utils/pdfGenerator';
+import { generateBudgetPDFPreview, downloadPDFFromBlob, type PdfResult } from '@/utils/pdfGenerator';
 import type { ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
 
@@ -16,6 +16,7 @@ interface UseBudgetPdfProps {
 export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemValue, toast }: UseBudgetPdfProps) {
     const [showPdfPreview, setShowPdfPreview] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+    const [pdfHashInfo, setPdfHashInfo] = useState<{ hash: string; documentId: string } | null>(null);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [showPdfItemSelection, setShowPdfItemSelection] = useState(false);
     const [pdfSelectedItems, setPdfSelectedItems] = useState<Set<number>>(new Set());
@@ -66,7 +67,7 @@ export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemV
                 value: selectedTotal
             };
 
-            const blobUrl = await generateBudgetPDFPreview({
+            const result = await generateBudgetPDFPreview({
                 budget: filteredBudget,
                 patientName: patientName || 'Paciente',
                 clinicName: clinicInfo.clinicName,
@@ -77,7 +78,8 @@ export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemV
                 dentistCRO: clinicInfo.dentistCRO,
             });
 
-            setPdfPreviewUrl(blobUrl);
+            setPdfPreviewUrl(result.blobUrl);
+            setPdfHashInfo({ hash: result.hash, documentId: result.documentId });
         } catch (error) {
             console.error('Erro ao gerar PDF:', error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao gerar PDF" });
@@ -100,6 +102,7 @@ export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemV
             URL.revokeObjectURL(pdfPreviewUrl);
             setPdfPreviewUrl(null);
         }
+        setPdfHashInfo(null);
     };
 
     const getSelectedTotal = () => {
@@ -111,6 +114,7 @@ export function useBudgetPdf({ budget, parsedNotes, teeth, patientName, getItemV
     return {
         showPdfPreview,
         pdfPreviewUrl,
+        pdfHashInfo,
         generatingPdf,
         showPdfItemSelection,
         pdfSelectedItems,

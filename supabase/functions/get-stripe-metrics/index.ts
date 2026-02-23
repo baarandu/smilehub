@@ -21,7 +21,7 @@ serve(async (req) => {
         return handleCorsOptions(req);
     }
 
-    const log = createLogger("get-stripe-metrics");
+    const log = createLogger("get-stripe-metrics", req);
 
     try {
         // Auth

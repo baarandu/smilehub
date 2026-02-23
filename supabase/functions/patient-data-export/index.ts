@@ -20,7 +20,7 @@ serve(async (req) => {
     return handleCorsOptions(req);
   }
 
-  const log = createLogger("patient-data-export");
+  const log = createLogger("patient-data-export", req);
 
   try {
     // Auth
