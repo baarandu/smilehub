@@ -1,25 +1,9 @@
 import { Link } from 'react-router-dom';
+import { LegalPageLayout } from '@/components/layout/LegalPageLayout';
 
 const InformationSecurityPolicy = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
-          <Link to="/" className="text-primary font-bold text-xl hover:opacity-80 transition-opacity">
-            Organiza Odonto
-          </Link>
-          <Link
-            to="/"
-            className="text-sm text-primary hover:underline"
-          >
-            &larr; Voltar ao aplicativo
-          </Link>
-        </div>
-      </header>
-
-      {/* Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <LegalPageLayout>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 space-y-10 text-justify">
           {/* Title */}
           <div className="text-center border-b border-gray-200 pb-8">
@@ -598,18 +582,11 @@ const InformationSecurityPolicy = () => {
                 >
                   DPA
                 </Link>
-                <Link
-                  to="/"
-                  className="text-sm text-primary hover:underline"
-                >
-                  &larr; Voltar ao aplicativo
-                </Link>
               </div>
             </div>
           </footer>
         </div>
-      </main>
-    </div>
+    </LegalPageLayout>
   );
 };
 

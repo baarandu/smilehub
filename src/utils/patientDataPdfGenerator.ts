@@ -23,11 +23,54 @@ interface ExportData {
 const MARGIN = 15;
 const LINE_HEIGHT = 5;
 
+const ENUM_LABELS: Record<string, string> = {
+  // Status
+  completed: 'Concluído',
+  in_progress: 'Em Andamento',
+  pending: 'Pendente',
+  cancelled: 'Cancelado',
+  scheduled: 'Agendado',
+  approved: 'Aprovado',
+  rejected: 'Rejeitado',
+  paid: 'Pago',
+  confirmed: 'Confirmado',
+  no_show: 'Faltou',
+  rescheduled: 'Remarcado',
+  // Transaction types
+  income: 'Receita',
+  expense: 'Despesa',
+  // Payment methods
+  pix: 'PIX',
+  credit_card: 'Cartão de Crédito',
+  debit_card: 'Cartão de Débito',
+  cash: 'Dinheiro',
+  bank_transfer: 'Transferência',
+  boleto: 'Boleto',
+  // Gender
+  male: 'Masculino',
+  female: 'Feminino',
+  other: 'Outro',
+};
+
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return '—';
   if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  if (typeof value === 'object') return '—';
+  const str = String(value);
+  // Translate known enum values
+  if (ENUM_LABELS[str]) return ENUM_LABELS[str];
+  // Format ISO date strings to pt-BR
+  if (/^\d{4}-\d{2}-\d{2}(T|\s)\d{2}:\d{2}/.test(str)) {
+    try {
+      return new Date(str).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch { /* fall through */ }
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    try {
+      return new Date(str + 'T12:00:00').toLocaleDateString('pt-BR');
+    } catch { /* fall through */ }
+  }
+  return str;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -179,7 +222,13 @@ function addTable(doc: jsPDF, items: Record<string, unknown>[], y: number, selec
   doc.rect(MARGIN, y - 3, tableWidth, 7, 'F');
   keys.forEach((key, i) => {
     const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    doc.text(label.substring(0, 15), MARGIN + i * colWidth + 1, y + 1);
+    const cellX = MARGIN + i * colWidth + 1;
+    const maxCellWidth = colWidth - 2;
+    let clipped = label;
+    while (clipped.length > 1 && doc.getTextWidth(clipped) > maxCellWidth) {
+      clipped = clipped.substring(0, clipped.length - 1);
+    }
+    doc.text(clipped, cellX, y + 1);
   });
   y += 7;
 
@@ -190,8 +239,15 @@ function addTable(doc: jsPDF, items: Record<string, unknown>[], y: number, selec
   for (const item of items) {
     y = checkPageBreak(doc, y, 7);
     keys.forEach((key, i) => {
-      const val = formatValue(item[key]).substring(0, 25);
-      doc.text(val, MARGIN + i * colWidth + 1, y);
+      const val = formatValue(item[key]);
+      const cellX = MARGIN + i * colWidth + 1;
+      const maxCellWidth = colWidth - 2;
+      // Clip text to fit within column width
+      let clipped = val;
+      while (clipped.length > 1 && doc.getTextWidth(clipped) > maxCellWidth) {
+        clipped = clipped.substring(0, clipped.length - 1);
+      }
+      doc.text(clipped, cellX, y);
     });
     y += 5;
     doc.setDrawColor(230, 230, 230);
@@ -271,7 +327,7 @@ export async function generatePatientDataPDF(data: ExportData, patientName: stri
   // Budgets
   if (data.budgets && data.budgets.length > 0) {
     y = addSectionTitle(doc, `Orçamentos (${data.budgets.length})`, y);
-    y = addTable(doc, data.budgets, y, ['date', 'value', 'status', 'notes']);
+    y = addTable(doc, data.budgets, y, ['date', 'value', 'status', 'description']);
     y += 5;
   }
 
