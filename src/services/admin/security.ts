@@ -8,6 +8,8 @@ export interface AuditLogFilters {
   function_name?: string;
   start_date?: string;
   end_date?: string;
+  table_name?: string;
+  user_id?: string;
 }
 
 export interface AuditLogEntry {
@@ -16,6 +18,8 @@ export interface AuditLogEntry {
   table_name: string;
   record_id: string | null;
   new_data: Record<string, unknown>;
+  old_data: Record<string, unknown> | null;
+  description: string | null;
   source: string;
   function_name: string | null;
   request_id: string | null;
@@ -65,6 +69,8 @@ export const securityService = {
       p_function_name: filters.function_name || null,
       p_start_date: filters.start_date || null,
       p_end_date: filters.end_date || null,
+      p_table_name: filters.table_name || null,
+      p_user_id: filters.user_id || null,
     });
 
     if (error) throw error;

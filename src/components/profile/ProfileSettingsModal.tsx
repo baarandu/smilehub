@@ -706,7 +706,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                                                         <span className="font-medium text-[#8b3634] uppercase text-xs mr-2 px-1.5 py-0.5 bg-red-50 rounded">
                                                             {log.action}
                                                         </span>
-                                                        {((log as any).details as any)?.description || 'Ação registrada'}
+                                                        {(log as any).description || ((log as any).new_data as any)?.description || 'Ação registrada'}
                                                     </p>
                                                 </div>
                                             ))}

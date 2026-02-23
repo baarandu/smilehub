@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
-import { auditService } from '@/services/audit';
 import { sanitizeForDisplay } from '@/utils/security';
 
 export async function getPatients(page?: number, limit?: number): Promise<Patient[]> {
@@ -69,10 +68,6 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
 
   if (error) throw error;
 
-  if (data) {
-    await auditService.log('CREATE', 'Patient', data.id, { name: data.name });
-  }
-
   return data;
 }
 
@@ -136,10 +131,6 @@ export async function updatePatient(id: string, patient: PatientUpdate): Promise
 
   if (error) throw error;
 
-  if (data) {
-    await auditService.log('UPDATE', 'Patient', data.id, { changes: Object.keys(patient) });
-  }
-
   return data as Patient;
 }
 
@@ -192,8 +183,6 @@ export async function deletePatient(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw error;
-
-  await auditService.log('DELETE', 'Patient', id);
 }
 
 export async function searchPatients(query: string): Promise<Patient[]> {
