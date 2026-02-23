@@ -86,7 +86,7 @@ export default function LandingV2() {
     (async () => {
       try {
         const [active, disc] = await Promise.all([plansService.getActive(), appSettingsService.getAnnualDiscount()]);
-        setPlans(active.filter(p => p.slug !== 'enterprise').slice(0, 3));
+        setPlans(active);
         setAnnualDiscount(disc);
       } catch { /* silent */ } finally { setLoadingPlans(false); }
     })();
@@ -421,8 +421,16 @@ export default function LandingV2() {
             {loadingPlans ? (
               <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#b94a48]" /></div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-3">
-                {(plans.length > 0 ? plans : fallbackPlans).map((plan, idx) => {
+              <div className={`grid gap-6 ${
+                  (() => {
+                    const count = plans.length > 0 ? plans.length : fallbackPlans.length;
+                    if (count === 1) return 'max-w-lg mx-auto';
+                    if (count === 2) return 'md:grid-cols-2';
+                    if (count === 3) return 'md:grid-cols-3';
+                    return 'md:grid-cols-2 lg:grid-cols-3';
+                  })()
+                }`}>
+                {(plans.length > 0 ? plans : fallbackPlans).map((plan, idx, arr) => {
                   const p = 'slug' in plan ? plan as SubscriptionPlan : null;
                   const name = p?.name || (plan as any).name;
                   const desc = p?.description || (plan as any).description || '';
@@ -433,7 +441,7 @@ export default function LandingV2() {
                   const savings = billingPeriod === 'yearly'
                     ? calcSavings(p ? p.price_monthly : (plan as any).priceCents)
                     : undefined;
-                  const highlighted = idx === 1;
+                  const highlighted = idx === arr.length - 1 && arr.length > 1;
 
                   return (
                     <Reveal key={name} delay={idx * 100}>

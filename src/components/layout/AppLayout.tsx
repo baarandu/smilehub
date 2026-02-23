@@ -97,11 +97,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     });
   }, [isAdmin, isDentist, planFeatureKeys, hasAISecretaryAccess]);
 
-  // Fetch subscription plan and derive features from plan slug hierarchy
+  // Fetch subscription plan features from DB, fallback to hardcoded hierarchy
   useEffect(() => {
     if (clinicId) {
       subscriptionService.getCurrentSubscription(clinicId).then(({ plan }) => {
-        setPlanFeatureKeys(getFeaturesForPlan(plan?.slug));
+        const dbFeatures = Array.isArray(plan?.features)
+          ? plan.features as string[]
+          : typeof plan?.features === 'string'
+            ? JSON.parse(plan.features)
+            : null;
+        setPlanFeatureKeys(dbFeatures && dbFeatures.length > 0 ? dbFeatures : getFeaturesForPlan(plan?.slug));
       }).catch(console.error);
     }
   }, [clinicId]);

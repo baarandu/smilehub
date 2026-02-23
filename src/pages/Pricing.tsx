@@ -381,8 +381,9 @@ export default function Pricing() {
         }
     };
 
-    const essencial = plans.find(p => p.slug === 'essencial');
-    const profissional = plans.find(p => p.slug === 'profissional_v2');
+    // Plans are already sorted by sort_order from DB
+    // For feature comparison: each plan shows only the features it adds over the previous (cheaper) plan
+    const sortedPlans = plans; // already ordered by sort_order ASC
 
     if (loading) {
         return (
@@ -404,43 +405,49 @@ export default function Pricing() {
         );
     };
 
-    const renderPlanCard = (plan: Plan | undefined, isProfissional: boolean) => {
-        if (!plan) return null;
-
+    const renderPlanCard = (plan: Plan, planIndex: number) => {
         const isCurrent = currentPlanId === plan.id;
         const price = getDisplayPrice(plan);
         const showCouponStrike = hasCouponDiscountForPlan(plan);
         const savings = billingCycle === 'annual' ? getAnnualSavings(plan) : null;
         const originalPriceMonthly = plan.original_price_monthly;
+        // Highlight the most expensive plan (last in sort_order)
+        const isHighlighted = planIndex === sortedPlans.length - 1 && sortedPlans.length > 1;
 
         // Get features from DB plan.features array
         const planFeatureKeys = parseFeatures(plan.features);
-        // For Profissional: show only the extra features (not in Essencial)
-        const essencialKeys = essencial ? new Set(parseFeatures(essencial.features)) : new Set<string>();
-        const displayKeys = isProfissional
-            ? planFeatureKeys.filter(k => !essencialKeys.has(k))
+
+        // For plans after the first: show only features that are NEW compared to previous plan
+        const previousPlan = planIndex > 0 ? sortedPlans[planIndex - 1] : null;
+        const previousKeys = previousPlan ? new Set(parseFeatures(previousPlan.features)) : new Set<string>();
+        const displayKeys = planIndex > 0
+            ? planFeatureKeys.filter(k => !previousKeys.has(k))
             : planFeatureKeys;
-        // For Essencial locked section: show Profissional extras
-        const profissionalKeys = profissional ? parseFeatures(profissional.features) : [];
-        const lockedKeys = profissionalKeys.filter(k => !essencialKeys.has(k));
+
+        // For non-last plans: show locked features from the next plan as teaser
+        const nextPlan = planIndex < sortedPlans.length - 1 ? sortedPlans[planIndex + 1] : null;
+        const nextKeys = nextPlan ? parseFeatures(nextPlan.features) : [];
+        const currentKeysSet = new Set(planFeatureKeys);
+        const lockedKeys = nextKeys.filter(k => !currentKeysSet.has(k));
 
         return (
             <div
+                key={plan.id}
                 className={`
                     relative bg-white rounded-3xl p-8 shadow-sm border-2 transition-all flex flex-col
-                    ${isProfissional ? 'border-[#a03f3d]/40 shadow-lg' : 'border-gray-200'}
+                    ${isHighlighted ? 'border-[#a03f3d]/40 shadow-lg' : 'border-gray-200'}
                     ${isCurrent ? 'ring-2 ring-[#a03f3d]/20' : ''}
                 `}
             >
                 {/* Badges */}
-                <div className="flex items-center gap-2 mb-4">
-                    {isProfissional && (
+                <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {isHighlighted && (
                         <span className="inline-flex items-center gap-1 bg-[#a03f3d] text-white text-xs font-semibold px-3 py-1 rounded-full">
                             <Crown className="w-3 h-3" />
                             Mais popular
                         </span>
                     )}
-                    {isProfissional && originalPriceMonthly && (
+                    {originalPriceMonthly && (
                         <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                             <Zap className="w-3 h-3" />
                             Oferta de lançamento
@@ -467,8 +474,7 @@ export default function Pricing() {
                 <div className="mb-6">
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-sm text-gray-500">R$</span>
-                        {/* Show original price struck through for promo */}
-                        {isProfissional && originalPriceMonthly && !showCouponStrike && billingCycle === 'monthly' && (
+                        {originalPriceMonthly && !showCouponStrike && billingCycle === 'monthly' && (
                             <span className="text-xl text-gray-400 line-through mr-1">
                                 {formatPrice(originalPriceMonthly).int}
                             </span>
@@ -499,7 +505,7 @@ export default function Pricing() {
                         w-full rounded-xl py-6 font-semibold text-base transition-all mb-6
                         ${isCurrent
                             ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-0'
-                            : isProfissional
+                            : isHighlighted
                                 ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white shadow-md hover:shadow-lg'
                                 : 'bg-gray-900 hover:bg-gray-800 text-white'
                         }
@@ -512,9 +518,7 @@ export default function Pricing() {
                     ) : null}
                     {isCurrent
                         ? (isTrialing ? 'Seu trial atual' : 'Plano atual')
-                        : isProfissional
-                            ? 'Assinar Profissional'
-                            : 'Assinar Essencial'
+                        : `Assinar ${plan.name}`
                     }
                 </Button>
 
@@ -541,9 +545,9 @@ export default function Pricing() {
 
                 {/* Features */}
                 <div className="flex-1">
-                    {isProfissional && (
+                    {previousPlan && (
                         <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">
-                            Tudo do Essencial, mais:
+                            Tudo do {previousPlan.name}, mais:
                         </p>
                     )}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
@@ -557,12 +561,12 @@ export default function Pricing() {
                         })}
                     </div>
 
-                    {/* Show locked features on Essencial card */}
-                    {!isProfissional && lockedKeys.length > 0 && (
+                    {/* Show locked features from next plan as teaser */}
+                    {nextPlan && lockedKeys.length > 0 && (
                         <>
                             <div className="border-t border-dashed border-gray-200 my-5" />
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                                Disponível no Profissional:
+                                Disponível no {nextPlan.name}:
                             </p>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                                 {lockedKeys.slice(0, 6).map((key) => {
@@ -595,7 +599,7 @@ export default function Pricing() {
                         <div className="inline-flex items-center gap-2 bg-white border border-[#a03f3d]/20 rounded-full px-4 py-2 mb-4 shadow-sm">
                             <Sparkles className="w-4 h-4 text-[#a03f3d]" />
                             <span className="text-sm text-gray-700">
-                                Você está experimentando o <strong>Plano Profissional</strong> gratuitamente
+                                Você está experimentando o plano gratuitamente
                             </span>
                         </div>
                     )}
@@ -604,7 +608,7 @@ export default function Pricing() {
                         Planos simples, sem surpresas
                     </h1>
                     <p className="text-lg text-gray-500 max-w-2xl mx-auto">
-                        Dois planos. Tudo que sua clínica precisa. Escolha o que faz sentido pra você.
+                        Tudo que sua clínica precisa. Escolha o plano que faz sentido pra você.
                     </p>
                 </div>
 
@@ -711,10 +715,14 @@ export default function Pricing() {
                     </div>
                 )}
 
-                {/* Plans Grid — 2 columns full width */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {renderPlanCard(essencial, false)}
-                    {renderPlanCard(profissional, true)}
+                {/* Plans Grid — responsive columns based on number of plans */}
+                <div className={`grid grid-cols-1 gap-8 ${
+                    sortedPlans.length === 1 ? 'max-w-lg mx-auto' :
+                    sortedPlans.length === 2 ? 'md:grid-cols-2' :
+                    sortedPlans.length === 3 ? 'md:grid-cols-3' :
+                    'md:grid-cols-2 lg:grid-cols-3'
+                }`}>
+                    {sortedPlans.map((plan, index) => renderPlanCard(plan, index))}
                 </div>
 
                 {/* FAQ / Trust section */}
