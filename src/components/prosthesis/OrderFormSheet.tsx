@@ -124,8 +124,8 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
         color: order.color || '',
         shadeDetails: order.shade_details || '',
         cementationType: order.cementation_type || '',
-        labCost: order.lab_cost != null ? String(order.lab_cost) : '',
-        patientPrice: order.patient_price != null ? String(order.patient_price) : '',
+        labCost: order.lab_cost != null ? Number(order.lab_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+        patientPrice: order.patient_price != null ? Number(order.patient_price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         estimatedDeliveryDate: order.estimated_delivery_date || '',
         notes: order.notes || '',
         specialInstructions: order.special_instructions || '',
@@ -229,6 +229,20 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
     } catch {
       toast({ title: 'Erro ao salvar ordem', variant: 'destructive' });
     }
+  };
+
+  const formatCurrency = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    const cents = parseInt(digits, 10);
+    return (cents / 100).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const handleCurrencyChange = (field: 'labCost' | 'patientPrice', raw: string) => {
+    setForm(prev => ({ ...prev, [field]: formatCurrency(raw) }));
   };
 
   const updateField = (field: keyof ProsthesisOrderFormData, value: string | null) => {
@@ -415,7 +429,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
                         type: item.prosthesisType || prev.type,
                         material: isBudgetCustom ? 'outro' : (budgetMat || prev.material),
                         toothNumbers: item.tooth.tooth || prev.toothNumbers,
-                        patientPrice: String(item.value) || prev.patientPrice,
+                        patientPrice: item.value ? Number(item.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : prev.patientPrice,
                       }));
                       if (isBudgetCustom) setMaterialCustom(budgetMat);
                     }
@@ -461,17 +475,19 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
               <div className="space-y-2">
                 <Label>Custo Laboratório (R$)</Label>
                 <Input
+                  inputMode="numeric"
                   placeholder="0,00"
                   value={form.labCost}
-                  onChange={e => updateField('labCost', e.target.value)}
+                  onChange={e => handleCurrencyChange('labCost', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Valor Paciente (R$)</Label>
                 <Input
+                  inputMode="numeric"
                   placeholder="0,00"
                   value={form.patientPrice}
-                  onChange={e => updateField('patientPrice', e.target.value)}
+                  onChange={e => handleCurrencyChange('patientPrice', e.target.value)}
                 />
               </div>
             </div>
