@@ -20,7 +20,7 @@ const PrivacyPolicy = () => {
 
       {/* Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 space-y-10">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 sm:p-12 space-y-10 text-justify">
           {/* Title */}
           <div className="text-center border-b border-gray-200 pb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -543,10 +543,10 @@ const PrivacyPolicy = () => {
             </p>
             <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside">
               <li>
-                <strong>Notificar o controlador (cl&iacute;nica)</strong> em prazo razo&aacute;vel, compat&iacute;vel
-                com a gravidade e natureza do incidente, conforme orienta&ccedil;&otilde;es da ANPD,
-                para que este cumpra suas obriga&ccedil;&otilde;es de comunica&ccedil;&atilde;o perante a
-                ANPD e os pacientes afetados.
+                <strong>Notificar o controlador (cl&iacute;nica) em at&eacute; 48 horas</strong> ap&oacute;s a
+                confirma&ccedil;&atilde;o do incidente, conforme definido no Acordo de Processamento
+                de Dados (DPA), para que este cumpra suas obriga&ccedil;&otilde;es de comunica&ccedil;&atilde;o
+                perante a ANPD e os pacientes afetados.
               </li>
               <li>
                 <strong>Comunicar a Autoridade Nacional de Prote&ccedil;&atilde;o de Dados (ANPD)</strong> quando
@@ -586,9 +586,8 @@ const PrivacyPolicy = () => {
               de Dados:
             </p>
             <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-700 space-y-1">
-              <p><strong>Nome:</strong> [Nome do Encarregado / DPO]</p>
-              <p><strong>E-mail:</strong> [dpo@organizaodonto.com.br]</p>
-              <p><strong>Telefone:</strong> [+55 (XX) XXXXX-XXXX]</p>
+              <p><strong>Nome:</strong> Equipe de Prote&ccedil;&atilde;o de Dados</p>
+              <p><strong>E-mail:</strong> suporte@organizaodonto.app</p>
             </div>
             <p className="text-gray-600 text-sm leading-relaxed">
               As solicita&ccedil;&otilde;es ser&atilde;o respondidas no prazo de 15 dias, conforme

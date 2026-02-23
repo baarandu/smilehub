@@ -177,10 +177,13 @@ export async function updatePatientFromForm(id: string, formData: PatientFormDat
 }
 
 export async function deletePatient(id: string): Promise<void> {
-  const { error } = await supabase
-    .from('patients')
-    .delete()
-    .eq('id', id);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado');
+
+  const { error } = await supabase.rpc('soft_delete_patient', {
+    p_patient_id: id,
+    p_user_id: user.id,
+  });
 
   if (error) throw error;
 }

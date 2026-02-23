@@ -4,6 +4,7 @@ import { Mail, Lock, User, Building2, ArrowRight, Loader2, Eye, EyeOff } from 'l
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ export default function Signup() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [gender, setGender] = useState<Gender>('male');
     const [clinicName, setClinicName] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -39,6 +41,11 @@ export default function Signup() {
         const pwResult = passwordSchema.safeParse(password);
         if (!pwResult.success) {
             toast.error(pwResult.error.issues[0].message);
+            return;
+        }
+
+        if (!termsAccepted) {
+            toast.error('Você precisa aceitar os Termos de Uso e a Política de Privacidade.');
             return;
         }
 
@@ -193,6 +200,24 @@ export default function Signup() {
                                     )}
                                 </button>
                             </div>
+                        </div>
+
+                        <div className="flex items-start space-x-3">
+                            <Checkbox
+                                id="terms-signup"
+                                checked={termsAccepted}
+                                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                            />
+                            <label htmlFor="terms-signup" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
+                                Li e aceito os{' '}
+                                <Link to="/termos" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
+                                    Termos de Uso
+                                </Link>{' '}
+                                e a{' '}
+                                <Link to="/privacidade" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
+                                    Política de Privacidade
+                                </Link>.
+                            </label>
                         </div>
 
                         <Button

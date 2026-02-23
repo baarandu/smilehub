@@ -264,7 +264,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                     onClick={() => setShowDeleteDialog(true)}
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Excluir</span>
+                    <span className="hidden sm:inline">Arquivar</span>
                   </Button>
                 )}
               </div>
@@ -327,15 +327,15 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Paciente?</AlertDialogTitle>
+            <AlertDialogTitle>Arquivar Paciente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.
+              O paciente e todos os seus registros clínicos serão arquivados. Os dados serão preservados por no mínimo 20 anos, conforme exigência do CFO e da Lei 13.787. Esta ação não exclui dados permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Excluir
+              Arquivar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

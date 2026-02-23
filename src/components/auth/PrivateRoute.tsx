@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { checkTermsAccepted } from '@/services/terms';
+import { TermsAcceptanceModal } from './TermsAcceptanceModal';
 
 export function PrivateRoute() {
     const [session, setSession] = useState<any>(null);
@@ -11,6 +13,7 @@ export function PrivateRoute() {
     const [isChecking, setIsChecking] = useState(true);
     const [isAllowed, setIsAllowed] = useState(false);
     const [isTrialExpired, setIsTrialExpired] = useState(false);
+    const [needsTermsAcceptance, setNeedsTermsAcceptance] = useState(false);
 
     // Track whether the initial auth check has completed.
     // After that, we NEVER show the loading spinner again — all subsequent
@@ -110,7 +113,13 @@ export function PrivateRoute() {
                     }
                 }
 
+                // Check terms acceptance for allowed users
                 if (mounted) {
+                    const termsOk = await checkTermsAccepted();
+                    if (!termsOk) {
+                        setNeedsTermsAcceptance(true);
+                    }
+
                     setLoading(false);
                     setIsChecking(false);
                     initialCheckDone.current = true;
@@ -179,5 +188,15 @@ export function PrivateRoute() {
         return <Navigate to="/planos" replace />;
     }
 
-    return <Outlet />;
+    return (
+        <>
+            {needsTermsAcceptance && (
+                <TermsAcceptanceModal
+                    open={needsTermsAcceptance}
+                    onAccepted={() => setNeedsTermsAcceptance(false)}
+                />
+            )}
+            <Outlet />
+        </>
+    );
 }
