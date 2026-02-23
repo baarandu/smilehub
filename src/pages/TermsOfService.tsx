@@ -29,7 +29,24 @@ const TermsOfService = () => {
             <p className="text-gray-500 text-sm">
               Plataforma Organiza Odonto &mdash; Gest&atilde;o Odontol&oacute;gica
             </p>
+            <p className="text-gray-400 text-xs mt-2">
+              Vers&atilde;o 1.0 &mdash; Vig&ecirc;ncia: 23 de fevereiro de 2026
+            </p>
           </div>
+
+          {/* Resumo em linguagem simples */}
+          <section className="bg-primary/5 rounded-lg p-6 border border-primary/20">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Resumo em linguagem simples
+            </h2>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              O Organiza Odonto &eacute; uma ferramenta de gest&atilde;o para cl&iacute;nicas odontol&oacute;gicas.
+              N&oacute;s fornecemos o software; voc&ecirc; &eacute; respons&aacute;vel pelas decis&otilde;es cl&iacute;nicas e pelo
+              cumprimento das normas do seu conselho profissional. Seus dados pertencem a voc&ecirc;,
+              n&atilde;o usamos dados cl&iacute;nicos para treinar intelig&ecirc;ncia artificial, e voc&ecirc; pode
+              export&aacute;-los a qualquer momento. Abaixo est&atilde;o os termos completos.
+            </p>
+          </section>
 
           {/* 1. Definicoes */}
           <section className="space-y-3">
@@ -80,6 +97,15 @@ const TermsOfService = () => {
                   o julgamento profissional.
                 </p>
               </div>
+              <div className="bg-gray-50 rounded-md p-4">
+                <p className="text-sm font-medium text-gray-800">For&ccedil;a Maior</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Eventos imprevis&iacute;veis e inevit&aacute;veis, fora do controle razo&aacute;vel das partes,
+                  incluindo, mas n&atilde;o se limitando a: desastres naturais, pandemias, guerras,
+                  atos governamentais, falhas generalizadas de infraestrutura de internet ou
+                  energia el&eacute;trica, e ataques cibern&eacute;ticos em larga escala.
+                </p>
+              </div>
             </div>
           </section>
 
@@ -120,10 +146,16 @@ const TermsOfService = () => {
                 estat&iacute;sticas de atendimento e vis&atilde;o consolidada da cl&iacute;nica.
               </li>
             </ul>
-            <p className="text-gray-600 text-sm leading-relaxed">
-              A Plataforma n&atilde;o substitui o julgamento cl&iacute;nico do profissional de sa&uacute;de,
-              sendo uma ferramenta auxiliar de gest&atilde;o e organiza&ccedil;&atilde;o.
-            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mt-3">
+              <p className="text-sm text-amber-900 font-medium">Aviso importante</p>
+              <p className="text-sm text-amber-800 mt-1">
+                A Plataforma &eacute; uma <strong>ferramenta de gest&atilde;o</strong> e n&atilde;o presta servi&ccedil;os
+                de sa&uacute;de, n&atilde;o emite diagn&oacute;sticos e n&atilde;o substitui o julgamento cl&iacute;nico do
+                profissional de sa&uacute;de. Toda e qualquer decis&atilde;o cl&iacute;nica &eacute; de responsabilidade
+                exclusiva do profissional habilitado. Conte&uacute;dos gerados por intelig&ecirc;ncia artificial
+                t&ecirc;m car&aacute;ter meramente sugestivo e auxiliar.
+              </p>
+            </div>
           </section>
 
           {/* 3. Cadastro e Acesso */}
@@ -174,6 +206,12 @@ const TermsOfService = () => {
                 Odontologia (CFO) e a LGPD.
               </li>
               <li>
+                <strong>Manter registro ativo no CRO</strong> (Conselho Regional de Odontologia) e,
+                quando aplic&aacute;vel, o alvar&aacute; sanit&aacute;rio e demais licen&ccedil;as exigidas pela ANVISA
+                e &oacute;rg&atilde;os reguladores. A Plataforma n&atilde;o verifica nem se responsabiliza pela
+                regularidade profissional ou sanit&aacute;ria da Cl&iacute;nica.
+              </li>
+              <li>
                 N&atilde;o utilizar a Plataforma para armazenar, transmitir ou processar conte&uacute;do
                 il&iacute;cito, ofensivo, difamat&oacute;rio ou que viole direitos de terceiros.
               </li>
@@ -188,6 +226,8 @@ const TermsOfService = () => {
               <li>
                 Manter c&oacute;pias de seguran&ccedil;a (backups) pr&oacute;prias dos dados cr&iacute;ticos,
                 utilizando as funcionalidades de exporta&ccedil;&atilde;o disponibilizadas pela Plataforma.
+                A Plataforma realiza backups autom&aacute;ticos, por&eacute;m a Cl&iacute;nica &eacute; a respons&aacute;vel
+                final pela integridade e preserva&ccedil;&atilde;o de seus dados.
               </li>
               <li>
                 N&atilde;o realizar engenharia reversa, descompilar, desmontar ou tentar acessar
@@ -210,9 +250,13 @@ const TermsOfService = () => {
             </p>
             <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside">
               <li>
-                Manter o servi&ccedil;o dispon&iacute;vel com n&iacute;vel de disponibilidade de 99,5% (SLA),
-                exceto durante per&iacute;odos de manuten&ccedil;&atilde;o programada, devidamente comunicados
-                com anteced&ecirc;ncia.
+                <strong>Disponibilidade (SLA):</strong> Empreender esfor&ccedil;os comercialmente
+                razo&aacute;veis para manter o servi&ccedil;o dispon&iacute;vel com meta de disponibilidade
+                de <strong>99,5% ao m&ecirc;s</strong>, excluindo per&iacute;odos de manuten&ccedil;&atilde;o programada
+                (comunicados com anteced&ecirc;ncia m&iacute;nima de 48 horas) e eventos de For&ccedil;a Maior.
+                A disponibilidade &eacute; medida mensalmente. Em caso de descumprimento do SLA por
+                dois meses consecutivos, a Cl&iacute;nica poder&aacute; solicitar cr&eacute;dito proporcional ao
+                per&iacute;odo de indisponibilidade, limitado a 30% do valor mensal da assinatura.
               </li>
               <li>
                 Implementar e manter medidas de seguran&ccedil;a t&eacute;cnicas e administrativas
@@ -224,7 +268,7 @@ const TermsOfService = () => {
               </li>
               <li>
                 Comunicar incidentes de seguran&ccedil;a que possam afetar os dados do Usu&aacute;rio
-                no prazo previsto pela LGPD.
+                em prazo razo&aacute;vel, conforme previsto pela LGPD.
               </li>
             </ul>
             <p className="text-gray-600 text-sm leading-relaxed mt-3">
@@ -236,7 +280,7 @@ const TermsOfService = () => {
               </li>
               <li>
                 Indisponibilidade decorrente de falhas na conex&atilde;o de internet do Usu&aacute;rio,
-                provedores de infraestrutura de terceiros ou eventos de for&ccedil;a maior.
+                provedores de infraestrutura de terceiros ou eventos de For&ccedil;a Maior.
               </li>
               <li>
                 Decis&otilde;es cl&iacute;nicas ou administrativas tomadas com base em informa&ccedil;&otilde;es
@@ -245,6 +289,10 @@ const TermsOfService = () => {
               <li>
                 Danos resultantes do uso indevido das credenciais de acesso pelo Usu&aacute;rio
                 ou terceiros.
+              </li>
+              <li>
+                Irregularidades na situa&ccedil;&atilde;o cadastral, sanit&aacute;ria ou profissional da
+                Cl&iacute;nica perante o CRO, ANVISA ou demais &oacute;rg&atilde;os reguladores.
               </li>
             </ul>
           </section>
@@ -273,6 +321,16 @@ const TermsOfService = () => {
                 fins pr&oacute;prios, exceto de forma agregada e anonimizada para melhoria do servi&ccedil;o.
               </p>
             </div>
+            <div className="border-l-4 border-red-400/60 pl-4 mt-3">
+              <p className="text-sm font-medium text-gray-800">Dados cl&iacute;nicos e IA</p>
+              <p className="text-sm text-gray-600 mt-1">
+                A Plataforma <strong>n&atilde;o utiliza</strong> dados cl&iacute;nicos, prontu&aacute;rios ou
+                informa&ccedil;&otilde;es de pacientes para treinamento de modelos de intelig&ecirc;ncia
+                artificial, pr&oacute;prios ou de terceiros. Os dados processados por funcionalidades
+                de IA s&atilde;o utilizados exclusivamente para gerar a resposta solicitada e
+                n&atilde;o s&atilde;o retidos pelos provedores de IA al&eacute;m do necess&aacute;rio para o processamento.
+              </p>
+            </div>
           </section>
 
           {/* 7. Privacidade e Protecao de Dados */}
@@ -287,7 +345,8 @@ const TermsOfService = () => {
             <p className="text-gray-600 text-sm leading-relaxed">
               A Plataforma atua como <strong>operadora</strong> de dados pessoais, processando
               os dados em nome da Cl&iacute;nica (<strong>controladora</strong>), conforme as
-              instru&ccedil;&otilde;es e finalidades definidas por esta.
+              instru&ccedil;&otilde;es e finalidades definidas por esta. Essa rela&ccedil;&atilde;o &eacute; formalizada
+              por meio de Acordo de Processamento de Dados (DPA) quando aplic&aacute;vel.
             </p>
             <p className="text-gray-600 text-sm leading-relaxed">
               As pr&aacute;ticas detalhadas de coleta, uso, armazenamento, compartilhamento e
@@ -302,9 +361,9 @@ const TermsOfService = () => {
                 A Cl&iacute;nica, na qualidade de controladora, &eacute; respons&aacute;vel por:
               </p>
               <ul className="list-disc list-inside space-y-1 text-gray-600">
-                <li>Obter o consentimento dos pacientes para o tratamento de dados.</li>
-                <li>Atender &agrave;s solicita&ccedil;&otilde;es de titulares de dados (acesso, corre&ccedil;&atilde;o, exclus&atilde;o).</li>
-                <li>Garantir que o uso da Plataforma esteja em conformidade com a LGPD.</li>
+                <li>Obter o consentimento dos pacientes para o tratamento de dados de sa&uacute;de (Art. 11, LGPD).</li>
+                <li>Atender &agrave;s solicita&ccedil;&otilde;es de titulares de dados (acesso, corre&ccedil;&atilde;o, exclus&atilde;o, portabilidade).</li>
+                <li>Garantir que o uso da Plataforma esteja em conformidade com a LGPD e normas do CFO.</li>
               </ul>
             </div>
           </section>
@@ -333,23 +392,64 @@ const TermsOfService = () => {
                 anualmente, com comunica&ccedil;&atilde;o pr&eacute;via de no m&iacute;nimo 30 dias.
               </li>
               <li>
+                <strong>Direito de arrependimento:</strong> Em conformidade com o Art. 49 do
+                C&oacute;digo de Defesa do Consumidor, a Cl&iacute;nica poder&aacute; desistir da contrata&ccedil;&atilde;o
+                no prazo de 7 (sete) dias corridos a contar da assinatura, com reembolso
+                integral dos valores pagos.
+              </li>
+              <li>
                 <strong>Inadimpl&ecirc;ncia:</strong> Em caso de n&atilde;o pagamento, o acesso &agrave;
                 Plataforma poder&aacute; ser suspenso ap&oacute;s 10 dias de atraso, com pr&eacute;via
                 notifica&ccedil;&atilde;o. Os dados ser&atilde;o mantidos por 90 dias ap&oacute;s a suspens&atilde;o,
-                per&iacute;odo no qual a Cl&iacute;nica poder&aacute; regularizar a situa&ccedil;&atilde;o.
+                per&iacute;odo no qual a Cl&iacute;nica poder&aacute; regularizar a situa&ccedil;&atilde;o e exportar
+                seus dados. Ap&oacute;s esse prazo, os dados ser&atilde;o eliminados definitivamente,
+                exceto quando houver obriga&ccedil;&atilde;o legal de reten&ccedil;&atilde;o aplic&aacute;vel ao
+                controlador. A responsabilidade pela guarda legal de prontu&aacute;rios ap&oacute;s
+                o cancelamento &eacute; da Cl&iacute;nica.
               </li>
               <li>
                 <strong>Cancelamento:</strong> A Cl&iacute;nica poder&aacute; cancelar a assinatura a qualquer
                 momento. O acesso permanecer&aacute; ativo at&eacute; o fim do per&iacute;odo j&aacute; pago. N&atilde;o
-                haver&aacute; reembolso proporcional, salvo disposi&ccedil;&atilde;o em contr&aacute;rio prevista em lei.
+                haver&aacute; reembolso proporcional ap&oacute;s o prazo de arrependimento, salvo
+                disposi&ccedil;&atilde;o em contr&aacute;rio prevista em lei.
               </li>
             </ul>
           </section>
 
-          {/* 9. Vigencia e Rescisao */}
+          {/* 9. Modificações do Serviço */}
           <section className="space-y-3">
             <h2 className="text-xl font-semibold text-gray-900">
-              9. Vig&ecirc;ncia e Rescis&atilde;o
+              9. Modifica&ccedil;&otilde;es do Servi&ccedil;o
+            </h2>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              A Plataforma reserva-se o direito de, a qualquer momento:
+            </p>
+            <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside">
+              <li>
+                Adicionar, modificar ou descontinuar funcionalidades, desde que as
+                funcionalidades essenciais contratadas sejam mantidas durante a vig&ecirc;ncia
+                da assinatura.
+              </li>
+              <li>
+                Realizar manuten&ccedil;&otilde;es programadas, com comunica&ccedil;&atilde;o pr&eacute;via de 48 horas,
+                preferencialmente em hor&aacute;rios de menor utiliza&ccedil;&atilde;o.
+              </li>
+              <li>
+                Realizar manuten&ccedil;&otilde;es emergenciais sem aviso pr&eacute;vio quando necess&aacute;rio
+                para garantir a seguran&ccedil;a ou estabilidade do servi&ccedil;o.
+              </li>
+            </ul>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Caso uma funcionalidade contratada seja descontinuada, a Cl&iacute;nica ser&aacute;
+              notificada com anteced&ecirc;ncia m&iacute;nima de 60 dias e poder&aacute; rescindir o
+              contrato sem &ocirc;nus.
+            </p>
+          </section>
+
+          {/* 10. Vigencia e Rescisao */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900">
+              10. Vig&ecirc;ncia e Rescis&atilde;o
             </h2>
             <p className="text-gray-600 text-sm leading-relaxed">
               Estes Termos de Uso entram em vigor na data de aceite pelo Usu&aacute;rio e permanecem
@@ -368,21 +468,24 @@ const TermsOfService = () => {
               <li>
                 <strong>Exporta&ccedil;&atilde;o de dados:</strong> Ap&oacute;s a rescis&atilde;o ou cancelamento,
                 a Cl&iacute;nica ter&aacute; um prazo de 30 dias para exportar seus dados atrav&eacute;s das
-                funcionalidades de exporta&ccedil;&atilde;o da Plataforma. Ap&oacute;s esse prazo, os dados
-                ser&atilde;o eliminados, exceto quando houver obriga&ccedil;&atilde;o legal de reten&ccedil;&atilde;o.
+                funcionalidades de exporta&ccedil;&atilde;o da Plataforma, em formatos interoper&aacute;veis
+                (CSV, JSON, PDF). Ap&oacute;s esse prazo, os dados ser&atilde;o eliminados
+                definitivamente, exceto quando houver obriga&ccedil;&atilde;o legal de reten&ccedil;&atilde;o
+                aplic&aacute;vel ao controlador. A responsabilidade pela guarda legal de
+                prontu&aacute;rios ap&oacute;s a rescis&atilde;o &eacute; da Cl&iacute;nica.
               </li>
               <li>
                 <strong>Sobreviv&ecirc;ncia:</strong> As cl&aacute;usulas relativas a propriedade intelectual,
-                limita&ccedil;&atilde;o de responsabilidade e disposi&ccedil;&otilde;es gerais sobreviver&atilde;o &agrave;
-                rescis&atilde;o destes Termos.
+                limita&ccedil;&atilde;o de responsabilidade, confidencialidade e disposi&ccedil;&otilde;es gerais
+                sobreviver&atilde;o &agrave; rescis&atilde;o destes Termos.
               </li>
             </ul>
           </section>
 
-          {/* 10. Limitacao de Responsabilidade */}
+          {/* 11. Limitacao de Responsabilidade */}
           <section className="space-y-3">
             <h2 className="text-xl font-semibold text-gray-900">
-              10. Limita&ccedil;&atilde;o de Responsabilidade
+              11. Limita&ccedil;&atilde;o de Responsabilidade
             </h2>
             <p className="text-gray-600 text-sm leading-relaxed">
               Na m&aacute;xima extens&atilde;o permitida pela legisla&ccedil;&atilde;o aplic&aacute;vel:
@@ -391,7 +494,7 @@ const TermsOfService = () => {
               <li>
                 A responsabilidade total da Plataforma por danos diretos ser&aacute; limitada ao
                 valor total pago pela Cl&iacute;nica nos 12 meses anteriores ao evento que deu
-                origem &agrave; reclama&ccedil;&atilde;o.
+                origem &agrave; reclama&ccedil;&atilde;o, <strong>exceto em casos de dolo ou culpa grave</strong>.
               </li>
               <li>
                 A Plataforma n&atilde;o ser&aacute; respons&aacute;vel por danos indiretos, incidentais,
@@ -408,12 +511,34 @@ const TermsOfService = () => {
                 erros, embora se empenhe para manter alta disponibilidade e qualidade.
               </li>
             </ul>
+            <p className="text-gray-600 text-sm leading-relaxed mt-3">
+              Nenhuma disposi&ccedil;&atilde;o destes Termos limita direitos inderrog&aacute;veis do consumidor
+              previstos em lei.
+            </p>
           </section>
 
-          {/* 11. Disposicoes Gerais */}
+          {/* 12. Força Maior */}
           <section className="space-y-3">
             <h2 className="text-xl font-semibold text-gray-900">
-              11. Disposi&ccedil;&otilde;es Gerais
+              12. For&ccedil;a Maior
+            </h2>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Nenhuma das partes ser&aacute; respons&aacute;vel por falhas ou atrasos no cumprimento
+              de suas obriga&ccedil;&otilde;es decorrentes de eventos de For&ccedil;a Maior, conforme
+              definido na Se&ccedil;&atilde;o 1.
+            </p>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              A parte afetada dever&aacute; notificar a outra parte no prazo m&aacute;ximo de 5 (cinco)
+              dias &uacute;teis ap&oacute;s a ocorr&ecirc;ncia do evento, indicando a natureza, dura&ccedil;&atilde;o
+              estimada e as medidas adotadas para mitigar seus efeitos. As obriga&ccedil;&otilde;es
+              afetadas ficar&atilde;o suspensas durante a persist&ecirc;ncia do evento de For&ccedil;a Maior.
+            </p>
+          </section>
+
+          {/* 13. Disposicoes Gerais */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900">
+              13. Disposi&ccedil;&otilde;es Gerais
             </h2>
             <div className="space-y-3">
               <div className="border-l-4 border-primary/60 pl-4">
@@ -466,15 +591,35 @@ const TermsOfService = () => {
             </div>
           </section>
 
-          {/* 12. Foro */}
+          {/* 14. Resolução de Conflitos */}
           <section className="space-y-3">
             <h2 className="text-xl font-semibold text-gray-900">
-              12. Foro
+              14. Resolu&ccedil;&atilde;o de Conflitos
             </h2>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Em caso de controv&eacute;rsia decorrente destes Termos, as partes comprometem-se
+              a buscar solu&ccedil;&atilde;o amig&aacute;vel por meio de <strong>negocia&ccedil;&atilde;o direta</strong> pelo
+              prazo de 30 (trinta) dias, contados da notifica&ccedil;&atilde;o formal da parte
+              interessada. Somente ap&oacute;s esgotado esse prazo sem acordo, as partes poder&atilde;o
+              recorrer ao Poder Judici&aacute;rio.
+            </p>
+          </section>
+
+          {/* 15. Legislação Aplicável e Foro */}
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold text-gray-900">
+              15. Legisla&ccedil;&atilde;o Aplic&aacute;vel e Foro
+            </h2>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Estes Termos de Uso s&atilde;o regidos pelas <strong>leis da Rep&uacute;blica Federativa
+              do Brasil</strong>, em especial a Lei n&ordm; 13.709/2018 (LGPD), a Lei n&ordm; 8.078/1990
+              (C&oacute;digo de Defesa do Consumidor) e o Marco Civil da Internet (Lei n&ordm; 12.965/2014).
+            </p>
             <p className="text-gray-600 text-sm leading-relaxed">
               As partes elegem o foro da Comarca de S&atilde;o Paulo, Estado de S&atilde;o Paulo, como
               competente para dirimir quaisquer quest&otilde;es decorrentes destes Termos de Uso,
-              com ren&uacute;ncia expressa a qualquer outro, por mais privilegiado que seja.
+              sem preju&iacute;zo do direito do consumidor de optar pelo foro de seu domic&iacute;lio
+              conforme o Art. 101, I do C&oacute;digo de Defesa do Consumidor.
             </p>
           </section>
 
@@ -482,7 +627,7 @@ const TermsOfService = () => {
           <footer className="border-t border-gray-200 pt-6 mt-10 space-y-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-gray-500">
-                <strong>&Uacute;ltima atualiza&ccedil;&atilde;o:</strong> 23 de fevereiro de 2026
+                <strong>Vers&atilde;o 1.0</strong> &mdash; &Uacute;ltima atualiza&ccedil;&atilde;o: 23 de fevereiro de 2026
               </p>
               <Link
                 to="/privacidade"
