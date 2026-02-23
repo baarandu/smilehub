@@ -10,6 +10,8 @@ import { formatCurrency, formatDate, migrateItems } from '@/utils/materials';
 import { AddItemDialog, CheckoutDialog, OrderDetailDialog, ImportMaterialsDialog } from '@/components/materials';
 import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/materials/ExpensePaymentDialog';
 import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
+import { usePlanFeature } from '@/hooks/usePlanFeature';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 
 export default function Materials() {
   // Orders State
@@ -40,6 +42,8 @@ export default function Materials() {
 
   // Import Modal State
   const [importModalVisible, setImportModalVisible] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const { hasFeature: hasImport } = usePlanFeature('estoque_importacao');
   const [clinicId, setClinicId] = useState<string | null>(null);
 
   // Invoice State
@@ -598,12 +602,18 @@ export default function Materials() {
                       </Button>
                     </div>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={() => invoiceInputRef.current?.click()} className="gap-2">
+                    <Button variant="outline" size="sm" onClick={() => {
+                      if (!hasImport) { setShowUpgradePrompt(true); return; }
+                      invoiceInputRef.current?.click();
+                    }} className="gap-2">
                       <Receipt className="w-4 h-4" />
                       Anexar NF
                     </Button>
                   )}
-                  <Button variant="outline" onClick={() => setImportModalVisible(true)} className="gap-2">
+                  <Button variant="outline" onClick={() => {
+                    if (!hasImport) { setShowUpgradePrompt(true); return; }
+                    setImportModalVisible(true);
+                  }} className="gap-2">
                     <FileUp className="w-4 h-4" />
                     Importar
                   </Button>
@@ -825,6 +835,13 @@ export default function Materials() {
         onConfirm={handlePaymentConfirm}
         itemName={`Compra de Materiais - ${pendingPurchaseData?.purchasedItems.length || 0} itens`}
         value={pendingPurchaseData?.purchasedTotal || 0}
+      />
+
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onOpenChange={setShowUpgradePrompt}
+        feature="Importação de Materiais"
+        description="Importe sua lista de materiais por copiar/colar ou nota fiscal com processamento por IA."
       />
     </div>
   );

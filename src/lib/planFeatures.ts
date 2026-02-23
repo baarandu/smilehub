@@ -1,28 +1,26 @@
 /**
  * Check if a plan's feature list includes a given feature key.
- * Features are now stored explicitly per plan in subscription_plans.features.
- * No more hierarchy/inheritance — each plan lists all its features.
+ * Features are stored explicitly per plan in subscription_plans.features.
  */
 export function planHasFeature(planFeatures: string[] | null | undefined, feature: string): boolean {
   if (!planFeatures || !Array.isArray(planFeatures)) return false;
   return planFeatures.includes(feature);
 }
 
-// Plan hierarchy and features — used as fallback when plan.features is not set
-const PLAN_HIERARCHY = ['basico', 'profissional', 'premium', 'enterprise'] as const;
+// Plan hierarchy — 2 plans only
+const PLAN_HIERARCHY = ['essencial', 'profissional_v2'] as const;
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  basico: [
-    'agenda', 'prontuario', 'anamnese', 'orcamentos', 'alertas', 'suporte_email',
+  essencial: [
+    'agenda', 'prontuario', 'anamnese', 'orcamentos', 'alertas',
+    'financeiro', 'estoque', 'suporte_email',
   ],
-  profissional: [
-    'financeiro', 'estoque', 'imposto_renda', 'comissoes', 'central_protese', 'suporte_chat',
-  ],
-  premium: [
-    'consulta_voz', 'dentista_ia', 'contabilidade_ia', 'whatsapp_confirmacao', 'multi_unidades',
-  ],
-  enterprise: [
-    'secretaria_ia', 'whitelabel', 'api', 'relatorios_avancados', 'suporte_telefone', 'gerente_dedicado',
+  profissional_v2: [
+    'estoque_importacao', 'assinatura_digital',
+    'dentista_ia', 'contabilidade_ia',
+    'comissoes', 'central_protese', 'imposto_renda',
+    'whatsapp_confirmacao', 'multi_unidades', 'relatorios_avancados',
+    'suporte_chat',
   ],
 };
 

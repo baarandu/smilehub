@@ -26,7 +26,12 @@ import {
     Headphones,
     FileSignature,
     Tag,
+    FileUp,
     type LucideIcon,
+    Crown,
+    ArrowRight,
+    X,
+    Zap,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,7 +61,17 @@ type Plan = Database['public']['Tables']['subscription_plans']['Row'];
 const lucideIconMap: Record<string, LucideIcon> = {
     Calendar, FileText, DollarSign, Bell, MessageCircle, Package,
     Award, Stethoscope, Mic, Calculator, Bot, Sparkles, BarChart3,
-    Headphones, UserCog, Users, CheckCircle, FileSignature,
+    Headphones, UserCog, Users, CheckCircle, FileSignature, FileUp,
+};
+
+const parseFeatures = (featuresJson: any): string[] => {
+    try {
+        if (Array.isArray(featuresJson)) return featuresJson;
+        if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
+        return [];
+    } catch {
+        return [];
+    }
 };
 
 export default function Pricing() {
@@ -261,7 +276,7 @@ export default function Pricing() {
                 .from('subscription_plans')
                 .select('*')
                 .eq('is_active', true)
-                .order('price_monthly', { ascending: true });
+                .order('sort_order', { ascending: true });
 
             if (error) throw error;
             setPlans(data || []);
@@ -310,23 +325,12 @@ export default function Pricing() {
         }
     };
 
-    const parseFeatures = (featuresJson: any): string[] => {
-        try {
-            if (Array.isArray(featuresJson)) return featuresJson;
-            if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
-            return [];
-        } catch {
-            return [];
-        }
-    };
-
     const formatPrice = (priceInCents: number) => {
         const price = priceInCents / 100;
         const [intPart, decPart] = price.toFixed(2).split('.');
         return { int: intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.'), dec: decPart };
     };
 
-    // Annual price: monthly * 12 with configured discount percentage
     const getAnnualPrice = (monthlyPriceInCents: number) => {
         const yearlyTotal = monthlyPriceInCents * 12;
         const discount = yearlyTotal * (annualDiscountPercent / 100);
@@ -335,14 +339,12 @@ export default function Pricing() {
 
     const applyCouponDiscount = (priceInCents: number, plan: Plan): number => {
         if (!appliedCoupon) return priceInCents;
-        // Check plan applicability
         if (appliedCoupon.applicable_plan_ids && appliedCoupon.applicable_plan_ids.length > 0 && !appliedCoupon.applicable_plan_ids.includes(plan.id)) {
             return priceInCents;
         }
         if (appliedCoupon.discount_type === 'percent') {
             return priceInCents * (1 - appliedCoupon.discount_value / 100);
         }
-        // Fixed amount discount (in cents)
         return Math.max(0, priceInCents - appliedCoupon.discount_value);
     };
 
@@ -354,13 +356,6 @@ export default function Pricing() {
         }
         price = applyCouponDiscount(price, plan);
         return formatPrice(price);
-    };
-
-    const getOriginalPrice = (plan: Plan) => {
-        if (billingCycle === 'annual') {
-            return formatPrice(getAnnualPrice(plan.price_monthly) / 12);
-        }
-        return formatPrice(plan.price_monthly);
     };
 
     const hasCouponDiscountForPlan = (plan: Plan): boolean => {
@@ -375,44 +370,19 @@ export default function Pricing() {
         return formatPrice(monthlyTotal - annualTotal);
     };
 
-    const getButtonConfig = (plan: Plan) => {
-        const isCurrent = currentPlanId === plan.id;
-
-        if (plan.slug === 'enterprise') {
-            return {
-                text: 'Fale conosco',
-                variant: 'primary' as const,
-                disabled: false,
-                isContact: true
-            };
-        }
-
-        if (isCurrent) {
-            return {
-                text: 'Plano atual',
-                variant: 'outline' as const,
-                disabled: true,
-                isContact: false
-            };
-        }
-
-        return {
-            text: 'Selecionar plano',
-            variant: 'primary' as const,
-            disabled: false,
-            isContact: false
-        };
-    };
-
     const handleButtonClick = (plan: Plan) => {
-        if (plan.slug === 'enterprise') {
-            window.open('https://wa.me/5571997118372?text=Olá! Tenho interesse no plano Enterprise.', '_blank');
-            return;
-        }
+        const isCurrent = currentPlanId === plan.id;
+        if (isCurrent) return;
 
-        // Sempre vai para assinatura/pagamento
-        handleSubscribe(plan);
+        if (currentPlanId) {
+            handlePlanChange(plan);
+        } else {
+            handleSubscribe(plan);
+        }
     };
+
+    const essencial = plans.find(p => p.slug === 'essencial');
+    const profissional = plans.find(p => p.slug === 'profissional_v2');
 
     if (loading) {
         return (
@@ -422,50 +392,243 @@ export default function Pricing() {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-[#fdf8f7] via-[#fef6f5] to-[#fdf2f0]">
-            <div className="max-w-screen-2xl mx-auto px-4 py-6">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    {/* Trial Badge */}
-                    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 mb-4 shadow-sm">
-                        <Sparkles className="w-4 h-4 text-[#a03f3d]" />
-                        <span className="text-sm text-gray-700">
-                            {billingCycle === 'monthly'
-                                ? '30 dias grátis no plano mensal'
-                                : `${annualDiscountPercent}% de desconto no plano anual`}
+    const renderFeatureItem = (feat: { key: string; label: string; icon: string }, muted = false) => {
+        const Icon = lucideIconMap[feat.icon] || CheckCircle;
+        return (
+            <div key={feat.key} className="flex items-center gap-2.5">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${muted ? 'bg-gray-100' : 'bg-[#fef2f2]'}`}>
+                    <Icon className={`w-3.5 h-3.5 ${muted ? 'text-gray-400' : 'text-[#a03f3d]'}`} />
+                </div>
+                <span className={`text-sm ${muted ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{feat.label}</span>
+            </div>
+        );
+    };
+
+    const renderPlanCard = (plan: Plan | undefined, isProfissional: boolean) => {
+        if (!plan) return null;
+
+        const isCurrent = currentPlanId === plan.id;
+        const price = getDisplayPrice(plan);
+        const showCouponStrike = hasCouponDiscountForPlan(plan);
+        const savings = billingCycle === 'annual' ? getAnnualSavings(plan) : null;
+        const originalPriceMonthly = plan.original_price_monthly;
+
+        // Get features from DB plan.features array
+        const planFeatureKeys = parseFeatures(plan.features);
+        // For Profissional: show only the extra features (not in Essencial)
+        const essencialKeys = essencial ? new Set(parseFeatures(essencial.features)) : new Set<string>();
+        const displayKeys = isProfissional
+            ? planFeatureKeys.filter(k => !essencialKeys.has(k))
+            : planFeatureKeys;
+        // For Essencial locked section: show Profissional extras
+        const profissionalKeys = profissional ? parseFeatures(profissional.features) : [];
+        const lockedKeys = profissionalKeys.filter(k => !essencialKeys.has(k));
+
+        return (
+            <div
+                className={`
+                    relative bg-white rounded-3xl p-8 shadow-sm border-2 transition-all flex flex-col
+                    ${isProfissional ? 'border-[#a03f3d]/40 shadow-lg' : 'border-gray-200'}
+                    ${isCurrent ? 'ring-2 ring-[#a03f3d]/20' : ''}
+                `}
+            >
+                {/* Badges */}
+                <div className="flex items-center gap-2 mb-4">
+                    {isProfissional && (
+                        <span className="inline-flex items-center gap-1 bg-[#a03f3d] text-white text-xs font-semibold px-3 py-1 rounded-full">
+                            <Crown className="w-3 h-3" />
+                            Mais popular
                         </span>
+                    )}
+                    {isProfissional && originalPriceMonthly && (
+                        <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                            <Zap className="w-3 h-3" />
+                            Oferta de lançamento
+                        </span>
+                    )}
+                    {isCurrent && (
+                        <span className="inline-flex items-center gap-1 bg-gray-900 text-white text-xs font-medium px-3 py-1 rounded-full">
+                            <Sparkles className="w-3 h-3" />
+                            {isTrialing ? 'Seu trial' : 'Seu plano'}
+                        </span>
+                    )}
+                    {billingCycle === 'annual' && savings && (
+                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">
+                            Economize R$ {savings.int},{savings.dec}/ano
+                        </span>
+                    )}
+                </div>
+
+                {/* Plan Name & Description */}
+                <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                <p className="text-sm text-gray-500 mb-6">{plan.description}</p>
+
+                {/* Price */}
+                <div className="mb-6">
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm text-gray-500">R$</span>
+                        {/* Show original price struck through for promo */}
+                        {isProfissional && originalPriceMonthly && !showCouponStrike && billingCycle === 'monthly' && (
+                            <span className="text-xl text-gray-400 line-through mr-1">
+                                {formatPrice(originalPriceMonthly).int}
+                            </span>
+                        )}
+                        {showCouponStrike && (
+                            <span className="text-xl text-gray-400 line-through mr-1">
+                                {formatPrice(plan.price_monthly).int},{formatPrice(plan.price_monthly).dec}
+                            </span>
+                        )}
+                        <span className={`text-5xl font-bold tracking-tight ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>
+                            {price.int}
+                        </span>
+                        <span className={`text-xl font-bold ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>
+                            ,{price.dec}
+                        </span>
+                        <span className="text-sm text-gray-500">/mês</span>
+                    </div>
+                    {billingCycle === 'annual' && (
+                        <p className="text-xs text-gray-400 mt-1">
+                            Cobrado anualmente (R$ {formatPrice(getAnnualPrice(plan.price_monthly)).int},{formatPrice(getAnnualPrice(plan.price_monthly)).dec}/ano)
+                        </p>
+                    )}
+                </div>
+
+                {/* CTA Button */}
+                <Button
+                    className={`
+                        w-full rounded-xl py-6 font-semibold text-base transition-all mb-6
+                        ${isCurrent
+                            ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-0'
+                            : isProfissional
+                                ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white shadow-md hover:shadow-lg'
+                                : 'bg-gray-900 hover:bg-gray-800 text-white'
+                        }
+                    `}
+                    onClick={() => handleButtonClick(plan)}
+                    disabled={isCurrent || (processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id))}
+                >
+                    {processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id) ? (
+                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                    ) : null}
+                    {isCurrent
+                        ? (isTrialing ? 'Seu trial atual' : 'Plano atual')
+                        : isProfissional
+                            ? 'Assinar Profissional'
+                            : 'Assinar Essencial'
+                    }
+                </Button>
+
+                {/* Cancel Button for current plan */}
+                {isCurrent && !isTrialing && (
+                    <div className="-mt-4 mb-4">
+                        {cancelAtPeriodEnd ? (
+                            <div className="flex items-center justify-center gap-2 text-amber-600 text-sm py-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>Cancelado - acesso até {currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR') : 'fim do período'}</span>
+                            </div>
+                        ) : (
+                            <Button
+                                variant="ghost"
+                                className="w-full text-gray-400 hover:text-red-600 hover:bg-red-50 text-sm"
+                                onClick={() => setCancelDialogOpen(true)}
+                            >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Cancelar assinatura
+                            </Button>
+                        )}
+                    </div>
+                )}
+
+                {/* Features */}
+                <div className="flex-1">
+                    {isProfissional && (
+                        <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">
+                            Tudo do Essencial, mais:
+                        </p>
+                    )}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        {displayKeys.map((key) => {
+                            const def = featureDefs.get(key);
+                            return renderFeatureItem({
+                                key,
+                                label: def?.label || key,
+                                icon: def?.icon || 'CheckCircle',
+                            });
+                        })}
                     </div>
 
+                    {/* Show locked features on Essencial card */}
+                    {!isProfissional && lockedKeys.length > 0 && (
+                        <>
+                            <div className="border-t border-dashed border-gray-200 my-5" />
+                            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                                Disponível no Profissional:
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                {lockedKeys.slice(0, 6).map((key) => {
+                                    const def = featureDefs.get(key);
+                                    return renderFeatureItem({
+                                        key,
+                                        label: def?.label || key,
+                                        icon: def?.icon || 'CheckCircle',
+                                    }, true);
+                                })}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <p className="text-xs text-center text-gray-400 mt-6 pt-4 border-t border-gray-100">
+                    Sem fidelidade. Cancele quando quiser.
+                </p>
+            </div>
+        );
+    };
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-[#fdf8f7] via-[#fef6f5] to-[#fdf2f0]">
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    {isTrialing && (
+                        <div className="inline-flex items-center gap-2 bg-white border border-[#a03f3d]/20 rounded-full px-4 py-2 mb-4 shadow-sm">
+                            <Sparkles className="w-4 h-4 text-[#a03f3d]" />
+                            <span className="text-sm text-gray-700">
+                                Você está experimentando o <strong>Plano Profissional</strong> gratuitamente
+                            </span>
+                        </div>
+                    )}
+
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Planos e Assinaturas
+                        Planos simples, sem surpresas
                     </h1>
-                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                        Gerencie seu plano atual ou faça upgrades conforme sua clínica cresce.
+                    <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+                        Dois planos. Tudo que sua clínica precisa. Escolha o que faz sentido pra você.
                     </p>
                 </div>
 
                 {/* Benefits Bar */}
                 <div className="flex flex-wrap justify-center gap-4 mb-6">
-                    <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100">
                         <Shield className="w-5 h-5 text-[#a03f3d]" />
                         <div>
                             <p className="text-xs text-gray-500">Segurança</p>
-                            <p className="font-semibold text-gray-900">Dados criptografados</p>
+                            <p className="font-semibold text-sm text-gray-900">Dados criptografados</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100">
                         <CheckCircle className="w-5 h-5 text-[#a03f3d]" />
                         <div>
                             <p className="text-xs text-gray-500">Flexibilidade</p>
-                            <p className="font-semibold text-gray-900">Cancele quando quiser</p>
+                            <p className="font-semibold text-sm text-gray-900">Cancele quando quiser</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 bg-white rounded-xl px-6 py-4 shadow-sm border border-gray-100">
-                        <MessageCircle className="w-5 h-5 text-[#a03f3d]" />
+                    <div className="flex items-center gap-3 bg-white rounded-xl px-5 py-3 shadow-sm border border-gray-100">
+                        <Users className="w-5 h-5 text-[#a03f3d]" />
                         <div>
-                            <p className="text-xs text-gray-500">Suporte</p>
-                            <p className="font-semibold text-gray-900">Via WhatsApp</p>
+                            <p className="text-xs text-gray-500">Sem limites</p>
+                            <p className="font-semibold text-sm text-gray-900">Usuários e pacientes ilimitados</p>
                         </div>
                     </div>
                 </div>
@@ -548,136 +711,25 @@ export default function Pricing() {
                     </div>
                 )}
 
-                {/* Plans Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {plans.map((plan) => {
-                        const featureKeys = parseFeatures(plan.features);
-                        const isCurrent = currentPlanId === plan.id;
-                        const price = getDisplayPrice(plan);
-                        const originalPrice = getOriginalPrice(plan);
-                        const showCouponStrike = hasCouponDiscountForPlan(plan);
-                        const buttonConfig = getButtonConfig(plan);
-                        const isEnterprise = plan.slug === 'enterprise';
-                        const savings = billingCycle === 'annual' ? getAnnualSavings(plan) : null;
+                {/* Plans Grid — 2 columns full width */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {renderPlanCard(essencial, false)}
+                    {renderPlanCard(profissional, true)}
+                </div>
 
-                        return (
-                            <div
-                                key={plan.id}
-                                className={`
-                                    relative bg-white rounded-3xl p-6 shadow-sm border transition-all
-                                    ${isCurrent ? 'border-[#a03f3d]/30 shadow-md' : 'border-gray-100 hover:shadow-md'}
-                                `}
-                            >
-                                {/* Annual Savings Badge */}
-                                {billingCycle === 'annual' && savings && !isEnterprise && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                        <span className="inline-flex items-center gap-1 bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
-                                            Economize R$ {savings.int},{savings.dec}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Plan Header */}
-                                <div className={`mb-4 ${billingCycle === 'annual' && !isEnterprise ? 'mt-2' : ''}`}>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                                        {isCurrent && (
-                                            <span className="inline-flex items-center gap-1 bg-[#a03f3d] text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                                                <Sparkles className="w-3 h-3" />
-                                                Seu plano
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-gray-500 min-h-[40px]">
-                                        {plan.description}
-                                    </p>
-                                </div>
-
-                                {/* Price */}
-                                <div className="mb-6">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-sm text-gray-500">R$</span>
-                                        {showCouponStrike && (
-                                            <span className="text-lg text-gray-400 line-through mr-1">{originalPrice.int},{originalPrice.dec}</span>
-                                        )}
-                                        <span className={`text-4xl font-bold ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>{price.int},{price.dec}</span>
-                                        <span className="text-sm text-gray-500">/mês</span>
-                                    </div>
-                                    {billingCycle === 'annual' && !isEnterprise && (
-                                        <p className="text-xs text-gray-400 mt-1">
-                                            Cobrado anualmente (R$ {formatPrice(getAnnualPrice(plan.price_monthly)).int},{formatPrice(getAnnualPrice(plan.price_monthly)).dec}/ano)
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Features */}
-                                <div className="space-y-3 mb-6">
-                                    {featureKeys.slice(0, 6).map((key, i) => {
-                                        const def = featureDefs.get(key);
-                                        const IconComponent = lucideIconMap[def?.icon || 'CheckCircle'] || CheckCircle;
-                                        const label = def?.label || key;
-
-                                        return (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-[#fef2f2]">
-                                                    <IconComponent className="w-4 h-4 text-[#a03f3d]" />
-                                                </div>
-                                                <span className="text-sm text-gray-700">{label}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Button */}
-                                <Button
-                                    className={`
-                                        w-full rounded-xl py-3 font-medium transition-all
-                                        ${buttonConfig.variant === 'primary'
-                                            ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white'
-                                            : buttonConfig.variant === 'outline'
-                                            ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-0'
-                                            : 'bg-[#f5f0ef] hover:bg-[#ebe3e1] text-gray-700 border-0'
-                                        }
-                                    `}
-                                    onClick={() => handleButtonClick(plan)}
-                                    disabled={buttonConfig.disabled || (processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id))}
-                                >
-                                    {processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id) ? (
-                                        <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                                    ) : null}
-                                    {buttonConfig.text}
-                                </Button>
-
-                                {/* Cancel Button - only for current plan */}
-                                {isCurrent && (
-                                    <div className="mt-3 pt-3 border-t border-gray-100">
-                                        {cancelAtPeriodEnd ? (
-                                            <div className="flex items-center justify-center gap-2 text-amber-600 text-sm">
-                                                <AlertTriangle className="w-4 h-4" />
-                                                <span>Cancelado - acesso até {currentPeriodEnd ? new Date(currentPeriodEnd).toLocaleDateString('pt-BR') : 'fim do período'}</span>
-                                            </div>
-                                        ) : (
-                                            <Button
-                                                variant="ghost"
-                                                className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50"
-                                                onClick={() => setCancelDialogOpen(true)}
-                                            >
-                                                <XCircle className="w-4 h-4 mr-2" />
-                                                Cancelar assinatura
-                                            </Button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Footer Text */}
-                                <p className="text-xs text-center text-gray-400 mt-4">
-                                    {isEnterprise
-                                        ? 'Cancelamento grátis a qualquer momento.'
-                                        : 'Sem fidelidade. Cancele quando quiser.'}
-                                </p>
-                            </div>
-                        );
-                    })}
+                {/* FAQ / Trust section */}
+                <div className="mt-12 text-center">
+                    <p className="text-sm text-gray-400">
+                        Precisa de algo personalizado?{' '}
+                        <a
+                            href="https://wa.me/5571997118372?text=Olá! Gostaria de saber mais sobre os planos."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#a03f3d] hover:underline font-medium"
+                        >
+                            Fale conosco pelo WhatsApp
+                        </a>
+                    </p>
                 </div>
             </div>
 

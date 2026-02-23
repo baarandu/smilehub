@@ -5,6 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useExams, useDeleteExam } from '@/hooks/useExams';
 import { NewExamDialog } from './NewExamDialog';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
+import { usePlanFeature } from '@/hooks/usePlanFeature';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import type { Exam } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -22,6 +24,8 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
   const [showDialog, setShowDialog] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [signingExam, setSigningExam] = useState<Exam | null>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const { hasFeature: hasSignature } = usePlanFeature('assinatura_digital');
 
   const formatDate = (date: string | null) => {
     if (!date) return '-';
@@ -123,6 +127,10 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
                       title="Coletar Assinatura"
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (!hasSignature) {
+                          setShowUpgradePrompt(true);
+                          return;
+                        }
                         setSigningExam(exam);
                       }}
                     >
@@ -181,6 +189,13 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
           record={signingExam as unknown as Record<string, unknown>}
         />
       )}
+
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onOpenChange={setShowUpgradePrompt}
+        feature="Assinatura Digital"
+        description="Assine digitalmente exames e outros registros clínicos com validade jurídica."
+      />
     </>
   );
 }

@@ -7,6 +7,8 @@ import { locationsService, type Location } from '@/services/locations';
 import { NewProcedureDialog } from './NewProcedureDialog';
 import { ProcedureViewDialog } from './ProcedureViewDialog';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
+import { usePlanFeature } from '@/hooks/usePlanFeature';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +39,8 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
   const [signingProcedure, setSigningProcedure] = useState<Procedure | null>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const { hasFeature: hasSignature } = usePlanFeature('assinatura_digital');
 
   useEffect(() => {
     loadLocations();
@@ -188,6 +192,10 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
                       title="Coletar Assinatura"
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (!hasSignature) {
+                          setShowUpgradePrompt(true);
+                          return;
+                        }
                         setSigningProcedure(procedure);
                       }}
                     >
@@ -285,6 +293,13 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
           record={signingProcedure as unknown as Record<string, unknown>}
         />
       )}
+
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onOpenChange={setShowUpgradePrompt}
+        feature="Assinatura Digital"
+        description="Assine digitalmente procedimentos, anamneses e exames com validade jurídica."
+      />
     </>
   );
 }

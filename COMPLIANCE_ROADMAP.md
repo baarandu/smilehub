@@ -1,8 +1,8 @@
 # Roadmap de Compliance Jurídica — Organiza Odonto
 
 > Referência operacional para implementação dos gaps identificados na auditoria de 23/02/2026.
-> Checklist de 73 itens auditados: **55 implementados, 7 parciais, 11 pendentes.**
-> Nota global: **A** — P0, P1 e P2 (8, 10, 11) concluídos.
+> Checklist de 73 itens auditados: **51 implementados, 11 parciais, 11 pendentes.**
+> Nota global: **A-** — objetivo: **A (healthtech auditável).**
 
 ---
 
@@ -107,214 +107,184 @@
 
 ## P1 — Gaps Regulatórios
 
-### 4. ~~Registrar consentimento de menores (Art. 14)~~ CONCLUÍDO
+### 4. Registrar consentimento de menores (Art. 14)
 
-**Status:** Implementado em 23/02/2026 (`20260224_minor_consent.sql`)
-**Risco:** ~~Art. 14 LGPD exige consentimento verificável de responsável legal~~ Mitigado
-**Referência legal:** Art. 14 LGPD
+**Status:** Campos `patient_type`, `legal_guardian` existem. Sem log de consentimento parental.
+**Risco:** Art. 14 LGPD exige consentimento verificável de responsável legal
 
-**Implementado:**
-- [x] Colunas `guardian_name`, `ip_address` adicionadas em `patient_consents`
-- [x] RPC `check_minor_consent(p_patient_id, p_clinic_id)` — fail-closed (sem registro = sem consentimento)
-- [x] Componente `MinorConsentBadge` no header do paciente (apenas para `patient_type = 'child'`)
-- [x] Toggle com input de nome do responsável (pré-preenchido com `legal_guardian || mother_name || father_name`)
-- [x] Seção de consentimento destacada (bg-amber-50) na aba "Pais e Responsável" do PatientForm
-- [x] `createPatientFromForm` faz upsert em `patient_consents` com `consent_type: 'minor_data_processing'`
-- [x] Campo `minorConsent?: boolean` adicionado em `PatientFormData`
+**O que fazer:**
+- [ ] Criar tabela `minor_consents`:
+  ```
+  id uuid PK
+  patient_id uuid REFERENCES patients
+  clinic_id uuid REFERENCES clinics
+  guardian_name text NOT NULL
+  guardian_cpf text  -- opcional, para identificação
+  consent_type text  -- 'treatment' | 'data_processing' | 'ai_analysis'
+  granted_at timestamptz DEFAULT now()
+  granted_by uuid REFERENCES auth.users  -- quem registrou
+  ip_address text
+  notes text
+  ```
+- [ ] No PatientForm: se `patient_type = 'child'`, exibir checkbox de consentimento do responsável
+- [ ] Registrar com IP e timestamp
+- [ ] Audit trigger automático na tabela
 
-**Arquivos criados/modificados:**
-- `supabase/migrations/20260224_minor_consent.sql`
-- `src/components/patients/MinorConsentBadge.tsx`
-- `src/components/patients/PatientForm.tsx`
-- `src/components/patients/PatientHeader.tsx`
-- `src/services/patients.ts`
-- `src/types/database.ts`
+**Arquivos a modificar:**
+- Nova migration: `supabase/migrations/YYYYMMDD_minor_consents.sql`
+- `src/components/patients/PatientForm.tsx` — fluxo condicional para menores
 
 **Validação:**
-- [x] `npx vite build` passa
-- [ ] Paciente child mostra badge de consentimento no header
-- [ ] Toggle de consentimento grava com guardian_name
-- [ ] PatientForm child mostra seção de consentimento
+- [ ] Criar paciente menor sem consentimento → aviso ou bloqueio
+- [ ] Registro salvo com guardian_name, IP, timestamp
 
 ---
 
-### 5. ~~Implementar exportação CSV/PDF de dados do titular~~ CONCLUÍDO
+### 5. Implementar exportação CSV/PDF de dados do titular
 
-**Status:** Implementado em 23/02/2026
-**Risco:** ~~Promessa documental não cumprida (Art. 18, V LGPD — portabilidade)~~ Mitigado
-**Referência legal:** Art. 18, V LGPD
+**Status:** Export JSON funcional. CSV e PDF prometidos na Política de Privacidade mas não implementados.
+**Risco:** Promessa documental não cumprida (Art. 18, V LGPD — portabilidade)
 
-**Implementado:**
-- [x] Edge Function `patient-data-export` aceita parâmetro `format` (`json` | `csv`)
-- [x] CSV server-side com BOM UTF-8, seções separadas por `=== NOME ===`, headers + rows
-- [x] PDF client-side via `jsPDF` com seções: Dados Pessoais, Anamneses, Consultas, Procedimentos, Exames, Orçamentos, Documentos, Transações, Sessões de Voz
-- [x] Todos os labels do PDF em português (80+ campos mapeados)
-- [x] Footer com document ID + hash SHA-256
-- [x] Dropdown no header do paciente com 3 opções: JSON / CSV / PDF
-- [x] Download via Blob + `URL.createObjectURL` (robusto em todos os browsers)
-- [x] Edge Function deployada em produção
+**O que fazer:**
+- [ ] Adicionar formato CSV ao `patient-data-export` Edge Function (flatten JSON → CSV)
+- [ ] Adicionar formato PDF usando a mesma lógica do `patientReportGenerator.ts`
+- [ ] Parâmetro `?format=json|csv|pdf` na chamada
+- [ ] Atualizar UI de export para oferecer seleção de formato
 
-**Arquivos criados/modificados:**
-- `supabase/functions/patient-data-export/index.ts` — CSV format + helpers
-- `src/utils/patientDataPdfGenerator.ts`
-- `src/components/patients/PatientHeader.tsx` — dropdown de export
+**Arquivos a modificar:**
+- `supabase/functions/patient-data-export/index.ts` — adicionar formatters
+- UI de export (botão no `PatientHeader.tsx` ou similar)
 
 **Validação:**
-- [x] `npx vite build` passa
-- [x] Edge Function deployada
-- [ ] Export JSON baixa arquivo válido
+- [ ] Export JSON continua funcionando
 - [ ] Export CSV baixa arquivo válido com headers
-- [ ] Export PDF gera documento legível com labels em pt-BR
+- [ ] Export PDF gera documento legível
 - [ ] Rate limit mantido (5/hora)
 
 ---
 
-### 6. ~~Elaborar RIPD (Relatório de Impacto à Proteção de Dados)~~ CONCLUÍDO
+### 6. Elaborar RIPD (Relatório de Impacto à Proteção de Dados)
 
-**Status:** Implementado em 23/02/2026
-**Risco:** ~~Art. 38 LGPD — ANPD pode solicitar RIPD para dados sensíveis de saúde~~ Mitigado
-**Referência legal:** Art. 38 LGPD
+**Status:** Não existe. Matriz de Risco LGPD implementada mas RIPD formal não produzido.
+**Risco:** Art. 38 LGPD — ANPD pode solicitar RIPD para tratamento de dados sensíveis de saúde.
 
-**Implementado:**
-- [x] Página `/configuracoes/ripd` com 9 seções conforme diretrizes ANPD:
-  1. Identificação dos Agentes (Controlador/Operador/DPO)
-  2. Necessidade e Justificativa do RIPD
-  3. Descrição do Tratamento de Dados (tabela com categorias, finalidades, bases legais)
-  4. Necessidade e Proporcionalidade
-  5. Riscos Identificados (resumo dos 18 riscos da Matriz)
-  6. Medidas de Mitigação (5 categorias)
-  7. Riscos Residuais
-  8. Parecer do Encarregado (DPO) com campos de assinatura
-  9. Conclusão e Aprovação com campos de assinatura
-- [x] Botão "Imprimir / PDF" via `window.print()` com estilos de impressão
-- [x] Print CSS: esconde sidebar/nav, `break-inside: avoid` nos cards, formato A4
-- [x] Guard admin-only (`useClinic().isAdmin`)
-- [x] Card RIPD na seção Legal de Settings
+**O que fazer:**
+- [ ] Criar documento baseado na Matriz de Risco existente (`LGPDRiskMatrix.tsx`)
+- [ ] Estrutura mínima do RIPD:
+  1. Descrição das operações de tratamento
+  2. Dados pessoais e sensíveis envolvidos
+  3. Necessidade e proporcionalidade
+  4. Riscos para os titulares
+  5. Medidas de mitigação
+  6. Parecer do DPO
+- [ ] Pode ser página no app (`/configuracoes/ripd`) ou documento PDF externo
+- [ ] Referenciar no DPA e na PSI
 
-**Arquivos criados/modificados:**
-- `src/pages/RIPD.tsx`
-- `src/App.tsx` — lazy import + rota
-- `src/pages/Settings.tsx` — card na seção Legal
-- `src/index.css` — estilos `@media print`
+**Arquivos a criar:**
+- `src/pages/RIPD.tsx` (se página no app) ou documento externo
+- Atualizar `src/App.tsx` e `src/pages/Settings.tsx` se for página
 
 **Validação:**
-- [x] `npx vite build` passa
-- [ ] Página acessível em `/configuracoes/ripd` (admin only)
-- [ ] Impressão/PDF sem cortar cards na quebra de página
-- [ ] Card RIPD aparece em Settings > Legal
-
+- [ ] Documento cobre todos os tratamentos listados no DPA Anexo I
+- [ ] Referência cruzada com Matriz de Risco
+outra duvida 
 ---
 
-### 7. ~~Endpoint de exclusão/anonimização de dados do titular~~ CONCLUÍDO
+### 7. Endpoint de exclusão de dados do titular
 
-**Status:** Implementado em 23/02/2026 (`20260224_anonymize_patient.sql`)
-**Risco:** ~~Art. 18, IV LGPD — direito à eliminação~~ Mitigado
-**Referência legal:** Art. 18, IV LGPD
+**Status:** Não existe endpoint de exclusão/anonimização
+**Risco:** Art. 18, IV LGPD — direito à eliminação
 
-**Implementado:**
-- [x] RPC `anonymize_patient_data` (SECURITY DEFINER, service_role only):
-  - Snapshot pré-anonimização em `audit_logs`
-  - Paciente: nome → "PACIENTE ANONIMIZADO", CPF/RG/email/phone/address → null
-  - Voice sessions: transcription → "[ANONIMIZADO]", extracted_data → '{}'
-  - Todos os consentimentos revogados
-  - `deleted_at` setado se não existia
-  - Verifica `retention_locked_until` — bloqueia sem override
-  - Override requer reason ≥ 10 chars
-- [x] Edge Function `patient-data-anonymize`:
-  - Auth JWT + role check (admin only)
-  - Rate limit: 2/hora
-  - Confirmação dupla: `confirmationCode` = 4 primeiras letras do nome (uppercase)
-  - Audit via structured logger
-- [x] `AnonymizePatientDialog` com 2 etapas:
-  1. Checkbox "Compreendo que é irreversível"
-  2. Input código de confirmação
-  3. Se retention locked: toggle override + textarea justificativa
-- [x] Botão "Anonimizar" (admin-only, outline text-red-600, ícone UserX) no PatientHeader
-- [x] Service `anonymizePatient()` em `patients.ts`
-- [x] Safe messages adicionadas ao `errorHandler.ts`
-- [x] Edge Function deployada em produção
+**O que fazer:**
+- [ ] Criar Edge Function `patient-data-deletion`
+- [ ] Lógica: anonimizar dados pessoais (nome → "ANONIMIZADO", CPF → null, etc.)
+- [ ] Preservar dados clínicos anonimizados (prontuário sem PII — CFO 20 anos)
+- [ ] Registrar audit log com motivo da exclusão
+- [ ] Exigir confirmação dupla (admin + motivo)
+- [ ] Respeitar `retention_locked_until` — bloquear se dentro do prazo
 
-**Arquivos criados/modificados:**
-- `supabase/migrations/20260224_anonymize_patient.sql`
-- `supabase/functions/patient-data-anonymize/index.ts`
-- `supabase/functions/_shared/errorHandler.ts`
-- `src/components/patients/AnonymizePatientDialog.tsx`
-- `src/components/patients/PatientHeader.tsx`
-- `src/services/patients.ts`
+**Arquivos a criar:**
+- `supabase/functions/patient-data-deletion/index.ts`
+- UI de solicitação de exclusão (modal com justificativa)
 
 **Validação:**
-- [x] `npx vite build` passa
-- [x] Edge Function deployada
-- [ ] Anonimização com código correto → dados anonimizados
-- [ ] Anonimização com código errado → erro
-- [ ] Anonimização dentro de retenção sem override → bloqueada
-- [ ] Audit log registra snapshot pré-anonimização
+- [ ] Dados pessoais anonimizados
+- [ ] Dados clínicos preservados sem PII
+- [ ] Audit log registra quem solicitou e quando
+- [ ] Prontuário dentro de 20 anos → bloqueado
 
 ---
 
 ## P2 — Melhorias de Conformidade
 
-### 8. ~~Referências legais nos Termos de Uso~~ CONCLUÍDO
+### 8. Referências legais nos Termos de Uso
 
-**Status:** Implementado em 23/02/2026
-**Impacto:** ~~Validade jurídica da assinatura eletrônica poderia ser questionada~~ Mitigado
+**Status:** Termos não referenciam MP 2.200-2/2001 nem Lei 14.063/2020
+**Impacto:** Validade jurídica da assinatura eletrônica poderia ser questionada
 
-**Implementado:**
-- [x] Seção "Validade de Documentos Eletrônicos" em Disposições Gerais (seção 13)
-- [x] Referência a MP 2.200-2/2001 (ICP-Brasil, documentos eletrônicos)
-- [x] Referência a Lei 14.063/2020 (assinaturas eletrônicas em saúde)
-- [x] Explicação de que aceite registrado com usuário, data, hora e IP constitui assinatura eletrônica válida (Art. 10, §2º MP 2.200-2)
+**O que fazer:**
+- [ ] Adicionar seção ou parágrafo nos Termos referenciando:
+  - MP 2.200-2/2001 (validade de documentos eletrônicos)
+  - Lei 14.063/2020 (tipos de assinatura eletrônica)
+  - Nível de assinatura utilizado (avançada via SuperSign)
+- [ ] Mencionar que assinatura qualificada (ICP-Brasil) é opcional e pode ser integrada futuramente
 
-**Arquivos modificados:**
-- `src/pages/TermsOfService.tsx` — seção 13
-
----
-
-### ~~9. MFA (Autenticação Multifator)~~ REMOVIDO
-
-**Decisão:** Removido do escopo. PSI ajustada para refletir controle atual (senha forte 12+ chars).
-MFA pode ser implementado futuramente como diferencial, mas não é exigência legal da LGPD.
+**Arquivos a modificar:**
+- `src/pages/TermsOfService.tsx`
 
 ---
 
-### 10. ~~Runbook de Disaster Recovery~~ CONCLUÍDO
+### 9. MFA (Autenticação Multifator)
 
-**Status:** Implementado em 23/02/2026
-**Impacto:** ~~Sem procedimento documentado para recuperação de desastres~~ Mitigado
+**Status:** Não implementado. Supabase Auth suporta nativamente.
+**Impacto:** PSI menciona MFA para acesso administrativo
 
-**Implementado:**
-- [x] `docs/disaster-recovery.md` com 8 seções:
-  1. Objetivo
-  2. Escopo (tabela RPO/RTO por componente)
-  3. Backups (DB automático, PITR, Storage, código-fonte)
-  4. Cenários: Indisponibilidade Supabase, Corrupção de Dados, Comprometimento de Credenciais, Perda de Frontend, Falha em Migration
-  5. Comunicação (responsáveis e canais)
-  6. Testes do Plano (checklist semestral)
-  7. Procedimentos de Contingência Manual
-  8. Documentos Relacionados
+**O que fazer:**
+- [ ] Habilitar MFA no Supabase Dashboard → Authentication → MFA
+- [ ] Criar componente de enrollment TOTP em Settings
+- [ ] Exigir MFA para role `admin` (opcional para outros)
+- [ ] Adicionar verificação MFA no login flow
 
-**Arquivos criados:**
-- `docs/disaster-recovery.md`
+**Arquivos a criar/modificar:**
+- Novo componente: `src/components/auth/MFASetup.tsx`
+- `src/pages/Settings.tsx` — card na seção Conta
+- Login flow — verificação de fator adicional
 
 ---
 
-### 11. ~~TCLE específicos por procedimento~~ CONCLUÍDO
+### 10. Runbook de Disaster Recovery
 
-**Status:** Implementado em 23/02/2026
-**Impacto:** ~~CFO recomenda consentimento específico por tipo de procedimento~~ Mitigado
+**Status:** `docs/resposta-incidentes.md` cobre incidentes de segurança, mas não DR.
+**Impacto:** Sem procedimento documentado para recuperação de desastres
 
-**Implementado:**
-- [x] 5 TCLE específicos adicionados ao `DEFAULT_TEMPLATES`:
-  - TCLE — Implante Dentário (riscos: parestesia, não osseointegração, perfuração seio maxilar)
-  - TCLE — Clareamento Dental (riscos: sensibilidade, irritação gengival, contraindicações)
-  - TCLE — Cirurgia Oral (riscos: hemorragia, alveolite, trismo, comunicação buco-sinusal)
-  - TCLE — Ortodontia (riscos: reabsorção radicular, descalcificação, recidiva)
-  - TCLE — Prótese Dentária (riscos: sensibilidade, necessidade de canal, fratura)
-- [x] Cada template com: procedimento, riscos específicos, alternativas, cuidados, campos de assinatura (paciente + profissional CRO)
-- [x] Variáveis `{{nome}}`, `{{cpf}}`, `{{data_nascimento}}`, `{{data}}`
+**O que fazer:**
+- [ ] Criar `docs/disaster-recovery.md` com:
+  - Cenários cobertos (falha DB, falha provider, ransomware, corrupção)
+  - Procedimento de restauração via Supabase Dashboard
+  - Comandos PITR
+  - Contatos de emergência Supabase
+  - Checklist de validação pós-restauração
+  - RTO: 4h, RPO: minutos (PITR) / 24h (catástrofe)
 
-**Arquivos modificados:**
-- `src/components/patients/DocumentsModal.tsx` — 5 templates adicionados (total: 11 templates)
+---
+
+### 11. TCLE específicos por procedimento
+
+**Status:** 4 templates genéricos. Sem TCLE para implante, clareamento, ortodontia, etc.
+**Impacto:** CFO recomenda consentimento específico por tipo de procedimento
+
+**O que fazer:**
+- [ ] Criar templates adicionais no `DocumentsModal.tsx`:
+  - TCLE para implantes dentários
+  - TCLE para clareamento dental
+  - TCLE para procedimentos cirúrgicos
+  - TCLE para ortodontia
+  - TCLE para prótese
+- [ ] Cada template com riscos específicos do procedimento
+- [ ] Variáveis: `{{nome}}`, `{{cpf}}`, `{{dente}}`, `{{procedimento}}`, `{{data}}`
+
+**Arquivos a modificar:**
+- `src/components/patients/DocumentsModal.tsx` — adicionar templates
 
 ---
 
@@ -383,7 +353,7 @@ MFA pode ser implementado futuramente como diferencial, mas não é exigência l
 
 ## Checklist de Validação Final
 
-Após implementar P0 + P1 + P2 parcial, rodar esta verificação:
+Após implementar P0 + P1, rodar esta verificação:
 
 ```
 [x] npx vite build — compila sem erros
@@ -392,13 +362,10 @@ Após implementar P0 + P1 + P2 parcial, rodar esta verificação:
 [ ] Signup exige aceite de termos com IP/timestamp — código pronto, testar em produção
 [ ] Re-aceite funciona quando versão muda — código pronto, testar em produção
 [x] DPO com dados reais na Política de Privacidade
-[x] Consentimento de menor — badge, form e upsert implementados (P1)
-[x] Export funciona em JSON, CSV e PDF — Edge Function deployada (P1)
-[x] Endpoint de anonimização — Edge Function deployada com confirmação dupla (P1)
-[x] RIPD — página com 9 seções ANPD + impressão/PDF (P1)
-[x] Referências legais (MP 2.200-2, Lei 14.063) nos Termos de Uso (P2)
-[x] Runbook de Disaster Recovery documentado (P2)
-[x] 5 TCLEs específicos por procedimento — implante, clareamento, cirurgia, ortodontia, prótese (P2)
+[ ] Consentimento de menor registrado com IP/timestamp (P1)
+[ ] Export funciona em JSON, CSV e PDF (P1)
+[ ] Endpoint de exclusão/anonimização funcional (P1)
+[ ] RIPD documento produzido e referenciado (P1)
 ```
 
 ---

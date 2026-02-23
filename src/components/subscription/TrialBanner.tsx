@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, ArrowRight, X } from 'lucide-react';
+import { Clock, ArrowRight, X, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
@@ -91,7 +91,7 @@ export function TrialBanner() {
                 "relative flex items-center justify-between gap-4 px-4 py-3 rounded-lg mb-4 transition-all",
                 isUrgent && "bg-red-50 border border-red-200",
                 isWarning && "bg-orange-50 border border-orange-200",
-                !isUrgent && !isWarning && "bg-blue-50 border border-blue-200"
+                !isUrgent && !isWarning && "bg-gradient-to-r from-[#fef2f2] to-[#fdf8f7] border border-[#a03f3d]/20"
             )}
         >
             <div className="flex items-center gap-3">
@@ -100,17 +100,20 @@ export function TrialBanner() {
                         "flex items-center justify-center w-8 h-8 rounded-full",
                         isUrgent && "bg-red-100",
                         isWarning && "bg-orange-100",
-                        !isUrgent && !isWarning && "bg-blue-100"
+                        !isUrgent && !isWarning && "bg-[#a03f3d]/10"
                     )}
                 >
-                    <Clock
-                        className={cn(
-                            "w-4 h-4",
-                            isUrgent && "text-red-600",
-                            isWarning && "text-orange-600",
-                            !isUrgent && !isWarning && "text-blue-600"
-                        )}
-                    />
+                    {isUrgent || isWarning ? (
+                        <Clock
+                            className={cn(
+                                "w-4 h-4",
+                                isUrgent && "text-red-600",
+                                isWarning && "text-orange-600"
+                            )}
+                        />
+                    ) : (
+                        <Sparkles className="w-4 h-4 text-[#a03f3d]" />
+                    )}
                 </div>
                 <div>
                     <p
@@ -118,14 +121,14 @@ export function TrialBanner() {
                             "text-sm font-medium",
                             isUrgent && "text-red-800",
                             isWarning && "text-orange-800",
-                            !isUrgent && !isWarning && "text-blue-800"
+                            !isUrgent && !isWarning && "text-gray-900"
                         )}
                     >
                         {daysLeft === 0
-                            ? "Seu trial termina hoje!"
+                            ? "Seu trial do Plano Profissional termina hoje!"
                             : daysLeft === 1
-                                ? "Seu trial termina amanhã!"
-                                : `${daysLeft} dias restantes no seu trial`
+                                ? "Seu trial do Plano Profissional termina amanhã!"
+                                : `Você está no Plano Profissional (trial) — ${daysLeft} dias restantes`
                         }
                     </p>
                     <p
@@ -133,10 +136,10 @@ export function TrialBanner() {
                             "text-xs",
                             isUrgent && "text-red-600",
                             isWarning && "text-orange-600",
-                            !isUrgent && !isWarning && "text-blue-600"
+                            !isUrgent && !isWarning && "text-gray-500"
                         )}
                     >
-                        Escolha um plano para continuar usando após o período de teste
+                        Aproveite todos os recursos: IA, assinatura digital, importação e mais. Escolha um plano para continuar.
                     </p>
                 </div>
             </div>
@@ -148,7 +151,7 @@ export function TrialBanner() {
                         "flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                         isUrgent && "bg-red-600 text-white hover:bg-red-700",
                         isWarning && "bg-orange-600 text-white hover:bg-orange-700",
-                        !isUrgent && !isWarning && "bg-blue-600 text-white hover:bg-blue-700"
+                        !isUrgent && !isWarning && "bg-[#a03f3d] text-white hover:bg-[#8b3634]"
                     )}
                 >
                     Ver planos
@@ -160,7 +163,7 @@ export function TrialBanner() {
                         "p-1 rounded-md transition-colors",
                         isUrgent && "text-red-400 hover:text-red-600 hover:bg-red-100",
                         isWarning && "text-orange-400 hover:text-orange-600 hover:bg-orange-100",
-                        !isUrgent && !isWarning && "text-blue-400 hover:text-blue-600 hover:bg-blue-100"
+                        !isUrgent && !isWarning && "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                     )}
                     aria-label="Fechar"
                 >

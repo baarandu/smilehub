@@ -7,6 +7,8 @@ import { useAnamneses, useDeleteAnamnese } from '@/hooks/useAnamneses';
 import { AnamneseSummaryDialog } from './AnamneseSummaryDialog';
 import { NewAnamneseDialog } from './NewAnamneseDialog';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
+import { usePlanFeature } from '@/hooks/usePlanFeature';
+import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
 
@@ -24,6 +26,8 @@ export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTa
     const [showAnamneseDialog, setShowAnamneseDialog] = useState(false);
     const [editingAnamnese, setEditingAnamnese] = useState<Anamnese | null>(null);
     const [signingAnamnese, setSigningAnamnese] = useState<Anamnese | null>(null);
+    const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+    const { hasFeature: hasSignature } = usePlanFeature('assinatura_digital');
 
     const formatDate = (date: string) => {
         if (!date) return '';
@@ -158,6 +162,10 @@ export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTa
                                                 title="Coletar Assinatura"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    if (!hasSignature) {
+                                                        setShowUpgradePrompt(true);
+                                                        return;
+                                                    }
                                                     setSigningAnamnese(anamnese);
                                                 }}
                                             >
@@ -220,6 +228,13 @@ export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTa
                     record={signingAnamnese as unknown as Record<string, unknown>}
                 />
             )}
+
+            <UpgradePrompt
+                open={showUpgradePrompt}
+                onOpenChange={setShowUpgradePrompt}
+                feature="Assinatura Digital"
+                description="Assine digitalmente anamneses e outros registros clínicos com validade jurídica."
+            />
         </>
     );
 }

@@ -2569,6 +2569,7 @@ export type Database = {
           max_patients: number | null
           max_users: number
           name: string
+          original_price_monthly: number | null
           price_monthly: number
           price_yearly: number | null
           slug: string
@@ -2585,6 +2586,7 @@ export type Database = {
           max_patients?: number | null
           max_users?: number
           name: string
+          original_price_monthly?: number | null
           price_monthly: number
           price_yearly?: number | null
           slug: string
@@ -2601,6 +2603,7 @@ export type Database = {
           max_patients?: number | null
           max_users?: number
           name?: string
+          original_price_monthly?: number | null
           price_monthly?: number
           price_yearly?: number | null
           slug?: string
