@@ -100,8 +100,10 @@ serve(async (req: Request) => {
       throw new Error("Serviço de email não configurado.");
     }
 
-    // Generate 6-digit OTP
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate 6-digit OTP (cryptographically secure)
+    const otpArray = new Uint32Array(1);
+    crypto.getRandomValues(otpArray);
+    const otpCode = String(100000 + (otpArray[0] % 900000));
 
     // Hash the OTP (SHA-256)
     const encoder = new TextEncoder();

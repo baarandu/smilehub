@@ -6,6 +6,24 @@ import { buildSystemPrompt } from "./systemPrompt.ts";
 import * as evolution from "./evolutionClient.ts";
 import { createLogger } from "../_shared/logger.ts";
 
+// ─── Soft rate limit (logging only, never blocks webhook delivery) ────────────
+const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
+const WEBHOOK_RATE_WINDOW_MS = 60_000; // 1 min
+const WEBHOOK_RATE_WARN_THRESHOLD = 120; // log warning above this
+
+function trackWebhookRate(ip: string, log: any): void {
+  const now = Date.now();
+  const entry = webhookIpCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    webhookIpCounts.set(ip, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS });
+    return;
+  }
+  entry.count++;
+  if (entry.count === WEBHOOK_RATE_WARN_THRESHOLD) {
+    log.warn("Webhook rate threshold exceeded (logging only)", { ip, count: entry.count });
+  }
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MAX_TOOL_ITERATIONS = 5;
@@ -243,6 +261,10 @@ serve(async (req) => {
       log.warn("Invalid API key");
       return new Response("Unauthorized", { status: 401 });
     }
+
+    // Soft rate tracking (log only, never blocks delivery)
+    const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    trackWebhookRate(webhookIp, log);
 
     // ── 2. Parse Evolution API payload ───────────────────────────────
     const payload = await req.json();

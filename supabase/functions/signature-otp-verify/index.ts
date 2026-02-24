@@ -6,7 +6,10 @@ import { extractBearerToken, validateUUID, validateRequired, ValidationError } f
 import { createLogger } from "../_shared/logger.ts";
 
 const FUNCTION_NAME = "signature-otp-verify";
-const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET") || "";
+const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET");
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET não configurado. Verificação OTP indisponível.");
+}
 
 /** Create a short-lived JWT for OTP verification (5 min) */
 async function createOtpToken(challengeId: string, patientId: string, recordType: string, recordId: string): Promise<string> {

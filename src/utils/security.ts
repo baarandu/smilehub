@@ -2,6 +2,7 @@
  * Security utility functions
  * These functions help protect sensitive data and prevent XSS attacks
  */
+import DOMPurify from 'dompurify';
 
 /**
  * Mask CPF for display - shows only last 2 digits
@@ -84,6 +85,18 @@ export function sanitizeForDisplay(text: string | null | undefined): string {
         .replace(/<[^>]*>/g, '')
         // Remove javascript: URLs
         .replace(/javascript:/gi, '');
+}
+
+/**
+ * Sanitize HTML using DOMPurify (robust XSS prevention)
+ * Use this instead of regex-based sanitizeText for HTML content
+ */
+export function sanitizeHtml(html: string | null | undefined): string {
+    if (!html) return '';
+    return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'ul', 'ol', 'li', 'span'],
+        ALLOWED_ATTR: ['class'],
+    });
 }
 
 /**

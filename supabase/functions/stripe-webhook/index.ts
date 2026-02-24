@@ -5,6 +5,24 @@ import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
 import { createLogger } from "../_shared/logger.ts"
 
+// Soft rate limit (logging only, never blocks webhook delivery)
+const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
+const WEBHOOK_RATE_WINDOW_MS = 60_000;
+const WEBHOOK_RATE_WARN_THRESHOLD = 60;
+
+function trackWebhookRate(ip: string): void {
+  const now = Date.now();
+  const entry = webhookIpCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    webhookIpCounts.set(ip, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS });
+    return;
+  }
+  entry.count++;
+  if (entry.count === WEBHOOK_RATE_WARN_THRESHOLD) {
+    console.warn(`[stripe-webhook] Rate threshold exceeded (logging only): ip=${ip} count=${entry.count}`);
+  }
+}
+
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
     apiVersion: '2022-11-15',
     httpClient: Stripe.createFetchHttpClient(),
@@ -18,6 +36,10 @@ const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 serve(async (req) => {
+    // Soft rate tracking
+    const stripeIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    trackWebhookRate(stripeIp);
+
     const signature = req.headers.get('Stripe-Signature')
     const body = await req.text()
 

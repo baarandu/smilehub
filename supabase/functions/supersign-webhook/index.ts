@@ -6,6 +6,24 @@ import { createLogger } from "../_shared/logger.ts";
 const SUPERSIGN_API = "https://api.sign.supersign.com.br";
 const FUNCTION_NAME = "supersign-webhook";
 
+// Soft rate limit (logging only, never blocks webhook delivery)
+const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
+const WEBHOOK_RATE_WINDOW_MS = 60_000;
+const WEBHOOK_RATE_WARN_THRESHOLD = 60;
+
+function trackWebhookRate(ip: string, logger: any): void {
+  const now = Date.now();
+  const entry = webhookIpCounts.get(ip);
+  if (!entry || now > entry.resetAt) {
+    webhookIpCounts.set(ip, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS });
+    return;
+  }
+  entry.count++;
+  if (entry.count === WEBHOOK_RATE_WARN_THRESHOLD) {
+    logger.warn("Webhook rate threshold exceeded (logging only)", { ip, count: entry.count });
+  }
+}
+
 serve(async (req: Request) => {
   // Webhooks are POST only, no CORS needed (server-to-server)
   if (req.method !== "POST") {
@@ -13,6 +31,10 @@ serve(async (req: Request) => {
   }
 
   const logger = createLogger(FUNCTION_NAME);
+
+  // Soft rate tracking
+  const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  trackWebhookRate(webhookIp, logger);
 
   try {
     // Validate HMAC signature

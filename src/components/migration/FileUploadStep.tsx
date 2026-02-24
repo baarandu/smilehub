@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Upload, FileSpreadsheet, FileJson, FileText, Users, Stethoscope, DollarSign, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,9 +54,15 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('Arquivo muito grande. O tamanho máximo é 50 MB.');
+        return;
+      }
       setSelectedFile(file);
     }
   };
@@ -77,6 +84,10 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('Arquivo muito grande. O tamanho máximo é 50 MB.');
+        return;
+      }
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (ext === 'csv' || ext === 'xlsx' || ext === 'xls' || ext === 'json') {
         setSelectedFile(file);

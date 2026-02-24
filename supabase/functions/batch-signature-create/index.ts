@@ -21,6 +21,16 @@ interface ResolvedRecord extends BatchRecord {
   content_hash: string;
 }
 
+/** Escape HTML special characters to prevent XSS */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function getRecordTypeLabel(type: string): string {
   switch (type) {
     case "procedure": return "Procedimento";
@@ -64,11 +74,11 @@ function generateBatchHtml(
   const rows = records.map((r, i) => `
     <tr>
       <td style="border:1px solid #ddd;padding:8px;">${i + 1}</td>
-      <td style="border:1px solid #ddd;padding:8px;">${r.patient_name}</td>
-      <td style="border:1px solid #ddd;padding:8px;">${r.record_date}</td>
-      <td style="border:1px solid #ddd;padding:8px;">${getRecordTypeLabel(r.record_type)}</td>
-      <td style="border:1px solid #ddd;padding:8px;">${r.description}</td>
-      <td style="border:1px solid #ddd;padding:8px;font-family:monospace;font-size:10px;">${r.content_hash.slice(0, 16)}...</td>
+      <td style="border:1px solid #ddd;padding:8px;">${escapeHtml(r.patient_name)}</td>
+      <td style="border:1px solid #ddd;padding:8px;">${escapeHtml(r.record_date)}</td>
+      <td style="border:1px solid #ddd;padding:8px;">${escapeHtml(getRecordTypeLabel(r.record_type))}</td>
+      <td style="border:1px solid #ddd;padding:8px;">${escapeHtml(r.description)}</td>
+      <td style="border:1px solid #ddd;padding:8px;font-family:monospace;font-size:10px;">${escapeHtml(r.content_hash.slice(0, 16))}...</td>
     </tr>
   `).join("");
 
@@ -79,8 +89,8 @@ function generateBatchHtml(
     <body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:24px;">
       <h1 style="color:#0D9488;text-align:center;">Lote de Assinaturas Digitais</h1>
       <table style="width:100%;margin:16px 0;">
-        <tr><td><strong>Número:</strong></td><td>${batchNumber}</td></tr>
-        <tr><td><strong>Dentista:</strong></td><td>${dentistName} — CRO ${dentistCro}</td></tr>
+        <tr><td><strong>Número:</strong></td><td>${escapeHtml(batchNumber)}</td></tr>
+        <tr><td><strong>Dentista:</strong></td><td>${escapeHtml(dentistName)} — CRO ${escapeHtml(dentistCro)}</td></tr>
         <tr><td><strong>Data/Hora:</strong></td><td>${now}</td></tr>
         <tr><td><strong>Algoritmo:</strong></td><td>SHA-256</td></tr>
         <tr><td><strong>ID Único:</strong></td><td style="font-family:monospace;">${batchId}</td></tr>

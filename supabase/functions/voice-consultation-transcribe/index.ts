@@ -128,14 +128,18 @@ serve(async (req) => {
     });
 
     if (encryptError) {
-      // Fallback: store plaintext if encryption RPC not available yet
-      console.warn('[voice-transcribe] Encryption RPC failed, storing plaintext:', encryptError.message);
+      log.error("Encryption RPC failed — refusing to store plaintext (LGPD)", {
+        error: encryptError.message,
+        session_id: sessionId,
+      });
       await supabase
         .from("voice_consultation_sessions")
         .update({
-          transcription: transcriptionText,
+          status: "error",
+          processing_error: "Falha na criptografia da transcrição. Dados não armazenados por segurança.",
         })
         .eq("id", sessionId);
+      throw new Error("Erro ao criptografar transcrição. Tente novamente.");
     }
 
     // Always update duration

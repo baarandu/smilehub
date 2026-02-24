@@ -42,6 +42,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {isAssistant ? (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown
+              skipHtml
               components={{
                 // Customize markdown rendering
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,

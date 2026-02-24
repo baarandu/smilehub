@@ -75,6 +75,17 @@ FORMATO DE SAÍDA (JSON):
   "total_amount": 150.00 ou null
 }`;
 
+/** Fetch with timeout */
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 30000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -148,7 +159,7 @@ serve(async (req) => {
         clinicId: clinic_id,
       });
 
-      gptResponse = await fetch(
+      gptResponse = await fetchWithTimeout(
         "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
@@ -166,11 +177,18 @@ serve(async (req) => {
             temperature: 0.1,
             max_tokens: 4000,
           }),
-        }
+        },
+        30000,
       );
     } else {
       // Invoice mode: GPT-4o vision
       validateRequired(image_base64, "image_base64");
+
+      // Validate image size (base64 ~1.33x raw, so 20MB base64 ≈ 15MB raw)
+      const MAX_IMAGE_BASE64_LENGTH = 20 * 1024 * 1024;
+      if (image_base64.length > MAX_IMAGE_BASE64_LENGTH) {
+        throw new Error("Imagem muito grande. O tamanho máximo é 20 MB.");
+      }
 
       // PDFs use "file" content type; images use "image_url"
       const isPdf = file_type === "pdf";
@@ -190,7 +208,7 @@ serve(async (req) => {
             },
           };
 
-      gptResponse = await fetch(
+      gptResponse = await fetchWithTimeout(
         "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
@@ -217,7 +235,8 @@ serve(async (req) => {
             temperature: 0.1,
             max_tokens: 4000,
           }),
-        }
+        },
+        30000,
       );
     }
 

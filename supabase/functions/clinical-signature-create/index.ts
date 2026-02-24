@@ -7,7 +7,10 @@ import { createLogger } from "../_shared/logger.ts";
 import { computeRecordHash } from "../_shared/contentHash.ts";
 
 const FUNCTION_NAME = "clinical-signature-create";
-const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET") || "";
+const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET");
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET não configurado. Assinatura OTP indisponível.");
+}
 
 /** Verify short-lived OTP JWT */
 async function verifyOtpToken(token: string): Promise<{

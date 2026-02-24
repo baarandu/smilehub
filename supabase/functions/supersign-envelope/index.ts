@@ -17,17 +17,10 @@ const SUPERSIGN_API = "https://api.sign.supersign.com.br";
 const FUNCTION_NAME = "supersign-envelope";
 
 serve(async (req: Request) => {
-  // CORS: always allow requesting origin (auth is handled by JWT)
-  const origin = req.headers.get("origin") || "*";
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Max-Age": "86400",
-  };
+  const corsHeaders = getCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handleCorsOptions(req);
   }
 
   const logger = createLogger(FUNCTION_NAME, req);
@@ -85,6 +78,9 @@ async function handleCreate(
   const clinicId = validateUUID(body.clinic_id, "clinic_id");
   const title = validateMaxLength(validateRequired(body.title, "title"), 200, "title");
   const pdfStoragePath = validateRequired(body.pdf_storage_path, "pdf_storage_path");
+  if (!pdfStoragePath.endsWith('.pdf')) {
+    throw new ValidationError("Apenas arquivos PDF são aceitos para assinatura digital.");
+  }
   const needsPatientSignature = !!body.needs_patient_signature;
   const patientDeliveryMethod = body.patient_delivery_method || null;
   const documentTemplateId = body.document_template_id || null;

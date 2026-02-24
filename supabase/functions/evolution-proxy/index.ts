@@ -76,9 +76,9 @@ async function authenticateUser(
 
   if (cuError || !clinicUser) throw new Error("User not authorized for this clinic");
 
-  // Only admins can manage WhatsApp
+  // Only admins and dentists can manage WhatsApp
   if (clinicUser.role !== "admin" && clinicUser.role !== "dentist") {
-    throw new Error("Apenas administradores podem gerenciar o WhatsApp");
+    throw new Error("Apenas dentistas e administradores podem gerenciar o WhatsApp");
   }
 
   return { userId: user.id, clinicId: clinicUser.clinic_id };

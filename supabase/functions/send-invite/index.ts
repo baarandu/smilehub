@@ -19,6 +19,7 @@ const handler = async (request: Request): Promise<Response> => {
         // Verify webhook secret to prevent unauthorized access.
         const authHeader = request.headers.get('Authorization') || '';
         const webhookSecret = request.headers.get('x-webhook-secret') || '';
+        const dedicatedSecret = Deno.env.get('SEND_INVITE_WEBHOOK_SECRET') || '';
         const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
         // Timing-safe comparison to prevent timing attacks
@@ -32,9 +33,11 @@ const handler = async (request: Request): Promise<Response> => {
         };
 
         const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+        // Prefer dedicated webhook secret; fall back to service_role_key temporarily
+        const expectedSecret = dedicatedSecret || serviceRoleKey;
         const isAuthorized =
-            (bearerToken.length > 0 && timingSafeEqual(bearerToken, serviceRoleKey)) ||
-            (webhookSecret.length > 0 && timingSafeEqual(webhookSecret, serviceRoleKey));
+            (bearerToken.length > 0 && timingSafeEqual(bearerToken, expectedSecret)) ||
+            (webhookSecret.length > 0 && timingSafeEqual(webhookSecret, expectedSecret));
 
         if (!isAuthorized) {
             return new Response(

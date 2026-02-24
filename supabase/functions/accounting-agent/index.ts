@@ -136,6 +136,28 @@ serve(async (req) => {
 
       if (convError) throw convError;
       conversationId = newConv.id;
+    } else {
+      // Verify conversation belongs to the user's clinic (prevent cross-clinic access)
+      const { data: conv, error: convCheckError } = await supabase
+        .from("accounting_agent_conversations")
+        .select("clinic_id")
+        .eq("id", conversationId)
+        .single();
+
+      if (convCheckError || !conv) {
+        throw new Error("Conversa não encontrada.");
+      }
+      if (conv.clinic_id !== clinic_id) {
+        log.audit(supabase, {
+          action: "UNAUTHORIZED_ACCESS_ATTEMPT",
+          table_name: "accounting_agent_conversations",
+          record_id: conversationId,
+          user_id: user.id,
+          clinic_id,
+          details: { target_clinic_id: conv.clinic_id },
+        });
+        throw new Error("Unauthorized");
+      }
     }
 
     // Get conversation history (limit to last 10 to reduce token usage)
