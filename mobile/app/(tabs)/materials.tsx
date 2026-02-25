@@ -7,11 +7,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // Icons
-import { Package, Plus, ClipboardList, Clock, Receipt, X as XIcon } from 'lucide-react-native';
+import { Package, Plus, ClipboardList, ClipboardPaste, Clock, Receipt, X as XIcon } from 'lucide-react-native';
 import { Trash2, Pencil, Store, ShoppingCart } from 'lucide-react-native';
 
 // Extracted components
-import { OrderCard, AddItemModal, CheckoutModal, OrderDetailModal } from '../../src/components/materials';
+import { OrderCard, AddItemModal, CheckoutModal, OrderDetailModal, ImportMaterialsModal } from '../../src/components/materials';
 import { ExpensePaymentModal, ExpensePaymentTransaction } from '../../src/components/financial/ExpensePaymentModal';
 
 // Types, Utils and Styles
@@ -40,6 +40,9 @@ export default function Materials() {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<ShoppingOrder | null>(null);
     const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+
+    // Import Modal State
+    const [importModalVisible, setImportModalVisible] = useState(false);
 
     // Invoice & Clinic State
     const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
@@ -169,6 +172,13 @@ export default function Materials() {
     const handleEditItem = (item: ShoppingItem) => {
         setEditingItem(item);
         setAddItemModalVisible(true);
+    };
+
+    const handleImportItems = (importedItems: ShoppingItem[], importedInvoiceUrl?: string) => {
+        setItems(prev => [...prev, ...importedItems]);
+        if (importedInvoiceUrl) {
+            setInvoiceUrl(importedInvoiceUrl);
+        }
     };
 
     // Base64 decoder for file upload
@@ -811,18 +821,26 @@ export default function Materials() {
                         <Text style={styles.headerSubtitle}>Gerencie suas listas de compras.</Text>
                     </View>
                     {activeTab === 'pending' && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                setItems([]);
-                                setCurrentOrderId(null);
-                                setInvoiceUrl(null);
-                                setEditingItem(null);
-                                setAddItemModalVisible(true);
-                            }}
-                            style={styles.addButton}
-                        >
-                            <Plus size={24} color="white" />
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                            <TouchableOpacity
+                                onPress={() => setImportModalVisible(true)}
+                                style={[styles.addButton, { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#b94a48' }]}
+                            >
+                                <ClipboardPaste size={22} color="#b94a48" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setItems([]);
+                                    setCurrentOrderId(null);
+                                    setInvoiceUrl(null);
+                                    setEditingItem(null);
+                                    setAddItemModalVisible(true);
+                                }}
+                                style={styles.addButton}
+                            >
+                                <Plus size={24} color="white" />
+                            </TouchableOpacity>
+                        </View>
                     )}
                 </View>
 
@@ -894,6 +912,13 @@ export default function Materials() {
                 onAttachInvoice={handleAttachInvoiceToOrder}
                 hasExpense={hasExpense}
                 checkingExpense={checkingExpense}
+            />
+
+            <ImportMaterialsModal
+                visible={importModalVisible}
+                onClose={() => setImportModalVisible(false)}
+                onImportItems={handleImportItems}
+                clinicId={clinicId || ''}
             />
 
             <ExpensePaymentModal

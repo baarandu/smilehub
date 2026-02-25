@@ -18,3 +18,20 @@ export interface ShoppingOrder {
     invoice_url: string | null;
     created_at: string;
 }
+
+export interface ParsedMaterialItem {
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    brand: string;
+    type?: string;
+    code?: string;
+}
+
+export interface ParseMaterialsResponse {
+    items: ParsedMaterialItem[];
+    brand?: string | null;
+    payment_method?: string | null;
+    total_amount?: number | null;
+    tokens_used?: number;
+}
