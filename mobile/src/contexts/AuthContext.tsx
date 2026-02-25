@@ -88,7 +88,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+            // Se o refresh token é inválido, limpar sessão silenciosamente
+            if (error?.message?.includes('Refresh Token')) {
+                supabase.auth.signOut().catch(() => {});
+                setSession(null);
+                setUser(null);
+                setIsLoading(false);
+                return;
+            }
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
@@ -96,15 +104,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setIsLoading(false);
             }
+        }).catch(() => {
+            // Erro inesperado na recuperação de sessão - limpar e seguir
+            supabase.auth.signOut().catch(() => {});
+            setSession(null);
+            setUser(null);
+            setIsLoading(false);
         });
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                // Determine if we need to show loading during auth state change
-                // Usually better to keep loading state if we are fetching extra data
-                // But for seamless nav, maybe not. Let's keep it simple.
                 await checkSubscription(session.user.id);
             } else {
                 setRole(null);

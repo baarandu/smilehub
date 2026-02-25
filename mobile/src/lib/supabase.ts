@@ -1,7 +1,14 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import { LogBox } from 'react-native';
 import type { Database } from '../types/database';
 import { SecureStorageAdapter } from './secureStorage';
+
+// Suprimir erro de refresh token inválido no LogBox (é tratado via logout silencioso)
+LogBox.ignoreLogs([
+    'AuthApiError: Invalid Refresh Token',
+    'Invalid Refresh Token: Refresh Token Not Found',
+]);
 
 // Environment variables - MUST be configured in .env file
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -38,12 +45,18 @@ const originalGetSession = supabase.auth.getSession.bind(supabase.auth);
 (supabase.auth as any).getSession = async () => {
     try {
         const result = await originalGetSession();
+        // Tratar erro retornado na resposta (não thrown)
+        if (result?.error?.message?.includes('Refresh Token') ||
+            result?.error?.code === 'refresh_token_not_found') {
+            await supabase.auth.signOut().catch(() => {});
+            return { data: { session: null }, error: result.error };
+        }
         return result;
     } catch (error: any) {
         if (error?.message?.includes('Refresh Token') ||
             error?.code === 'refresh_token_not_found') {
             // Refresh token inválido - fazer logout silencioso
-            await supabase.auth.signOut();
+            await supabase.auth.signOut().catch(() => {});
             return { data: { session: null }, error: null };
         }
         throw error;
