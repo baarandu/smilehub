@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert, ScrollView } from 'react-native';
 import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { subscriptionService } from '../../services/subscription';
@@ -117,7 +117,7 @@ export function ProfileModal({
                         </View>
 
                         {/* Menu Items */}
-                        <View className="p-6 gap-2">
+                        <ScrollView className="flex-1" contentContainerStyle={{ padding: 24, gap: 8 }} showsVerticalScrollIndicator={false}>
                             {/* Admin Section - Only for Super Admins */}
                             {isSuperAdmin && (
                                 <>
@@ -305,7 +305,7 @@ export function ProfileModal({
                                 <LogOut size={20} color="#EF4444" />
                                 <Text className="text-[#a03f3d] font-medium">Sair da Conta</Text>
                             </TouchableOpacity>
-                        </View>
+                        </ScrollView>
                     </View>
                 </Animated.View>
             </View >
