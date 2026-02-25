@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -16,10 +16,13 @@ import type { ReturnAlert } from '../../src/types/database';
 import { remindersService, type Reminder } from '../../src/services/reminders';
 import { profileService } from '../../src/services/profile';
 import { getPendingReturns, markProcedureCompleted, type PendingReturn } from '../../src/services/pendingReturns';
+import { prosthesisService } from '../../src/services/prosthesis';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useClinic } from '../../src/contexts/ClinicContext';
 import { supabase } from '../../src/lib/supabase';
 import { TrialBanner } from '../../src/components/TrialBanner';
+import { OnboardingModal } from '../../src/components/onboarding/OnboardingModal';
+import { OnboardingTrigger } from '../../src/components/onboarding/OnboardingTrigger';
 
 export default function Dashboard() {
     const router = useRouter();
@@ -31,6 +34,7 @@ export default function Dashboard() {
     const [pendingReturns, setPendingReturns] = useState(0);
     const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
     const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
+    const [prosthesisCount, setProsthesisCount] = useState(0);
     const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
 
     // Profile & Settings
@@ -127,6 +131,11 @@ export default function Dashboard() {
             setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
             setPendingBudgetsCount(budgetsCount);
+
+            // Load prosthesis count separately (non-blocking)
+            if (clinicId) {
+                prosthesisService.getPreLabCount(clinicId).then(c => setProsthesisCount(c)).catch(() => {});
+            }
 
             const combined: any[] = [
                 ...birthdays,
@@ -225,6 +234,9 @@ export default function Dashboard() {
                             setLoadingPendingBudgets(true);
                             try { setPendingBudgetsList(await budgetsService.getAllPending()); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
                         }} />
+                        {clinicIsDentist && (
+                            <StatsCard title="Próteses Ativas" value={prosthesisCount.toString()} icon={<Layers size={24} color="#7C3AED" />} onPress={() => router.push('/prosthesis-center')} />
+                        )}
                     </View>
 
                     {/* Agenda Section */}
@@ -339,6 +351,10 @@ export default function Dashboard() {
                 loading={loadingPendingReturns}
                 onMarkCompleted={handleMarkProcedureCompleted}
             />
+
+            {/* Onboarding */}
+            <OnboardingModal />
+            <OnboardingTrigger />
         </View>
     );
 }

@@ -12,7 +12,13 @@ import {
     CreditCard,
     Key,
     HelpCircle,
-    Settings
+    Settings,
+    Shield,
+    ClipboardCheck,
+    Lock,
+    Monitor,
+    Scale,
+    Upload,
 } from 'lucide-react-native';
 import { useClinic } from '../../src/contexts/ClinicContext';
 
@@ -125,6 +131,85 @@ export default function SettingsPage() {
                     title="Central de Suporte"
                     description="FAQ e contato com suporte"
                     onPress={() => router.push('/settings/support')}
+                />
+
+                {/* LGPD & Segurança */}
+                {isAdmin && (
+                    <>
+                        <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-6 mb-3">LGPD & Segurança</Text>
+
+                        <SettingItem
+                            icon={Shield}
+                            title="Matriz de Risco LGPD"
+                            description="18 riscos mapeados e mitigações"
+                            onPress={() => router.push('/settings/lgpd-risk-matrix')}
+                        />
+
+                        <SettingItem
+                            icon={ClipboardCheck}
+                            title="Checklist de Conformidade"
+                            description="Verificação anual de segurança"
+                            onPress={() => router.push('/settings/compliance-checklist')}
+                        />
+
+                        <SettingItem
+                            icon={FileText}
+                            title="RIPD"
+                            description="Relatório de Impacto (Art. 38 LGPD)"
+                            onPress={() => router.push('/settings/ripd')}
+                        />
+
+                        <SettingItem
+                            icon={Monitor}
+                            title="Gerenciamento de Sessões"
+                            description="Sessão atual e sign out global"
+                            onPress={() => router.push('/settings/session-management')}
+                        />
+                    </>
+                )}
+
+                {/* Data Migration — Admin only */}
+                {isAdmin && (
+                    <>
+                        <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-6 mb-3">Dados</Text>
+                        <SettingItem
+                            icon={Upload}
+                            title="Migração de Dados"
+                            description="Importe dados de outros sistemas"
+                            onPress={() => router.push('/settings/data-migration')}
+                        />
+                    </>
+                )}
+
+                {/* Legal */}
+                <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-6 mb-3">Legal</Text>
+
+                <SettingItem
+                    icon={Scale}
+                    title="Termos de Uso"
+                    description="Termos e condições da plataforma"
+                    onPress={() => router.push('/settings/legal/terms')}
+                />
+
+                <SettingItem
+                    icon={Shield}
+                    title="Política de Privacidade"
+                    description="Como tratamos seus dados"
+                    onPress={() => router.push('/settings/legal/privacy')}
+                />
+
+                <SettingItem
+                    icon={FileText}
+                    title="DPA"
+                    description="Acordo de Processamento de Dados"
+                    onPress={() => router.push('/settings/legal/dpa')}
+                />
+
+                <SettingItem
+                    icon={Lock}
+                    title="Segurança da Informação"
+                    description="Política de segurança da plataforma"
+                    onPress={() => router.push('/settings/legal/security-info')}
                 />
 
                 {/* Bottom spacing */}

@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Plus, Upload, Trash2, FileText, Edit3 } from 'lucide-react-native';
 import type { Exam } from '../../../types/database';
+import { RecordSignatureBadge } from '../../clinical-signatures';
 
 interface ExamsTabProps {
     exams: Exam[];
@@ -98,9 +99,12 @@ export function ExamsTab({
                                 <View className="flex-row justify-between items-start mb-2">
                                     <View className="flex-1">
                                         <Text className="font-semibold text-gray-900">{exam.title}</Text>
-                                        <Text className="text-gray-500 text-xs">
-                                            {new Date(exam.date).toLocaleDateString('pt-BR')}
-                                        </Text>
+                                        <View className="flex-row items-center gap-2">
+                                            <Text className="text-gray-500 text-xs">
+                                                {new Date(exam.date).toLocaleDateString('pt-BR')}
+                                            </Text>
+                                            <RecordSignatureBadge recordType="exam" recordId={exam.id} compact />
+                                        </View>
                                     </View>
                                 </View>
 

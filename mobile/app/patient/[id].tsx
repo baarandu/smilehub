@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Platform, RefreshControl, TextInput, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle, Baby } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Mail, Heart, FileText, Calendar, Trash2, Edit3, Hospital, ClipboardList, Calculator, CreditCard, X, AlertTriangle, Baby, UserX } from 'lucide-react-native';
 import { deletePatient, patientsService } from '../../src/services/patients';
 import { EditPatientModal, NewAnamneseModal, AnamneseSummaryModal, NewBudgetModal, PaymentMethodModal, BudgetViewModal, NewProcedureModal, NewExamModal, ReportGenerationModal, ProcedureViewModal, NewChildAnamneseModal, ChildAnamneseSummaryModal } from '../../src/components/patients';
 import { type ToothEntry, calculateToothTotal } from '../../src/components/patients/budgetUtils';
@@ -16,6 +16,9 @@ import { childAnamnesesService } from '../../src/services/childAnamneses';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab, ChildAnamneseTab } from '../../src/components/patients/tabs';
 import { useClinic } from '../../src/contexts/ClinicContext';
 import { incomeTaxService } from '../../src/services/incomeTax';
+import { PatientAiConsent } from '../../src/components/patients/PatientAiConsent';
+import { MinorConsentBadge } from '../../src/components/patients/MinorConsentBadge';
+import { AnonymizePatientDialog } from '../../src/components/patients/AnonymizePatientDialog';
 import * as Linking from 'expo-linking';
 import ImageViewing from 'react-native-image-viewing';
 import { WebView } from 'react-native-webview';
@@ -26,7 +29,7 @@ type TabType = 'anamnese' | 'budgets' | 'procedures' | 'exams' | 'payments';
 export default function PatientDetail() {
     const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
     const router = useRouter();
-    const { roles } = useClinic();
+    const { roles, clinicId: ctxClinicId, isAdmin } = useClinic();
 
     // Secretaries (who are not also dentists/admins) cannot see anamnese
     const isSecretary = roles.length > 0 && roles.every(r => r === 'assistant' || r === 'viewer');
@@ -83,6 +86,7 @@ export default function PatientDetail() {
     const [showAlertDaysModal, setShowAlertDaysModal] = useState(false);
     const [alertDays, setAlertDays] = useState('180');
     const [pjSources, setPjSources] = useState<PJSource[]>([]);
+    const [showAnonymizeDialog, setShowAnonymizeDialog] = useState(false);
 
     // Pull-to-refresh handler
     const handleRefresh = useCallback(async () => {
@@ -269,6 +273,11 @@ export default function PatientDetail() {
                 <TouchableOpacity onPress={handleDelete} className="bg-[#fef2f2] p-2 rounded-lg">
                     <Trash2 size={20} color="#EF4444" />
                 </TouchableOpacity>
+                {isAdmin && (
+                    <TouchableOpacity onPress={() => setShowAnonymizeDialog(true)} className="bg-red-50 p-2 rounded-lg ml-2">
+                        <UserX size={20} color="#B91C1C" />
+                    </TouchableOpacity>
+                )}
             </View>
 
             <ScrollView
@@ -327,6 +336,20 @@ export default function PatientDetail() {
                         )}
                     </View>
                 </View>
+
+                {/* Consent Controls */}
+                {ctxClinicId && (
+                    <View className="mx-4 mb-4 gap-2">
+                        <PatientAiConsent patientId={patient.id} clinicId={ctxClinicId} />
+                        {(patient as any).patient_type === 'child' && (
+                            <MinorConsentBadge
+                                patientId={patient.id}
+                                clinicId={ctxClinicId}
+                                guardianNameDefault={(patient as any).legal_guardian || (patient as any).mother_name || (patient as any).father_name}
+                            />
+                        )}
+                    </View>
+                )}
 
                 {/* Tabs */}
                 <View className="mx-4 mb-4">
@@ -457,6 +480,18 @@ export default function PatientDetail() {
             <NewExamModal visible={showExamModal} patientId={id!} onClose={() => { setShowExamModal(false); setSelectedExam(null); }} onSuccess={loadExams} exam={selectedExam} />
             <ReportGenerationModal visible={showReportModal} onClose={() => setShowReportModal(false)} patient={patient} procedures={procedures} exams={exams} />
             <ImageViewing images={previewImage ? [{ uri: previewImage }] : []} imageIndex={0} visible={isImageViewVisible} onRequestClose={() => setIsImageViewVisible(false)} />
+
+            {/* Anonymize Dialog */}
+            {isAdmin && ctxClinicId && (
+                <AnonymizePatientDialog
+                    visible={showAnonymizeDialog}
+                    onClose={() => setShowAnonymizeDialog(false)}
+                    patientId={patient.id}
+                    clinicId={ctxClinicId}
+                    patientName={patient.name}
+                    onSuccess={() => router.replace('/patients')}
+                />
+            )}
 
             {/* Alert Days Modal */}
             <Modal visible={showAlertDaysModal} transparent animationType="fade" onRequestClose={() => setShowAlertDaysModal(false)}>

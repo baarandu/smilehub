@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { ClipboardList, Edit3, Trash2, Plus, Calendar } from 'lucide-react-native';
 import type { Anamnese } from '../../../types/database';
+import { RecordSignatureBadge } from '../../clinical-signatures';
 
 interface AnamneseTabProps {
     anamneses: Anamnese[];
@@ -72,15 +73,16 @@ export function AnamneseTab({ anamneses, onAdd, onEdit, onDelete, onView }: Anam
                                     activeOpacity={0.7}
                                     className="p-4 border-b border-gray-50 bg-white"
                                 >
-                                    <View className="flex-row items-center mb-2">
+                                    <View className="flex-row items-center mb-2 gap-2">
                                         <Calendar size={16} color="#6B7280" />
-                                        <Text className="text-gray-500 ml-2">
+                                        <Text className="text-gray-500">
                                             {(() => {
                                                 if (!anamnese.date) return '';
                                                 const [year, month, day] = anamnese.date.split('-');
                                                 return `${day}/${month}/${year}`;
                                             })()}
                                         </Text>
+                                        <RecordSignatureBadge recordType="anamnesis" recordId={anamnese.id} compact />
                                     </View>
                                     <View className="flex-row flex-wrap gap-1">
                                         {anamnese.medical_treatment && <View className="bg-amber-100 px-2 py-0.5 rounded"><Text className="text-xs text-amber-700">Em tratamento</Text></View>}

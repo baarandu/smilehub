@@ -5,6 +5,7 @@ import { Stack, useRouter, useSegments, Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { ClinicProvider } from '../src/contexts/ClinicContext';
+import { OnboardingProvider } from '../src/contexts/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
 
@@ -125,6 +126,8 @@ function RootLayoutNav() {
                 <Stack.Screen name="forgot-password" />
                 <Stack.Screen name="reset-password" />
                 <Stack.Screen name="trial-expired" />
+                <Stack.Screen name="batch-signature" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+                <Stack.Screen name="prosthesis-center" options={{ presentation: 'card', animation: 'slide_from_right' }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="admin" options={{ headerShown: false }} />
             </Stack>
@@ -146,7 +149,9 @@ function RootLayout() {
             >
                 <AuthProvider>
                     <ClinicProvider>
-                        <RootLayoutNav />
+                        <OnboardingProvider>
+                            <RootLayoutNav />
+                        </OnboardingProvider>
                     </ClinicProvider>
                 </AuthProvider>
             </StripeProvider>

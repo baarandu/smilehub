@@ -2,11 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable, RefreshControl, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Calendar, Plus, MapPin, X } from 'lucide-react-native';
+import { Calendar, Plus, MapPin, X, Settings } from 'lucide-react-native';
 import { appointmentsService } from '../../src/services/appointments';
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { locationsService, type Location } from '../../src/services/locations';
 import { CalendarGrid, NewAppointmentModal } from '../../src/components/agenda';
+import { ScheduleSettingsModal } from '../../src/components/agenda/ScheduleSettingsModal';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '../../src/types/database';
 
 export default function Agenda() {
@@ -24,6 +25,7 @@ export default function Agenda() {
     const [showStatusPicker, setShowStatusPicker] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithPatient | null>(null);
     const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
+    const [showScheduleSettings, setShowScheduleSettings] = useState(false);
 
     // Patient creation flow
     const [showPatientModal, setShowPatientModal] = useState(false);
@@ -360,16 +362,24 @@ export default function Agenda() {
                         <Text className="text-2xl font-bold text-gray-900">Agenda</Text>
                         <Text className="text-gray-500 mt-1">Consultas agendadas</Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => {
-                            loadLocations();
-                            setEditingAppointment(null);
-                            setShowModal(true);
-                        }}
-                        className="bg-[#a03f3d] w-12 h-12 rounded-full items-center justify-center shadow-lg"
-                    >
-                        <Plus size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
+                    <View className="flex-row items-center gap-3">
+                        <TouchableOpacity
+                            onPress={() => setShowScheduleSettings(true)}
+                            className="bg-gray-100 w-10 h-10 rounded-full items-center justify-center"
+                        >
+                            <Settings size={20} color="#6B7280" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => {
+                                loadLocations();
+                                setEditingAppointment(null);
+                                setShowModal(true);
+                            }}
+                            className="bg-[#a03f3d] w-12 h-12 rounded-full items-center justify-center shadow-lg"
+                        >
+                            <Plus size={24} color="#FFFFFF" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Calendar */}
@@ -605,6 +615,7 @@ export default function Agenda() {
                     </KeyboardAvoidingView>
                 </SafeAreaView>
             </Modal>
+            <ScheduleSettingsModal visible={showScheduleSettings} onClose={() => setShowScheduleSettings(false)} />
         </SafeAreaView>
     );
 }

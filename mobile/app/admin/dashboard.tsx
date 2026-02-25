@@ -22,7 +22,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Crown,
-    PieChart as PieChartIcon
+    PieChart as PieChartIcon,
+    Tag,
+    ShieldAlert
 } from 'lucide-react-native';
 import Svg, { Path, G } from 'react-native-svg';
 import { supabase } from '../../src/lib/supabase';
@@ -878,6 +880,34 @@ export default function AdminDashboardScreen() {
                                 <View className="flex-1">
                                     <Text className="text-gray-900 font-semibold">Gerenciar Planos</Text>
                                     <Text className="text-gray-500 text-sm">Editar planos e precos</Text>
+                                </View>
+                                <ChevronRight size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center bg-white rounded-xl p-4 shadow-sm border border-gray-100 mt-3"
+                                onPress={() => router.push('/admin/coupons')}
+                            >
+                                <View className="w-10 h-10 bg-pink-50 rounded-full items-center justify-center mr-4">
+                                    <Tag size={20} color="#EC4899" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-gray-900 font-semibold">Cupons de Desconto</Text>
+                                    <Text className="text-gray-500 text-sm">Gerenciar cupons promocionais</Text>
+                                </View>
+                                <ChevronRight size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                className="flex-row items-center bg-white rounded-xl p-4 shadow-sm border border-gray-100 mt-3"
+                                onPress={() => router.push('/admin/security')}
+                            >
+                                <View className="w-10 h-10 bg-red-50 rounded-full items-center justify-center mr-4">
+                                    <ShieldAlert size={20} color="#EF4444" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-gray-900 font-semibold">Segurança</Text>
+                                    <Text className="text-gray-500 text-sm">Métricas e logs de auditoria</Text>
                                 </View>
                                 <ChevronRight size={20} color="#9CA3AF" />
                             </TouchableOpacity>

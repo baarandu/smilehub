@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Calendar, Trash2, MapPin, Plus, Hospital, Edit3 } from 'lucide-react-native';
 import type { Procedure, Exam } from '../../../types/database';
+import { RecordSignatureBadge } from '../../clinical-signatures';
 
 interface ProceduresTabProps {
     procedures: Procedure[];
@@ -152,6 +153,7 @@ export function ProceduresTab({
                                                     {getStatusInfo(procedure.status).label}
                                                 </Text>
                                             </View>
+                                            <RecordSignatureBadge recordType="procedure" recordId={procedure.id} compact />
                                         </View>
 
                                         {/* Location and Description */}
