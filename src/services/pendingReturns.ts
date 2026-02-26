@@ -61,7 +61,18 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
         return latestCompleted < item.date;
     });
 
-    return filtered.map((item: any) => ({
+    // Deduplicate by patient_id + description, keeping only the most recent
+    const seen = new Map<string, any>();
+    for (const item of filtered) {
+        const key = `${item.patient_id}::${item.description}`;
+        const existing = seen.get(key);
+        if (!existing || item.date > existing.date) {
+            seen.set(key, item);
+        }
+    }
+    const deduplicated = Array.from(seen.values());
+
+    return deduplicated.map((item: any) => ({
         procedure: {
             id: item.id,
             patient_id: item.patient_id,

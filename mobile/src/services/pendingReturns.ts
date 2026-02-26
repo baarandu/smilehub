@@ -14,24 +14,18 @@ export interface PendingReturn {
 export async function getPendingReturns(): Promise<PendingReturn[]> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
-    // Auto-update in_progress procedures older than 30 days to pending
-    await (supabase
-        .from('procedures') as any)
-        .update({ status: 'pending' })
-        .eq('status', 'in_progress')
-        .lt('updated_at', thirtyDaysAgoStr);
-
-    // Fetch all pending procedures
+    // Fetch pending or in_progress procedures with date older than 30 days
     const { data, error } = await supabase
         .from('procedures')
         .select(`
       *,
       patients:patient_id (id, name, phone)
     `)
-        .eq('status', 'pending')
-        .order('updated_at', { ascending: true });
+        .in('status', ['pending', 'in_progress'])
+        .lt('date', thirtyDaysAgoStr)
+        .order('date', { ascending: true });
 
     if (error) {
         console.error('Error fetching pending returns:', error);
@@ -65,7 +59,18 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
         return latestCompleted < item.date;
     });
 
-    return filtered.map((item: any) => ({
+    // Deduplicate by patient_id + description, keeping only the most recent
+    const seen = new Map<string, any>();
+    for (const item of filtered) {
+        const key = `${item.patient_id}::${item.description}`;
+        const existing = seen.get(key);
+        if (!existing || item.date > existing.date) {
+            seen.set(key, item);
+        }
+    }
+    const deduplicated = Array.from(seen.values());
+
+    return deduplicated.map((item: any) => ({
         procedure: {
             id: item.id,
             patient_id: item.patient_id,
@@ -81,7 +86,7 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
         },
         patient: item.patients,
         daysSinceUpdate: Math.floor(
-            (Date.now() - new Date(item.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+            (Date.now() - new Date(item.date).getTime()) / (1000 * 60 * 60 * 24)
         ),
     }));
 }
