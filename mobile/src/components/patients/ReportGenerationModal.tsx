@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
 import { X, FileText, CheckSquare, Square, Printer } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,8 @@ import type { Procedure, Exam, Patient } from '../../types/database';
 import { generatePatientReport } from '../../utils/pdfGenerator';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { budgetsService } from '../../services/budgets';
+import { getToothDisplayName, type ToothEntry } from './budgetUtils';
 
 interface ReportGenerationModalProps {
     visible: boolean;
@@ -15,12 +17,18 @@ interface ReportGenerationModalProps {
     exams: Exam[];
 }
 
+interface BudgetLink {
+    budgetId: string;
+    toothIndex: number;
+}
+
 export function ReportGenerationModal({ visible, onClose, patient, procedures, exams }: ReportGenerationModalProps) {
     const { user } = useAuth();
     const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [notes, setNotes] = useState('');
     const [generating, setGenerating] = useState(false);
+    const [budgets, setBudgets] = useState<any[]>([]);
 
     useEffect(() => {
         if (visible) {
@@ -28,8 +36,38 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
             setSelectedProcedures(procedures.map(p => p.id));
             setSelectedExams(exams.map(e => e.id));
             setNotes('');
+            // Fetch budgets for procedure name resolution
+            budgetsService.getByPatient(patient.id).then(b => setBudgets(b)).catch(() => {});
         }
     }, [visible, procedures, exams]);
+
+    // Resolve procedure names from budget links (same logic as web)
+    const procedureNameMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        const budgetMap = new Map(budgets.map((b: any) => [b.id, b]));
+
+        for (const proc of procedures) {
+            const links = (proc as any).budget_links as BudgetLink[] | null;
+            if (!links || links.length === 0) continue;
+
+            const names: string[] = [];
+            for (const link of links) {
+                const budget = budgetMap.get(link.budgetId);
+                if (!budget?.notes) continue;
+                try {
+                    const parsed = JSON.parse(budget.notes);
+                    const teeth = parsed.teeth as ToothEntry[];
+                    if (!teeth || !teeth[link.toothIndex]) continue;
+                    const tooth = teeth[link.toothIndex];
+                    const toothName = getToothDisplayName(tooth.tooth, false);
+                    const treatments = tooth.treatments.join(', ');
+                    names.push(`${treatments} - ${toothName}`);
+                } catch { /* skip */ }
+            }
+            if (names.length > 0) map[proc.id] = names.join('; ');
+        }
+        return map;
+    }, [procedures, budgets]);
 
     const toggleProcedure = (id: string) => {
         if (selectedProcedures.includes(id)) {
@@ -110,6 +148,7 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                 clinicEmail,
                 clinicAddress,
                 reportNumber,
+                procedureNames: procedureNameMap,
             });
             onClose();
         } catch (error) {
@@ -198,7 +237,14 @@ export function ReportGenerationModal({ visible, onClose, patient, procedures, e
                                                     {selectedProcedures.includes(proc.id) ? <CheckSquare size={20} color="#b94a48" /> : <Square size={20} color="#9CA3AF" />}
                                                 </View>
                                                 <View className="flex-1">
-                                                    <Text className="text-gray-900 font-medium">{sanitizeDescription(proc.description)}</Text>
+                                                    <Text className="text-gray-900 font-medium">
+                                                        {procedureNameMap[proc.id] || sanitizeDescription(proc.description)}
+                                                    </Text>
+                                                    {procedureNameMap[proc.id] && proc.description ? (
+                                                        <Text className="text-gray-500 text-xs mt-0.5" numberOfLines={1}>
+                                                            {proc.description.startsWith('Obs: ') ? proc.description.substring(5) : proc.description}
+                                                        </Text>
+                                                    ) : null}
                                                     <Text className="text-gray-500 text-xs mt-0.5">{new Date(proc.date).toLocaleDateString()}</Text>
                                                 </View>
                                             </TouchableOpacity>

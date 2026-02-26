@@ -13,12 +13,13 @@ interface ReportOptions {
     clinicLogo?: string;
     dentistName?: string;
     accountType?: 'solo' | 'clinic';
-    // New fields
     dentistCRO?: string;
     clinicAddress?: string;
     clinicPhone?: string;
     clinicEmail?: string;
     reportNumber?: string;
+    /** Map of procedure ID → resolved procedure name from budget links */
+    procedureNames?: Record<string, string>;
 }
 
 export const generatePatientReport = async ({
@@ -35,10 +36,11 @@ export const generatePatientReport = async ({
     clinicAddress,
     clinicPhone,
     clinicEmail,
-    reportNumber
+    reportNumber,
+    procedureNames = {},
 }: ReportOptions) => {
 
-    const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
+    const formatDate = (date: string) => new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
 
     // Process exams to resolve image URLs
     const examsWithImages = await Promise.all(exams.map(async (exam) => {
@@ -150,6 +152,9 @@ export const generatePatientReport = async ({
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório do Paciente</title>
         <style>
+            @page {
+                margin: 0;
+            }
             * {
                 box-sizing: border-box;
                 -webkit-print-color-adjust: exact !important;
@@ -158,9 +163,9 @@ export const generatePatientReport = async ({
             }
             body {
                 font-family: 'Helvetica', 'Arial', sans-serif;
-                padding: 20px;
+                padding: 40px;
                 color: #1f2937;
-                line-height: 1.4;
+                line-height: 1.5;
                 margin: 0;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -173,52 +178,52 @@ export const generatePatientReport = async ({
                 align-items: flex-start;
                 justify-content: space-between;
                 background-color: #f8fafc;
-                padding: 16px;
-                border-radius: 10px;
-                margin-bottom: 20px;
+                padding: 24px;
+                border-radius: 12px;
+                margin-bottom: 30px;
             }
             .header-left {
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 16px;
             }
             .avatar-placeholder {
-                width: 50px;
-                height: 50px;
+                width: 64px;
+                height: 64px;
                 background: linear-gradient(135deg, #a03f3d 0%, #c45a58 100%);
-                border-radius: 10px;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
             }
             .avatar-placeholder svg {
-                width: 24px;
-                height: 24px;
+                width: 32px;
+                height: 32px;
                 color: white;
             }
             .logo-img {
-                width: 50px;
-                height: 50px;
-                border-radius: 10px;
+                width: 64px;
+                height: 64px;
+                border-radius: 12px;
                 object-fit: contain;
             }
             .dentist-info h1 {
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: 700;
                 color: #1f2937;
-                margin: 0 0 2px 0;
+                margin: 0 0 4px 0;
             }
             .dentist-specialty {
-                font-size: 11px;
+                font-size: 13px;
                 font-weight: 600;
                 color: #1f2937;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                margin-bottom: 2px;
+                margin-bottom: 4px;
             }
             .dentist-cro {
-                font-size: 11px;
+                font-size: 13px;
                 color: #6b7280;
             }
             .header-right {
@@ -226,38 +231,38 @@ export const generatePatientReport = async ({
             }
             .report-badge {
                 display: inline-block;
-                padding: 4px 10px;
+                padding: 6px 12px;
                 border: 1px solid #e5e7eb;
-                border-radius: 6px;
-                font-size: 10px;
+                border-radius: 8px;
+                font-size: 12px;
                 font-weight: 600;
                 color: #374151;
                 background: white;
-                margin-bottom: 4px;
+                margin-bottom: 8px;
             }
             .report-date {
-                font-size: 11px;
+                font-size: 13px;
                 color: #6b7280;
             }
 
             /* Section Styles */
             .section {
-                margin-bottom: 20px;
+                margin-bottom: 28px;
                 break-inside: avoid;
             }
             .section-header {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                margin-bottom: 12px;
+                gap: 10px;
+                margin-bottom: 16px;
             }
             .section-icon {
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 color: #a03f3d;
             }
             .section-title {
-                font-size: 12px;
+                font-size: 14px;
                 font-weight: 700;
                 color: #1f2937;
                 text-transform: uppercase;
@@ -269,29 +274,25 @@ export const generatePatientReport = async ({
             .patient-card {
                 background-color: #f1f5f9;
                 border: 1px solid #e2e8f0;
-                border-radius: 10px;
-                padding: 18px 20px;
+                border-radius: 12px;
+                padding: 24px 28px;
             }
             .patient-grid {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 16px;
-            }
-            .patient-field {
-                flex: 1;
-                min-width: 120px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
             }
             .patient-field label {
                 display: block;
-                font-size: 9px;
+                font-size: 11px;
                 font-weight: 600;
                 color: #000000;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                margin-bottom: 2px;
+                margin-bottom: 4px;
             }
             .patient-field span {
-                font-size: 13px;
+                font-size: 15px;
                 font-weight: 500;
                 color: #000000;
             }
@@ -299,7 +300,7 @@ export const generatePatientReport = async ({
             /* Procedures Table Card */
             .procedures-card {
                 border: 1px solid #e2e8f0;
-                border-radius: 10px;
+                border-radius: 12px;
                 overflow: hidden;
                 background-color: #f1f5f9;
             }
@@ -309,16 +310,16 @@ export const generatePatientReport = async ({
             }
             .procedures-table th {
                 text-align: left;
-                padding: 12px 14px;
-                font-size: 12px;
+                padding: 14px 20px;
+                font-size: 14px;
                 font-weight: 600;
                 color: #000000;
                 background-color: #f1f5f9;
                 border-bottom: 1px solid #e2e8f0;
             }
             .procedures-table td {
-                padding: 14px;
-                font-size: 12px;
+                padding: 16px 20px;
+                font-size: 14px;
                 color: #000000;
                 border-bottom: 1px solid #e2e8f0;
                 vertical-align: middle;
@@ -328,22 +329,22 @@ export const generatePatientReport = async ({
                 border-bottom: none;
             }
             .procedures-table .date-col {
-                width: 80px;
+                width: 100px;
                 color: #000000;
             }
             .procedures-table .proc-col {
-                width: 160px;
+                width: 200px;
             }
             .procedures-table .obs-col {
-                font-size: 11px;
+                font-size: 13px;
                 color: #374151;
             }
             /* Exams Section */
             .exam-item {
-                margin-bottom: 15px;
+                margin-bottom: 20px;
                 border: 1px solid #e8c4c4;
                 padding: 0;
-                border-radius: 10px;
+                border-radius: 12px;
                 background-color: #fdf2f2;
                 overflow: hidden;
                 break-inside: avoid;
@@ -352,39 +353,39 @@ export const generatePatientReport = async ({
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 12px 14px;
+                padding: 14px 20px;
                 background-color: #a03f3d;
                 color: white;
             }
             .exam-name {
                 font-weight: 600;
                 color: #ffffff;
-                font-size: 13px;
+                font-size: 15px;
             }
             .exam-date {
-                font-size: 11px;
+                font-size: 13px;
                 color: #fecaca;
             }
             .exam-content {
-                padding: 12px;
+                padding: 16px;
             }
             .exam-images {
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 12px;
             }
             .exam-img {
                 max-width: 100%;
                 height: auto;
-                border-radius: 6px;
+                border-radius: 8px;
                 border: 1px solid #e5e7eb;
-                max-height: 400px;
+                max-height: 500px;
                 object-fit: contain;
             }
             .no-images {
                 font-style: italic;
                 color: #9ca3af;
-                font-size: 11px;
+                font-size: 13px;
             }
 
             /* Notes Box */
@@ -392,45 +393,65 @@ export const generatePatientReport = async ({
                 background-color: #f0fdf4;
                 border: 1px solid #22c55e;
                 border-left-width: 4px;
-                padding: 12px 16px;
-                border-radius: 6px;
+                padding: 16px 20px;
+                border-radius: 8px;
+            }
+            .notes-title {
+                font-weight: 700;
+                color: #166534;
+                font-size: 14px;
+                margin-bottom: 8px;
             }
             .notes-content {
-                font-size: 12px;
+                font-size: 14px;
                 color: #374151;
                 white-space: pre-wrap;
-                line-height: 1.5;
+                line-height: 1.6;
             }
 
             /* Footer */
             .footer {
-                margin-top: 30px;
-                padding-top: 16px;
+                margin-top: 50px;
+                padding-top: 24px;
                 border-top: 2px solid #a03f3d;
                 text-align: center;
             }
             .footer-dentist {
-                font-size: 14px;
+                font-size: 16px;
                 font-weight: 600;
                 color: #1f2937;
-                margin-bottom: 2px;
+                margin-bottom: 4px;
             }
             .footer-cro {
-                font-size: 11px;
+                font-size: 13px;
                 color: #6b7280;
-                margin-bottom: 12px;
+                margin-bottom: 16px;
             }
             .footer-clinic-info {
-                font-size: 10px;
+                font-size: 12px;
                 color: #9ca3af;
             }
             .footer-clinic-info span {
-                margin: 0 6px;
+                margin: 0 8px;
             }
 
             .page-break {
                 page-break-before: always;
-                padding-top: 30px;
+                padding-top: 40px;
+            }
+
+            @media print {
+                .no-print { display: none; }
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                body {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
             }
         </style>
     </head>
@@ -438,14 +459,7 @@ export const generatePatientReport = async ({
         ${includeHeader ? `
         <div class="header">
             <div class="header-left">
-                ${clinicLogo ? `<img src="${clinicLogo}" class="logo-img" />` : `
-                <div class="avatar-placeholder">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C8.5 2 6 5 6 9c0 2 1 4 2 5.5V22h8v-7.5c1-1.5 2-3.5 2-5.5 0-4-2.5-7-6-7z"/>
-                        <path d="M9 22v-3M15 22v-3M12 2v4"/>
-                    </svg>
-                </div>
-                `}
+                ${clinicLogo ? `<img src="${clinicLogo}" class="logo-img" />` : ''}
                 <div class="dentist-info">
                     <h1>${dentistTitle} ${dentistName || 'Dentista'}</h1>
                     <div class="dentist-specialty">Cirurgião(ã) Dentista</div>
@@ -453,8 +467,7 @@ export const generatePatientReport = async ({
                 </div>
             </div>
             <div class="header-right">
-                <div class="report-badge">Relatório Oficial ${currentReportNumber}</div>
-                <div class="report-date">${formatDateFull(new Date())}</div>
+                <div class="report-date"><svg style="display:inline-block;vertical-align:middle;margin-right:4px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${formatDateFull(new Date())}</div>
             </div>
         </div>
         ` : ''}
@@ -507,52 +520,53 @@ export const generatePatientReport = async ({
                         </tr>
                     </thead>
                     <tbody>
-                        ${procedures.flatMap((p) => {
+                        ${procedures.map((p) => {
+                            // Use resolved procedure name from budget links if available
+                            const resolvedName = procedureNames[p.id] || '';
                             const description = p.description || '';
-                            // Split potential Obs part
-                            const parts = description.split('\n\nObs: ');
-                            const itemsPart = parts[0];
-                            const obsPart = parts.length > 1 ? parts[1] : '';
 
-                            // Process procedure lines
-                            const lines = itemsPart.split('\n');
-                            const procedureLines: string[] = [];
+                            // Clean description for observations column
+                            let obs = description;
+                            if (obs.startsWith('Obs: ')) obs = obs.substring(5);
 
-                            lines.forEach(line => {
-                                const cleanLine = line.trim().replace(/^•\s*/, '');
-                                if (!cleanLine || cleanLine.startsWith('Obs:')) return;
-
-                                let sections = cleanLine.split(' | ');
-                                if (sections.length < 3) {
-                                    sections = cleanLine.split(' - ');
+                            // If no resolved name, try to extract from description (legacy format)
+                            let procName = resolvedName;
+                            if (!procName && description) {
+                                const parts = description.split('\n\nObs: ');
+                                const itemsPart = parts[0];
+                                if (!itemsPart.startsWith('Obs:')) {
+                                    const lines = itemsPart.split('\n');
+                                    const procedureLines: string[] = [];
+                                    lines.forEach(line => {
+                                        const cleanLine = line.trim().replace(/^•\s*/, '');
+                                        if (!cleanLine || cleanLine.startsWith('Obs:')) return;
+                                        let sections = cleanLine.split(' | ');
+                                        if (sections.length < 3) sections = cleanLine.split(' - ');
+                                        if (sections.length >= 3) {
+                                            procedureLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
+                                        } else {
+                                            procedureLines.push(cleanLine);
+                                        }
+                                    });
+                                    if (procedureLines.length > 0) {
+                                        procName = procedureLines.join(', ');
+                                        obs = parts.length > 1 ? parts[1] : '';
+                                    }
                                 }
-
-                                if (sections.length >= 3) {
-                                    procedureLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
-                                } else {
-                                    procedureLines.push(cleanLine);
-                                }
-                            });
-
-                            // If only one procedure line, put obs in same row
-                            if (procedureLines.length <= 1) {
-                                return [`
-                                <tr>
-                                    <td class="date-col">${formatDate(p.date)}</td>
-                                    <td class="proc-col">${procedureLines[0] || '-'}</td>
-                                    <td class="obs-col">${obsPart || '-'}</td>
-                                </tr>
-                                `];
                             }
 
-                            // Multiple procedure lines - first row gets obs, others get empty obs
-                            return procedureLines.map((line, index) => `
+                            // If we have a resolved name, use description as observations
+                            if (resolvedName) {
+                                obs = description.startsWith('Obs: ') ? description.substring(5) : description;
+                            }
+
+                            return `
                             <tr>
                                 <td class="date-col">${formatDate(p.date)}</td>
-                                <td class="proc-col">${line}</td>
-                                <td class="obs-col">${index === 0 ? (obsPart || '-') : '-'}</td>
+                                <td class="proc-col">${procName || '-'}</td>
+                                <td class="obs-col">${obs || '-'}</td>
                             </tr>
-                            `);
+                            `;
                         }).join('')}
                     </tbody>
                 </table>
