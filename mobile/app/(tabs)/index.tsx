@@ -12,6 +12,7 @@ import { budgetsService } from '../../src/services/budgets';
 import { PendingBudgetsModal } from '../../src/components/dashboard/PendingBudgetsModal';
 import { ProfileModal } from '../../src/components/dashboard/ProfileModal';
 import { PendingReturnsModal } from '../../src/components/dashboard/PendingReturnsModal';
+import { ImportantReturnsModal } from '../../src/components/dashboard/ImportantReturnsModal';
 import type { ReturnAlert } from '../../src/types/database';
 import { remindersService, type Reminder } from '../../src/services/reminders';
 import { profileService } from '../../src/services/profile';
@@ -49,6 +50,12 @@ export default function Dashboard() {
     const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
     const [pendingReturnsList, setPendingReturnsList] = useState<PendingReturn[]>([]);
     const [loadingPendingReturns, setLoadingPendingReturns] = useState(false);
+
+    // Important Returns Modal
+    const [showImportantReturnsModal, setShowImportantReturnsModal] = useState(false);
+    const [importantReturnsList, setImportantReturnsList] = useState<{ id: string; name: string; phone: string; return_alert_date: string }[]>([]);
+    const [loadingImportantReturns, setLoadingImportantReturns] = useState(false);
+    const [importantReturnsCount, setImportantReturnsCount] = useState(0);
 
     // Pending Budgets Modal
     const [showPendingBudgetsModal, setShowPendingBudgetsModal] = useState(false);
@@ -132,6 +139,15 @@ export default function Dashboard() {
             setPendingReturns(returnsCount);
             setTodayAppointments(appointments);
             setPendingBudgetsCount(budgetsCount);
+
+            // Store important returns count for the stats card
+            const importantReturnPatients = (importantReturns as any[]).map((a: any) => ({
+                id: a.patient.id,
+                name: a.patient.name,
+                phone: a.patient.phone,
+                return_alert_date: a.dueDate || a.date,
+            }));
+            setImportantReturnsCount(importantReturnPatients.length);
 
             // Load prosthesis count separately (non-blocking)
             if (clinicId) {
@@ -239,6 +255,15 @@ export default function Dashboard() {
                         {clinicIsDentist && (
                             <StatsCard title="Próteses Ativas" value={prosthesisCount.toString()} icon={<Layers size={24} color="#7C3AED" />} onPress={() => router.push('/prosthesis-center')} />
                         )}
+                        <StatsCard title="Retornos Importantes" value={importantReturnsCount.toString()} icon={<HeartPulse size={24} color="#EA580C" />} onPress={async () => {
+                            setShowImportantReturnsModal(true);
+                            setLoadingImportantReturns(true);
+                            try {
+                                const alerts = await alertsService.getImportantReturnAlerts();
+                                setImportantReturnsList(alerts.map((a: any) => ({ id: a.patient.id, name: a.patient.name, phone: a.patient.phone, return_alert_date: a.dueDate || a.date })));
+                            } catch (e) { console.error(e); }
+                            finally { setLoadingImportantReturns(false); }
+                        }} />
                     </View>
 
                     {/* Agenda Section */}
@@ -353,6 +378,13 @@ export default function Dashboard() {
                 returns={pendingReturnsList}
                 loading={loadingPendingReturns}
                 onMarkCompleted={handleMarkProcedureCompleted}
+            />
+
+            <ImportantReturnsModal
+                visible={showImportantReturnsModal}
+                onClose={() => setShowImportantReturnsModal(false)}
+                returns={importantReturnsList}
+                loading={loadingImportantReturns}
             />
 
             {/* Onboarding */}

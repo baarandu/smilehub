@@ -133,13 +133,12 @@ export const alertsService = {
     },
 
     async getImportantReturnAlerts(): Promise<Alert[]> {
-        const today = new Date().toISOString().split('T')[0];
-
         const { data: patients, error } = await supabase
             .from('patients')
             .select('id, name, phone, return_alert_flag, return_alert_date')
             .eq('return_alert_flag', true)
-            .lte('return_alert_date', today);
+            .not('return_alert_date', 'is', null)
+            .order('return_alert_date', { ascending: true });
 
         if (error) throw error;
 
