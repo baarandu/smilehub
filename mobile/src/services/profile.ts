@@ -348,6 +348,53 @@ export const profileService = {
         return letterheadUrl;
     },
 
+    async uploadLetterheadBlob(blob: Blob, ext: string, contentType: string): Promise<string> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+
+        const clinicId = clinicUser.clinic_id;
+        const fileName = `${clinicId}/letterhead.${ext}`;
+
+        const { error } = await supabase.storage
+            .from('clinic-logos')
+            .upload(fileName, blob, {
+                contentType,
+                upsert: true,
+            });
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+            .from('clinic-logos')
+            .getPublicUrl(fileName);
+
+        const letterheadUrl = urlData.publicUrl;
+
+        const { error: upsertError } = await (supabase
+            .from('clinic_settings') as any)
+            .upsert(
+                {
+                    user_id: user.id,
+                    letterhead_url: letterheadUrl,
+                    letterhead_width_mm: 210,
+                    letterhead_height_mm: 297,
+                },
+                { onConflict: 'user_id' }
+            );
+
+        if (upsertError) throw upsertError;
+
+        return letterheadUrl;
+    },
+
     async removeLetterhead(): Promise<void> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
