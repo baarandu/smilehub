@@ -1,3 +1,38 @@
+/** Human-readable labels for feature keys (pt-BR) */
+export const FEATURE_LABELS: Record<string, string> = {
+  agenda: 'Agenda inteligente',
+  prontuario: 'Prontuário digital',
+  anamnese: 'Anamnese completa',
+  orcamentos: 'Orçamentos',
+  alertas: 'Alertas e lembretes',
+  suporte_email: 'Suporte por e-mail',
+  financeiro: 'Financeiro completo',
+  estoque: 'Estoque e materiais',
+  imposto_renda: 'Imposto de Renda',
+  comissoes: 'Comissões de dentistas',
+  central_protese: 'Central de Próteses',
+  suporte_chat: 'Suporte por chat',
+  consulta_voz: 'Consulta por Voz (IA)',
+  dentista_ia: 'Dentista IA',
+  contabilidade_ia: 'Contabilidade IA',
+  assinatura_digital: 'Assinatura Digital',
+  whatsapp_confirmacao: 'Confirmação WhatsApp',
+  multi_unidades: 'Múltiplas unidades',
+  secretaria_ia: 'Secretária IA',
+  whitelabel: 'White Label',
+  api: 'API personalizada',
+  relatorios_avancados: 'Relatórios avançados',
+  suporte_telefone: 'Suporte por telefone',
+  gerente_dedicado: 'Gestor dedicado',
+  estoque_importacao: 'Importação de estoque',
+  protese: 'Próteses',
+};
+
+/** Translate a feature key to its label, falling back to the key itself */
+export function featureLabel(key: string): string {
+  return FEATURE_LABELS[key] || key;
+}
+
 /**
  * Check if a plan's feature list includes a given feature key.
  * Features are stored explicitly per plan in subscription_plans.features.

@@ -19,14 +19,16 @@ import {
 import { plansService } from '@/services/admin/plans';
 import { appSettingsService } from '@/services/admin/appSettings';
 import { SubscriptionPlan } from '@/types/database';
+import { featureLabel } from '@/lib/planFeatures';
 
-// Parse features from database (same approach as Pricing.tsx)
+// Parse features from database and translate keys to labels
 const getFeaturesList = (plan: SubscriptionPlan): string[] => {
   const featuresJson = plan.features;
   try {
-    if (Array.isArray(featuresJson)) return featuresJson as string[];
-    if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
-    return [];
+    let keys: string[] = [];
+    if (Array.isArray(featuresJson)) keys = featuresJson as string[];
+    else if (typeof featuresJson === 'string') keys = JSON.parse(featuresJson);
+    return keys.map(featureLabel);
   } catch {
     return [];
   }
