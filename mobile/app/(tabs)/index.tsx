@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -113,14 +113,15 @@ export default function Dashboard() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, budgetsCount, remindersCount, activeRemindersList] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, importantReturns, budgetsCount, remindersCount, activeRemindersList] = await Promise.all([
                 patientsService.count(),
                 appointmentsService.countToday(),
                 consultationsService.countPendingReturns(),
                 appointmentsService.getToday(),
-                consultationsService.getReturnAlerts(),
-                alertsService.getBirthdayAlerts(),
-                alertsService.getProcedureReminders(),
+                consultationsService.getReturnAlerts().catch(() => [] as ReturnAlert[]),
+                alertsService.getBirthdayAlerts().catch(() => [] as PatientAlert[]),
+                alertsService.getProcedureReminders().catch(() => [] as PatientAlert[]),
+                alertsService.getImportantReturnAlerts().catch(() => [] as PatientAlert[]),
                 budgetsService.getPendingCount(),
                 remindersService.getActiveCount(),
                 remindersService.getActive()
@@ -138,6 +139,7 @@ export default function Dashboard() {
             }
 
             const combined: any[] = [
+                ...importantReturns,
                 ...birthdays,
                 ...procedures,
                 ...scheduled.map(s => ({ ...s, type: 'scheduled' })),
@@ -301,7 +303,8 @@ export default function Dashboard() {
                                     let title = "";
                                     let subtitle = "";
 
-                                    if (alert.type === 'birthday') { icon = <Gift size={20} color="#EC4899" />; color = "bg-pink-50"; title = `Aniversário de ${alert.patient.name}`; subtitle = "Hoje"; }
+                                    if (alert.type === 'important_return') { icon = <HeartPulse size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = alert.patient.name; const days = Math.ceil((new Date(alert.dueDate || alert.date).getTime() - Date.now()) / 86400000); subtitle = `Retorno importante — em ${Math.abs(days)} dias`; }
+                                    else if (alert.type === 'birthday') { icon = <Gift size={20} color="#EC4899" />; color = "bg-pink-50"; title = `Aniversário de ${alert.patient.name}`; subtitle = "Hoje"; }
                                     else if (alert.type === 'procedure_return') { icon = <Clock size={20} color="#F59E0B" />; color = "bg-amber-50"; title = `Retorno: ${alert.patient.name}`; subtitle = `${alert.daysSince} dias sem vir`; }
                                     else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
                                     else if (alert.type === 'reminder') { icon = <Bell size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = alert.title; subtitle = alert.description || 'Lembrete'; }

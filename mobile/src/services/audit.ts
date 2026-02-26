@@ -6,9 +6,13 @@ export type AuditLog = {
     clinic_id: string;
     user_id: string | null;
     action: string;
-    entity: string;
-    entity_id: string | null;
-    details: any;
+    table_name: string;
+    record_id: string | null;
+    new_data: any;
+    old_data: any;
+    description: string | null;
+    source: string | null;
+    function_name: string | null;
     created_at: string;
 };
 
@@ -31,9 +35,9 @@ export const auditService = {
                 clinic_id: clinicUser.clinic_id,
                 user_id: user.id,
                 action,
-                entity,
-                entity_id: entityId,
-                details: details || {}
+                table_name: entity,
+                record_id: entityId,
+                new_data: details || {}
             });
         } catch (error) {
             console.error('Failed to log action:', error);

@@ -1,5 +1,3 @@
-import * as Crypto from 'expo-crypto';
-
 const PROCEDURE_FIELDS = [
   'budget_links', 'date', 'description', 'installments', 'location',
   'patient_id', 'payment_method', 'status', 'value',
@@ -52,9 +50,9 @@ export function canonicalizeRecord(record: Record<string, unknown>, recordType: 
 
 export async function computeRecordHash(record: Record<string, unknown>, recordType: string): Promise<string> {
   const canonical = canonicalizeRecord(record, recordType);
-  const hash = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    canonical
-  );
-  return hash;
+  const encoder = new TextEncoder();
+  const data = encoder.encode(canonical);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }

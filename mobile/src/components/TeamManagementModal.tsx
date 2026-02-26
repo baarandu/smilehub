@@ -411,14 +411,14 @@ export function TeamManagementModal({ visible, onClose }: TeamManagementModalPro
                                 {log.profiles?.full_name || log.profiles?.email || 'Usuário Desconhecido'}
                             </Text>
                             <Text className="text-xs text-gray-400">
-                                {new Date(log.created_at).toLocaleDateString()} {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(log.created_at).toLocaleDateString('pt-BR')}, {new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </Text>
                         </View>
                         <Text className="text-sm text-gray-600 mt-1">
-                            <Text className="font-medium text-[#8b3634]">{log.action}</Text> em {log.entity}
+                            <Text className="font-medium text-[#8b3634]">{log.action}</Text>
+                            {'   '}
+                            {(log as any).description || (log as any).new_data?.description || 'Ação registrada'}
                         </Text>
-                        {/* Optionally show details if needed */}
-                        {/* <Text className="text-xs text-gray-400 mt-1">{JSON.stringify(log.details)}</Text> */}
                     </View>
                 ))
             )}
