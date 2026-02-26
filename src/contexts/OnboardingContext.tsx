@@ -73,7 +73,8 @@ interface StoredOnboardingState {
 }
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const { clinicId } = useClinic();
+  const { clinicId, clinicName, members } = useClinic();
+  const memberCount = members.length;
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [showTooltips, setShowTooltips] = useState(true);
@@ -85,26 +86,74 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return clinicId ? `${STORAGE_KEY}_${clinicId}` : STORAGE_KEY;
   }, [clinicId]);
 
-  // Load onboarding state from localStorage
+  // Auto-detect completed steps from real Supabase data
+  const detectCompletedSteps = useCallback(async (): Promise<string[]> => {
+    if (!clinicId) return [];
+    const detected: string[] = [];
+
+    if (clinicName) detected.push('clinic_data');
+    if (memberCount > 1) detected.push('team');
+
+    try {
+      const { count } = await supabase
+        .from('taxes')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId);
+      if ((count || 0) > 0) detected.push('financial');
+    } catch {}
+
+    try {
+      const { count } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId);
+      if ((count || 0) > 0) detected.push('first_patient');
+    } catch {}
+
+    return detected;
+  }, [clinicId, clinicName, memberCount]);
+
+  // Load onboarding state from localStorage + auto-detect from real data
   useEffect(() => {
     if (!clinicId) return;
+
+    let storedSteps: string[] = [];
+    let dismissed = false;
+    let tooltips = true;
 
     const stored = localStorage.getItem(getStorageKey());
     if (stored) {
       try {
         const state: StoredOnboardingState = JSON.parse(stored);
-        setCompletedSteps(state.completedSteps || []);
-        setIsDismissed(state.dismissed || false);
-        setShowTooltips(state.tooltipsEnabled !== false);
+        storedSteps = state.completedSteps || [];
+        dismissed = state.dismissed || false;
+        tooltips = state.tooltipsEnabled !== false;
         setIsFirstAccess(false);
       } catch {
         setIsFirstAccess(true);
       }
     } else {
-      // First access - don't open automatically, wait for user click
       setIsFirstAccess(true);
     }
-  }, [clinicId, getStorageKey]);
+
+    // Auto-detect from real data and merge with stored
+    detectCompletedSteps().then(detected => {
+      const merged = [...new Set([...storedSteps, ...detected])];
+      setCompletedSteps(merged);
+      setIsDismissed(dismissed);
+      setShowTooltips(tooltips);
+
+      // Persist merged state if new steps were detected
+      if (merged.length > storedSteps.length) {
+        const state: StoredOnboardingState = {
+          completedSteps: merged,
+          dismissed,
+          tooltipsEnabled: tooltips,
+        };
+        localStorage.setItem(getStorageKey(), JSON.stringify(state));
+      }
+    });
+  }, [clinicId, getStorageKey, detectCompletedSteps]);
 
   // Save onboarding state to localStorage
   const saveState = useCallback((steps: string[], dismissed: boolean, tooltips: boolean) => {

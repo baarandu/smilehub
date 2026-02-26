@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useClinic } from './ClinicContext';
+import { supabase } from '../lib/supabase';
 
 interface OnboardingStep {
   id: string;
@@ -32,7 +33,7 @@ const ONBOARDING_STEPS: Omit<OnboardingStep, 'completed'>[] = [
 ];
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
-  const { clinicId } = useClinic();
+  const { clinicId, clinicName, members } = useClinic();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -41,21 +42,71 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const storageKey = clinicId ? `onboarding_state_${clinicId}` : null;
 
-  // Load state from AsyncStorage
+  const memberCount = members.length;
+
+  // Auto-detect completed steps from real data
+  const detectCompletedSteps = useCallback(async (): Promise<string[]> => {
+    if (!clinicId) return [];
+    const detected: string[] = [];
+
+    // 1. clinic_data: clinic has a name
+    if (clinicName) detected.push('clinic_data');
+
+    // 2. team: more than 1 member (admin + at least one other)
+    if (memberCount > 1) detected.push('team');
+
+    // 3. financial: has taxes or card fees configured
+    try {
+      const { count } = await supabase
+        .from('taxes')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId);
+      if ((count || 0) > 0) detected.push('financial');
+    } catch {}
+
+    // 4. first_patient: has at least one patient
+    try {
+      const { count } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId);
+      if ((count || 0) > 0) detected.push('first_patient');
+    } catch {}
+
+    return detected;
+  }, [clinicId, clinicName, memberCount]);
+
+  // Load state from AsyncStorage + auto-detect from real data
   useEffect(() => {
     if (!storageKey) return;
     const load = async () => {
       try {
         const raw = await AsyncStorage.getItem(storageKey);
+        let storedSteps: string[] = [];
+        let dismissed = false;
+
         if (raw) {
           const state = JSON.parse(raw);
-          setCompletedSteps(state.completedSteps || []);
-          setIsDismissed(state.dismissed || false);
+          storedSteps = state.completedSteps || [];
+          dismissed = state.dismissed || false;
           setIsFirstAccess(false);
         } else {
           setIsFirstAccess(true);
-          setCompletedSteps([]);
-          setIsDismissed(false);
+        }
+
+        // Auto-detect from real data and merge with stored
+        const detected = await detectCompletedSteps();
+        const merged = [...new Set([...storedSteps, ...detected])];
+
+        setCompletedSteps(merged);
+        setIsDismissed(dismissed);
+
+        // Persist merged state if new steps were detected
+        if (merged.length > storedSteps.length) {
+          await AsyncStorage.setItem(storageKey, JSON.stringify({
+            completedSteps: merged,
+            dismissed,
+          }));
         }
       } catch (e) {
         console.error('Error loading onboarding state:', e);
@@ -64,7 +115,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       }
     };
     load();
-  }, [storageKey]);
+  }, [storageKey, detectCompletedSteps]);
 
   // Auto-show on first access
   useEffect(() => {

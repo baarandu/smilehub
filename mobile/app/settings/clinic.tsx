@@ -6,6 +6,7 @@ import { ChevronLeft, Building2, Save, Users, MapPin, Phone, Mail } from 'lucide
 import { profileService } from '../../src/services/profile';
 import { locationsService, type Location } from '../../src/services/locations';
 import { useClinic } from '../../src/contexts/ClinicContext';
+import { useOnboarding } from '../../src/contexts/OnboardingContext';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { LocationsModal } from '../../src/components/dashboard/LocationsModal';
 
@@ -18,6 +19,7 @@ const BRAZILIAN_STATES = [
 export default function ClinicSettings() {
     const router = useRouter();
     const { isAdmin } = useClinic();
+    const { markStepCompleted } = useOnboarding();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -76,6 +78,7 @@ export default function ClinicSettings() {
                 phone: phone.trim() || undefined,
                 email: email.trim() || undefined,
             });
+            await markStepCompleted('clinic_data');
             Alert.alert('Sucesso', 'Informações da clínica atualizadas!');
         } catch (error) {
             console.error('Error updating clinic info:', error);
