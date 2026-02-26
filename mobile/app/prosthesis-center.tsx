@@ -12,7 +12,6 @@ import { OrderCard } from '../src/components/prosthesis/OrderCard';
 import { OrderFormModal } from '../src/components/prosthesis/OrderFormModal';
 import { OrderDetailModal } from '../src/components/prosthesis/OrderDetailModal';
 import { LabManagementModal } from '../src/components/prosthesis/LabManagementModal';
-import { ChecklistModal } from '../src/components/prosthesis/ChecklistModal';
 import { CompletionModal } from '../src/components/prosthesis/CompletionModal';
 import { useClinic } from '../src/contexts/ClinicContext';
 import { supabase } from '../src/lib/supabase';
@@ -38,11 +37,9 @@ export default function ProsthesisCenterPage() {
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
   const [showLabs, setShowLabs] = useState(false);
-  const [showChecklist, setShowChecklist] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [editingOrder, setEditingOrder] = useState<ProsthesisOrder | null>(null);
   const [detailOrder, setDetailOrder] = useState<ProsthesisOrder | null>(null);
-  const [checklistOrder, setChecklistOrder] = useState<ProsthesisOrder | null>(null);
   const [completionOrder, setCompletionOrder] = useState<ProsthesisOrder | null>(null);
   const [movingStatus, setMovingStatus] = useState(false);
 
@@ -65,13 +62,6 @@ export default function ProsthesisCenterPage() {
       return;
     }
 
-    // If moving to in_lab from pre_lab, show checklist first
-    if (newStatus === 'in_lab' && order.status === 'pre_lab') {
-      setChecklistOrder(order);
-      setShowChecklist(true);
-      return;
-    }
-
     try {
       setMovingStatus(true);
       await prosthesisService.moveOrder(order.id, newStatus);
@@ -84,21 +74,6 @@ export default function ProsthesisCenterPage() {
     }
   };
 
-  const handleChecklistSendToLab = async () => {
-    if (!checklistOrder) return;
-    try {
-      setMovingStatus(true);
-      await prosthesisService.moveOrder(checklistOrder.id, 'in_lab');
-      setShowChecklist(false);
-      setChecklistOrder(null);
-      refetch();
-    } catch (e) {
-      console.error('Error sending to lab:', e);
-      Alert.alert('Erro', 'Não foi possível enviar ao laboratório.');
-    } finally {
-      setMovingStatus(false);
-    }
-  };
 
   const handleCompleteOnly = async () => {
     if (!completionOrder) return;
@@ -269,13 +244,6 @@ export default function ProsthesisCenterPage() {
       <LabManagementModal
         visible={showLabs}
         onClose={() => setShowLabs(false)}
-      />
-
-      <ChecklistModal
-        visible={showChecklist}
-        onClose={() => { setShowChecklist(false); setChecklistOrder(null); }}
-        order={checklistOrder}
-        onSaveAndSend={handleChecklistSendToLab}
       />
 
       <CompletionModal

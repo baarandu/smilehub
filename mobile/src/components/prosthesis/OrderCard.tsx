@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { ChevronLeft, ChevronRight, Send } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { ChevronLeft, ChevronRight, Send, Calendar, MessageCircle } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import type { ProsthesisOrder } from '../../types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, STATUS_COLORS } from '../../types/prosthesis';
 import { getUrgencyInfo } from '../../utils/prosthesis';
@@ -15,8 +16,22 @@ interface OrderCardProps {
 }
 
 export function OrderCard({ order, onPress, onMoveLeft, onMoveRight, isFirst, isLast }: OrderCardProps) {
+  const router = useRouter();
   const urgency = getUrgencyInfo(order);
   const statusColor = STATUS_COLORS[order.status];
+
+  const handleWhatsApp = () => {
+    const phone = order.patient_phone?.replace(/\D/g, '');
+    if (!phone) return;
+    const type = PROSTHESIS_TYPE_LABELS[order.type] || order.type;
+    const teeth = order.tooth_numbers?.join(', ') || '';
+    const msg = `Olá ${order.patient_name}, sua prótese (${type}${teeth ? ` - ${teeth}` : ''}) chegou na clínica! Gostaria de agendar a instalação?`;
+    Linking.openURL(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`);
+  };
+
+  const handleSchedule = () => {
+    router.push('/agenda');
+  };
 
   return (
     <TouchableOpacity
@@ -63,8 +78,30 @@ export function OrderCard({ order, onPress, onMoveLeft, onMoveRight, isFirst, is
         )}
       </View>
 
+      {/* Schedule + WhatsApp buttons for in_clinic */}
+      {order.status === 'in_clinic' && (
+        <View className="flex-row gap-2 mt-3 pt-2 border-t border-gray-50">
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation?.(); handleSchedule(); }}
+            className="flex-1 flex-row items-center justify-center gap-1.5 py-2 bg-blue-50 rounded-lg border border-blue-100"
+          >
+            <Calendar size={14} color="#2563EB" />
+            <Text className="text-xs font-medium text-blue-700">Agendar</Text>
+          </TouchableOpacity>
+          {order.patient_phone && (
+            <TouchableOpacity
+              onPress={(e) => { e.stopPropagation?.(); handleWhatsApp(); }}
+              className="flex-1 flex-row items-center justify-center gap-1.5 py-2 bg-green-50 rounded-lg border border-green-100"
+            >
+              <MessageCircle size={14} color="#16A34A" />
+              <Text className="text-xs font-medium text-green-700">WhatsApp</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Move buttons */}
-      <View className="flex-row justify-between mt-3 pt-2 border-t border-gray-50">
+      <View className={`flex-row justify-between ${order.status === 'in_clinic' ? 'mt-2' : 'mt-3'} pt-2 border-t border-gray-50`}>
         {!isFirst && onMoveLeft ? (
           <TouchableOpacity
             onPress={(e) => { e.stopPropagation?.(); onMoveLeft(); }}

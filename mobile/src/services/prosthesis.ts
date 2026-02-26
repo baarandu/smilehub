@@ -106,10 +106,10 @@ export const prosthesisService = {
     const { data: { user } } = await supabase.auth.getUser();
     const updates: any = { status: newStatus };
 
-    // Set date fields
+    // Set date fields (DB columns: date_sent, date_received, date_completed)
     if (newStatus === 'completed') updates.date_completed = new Date().toISOString();
-    if (newStatus === 'in_lab' && order.status === 'pre_lab') updates.date_sent_to_lab = new Date().toISOString();
-    if (newStatus === 'in_clinic') updates.date_returned_to_clinic = new Date().toISOString();
+    if (newStatus === 'in_lab' && order.status === 'pre_lab') updates.date_sent = new Date().toISOString();
+    if (newStatus === 'in_clinic') updates.date_received = new Date().toISOString();
 
     // Auto-create shipment on lab transitions
     if (newStatus === 'in_lab') {
@@ -145,7 +145,7 @@ export const prosthesisService = {
 
   // History & Shipments
   async getOrderHistory(orderId: string): Promise<ProsthesisOrderHistory[]> {
-    const { data, error } = await historyTable().select('*').eq('order_id', orderId).order('changed_at', { ascending: false });
+    const { data, error } = await historyTable().select('*').eq('order_id', orderId).order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   },

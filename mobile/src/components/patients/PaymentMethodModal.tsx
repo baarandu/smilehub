@@ -329,7 +329,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     return (
         <Modal visible={visible} transparent animationType="slide">
             <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-white rounded-t-2xl max-h-[85%] flex flex-col">
+                <View className="bg-white rounded-t-2xl max-h-[85%] min-h-[50%] flex flex-col">
                     {/* Compact Header */}
                     <View className="px-4 py-3 border-b border-gray-100 flex-row justify-between items-center bg-slate-50 rounded-t-2xl">
                         <View className="flex-row items-center gap-2">

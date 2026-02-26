@@ -20,8 +20,8 @@ export interface ProsthesisOrder {
   position: number;
   current_shipment_number: number;
   date_ordered: string | null;
-  date_sent_to_lab: string | null;
-  date_returned_to_clinic: string | null;
+  date_sent: string | null;
+  date_received: string | null;
   date_completed: string | null;
   estimated_delivery_date: string | null;
   notes: string | null;
@@ -71,7 +71,7 @@ export interface ProsthesisOrderHistory {
   to_status: ProsthesisStatus;
   changed_by: string | null;
   changed_by_name?: string;
-  changed_at: string;
+  created_at: string;
   notes: string | null;
 }
 

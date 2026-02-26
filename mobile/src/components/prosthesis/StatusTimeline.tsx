@@ -51,7 +51,7 @@ export function StatusTimeline({ orderId }: StatusTimelineProps) {
                 </Text>
               </View>
               <Text className="text-[10px] text-gray-400 mt-0.5">
-                {new Date(entry.changed_at).toLocaleString('pt-BR')}
+                {new Date(entry.created_at).toLocaleString('pt-BR')}
               </Text>
               {entry.notes && (
                 <Text className="text-xs text-gray-500 mt-1">{entry.notes}</Text>

@@ -1,8 +1,63 @@
 import { Alert } from 'react-native';
 import { budgetsService } from '../services/budgets';
 import { financialService } from '../services/financial';
+import { prosthesisService } from '../services/prosthesis';
+import { supabase } from '../lib/supabase';
 import { type ToothEntry, calculateToothTotal, getToothDisplayName, calculateBudgetStatus } from '../components/patients/budgetUtils';
 import type { BudgetWithItems, Patient } from '../types/database';
+
+// Prosthesis integration helpers (mirrors web src/utils/prosthesis.ts)
+const TREATMENT_TO_PROSTHESIS_TYPE: Record<string, string> = {
+    'Bloco': 'onlay',
+    'Coroa': 'coroa',
+    'Faceta': 'faceta',
+    'Implante': 'implante',
+    'Pino': 'pino',
+    'Prótese Removível': 'protese_removivel',
+};
+
+const PROSTHETIC_TREATMENTS = Object.keys(TREATMENT_TO_PROSTHESIS_TYPE);
+
+function isProstheticTreatment(treatments: string[]): boolean {
+    return treatments.some(t => PROSTHETIC_TREATMENTS.includes(t));
+}
+
+function getProsthesisTypeFromTreatments(treatments: string[]): string | null {
+    for (const t of treatments) {
+        if (TREATMENT_TO_PROSTHESIS_TYPE[t]) return TREATMENT_TO_PROSTHESIS_TYPE[t];
+    }
+    return null;
+}
+
+function hasLabTreatment(tooth: ToothEntry): boolean {
+    const prostheticInItem = tooth.treatments.filter(t => PROSTHETIC_TREATMENTS.includes(t));
+    if (prostheticInItem.length === 0) return false;
+    if (!tooth.labTreatments) return true;
+    return prostheticInItem.some(t => tooth.labTreatments![t] !== false);
+}
+
+const VALID_MATERIALS = ['zirconia', 'porcelana', 'resina', 'metal', 'emax', 'ceramica', 'acrilico', 'metalceramica', 'outro'];
+
+const MATERIAL_MAP: Record<string, string> = {
+    'zircônia': 'zirconia', 'zirconia': 'zirconia',
+    'porcelana': 'porcelana',
+    'resina': 'resina',
+    'metal': 'metal',
+    'e-max': 'emax', 'emax': 'emax',
+    'cerâmica': 'ceramica', 'ceramica': 'ceramica',
+    'acrílico': 'acrilico', 'acrilico': 'acrilico',
+    'metalocerâmica': 'metalceramica', 'metalceramica': 'metalceramica', 'metalocêramica': 'metalceramica',
+    'fibra de vidro': 'outro',
+};
+
+function normalizeMaterial(raw: string | null | undefined): string | null {
+    if (!raw) return null;
+    const lower = raw.trim().toLowerCase();
+    if (!lower) return null;
+    if (MATERIAL_MAP[lower]) return MATERIAL_MAP[lower];
+    if (VALID_MATERIALS.includes(lower)) return lower;
+    return 'outro';
+}
 
 interface PaymentItem {
     budgetId: string;
@@ -41,8 +96,64 @@ interface PayerData {
 export function usePatientPayments(
     budgets: BudgetWithItems[],
     patient: Patient | null,
-    loadBudgets: () => void
+    loadBudgets: () => void,
+    clinicId?: string | null
 ) {
+    const autoCreateProsthesisOrder = async (tooth: ToothEntry, toothIndex: number, budgetId: string): Promise<boolean> => {
+        if (!clinicId) return false;
+        if (!isProstheticTreatment(tooth.treatments)) return false;
+        if (!hasLabTreatment(tooth)) return false;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+
+            const VALID_TYPES = ['coroa', 'ponte', 'protese_total', 'protese_parcial', 'protese_removivel', 'faceta', 'onlay', 'inlay', 'pino', 'provisorio', 'nucleo', 'implante', 'outro'];
+            const rawType = (tooth as any).prosthesisType || getProsthesisTypeFromTreatments(tooth.treatments) || 'outro';
+            const type = VALID_TYPES.includes(rawType) ? rawType : 'outro';
+            const value = Object.values(tooth.values).reduce((a: number, b: unknown) => a + (parseInt(b as string) || 0) / 100, 0);
+
+            let material: string | null = null;
+            if (tooth.materials) {
+                for (const t of tooth.treatments) {
+                    if (tooth.materials[t]) { material = tooth.materials[t]; break; }
+                }
+            }
+
+            const parseLabCost = (val?: string): number | null => {
+                if (!val) return null;
+                const cents = parseInt(val, 10);
+                if (isNaN(cents) || cents === 0) return null;
+                return cents / 100;
+            };
+
+            await prosthesisService.createOrder({
+                clinic_id: clinicId,
+                patient_id: patient?.id,
+                dentist_id: user.id,
+                type,
+                material: normalizeMaterial(material),
+                tooth_numbers: tooth.tooth ? [tooth.tooth] : [],
+                patient_price: value,
+                lab_id: (tooth as any).prosthesisLabId || null,
+                lab_cost: parseLabCost((tooth as any).prosthesisLabCost),
+                color: (tooth as any).prosthesisColor || null,
+                shade_details: (tooth as any).prosthesisShadeDetails || null,
+                cementation_type: (tooth as any).prosthesisCementation || null,
+                estimated_delivery_date: (tooth as any).prosthesisDeliveryDate || null,
+                notes: (tooth as any).prosthesisNotes || null,
+                special_instructions: (tooth as any).prosthesisInstructions || null,
+                budget_id: budgetId,
+                budget_tooth_index: toothIndex,
+            } as any);
+
+            return true;
+        } catch (err) {
+            console.error('Erro ao criar ordem de prótese automaticamente:', err);
+            return false;
+        }
+    };
+
     const getAllPaymentItems = (): PaymentItem[] => {
         const items: PaymentItem[] = [];
         budgets.forEach(budget => {
@@ -232,7 +343,12 @@ export function usePatientPayments(
                 });
             }
 
-            Alert.alert('Sucesso', 'Pagamento registrado com sucesso!');
+            // Auto-create prosthesis order if item is prosthetic with lab
+            const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, selectedPaymentItem.toothIndex, selectedPaymentItem.budgetId);
+
+            Alert.alert('Sucesso', prosthesisCreated
+                ? 'Pagamento registrado! Ordem de prótese criada na Central de Próteses.'
+                : 'Pagamento registrado com sucesso!');
             loadBudgets();
             onComplete?.();
         } catch (error) {
@@ -451,7 +567,16 @@ export function usePatientPayments(
                 }
             }
 
-            Alert.alert('Sucesso', `${selectedItems.items.length} pagamento(s) registrado(s) com sucesso!`);
+            // Auto-create prosthesis orders for prosthetic items with lab
+            let prosthesisCount = 0;
+            for (const item of selectedItems.items) {
+                const created = await autoCreateProsthesisOrder(item.tooth, item.index, selectedItems.budgetId);
+                if (created) prosthesisCount++;
+            }
+
+            Alert.alert('Sucesso', prosthesisCount > 0
+                ? `${selectedItems.items.length} pagamento(s) registrado(s)! ${prosthesisCount} ordem(ns) de prótese criada(s) na Central de Próteses.`
+                : `${selectedItems.items.length} pagamento(s) registrado(s) com sucesso!`);
             loadBudgets();
             onComplete?.();
         } catch (error) {

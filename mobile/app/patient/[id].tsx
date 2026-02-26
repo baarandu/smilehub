@@ -49,7 +49,7 @@ export default function PatientDetail() {
         loadPatient, loadAnamneses, loadChildAnamneses, loadBudgets, loadProcedures, loadExams,
     } = usePatientData(id);
 
-    const { getAllPaymentItems, handleConfirmPayment, handleConfirmPaymentMultiple, getLocationRate } = usePatientPayments(budgets, patient, loadBudgets);
+    const { getAllPaymentItems, handleConfirmPayment, handleConfirmPaymentMultiple, getLocationRate } = usePatientPayments(budgets, patient, loadBudgets, ctxClinicId);
     const { handleDeleteAnamnese, handleDeleteBudget, handleDeleteProcedure, handleDeleteExam } = usePatientHandlers({
         loadAnamneses, loadBudgets, loadProcedures, loadExams, exams
     });
