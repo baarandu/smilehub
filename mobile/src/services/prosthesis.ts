@@ -15,7 +15,7 @@ export const prosthesisService = {
   },
 
   async getActiveLabs(clinicId: string): Promise<ProsthesisLab[]> {
-    const { data, error } = await labsTable().select('*').eq('clinic_id', clinicId).eq('is_active', true).order('name');
+    const { data, error } = await labsTable().select('*').eq('clinic_id', clinicId).eq('active', true).order('name');
     if (error) throw error;
     return data || [];
   },
@@ -39,7 +39,7 @@ export const prosthesisService = {
   // Orders
   async getOrders(clinicId: string, filters?: ProsthesisOrderFilters): Promise<ProsthesisOrder[]> {
     let query = ordersTable()
-      .select('*, patients:patient_id(name, phone), clinic_professionals:dentist_id(name), prosthesis_labs:lab_id(name)')
+      .select('*, patients!inner(name, phone), profiles!prosthesis_orders_dentist_id_fkey(full_name), prosthesis_labs(name)')
       .eq('clinic_id', clinicId)
       .order('position');
 
@@ -56,7 +56,7 @@ export const prosthesisService = {
       ...order,
       patient_name: order.patients?.name,
       patient_phone: order.patients?.phone,
-      dentist_name: order.clinic_professionals?.name,
+      dentist_name: order.profiles?.full_name,
       lab_name: order.prosthesis_labs?.name,
     }));
   },
