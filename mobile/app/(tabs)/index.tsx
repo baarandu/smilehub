@@ -239,7 +239,7 @@ export default function Dashboard() {
                 {/* Content Container */}
                 <View className="px-4 pb-8">
                     {/* Stats Grid */}
-                    <View className="flex-row flex-wrap justify-between gap-y-4 mb-6">
+                    <View className="flex-row flex-wrap justify-between gap-y-3 mb-6">
                         <StatsCard title="Lembretes Ativos" value={activeReminders.toString()} icon={<Bell size={24} color="#b94a48" />} onPress={() => router.push('/alerts')} />
                         <StatsCard title="Consultas Hoje" value={todayCount.toString()} icon={<Calendar size={24} color="#b94a48" />} onPress={() => router.push('/agenda?date=today')} />
                         <StatsCard title="Retornos Pendentes" value={pendingReturns.toString()} icon={<AlertTriangle size={24} color="#F59E0B" />} onPress={async () => {
@@ -396,12 +396,12 @@ export default function Dashboard() {
 
 function StatsCard({ title, value, icon, trend, isPositive, onPress }: { title: string; value: string; icon: React.ReactNode; trend?: string; isPositive?: boolean; onPress?: () => void; }) {
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1} className="w-[48%] bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <View className="flex-row justify-between items-start mb-2">
-                <Text className="text-gray-600 text-sm font-medium flex-1">{title}</Text>
-                <View className="bg-[#fef2f2] p-2 rounded-lg">{icon}</View>
+        <TouchableOpacity onPress={onPress} activeOpacity={onPress ? 0.7 : 1} className="w-[31%] bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+            <View className="items-start mb-2">
+                <View className="bg-[#fef2f2] p-1.5 rounded-lg mb-1">{icon}</View>
+                <Text className="text-gray-600 text-xs font-medium">{title}</Text>
             </View>
-            <Text className="text-3xl font-bold text-gray-900 mb-1">{value}</Text>
+            <Text className="text-2xl font-bold text-gray-900">{value}</Text>
             {trend && <Text className={`text-xs ${isPositive ? 'text-green-600' : 'text-[#b94a48]'}`}>{trend}</Text>}
         </TouchableOpacity>
     );
