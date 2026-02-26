@@ -2,24 +2,30 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert as RNAlert, Switch, DeviceEventEmitter, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings, Plus, Trash2, Edit2, X } from 'lucide-react-native';
+import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings, Plus, Trash2, Edit2, X, CalendarClock, PenLine } from 'lucide-react-native';
 import { consultationsService } from '../../src/services/consultations';
 import { alertsService, Alert } from '../../src/services/alerts';
 import { appointmentsService } from '../../src/services/appointments';
 import { remindersService, Reminder } from '../../src/services/reminders';
 import { patientsService } from '../../src/services/patients';
 import type { ReturnAlert, AppointmentWithPatient, Patient } from '../../src/types/database';
+import { PROSTHESIS_TYPE_LABELS } from '../../src/types/prosthesis';
 import { ReminderModal, TemplatesModal, PatientSelectModal } from '../../src/components/alerts';
+import { useRouter } from 'expo-router';
+import { useClinic } from '../../src/contexts/ClinicContext';
 
 const DEFAULT_BIRTHDAY_MSG = `Parabéns {name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.`;
 const DEFAULT_RETURN_MSG = `Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?`;
 const DEFAULT_CONFIRMATION_MSG = `Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.`;
 
 export default function Alerts() {
+    const router = useRouter();
+    const { isDentist: clinicIsDentist } = useClinic();
     const [loading, setLoading] = useState(true);
     const [scheduledAlerts, setScheduledAlerts] = useState<ReturnAlert[]>([]);
     const [birthdayAlerts, setBirthdayAlerts] = useState<Alert[]>([]);
     const [procedureAlerts, setProcedureAlerts] = useState<Alert[]>([]);
+    const [prosthesisAlerts, setProsthesisAlerts] = useState<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]>([]);
     const [tomorrowAppointments, setTomorrowAppointments] = useState<AppointmentWithPatient[]>([]);
     const [reminders, setReminders] = useState<Reminder[]>([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -90,12 +96,13 @@ export default function Alerts() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [scheduled, birthdays, procedures, tomorrow, reminderList] = await Promise.all([
+            const [scheduled, birthdays, procedures, tomorrow, reminderList, prosthesis] = await Promise.all([
                 consultationsService.getReturnAlerts(),
                 alertsService.getBirthdayAlerts(),
                 alertsService.getProcedureReminders(),
                 appointmentsService.getTomorrow(),
-                remindersService.getAll()
+                remindersService.getAll(),
+                alertsService.getProsthesisSchedulingAlerts().catch(() => [])
             ]);
 
             setScheduledAlerts(scheduled.sort((a, b) => a.days_until_return - b.days_until_return));
@@ -103,6 +110,7 @@ export default function Alerts() {
             setProcedureAlerts(procedures);
             setTomorrowAppointments(tomorrow);
             setReminders(reminderList);
+            setProsthesisAlerts(prosthesis);
         } catch (error) {
             console.error('Error loading alerts:', error);
         } finally {
@@ -266,7 +274,9 @@ export default function Alerts() {
         );
     }
 
-    const hasAnyAlert = reminders.length > 0 || scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0 || tomorrowAppointments.length > 0;
+    const pendingCount = birthdayAlerts.length + procedureAlerts.length + tomorrowAppointments.filter(a => a.status !== 'confirmed').length;
+    const completedTodayCount = tomorrowAppointments.filter(a => a.status === 'confirmed').length;
+    const hasAnyAlert = reminders.length > 0 || scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0 || tomorrowAppointments.length > 0 || prosthesisAlerts.length > 0;
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
@@ -300,6 +310,28 @@ export default function Alerts() {
                         >
                             <Settings size={20} color="#6B7280" />
                         </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* KPI Cards */}
+                <View className="flex-row gap-3 mb-6">
+                    <View className="flex-1 bg-white rounded-2xl p-4 flex-row items-center gap-3 border border-gray-100">
+                        <View className="w-10 h-10 rounded-full bg-[#fef2f2] items-center justify-center">
+                            <Bell size={20} color="#b94a48" />
+                        </View>
+                        <View>
+                            <Text className="text-xs text-gray-500">Pendências</Text>
+                            <Text className="text-xl font-bold text-gray-900">{pendingCount}</Text>
+                        </View>
+                    </View>
+                    <View className="flex-1 bg-white rounded-2xl p-4 flex-row items-center gap-3 border border-gray-100">
+                        <View className="w-10 h-10 rounded-full bg-[#fef2f2] items-center justify-center">
+                            <CheckCircle size={20} color="#b94a48" />
+                        </View>
+                        <View>
+                            <Text className="text-xs text-gray-500">Concluídos hoje</Text>
+                            <Text className="text-xl font-bold text-gray-900">{completedTodayCount}</Text>
+                        </View>
                     </View>
                 </View>
 
@@ -348,15 +380,9 @@ export default function Alerts() {
 
                 <View className="h-px bg-gray-200 mb-6" />
 
-                {!hasAnyAlert && reminders.length === 0 ? (
-                    <View className="bg-white rounded-xl p-12 items-center">
-                        <Bell size={48} color="#D1D5DB" />
-                        <Text className="text-gray-400 mt-4">Nenhum alerta pendente</Text>
-                    </View>
-                ) : (
-                    <View className="gap-6">
+                <View className="gap-6">
                         {/* Tomorrow's Appointments */}
-                        {tomorrowAppointments.length > 0 && (
+                        {tomorrowAppointments.length > 0 ? (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
                                     <Bell size={20} color="#b94a48" />
@@ -428,10 +454,23 @@ export default function Alerts() {
                                     ))}
                                 </View>
                             </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <Bell size={20} color="#b94a48" />
+                                    <Text className="text-lg font-bold text-gray-800">Confirmar Consultas de Amanhã</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhuma consulta para confirmar amanhã</Text>
+                                </View>
+                            </View>
                         )}
 
                         {/* Birthday Alerts */}
-                        {birthdayAlerts.length > 0 && (
+                        {birthdayAlerts.length > 0 ? (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
                                     <Gift size={20} color="#EC4899" />
@@ -468,10 +507,23 @@ export default function Alerts() {
                                     })}
                                 </View>
                             </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <Gift size={20} color="#EC4899" />
+                                    <Text className="text-lg font-bold text-gray-800">Aniversariantes do Dia</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhum aniversariante hoje</Text>
+                                </View>
+                            </View>
                         )}
 
                         {/* Procedure Return Alerts */}
-                        {procedureAlerts.length > 0 && (
+                        {procedureAlerts.length > 0 ? (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
                                     <Clock size={20} color="#F59E0B" />
@@ -503,10 +555,23 @@ export default function Alerts() {
                                     ))}
                                 </View>
                             </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <Clock size={20} color="#F59E0B" />
+                                    <Text className="text-lg font-bold text-gray-800">Revisão Pendente (6 meses)</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhum paciente com revisão pendente</Text>
+                                </View>
+                            </View>
                         )}
 
                         {/* Scheduled Return Alerts */}
-                        {scheduledAlerts.length > 0 && (
+                        {scheduledAlerts.length > 0 ? (
                             <View>
                                 <View className="flex-row items-center gap-2 mb-3">
                                     <Calendar size={20} color="#b94a48" />
@@ -549,9 +614,69 @@ export default function Alerts() {
                                     })}
                                 </View>
                             </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <Calendar size={20} color="#b94a48" />
+                                    <Text className="text-lg font-bold text-gray-800">Retornos Agendados</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhum retorno agendado</Text>
+                                </View>
+                            </View>
                         )}
+
+                        {/* Prosthesis Scheduling Alerts */}
+                        {clinicIsDentist && (prosthesisAlerts.length > 0 ? (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <CalendarClock size={20} color="#7C3AED" />
+                                    <Text className="text-lg font-bold text-gray-800">Próteses Aguardando Agendamento</Text>
+                                    <View className="bg-purple-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-purple-700">{prosthesisAlerts.length}</Text>
+                                    </View>
+                                </View>
+                                <View className="gap-3">
+                                    {prosthesisAlerts.map((alert) => (
+                                        <View key={alert.id} className="bg-purple-50 rounded-xl p-4 border-l-4 border-l-purple-500">
+                                            <View className="flex-row items-start justify-between">
+                                                <View className="flex-1">
+                                                    <Text className="font-bold text-gray-900">{alert.patientName}</Text>
+                                                    <Text className="text-gray-600 text-sm mt-1">
+                                                        {(PROSTHESIS_TYPE_LABELS as Record<string, string>)[alert.type] || alert.type}
+                                                        {alert.toothNumbers.length > 0 && ` — Dentes: ${alert.toothNumbers.join(', ')}`}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            <TouchableOpacity
+                                                className="mt-3 bg-purple-600 rounded-lg py-2 flex-row justify-center items-center gap-2"
+                                                onPress={() => router.push('/agenda')}
+                                            >
+                                                <Calendar size={18} color="white" />
+                                                <Text className="text-white font-medium">Agendar</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <CalendarClock size={20} color="#7C3AED" />
+                                    <Text className="text-lg font-bold text-gray-800">Próteses Aguardando Agendamento</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhuma prótese aguardando agendamento</Text>
+                                </View>
+                            </View>
+                        ))}
                     </View>
-                )}
 
                 <View className="h-6" />
             </ScrollView>
