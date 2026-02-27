@@ -17,7 +17,7 @@ import {
 } from './budgetUtils';
 
 const PROSTHETIC_TREATMENTS = ['Bloco', 'Coroa', 'Faceta', 'Implante', 'Pino', 'Prótese Removível'];
-import { ToothPickerModal } from './ToothPickerModal';
+import { OdontogramPicker } from './odontogram';
 import { BudgetSummarySection } from './BudgetSummarySection';
 import { BudgetForm } from './budgets/BudgetForm';
 import { BudgetAddItemForm } from './budgets/BudgetAddItemForm';
@@ -39,7 +39,6 @@ export function NewBudgetModal({
 }: NewBudgetModalProps) {
     const [saving, setSaving] = useState(false);
     const [showToothPicker, setShowToothPicker] = useState(false);
-    const [selectedArches, setSelectedArches] = useState<string[]>([]);
 
     // Form state
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -133,28 +132,12 @@ export function NewBudgetModal({
 
     const resetCurrentTooth = () => {
         setSelectedTooth('');
-        setSelectedArches([]);
         setSelectedFaces([]);
         setSelectedTreatments([]);
         setTreatmentValues({});
         setTreatmentMaterials({});
         setLabTreatments({});
         setItemLocationRate(''); // Reset for next item
-    };
-
-    const toggleArch = (arch: string) => {
-        setSelectedArches(prev =>
-            prev.includes(arch)
-                ? prev.filter(a => a !== arch)
-                : [...prev, arch]
-        );
-    };
-
-    const confirmArchSelection = () => {
-        if (selectedArches.length > 0) {
-            setSelectedTooth(selectedArches.join(' + '));
-            setShowToothPicker(false);
-        }
     };
 
     const toggleTreatment = (treatment: string) => {
@@ -488,15 +471,15 @@ export function NewBudgetModal({
                 </KeyboardAvoidingView>
             </SafeAreaView>
 
-            {/* Tooth Picker Modal */}
-            <ToothPickerModal
+            {/* Odontogram Picker Modal */}
+            <OdontogramPicker
                 visible={showToothPicker}
                 onClose={() => setShowToothPicker(false)}
-                selectedArches={selectedArches}
                 teethList={teethList}
-                onToggleArch={toggleArch}
-                onConfirmArch={confirmArchSelection}
                 onSelectTooth={handleSelectTooth}
+                showFaces={showFaces}
+                selectedFaces={selectedFaces}
+                onToggleFace={toggleFace}
             />
         </Modal>
     );
