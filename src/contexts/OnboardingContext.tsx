@@ -100,7 +100,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', clinicId);
       if ((count || 0) > 0) detected.push('financial');
-    } catch {}
+    } catch { /* ignore */ }
 
     try {
       const { count } = await supabase
@@ -108,7 +108,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', clinicId);
       if ((count || 0) > 0) detected.push('first_patient');
-    } catch {}
+    } catch { /* ignore */ }
 
     return detected;
   }, [clinicId, clinicName, memberCount]);

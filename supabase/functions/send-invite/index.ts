@@ -19,8 +19,14 @@ const handler = async (request: Request): Promise<Response> => {
         // Verify webhook secret to prevent unauthorized access.
         const authHeader = request.headers.get('Authorization') || '';
         const webhookSecret = request.headers.get('x-webhook-secret') || '';
-        const dedicatedSecret = Deno.env.get('SEND_INVITE_WEBHOOK_SECRET') || '';
-        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+        const expectedSecret = Deno.env.get('SEND_INVITE_WEBHOOK_SECRET') || '';
+
+        if (!expectedSecret) {
+            return new Response(
+                JSON.stringify({ error: 'Webhook secret not configured' }),
+                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
 
         // Timing-safe comparison to prevent timing attacks
         const timingSafeEqual = (a: string, b: string): boolean => {
@@ -33,8 +39,6 @@ const handler = async (request: Request): Promise<Response> => {
         };
 
         const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-        // Prefer dedicated webhook secret; fall back to service_role_key temporarily
-        const expectedSecret = dedicatedSecret || serviceRoleKey;
         const isAuthorized =
             (bearerToken.length > 0 && timingSafeEqual(bearerToken, expectedSecret)) ||
             (webhookSecret.length > 0 && timingSafeEqual(webhookSecret, expectedSecret));

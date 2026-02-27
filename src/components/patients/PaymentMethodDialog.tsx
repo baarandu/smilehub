@@ -164,7 +164,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
         let cardFeeRate = 0;
         let cardFeeAmount = 0;
         let anticipationRate = 0;
-        let anticipationAmount = 0;
+        const anticipationAmount = 0;
 
         // Find applicable card fee
         if (selectedMethod === 'credit' || selectedMethod === 'debit') {

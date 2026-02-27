@@ -182,7 +182,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
             const match = t.description.match(/\((.*?)\)/);
             if (match) {
                 const parts = match[1].split(' - ');
-                let m = parts[0].trim().toLowerCase();
+                const m = parts[0].trim().toLowerCase();
                 if (m === 'crédito' || m === 'credit') method = 'Cartão de Crédito';
                 else if (m === 'débito' || m === 'debit') method = 'Cartão de Débito';
                 else if (m === 'pix') method = 'Pix';

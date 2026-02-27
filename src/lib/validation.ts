@@ -157,12 +157,13 @@ export function validatePixKey(key: string, type: string): { valid: boolean; err
                 return { valid: false, error: 'CNPJ inválido. Use formato 00.000.000/0001-00' };
             }
             break;
-        case 'email':
+        case 'email': {
             const emailResult = z.string().email().safeParse(cleanKey);
             if (!emailResult.success) {
                 return { valid: false, error: 'E-mail inválido' };
             }
             break;
+        }
         case 'phone':
             if (!pixPhoneRegex.test(cleanKey.replace(/\D/g, ''))) {
                 return { valid: false, error: 'Telefone inválido. Use formato +5511999999999' };

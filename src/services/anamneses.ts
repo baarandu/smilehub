@@ -16,7 +16,7 @@ export const anamnesesService = {
   async create(anamnese: AnamneseInsert): Promise<Anamnese> {
     const { data, error } = await supabase
       .from('anamneses')
-      // @ts-ignore - Supabase type generation issue with anamneses table
+      // @ts-expect-error - Supabase type generation issue with anamneses table
       .insert(anamnese)
       .select()
       .single();
@@ -28,7 +28,7 @@ export const anamnesesService = {
   async update(id: string, anamnese: AnamneseUpdate): Promise<Anamnese> {
     const { data, error } = await supabase
       .from('anamneses')
-      // @ts-ignore - Supabase type generation issue with anamneses table
+      // @ts-expect-error - Supabase type generation issue with anamneses table
       .update(anamnese)
       .eq('id', id)
       .select()

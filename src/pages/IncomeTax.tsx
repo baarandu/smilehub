@@ -38,11 +38,6 @@ export default function IncomeTax() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  // Apenas admin pode acessar esta página
-  if (!isAdmin) {
-    return <Navigate to="/inicio" replace />;
-  }
-
   // Data state
   const [fiscalProfile, setFiscalProfile] = useState<FiscalProfile | null>(null);
   const [pjSources, setPJSources] = useState<PJSource[]>([]);
@@ -82,6 +77,11 @@ export default function IncomeTax() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Apenas admin pode acessar esta página
+  if (!isAdmin) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

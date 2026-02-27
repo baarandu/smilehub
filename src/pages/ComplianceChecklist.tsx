@@ -326,6 +326,7 @@ const allItems = categories.flatMap(c => c.items);
 export default function ComplianceChecklist() {
   const { isAdmin } = useClinic();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const verified = useMemo(() => Object.values(checked).filter(Boolean).length, [checked]);
 
   if (!isAdmin) {
     return <Navigate to="/inicio" replace />;
@@ -336,7 +337,6 @@ export default function ComplianceChecklist() {
   };
 
   const total = allItems.length;
-  const verified = useMemo(() => Object.values(checked).filter(Boolean).length, [checked]);
   const pending = total - verified;
   const percentage = total > 0 ? Math.round((verified / total) * 100) : 0;
 

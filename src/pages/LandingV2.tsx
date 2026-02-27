@@ -93,7 +93,7 @@ export default function LandingV2() {
   }, []);
 
   const fmtPrice = (cents: number, yearly = false) => {
-    let p = yearly ? cents * (1 - annualDiscount / 100) : cents;
+    const p = yearly ? cents * (1 - annualDiscount / 100) : cents;
     const r = p / 100;
     return r % 1 === 0 ? r.toFixed(0) : r.toFixed(2).replace('.', ',');
   };

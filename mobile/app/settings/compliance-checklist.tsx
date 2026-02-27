@@ -106,13 +106,12 @@ export default function ComplianceChecklistPage() {
   const router = useRouter();
   const { isAdmin } = useClinic();
   const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const allItems = useMemo(() => categories.flatMap(c => c.items), []);
 
   if (!isAdmin) {
     router.replace('/');
     return null;
   }
-
-  const allItems = useMemo(() => categories.flatMap(c => c.items), []);
   const totalItems = allItems.length;
   const checkedCount = Object.values(checked).filter(Boolean).length;
   const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;

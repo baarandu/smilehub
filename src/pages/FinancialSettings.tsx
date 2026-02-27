@@ -19,7 +19,7 @@ const formatBrandName = (brand: string): string => {
     if (brand === 'others') return 'Outras Bandeiras';
     // Handle multi-word brands like "visa/mastercard"
     return brand
-        .split(/([\/\s-])/) // Split by / or space or hyphen, keeping delimiters
+        .split(/([/\s-])/) // Split by / or space or hyphen, keeping delimiters
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join('');
 };
@@ -30,11 +30,6 @@ export default function FinancialSettings() {
     const { isAdmin } = useClinic();
     const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
     const [loading, setLoading] = useState(true);
-
-    // Apenas admin pode acessar esta página
-    if (!isAdmin) {
-        return <Navigate to="/inicio" replace />;
-    }
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 
@@ -43,8 +38,6 @@ export default function FinancialSettings() {
     const [newTaxName, setNewTaxName] = useState('');
     const [newTaxRate, setNewTaxRate] = useState('');
     const [showTaxForm, setShowTaxForm] = useState(false);
-
-
 
     // New Fee State
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -65,9 +58,17 @@ export default function FinancialSettings() {
     const [filterBrand, setFilterBrand] = useState('all');
     const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
 
+    // Search filter
+    const [searchQuery, setSearchQuery] = useState('');
+
     useEffect(() => {
         loadData();
     }, []);
+
+    // Apenas admin pode acessar esta página
+    if (!isAdmin) {
+        return <Navigate to="/inicio" replace />;
+    }
 
     const loadData = async () => {
         setLoading(true);
@@ -222,9 +223,6 @@ export default function FinancialSettings() {
         if (filterType !== 'all' && fee.payment_type !== filterType) return false;
         return true;
     }).sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments);
-
-    // Search filter
-    const [searchQuery, setSearchQuery] = useState('');
 
     if (loading) {
         return (

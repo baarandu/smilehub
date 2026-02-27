@@ -170,7 +170,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     onSuccess();
                 } else {
                     const dbDate = dateToDbFormat(date);
-                    let finalDesc = `${description} (${paymentMethod})`;
+                    const finalDesc = `${description} (${paymentMethod})`;
 
                     if (updateAllRecurring && transactionToEdit.recurrence_id) {
                         const allRecurrence = await financialService.getByRecurrenceId(transactionToEdit.recurrence_id);
