@@ -21,7 +21,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "O Organiza Odonto precisa de acesso à câmera para que você possa tirar fotos de exames e documentos dos pacientes.",
         "NSPhotoLibraryUsageDescription": "O Organiza Odonto precisa de acesso à sua galeria para que você possa enviar fotos de exames já salvos.",
-        "NSMicrophoneUsageDescription": "O Organiza Odonto precisa de acesso ao microfone para funcionalidades de vídeo, se necessário."
+        "NSMicrophoneUsageDescription": "O Organiza Odonto precisa de acesso ao microfone para gravar consultas por voz e preencher formulários automaticamente."
       }
     },
     "android": {
@@ -34,6 +34,14 @@
       "package": "com.anonymous.organizaodonto",
       "versionCode": 17
     },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "O Organiza Odonto precisa de acesso ao microfone para gravar consultas por voz."
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

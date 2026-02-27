@@ -4,10 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, ChevronDown } from 'lucide-react-native';
 import { childAnamnesesService } from '../../services/childAnamneses';
 import type { ChildAnamnesis, ChildAnamnesisInsert } from '../../types/childAnamnesis';
-import type { AnamnesisCondition } from '../../types/voiceConsultation';
 import { DatePickerModal } from '../common/DatePickerModal';
-import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
-import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface Props {
     visible: boolean;
@@ -263,72 +260,6 @@ export function NewChildAnamneseModal({ visible, patientId, onClose, onSuccess, 
         }
     }, [visible, anamnesis?.id]);
 
-    const handleVoiceResult = useCallback((result: ExtractionResult) => {
-        const d = (result as any).childAnamnesis;
-        if (!d) return;
-        const b = (cond: AnamnesisCondition | undefined) => cond?.value === true;
-        const det = (cond: AnamnesisCondition | undefined) => cond?.details || '';
-
-        setForm(prev => ({
-            ...prev,
-            ...(d.pregnancyType != null && { pregnancyType: d.pregnancyType }),
-            ...(d.birthType != null && { birthType: d.birthType }),
-            ...(d.pregnancyComplications?.value != null && { pregnancyComplications: b(d.pregnancyComplications), pregnancyComplicationsDetails: det(d.pregnancyComplications) }),
-            ...(d.pregnancyMedications?.value != null && { pregnancyMedications: b(d.pregnancyMedications), pregnancyMedicationsDetails: det(d.pregnancyMedications) }),
-            ...(d.birthWeight != null && { birthWeight: d.birthWeight }),
-            ...(d.exclusiveBreastfeedingDuration != null && { exclusiveBreastfeedingDuration: d.exclusiveBreastfeedingDuration }),
-            ...(d.totalBreastfeedingDuration != null && { totalBreastfeedingDuration: d.totalBreastfeedingDuration }),
-            ...(d.currentHealth != null && { currentHealth: d.currentHealth }),
-            ...(d.chronicDisease?.value != null && { chronicDisease: b(d.chronicDisease), chronicDiseaseDetails: det(d.chronicDisease) }),
-            ...(d.hospitalized?.value != null && { hospitalized: b(d.hospitalized), hospitalizedDetails: det(d.hospitalized) }),
-            ...(d.surgery?.value != null && { surgery: b(d.surgery), surgeryDetails: det(d.surgery) }),
-            ...(d.respiratoryProblems?.value != null && { respiratoryProblems: b(d.respiratoryProblems), respiratoryProblemsDetails: det(d.respiratoryProblems) }),
-            ...(d.cardiopathy?.value != null && { cardiopathy: b(d.cardiopathy), cardiopathyDetails: det(d.cardiopathy) }),
-            ...(d.continuousMedication?.value != null && { continuousMedication: b(d.continuousMedication), continuousMedicationDetails: det(d.continuousMedication) }),
-            ...(d.frequentAntibiotics?.value != null && { frequentAntibiotics: b(d.frequentAntibiotics), frequentAntibioticsDetails: det(d.frequentAntibiotics) }),
-            ...(d.drugAllergy?.value != null && { drugAllergy: b(d.drugAllergy), drugAllergyDetails: det(d.drugAllergy) }),
-            ...(d.foodAllergy?.value != null && { foodAllergy: b(d.foodAllergy), foodAllergyDetails: det(d.foodAllergy) }),
-            ...(d.previousDentist != null && { previousDentist: d.previousDentist === true }),
-            ...(d.firstVisitAge != null && { firstVisitAge: d.firstVisitAge }),
-            ...(d.lastDentalVisit != null && { lastDentalVisit: d.lastDentalVisit }),
-            ...(d.lastVisitReason != null && { lastVisitReason: d.lastVisitReason }),
-            ...(d.previousProcedures != null && { previousProcedures: d.previousProcedures }),
-            ...(d.localAnesthesia != null && { localAnesthesia: d.localAnesthesia === true }),
-            ...(d.anesthesiaGoodReaction != null && { anesthesiaGoodReaction: d.anesthesiaGoodReaction === true }),
-            ...(d.anesthesiaAdverseReaction != null && { anesthesiaAdverseReaction: d.anesthesiaAdverseReaction }),
-            ...(d.frequentCankerSores != null && { frequentCankerSores: d.frequentCankerSores === true }),
-            ...(d.dentalTrauma?.value != null && { dentalTrauma: b(d.dentalTrauma), dentalTraumaDetails: det(d.dentalTrauma) }),
-            ...(d.traumaAffectedTooth != null && { traumaAffectedTooth: d.traumaAffectedTooth }),
-            ...(d.traumaReceivedTreatment != null && { traumaReceivedTreatment: d.traumaReceivedTreatment }),
-            ...(d.chiefComplaint != null && { chiefComplaint: d.chiefComplaint }),
-            ...(d.brushingBy != null && { brushingBy: d.brushingBy }),
-            ...(d.brushingFrequency != null && { brushingFrequency: d.brushingFrequency }),
-            ...(d.brushingStartAge != null && { brushingStartAge: d.brushingStartAge }),
-            ...(d.hygieneInstruction != null && { hygieneInstruction: d.hygieneInstruction === true }),
-            ...(d.fluorideToothpaste != null && { fluorideToothpaste: d.fluorideToothpaste === true }),
-            ...(d.toothpasteBrand != null && { toothpasteBrand: d.toothpasteBrand }),
-            ...(d.dentalFloss?.value != null && { dentalFloss: b(d.dentalFloss), dentalFlossDetails: det(d.dentalFloss) }),
-            ...(d.mouthwash?.value != null && { mouthwash: b(d.mouthwash), mouthwashDetails: det(d.mouthwash) }),
-            ...(d.wasBreastfed != null && { wasBreastfed: d.wasBreastfed === true }),
-            ...(d.usedBottle?.value != null && { usedBottle: b(d.usedBottle), usedBottleDetails: det(d.usedBottle) }),
-            ...(d.currentlyUsesBottle != null && { currentlyUsesBottle: d.currentlyUsesBottle === true }),
-            ...(d.usesPacifier != null && { usesPacifier: d.usesPacifier === true }),
-            ...(d.sugarFrequency != null && { sugarFrequency: d.sugarFrequency }),
-            ...(d.sugarBeforeBed != null && { sugarBeforeBed: d.sugarBeforeBed === true }),
-            ...(d.sleepsAfterSugarLiquid != null && { sleepsAfterSugarLiquid: d.sleepsAfterSugarLiquid === true }),
-            ...(d.nailBiting != null && { nailBiting: d.nailBiting === true }),
-            ...(d.objectBiting != null && { objectBiting: d.objectBiting === true }),
-            ...(d.thumbSucking != null && { thumbSucking: d.thumbSucking === true }),
-            ...(d.prolongedPacifier != null && { prolongedPacifier: d.prolongedPacifier === true }),
-            ...(d.teethGrinding?.value != null && { teethGrinding: b(d.teethGrinding), teethGrindingDetails: det(d.teethGrinding) }),
-            ...(d.mouthBreathing != null && { mouthBreathing: d.mouthBreathing === true }),
-            ...(d.behavior != null && { behavior: d.behavior }),
-            ...(d.managementTechniques?.value != null && { managementTechniques: b(d.managementTechniques), managementTechniquesDetails: det(d.managementTechniques) }),
-            ...(d.dentition != null && { dentition: d.dentition }),
-            ...(d.observations != null && { observations: d.observations }),
-        }));
-    }, []);
-
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -452,10 +383,6 @@ export function NewChildAnamneseModal({ visible, patientId, onClose, onSuccess, 
 
                     <ScrollView className="flex-1 px-4 py-4">
                         <Text className="text-sm text-gray-500 mb-4">Preencha os dados da anamnese odontopediátrica.</Text>
-
-                        {!anamnesis && (
-                            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} extractionType="child" />
-                        )}
 
                         {/* Date */}
                         <View className="bg-white rounded-xl border border-gray-100 overflow-hidden mb-4">

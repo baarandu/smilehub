@@ -21,9 +21,6 @@ import { ToothPickerModal } from './ToothPickerModal';
 import { BudgetSummarySection } from './BudgetSummarySection';
 import { BudgetForm } from './budgets/BudgetForm';
 import { BudgetAddItemForm } from './budgets/BudgetAddItemForm';
-import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
-import { extractedToBudgetForm } from '../voice-consultation/extractionHelpers';
-import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewBudgetModalProps {
     visible: boolean;
@@ -69,12 +66,6 @@ export function NewBudgetModal({
 
     // Editing state
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-    const handleVoiceResult = (result: ExtractionResult) => {
-        const { items, location: loc } = extractedToBudgetForm(result.budget, locations);
-        setTeethList(items);
-        if (loc) setLocation(loc);
-    };
 
     useEffect(() => {
         if (visible) {
@@ -435,10 +426,6 @@ export function NewBudgetModal({
                     </View>
 
                     <ScrollView className="flex-1 px-4 py-4">
-                        {!budget && (
-                            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
-                        )}
-
                         <BudgetForm
                             date={date}
                             onDateChange={handleDateChange}

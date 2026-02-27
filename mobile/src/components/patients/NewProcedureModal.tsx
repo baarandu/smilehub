@@ -17,8 +17,6 @@ import { ApprovedBudgetList } from './procedures/ApprovedBudgetList';
 import { AttachmentManager } from './procedures/AttachmentManager';
 import { ProcedureFooter } from './procedures/ProcedureFooter';
 import type { ApprovedItemOption, ProcedureFormState, Attachment } from './procedures/types';
-import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
-import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewProcedureModalProps {
   visible: boolean;
@@ -59,43 +57,6 @@ export function NewProcedureModal({
   const [approvedItems, setApprovedItems] = useState<ApprovedItemOption[]>([]);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [finalizedItemIds, setFinalizedItemIds] = useState<string[]>([]);
-
-  const handleVoiceResult = (result: ExtractionResult) => {
-    const parts: string[] = [];
-
-    // Try structured procedures first
-    if (result.procedures && result.procedures.length > 0) {
-      for (const p of result.procedures) {
-        const desc = [
-          p.treatment,
-          p.tooth && `Dente ${p.tooth}`,
-          p.material && `Material: ${p.material}`,
-          p.description,
-        ].filter(Boolean).join(' - ');
-        if (desc) parts.push(desc);
-      }
-
-      const first = result.procedures[0];
-      if (first.status) setForm(prev => ({ ...prev, status: first.status }));
-      if (first.location) {
-        const loc = locations.find(l => l.name.toLowerCase() === first.location!.toLowerCase());
-        if (loc) setForm(prev => ({ ...prev, location: loc.name }));
-      }
-    }
-
-    // Fallback: use consultation data if no structured procedures
-    if (parts.length === 0 && result.consultation) {
-      const c = result.consultation;
-      if (c.procedures) parts.push(c.procedures);
-      if (c.chiefComplaint) parts.push(c.chiefComplaint);
-      if (c.treatmentPlan) parts.push(c.treatmentPlan);
-      if (c.notes) parts.push(c.notes);
-    }
-
-    if (parts.length > 0) {
-      setObservations(parts.join('\n'));
-    }
-  };
 
   useEffect(() => {
     if (visible) {
@@ -480,10 +441,6 @@ export function NewProcedureModal({
           </View>
 
           <ScrollView className="flex-1 px-4 py-4">
-            {!procedure && (
-              <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
-            )}
-
             <ProcedureForm
               form={form}
               onChange={(updates) => setForm(prev => ({ ...prev, ...updates }))}
