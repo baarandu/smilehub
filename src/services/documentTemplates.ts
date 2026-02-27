@@ -207,9 +207,20 @@ export const documentTemplatesService = {
             }
         }
 
+        // Get clinic_id for storage path and DB insert
+        const { data: clinicUser } = await (supabase
+            .from('clinic_users') as any)
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
+        const clinicId = clinicUser.clinic_id as string;
+
         const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName);
 
-        const fileName = `doc_${patientId}_${Date.now()}.pdf`;
+        // Path must start with clinicId/ for RLS policy
+        const fileName = `${clinicId}/doc_${patientId}_${Date.now()}.pdf`;
 
         const { error: uploadError } = await supabase.storage
             .from('exams')
@@ -228,6 +239,7 @@ export const documentTemplatesService = {
             .from('exams') as any)
             .insert({
                 patient_id: patientId,
+                clinic_id: clinicId,
                 name: name,
                 order_date: new Date().toISOString().split('T')[0],
                 file_urls: [publicUrl],

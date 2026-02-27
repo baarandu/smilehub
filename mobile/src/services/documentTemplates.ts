@@ -82,6 +82,19 @@ export const documentTemplatesService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
+        // Get clinic_id for storage path and DB insert
+        const { data: clinicUser, error: clinicError } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (clinicError || !(clinicUser as any)?.clinic_id) {
+            throw new Error('Clinic not found');
+        }
+
+        const clinicId = (clinicUser as any).clinic_id as string;
+
         // Read file as base64
         const base64Data = await FileSystem.readAsStringAsync(fileUri, {
             encoding: 'base64'
@@ -98,7 +111,8 @@ export const documentTemplatesService = {
             bytes[i] = binaryString.charCodeAt(i);
         }
 
-        const fileName = `doc_${patientId}_${Date.now()}.pdf`;
+        // Path must start with clinicId/ for RLS policy
+        const fileName = `${clinicId}/doc_${patientId}_${Date.now()}.pdf`;
 
         const { error: uploadError } = await supabase.storage
             .from('exams')
@@ -117,6 +131,7 @@ export const documentTemplatesService = {
             .from('exams')
             .insert({
                 patient_id: patientId,
+                clinic_id: clinicId,
                 title: name,
                 name: name,
                 date: new Date().toISOString().split('T')[0],
