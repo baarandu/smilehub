@@ -6,6 +6,7 @@ import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileCl
 import { getPatients, createPatientFromForm } from '../../src/services/patients';
 import { budgetsService } from '../../src/services/budgets';
 import { DocumentsModal } from '../../components/DocumentsModal';
+import { useClinic } from '../../src/contexts/ClinicContext';
 import type { Patient, PatientFormData } from '../../src/types/database';
 
 interface PendingItem {
@@ -73,6 +74,7 @@ const emptyForm: PatientFormData = {
 
 export default function Patients() {
     const router = useRouter();
+    const { clinicId: ctxClinicId } = useClinic();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [patients, setPatients] = useState<Patient[]>([]);
@@ -1035,6 +1037,7 @@ export default function Patients() {
             <DocumentsModal
                 visible={showDocumentsModal}
                 onClose={() => setShowDocumentsModal(false)}
+                clinicId={ctxClinicId || undefined}
             />
         </SafeAreaView>
     );

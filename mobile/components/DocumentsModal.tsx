@@ -21,12 +21,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { documentTemplatesService } from '../src/services/documentTemplates';
 import { getPatients } from '../src/services/patients';
 import { profileService } from '../src/services/profile';
+import { SignaturePadModal } from '../src/components/clinical-signatures/SignaturePadModal';
 import type { DocumentTemplate, Patient } from '../src/types/database';
 
 
 interface DocumentsModalProps {
     visible: boolean;
     onClose: () => void;
+    clinicId?: string;
 }
 
 type ViewMode = 'list' | 'create' | 'edit' | 'generate';
@@ -277,7 +279,7 @@ Data: {{data}}`
     }
 ];
 
-export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
+export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalProps) {
     const [view, setView] = useState<ViewMode>('list');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -298,6 +300,11 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
     const [patientSearch, setPatientSearch] = useState('');
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [previewContent, setPreviewContent] = useState('');
+
+    // Signature
+    const [savedExamId, setSavedExamId] = useState<string | null>(null);
+    const [savedExamRecord, setSavedExamRecord] = useState<Record<string, unknown> | null>(null);
+    const [showSignatureModal, setShowSignatureModal] = useState(false);
 
     // Letterhead
     const [letterheadUrl, setLetterheadUrl] = useState<string | null>(null);
@@ -569,13 +576,37 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
             const html = getPDFHTML();
             const { uri } = await Print.printToFileAsync({ html });
 
-            await documentTemplatesService.saveAsExam(
+            const examResult = await documentTemplatesService.saveAsExam(
                 selectedPatient.id,
                 selectedTemplate.name,
                 uri
             );
 
-            Alert.alert('Sucesso', 'Documento salvo nos exames do paciente!');
+            if (clinicId) {
+                setSavedExamId(examResult.id);
+                setSavedExamRecord({
+                    patient_id: examResult.patient_id,
+                    name: examResult.name,
+                    order_date: examResult.order_date,
+                    exam_date: null,
+                    file_urls: examResult.file_urls,
+                    file_url: null,
+                    file_type: examResult.file_type ?? null,
+                });
+                Alert.alert(
+                    'Documento Salvo',
+                    'Documento salvo nos exames do paciente! Deseja assinar digitalmente?',
+                    [
+                        { text: 'Depois', style: 'cancel' },
+                        {
+                            text: 'Assinar',
+                            onPress: () => setShowSignatureModal(true),
+                        },
+                    ],
+                );
+            } else {
+                Alert.alert('Sucesso', 'Documento salvo nos exames do paciente!');
+            }
         } catch (error) {
             console.error('Error saving to exams:', error);
             Alert.alert('Erro', 'Falha ao salvar documento');
@@ -919,6 +950,31 @@ export function DocumentsModal({ visible, onClose }: DocumentsModalProps) {
                     </ScrollView>
                 )}
             </SafeAreaView>
+
+            {/* Signature Modal */}
+            {showSignatureModal && savedExamId && savedExamRecord && clinicId && selectedPatient && (
+                <SignaturePadModal
+                    visible={showSignatureModal}
+                    onClose={() => {
+                        setShowSignatureModal(false);
+                        setSavedExamId(null);
+                        setSavedExamRecord(null);
+                    }}
+                    clinicId={clinicId}
+                    patientId={selectedPatient.id}
+                    recordType="exam"
+                    recordId={savedExamId}
+                    record={savedExamRecord}
+                    signerType="dentist"
+                    signerName=""
+                    patientEmail={selectedPatient.email || undefined}
+                    onSuccess={() => {
+                        setShowSignatureModal(false);
+                        setSavedExamId(null);
+                        setSavedExamRecord(null);
+                    }}
+                />
+            )}
 
             {/* Custom Patient Selector Modal */}
             <Modal visible={showPatientSelector} animationType="slide">

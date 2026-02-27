@@ -1,9 +1,11 @@
-import React, { useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { Plus, Upload, Trash2, FileText, Edit3 } from 'lucide-react-native';
+import { Plus, Upload, Trash2, FileText, Edit3, PenLine } from 'lucide-react-native';
 import type { Exam } from '../../../types/database';
 import { RecordSignatureBadge } from '../../clinical-signatures';
+import { SignaturePadModal } from '../../clinical-signatures/SignaturePadModal';
+import type { SignerType } from '../../../types/clinicalSignature';
 
 interface ExamsTabProps {
     exams: Exam[];
@@ -11,6 +13,23 @@ interface ExamsTabProps {
     onEdit?: (exam: Exam) => void;
     onDelete?: (exam: Exam) => void;
     onPreviewImage: (url: string) => void;
+    clinicId?: string;
+    patientId?: string;
+    patientName?: string;
+    patientEmail?: string;
+    onRefresh?: () => void;
+}
+
+function buildExamRecord(exam: Exam): Record<string, unknown> {
+    return {
+        patient_id: exam.patient_id ?? null,
+        name: exam.name ?? exam.title ?? null,
+        order_date: exam.order_date ?? exam.date ?? null,
+        exam_date: (exam as any).exam_date ?? null,
+        file_urls: exam.file_urls ?? null,
+        file_url: (exam as any).file_url ?? null,
+        file_type: (exam as any).file_type ?? (exam as any).type ?? null,
+    };
 }
 
 export function ExamsTab({
@@ -19,12 +38,43 @@ export function ExamsTab({
     onEdit,
     onDelete,
     onPreviewImage,
+    clinicId,
+    patientId,
+    patientName,
+    patientEmail,
+    onRefresh,
 }: ExamsTabProps) {
     const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
+    const [signingExam, setSigningExam] = useState<Exam | null>(null);
+    const [signerType, setSignerType] = useState<SignerType>('dentist');
 
     const closeSwipeable = (id: string) => {
         const ref = swipeableRefs.current.get(id);
         if (ref) ref.close();
+    };
+
+    const handleSignExam = (exam: Exam) => {
+        Alert.alert(
+            'Assinar Registro',
+            'Quem vai assinar este registro?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Paciente',
+                    onPress: () => {
+                        setSignerType('patient');
+                        setSigningExam(exam);
+                    },
+                },
+                {
+                    text: 'Dentista',
+                    onPress: () => {
+                        setSignerType('dentist');
+                        setSigningExam(exam);
+                    },
+                },
+            ],
+        );
     };
 
     const renderRightActions = (exam: Exam) => {
@@ -106,6 +156,15 @@ export function ExamsTab({
                                             <RecordSignatureBadge recordType="exam" recordId={exam.id} compact />
                                         </View>
                                     </View>
+                                    {clinicId && patientId && (
+                                        <TouchableOpacity
+                                            onPress={() => handleSignExam(exam)}
+                                            className="bg-teal-50 p-2 rounded-lg ml-2"
+                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        >
+                                            <PenLine size={16} color="#0D9488" />
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
 
                                 {/* Description */}
@@ -153,6 +212,26 @@ export function ExamsTab({
                         </Swipeable>
                     );
                 })
+            )}
+
+            {/* Signature Modal */}
+            {signingExam && clinicId && patientId && (
+                <SignaturePadModal
+                    visible={!!signingExam}
+                    onClose={() => setSigningExam(null)}
+                    clinicId={clinicId}
+                    patientId={patientId}
+                    recordType="exam"
+                    recordId={signingExam.id}
+                    record={buildExamRecord(signingExam)}
+                    signerType={signerType}
+                    signerName={signerType === 'patient' ? (patientName || '') : ''}
+                    patientEmail={patientEmail}
+                    onSuccess={() => {
+                        setSigningExam(null);
+                        onRefresh?.();
+                    }}
+                />
             )}
         </View>
     );

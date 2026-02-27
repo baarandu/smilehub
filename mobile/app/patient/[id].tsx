@@ -377,7 +377,7 @@ export default function PatientDetail() {
                 )}
                 {activeTab === 'budgets' && <BudgetsTab budgets={budgets} onAdd={handleAddBudget} onEdit={handleEditBudget} onDelete={handleDeleteBudget} onView={handleViewBudget} />}
                 {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onView={handleViewProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
-                {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} />}
+                {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} clinicId={ctxClinicId || undefined} patientId={id} patientName={patient.name} patientEmail={patient.email || undefined} onRefresh={loadExams} />}
                 {activeTab === 'payments' && <PaymentsTab paymentItems={getAllPaymentItems()} onPaymentClick={handlePaymentClick} />}
 
                 {/* Health Info */}

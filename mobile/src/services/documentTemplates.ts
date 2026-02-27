@@ -78,7 +78,7 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async saveAsExam(patientId: string, name: string, fileUri: string): Promise<void> {
+    async saveAsExam(patientId: string, name: string, fileUri: string): Promise<{ id: string; patient_id: string; name: string; order_date: string; file_urls: string[]; file_type?: string }> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
@@ -127,19 +127,32 @@ export const documentTemplatesService = {
             .from('exams')
             .getPublicUrl(fileName);
 
-        const { error: insertError } = await supabase
+        const orderDate = new Date().toISOString().split('T')[0];
+
+        const { data: examData, error: insertError } = await supabase
             .from('exams')
             .insert({
                 patient_id: patientId,
                 clinic_id: clinicId,
                 title: name,
                 name: name,
-                date: new Date().toISOString().split('T')[0],
-                order_date: new Date().toISOString().split('T')[0],
+                date: orderDate,
+                order_date: orderDate,
                 file_urls: [publicUrl],
                 type: 'document'
-            } as any);
+            } as any)
+            .select()
+            .single();
 
         if (insertError) throw insertError;
+
+        return {
+            id: (examData as any).id,
+            patient_id: patientId,
+            name: name,
+            order_date: orderDate,
+            file_urls: [publicUrl],
+            file_type: 'document',
+        };
     }
 };
