@@ -590,6 +590,7 @@ export const generatePatientReport = async (options: ReportOptions) => {
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
+        printWindow.document.open();
         printWindow.document.write(htmlContent);
         printWindow.document.close();
         printWindow.focus();
@@ -612,18 +613,24 @@ export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blo
     container.style.background = 'white';
     document.body.appendChild(container);
 
-    // Extract body content from full HTML (strip <html>, <head>, etc.)
-    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    // Parse HTML safely using DOMParser instead of innerHTML
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(htmlContent, 'text/html');
 
-    if (styleMatch) {
+    // Extract and apply styles
+    const parsedStyles = parsed.querySelectorAll('style');
+    parsedStyles.forEach((s) => {
         const styleEl = document.createElement('style');
-        styleEl.textContent = styleMatch[1];
+        styleEl.textContent = s.textContent || '';
         container.appendChild(styleEl);
-    }
+    });
 
     const contentDiv = document.createElement('div');
-    contentDiv.innerHTML = bodyMatch ? bodyMatch[1] : htmlContent;
+    // Move parsed body children safely
+    const parsedBody = parsed.body;
+    while (parsedBody.firstChild) {
+        contentDiv.appendChild(parsedBody.firstChild);
+    }
     contentDiv.style.padding = '40px';
     contentDiv.style.fontFamily = "'Helvetica', 'Arial', sans-serif";
     contentDiv.style.color = '#1f2937';

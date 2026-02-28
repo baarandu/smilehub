@@ -66,6 +66,39 @@ export function extractBearerToken(authHeader: string | null): string {
   return token;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const PHONE_REGEX = /^\+?\d[\d\s()-]{7,19}$/;
+
+export function validateEmail(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || !EMAIL_REGEX.test(value.trim())) {
+    throw new ValidationError(`${fieldName} deve ser um e-mail válido.`);
+  }
+  return value.trim();
+}
+
+export function validatePhone(value: unknown, fieldName: string): string {
+  if (typeof value !== "string") {
+    throw new ValidationError(`${fieldName} deve ser texto.`);
+  }
+  const digits = value.replace(/\D/g, "");
+  if (digits.length < 8 || digits.length > 15 || !PHONE_REGEX.test(value)) {
+    throw new ValidationError(`${fieldName} deve ser um telefone válido.`);
+  }
+  return value;
+}
+
+export function validateNumericAmount(
+  value: unknown,
+  fieldName: string,
+  { min = 0, max = 99_999_99 }: { min?: number; max?: number } = {}
+): number {
+  const num = typeof value === "string" ? Number(value) : value;
+  if (typeof num !== "number" || !Number.isFinite(num) || num < min || num > max) {
+    throw new ValidationError(`${fieldName} deve ser um valor numérico entre ${min} e ${max}.`);
+  }
+  return num;
+}
+
 export function sanitizeSearchTerm(term: string, maxLength = 100): string {
   if (!term || term.length < 2) {
     throw new ValidationError("Termo de busca deve ter pelo menos 2 caracteres.");

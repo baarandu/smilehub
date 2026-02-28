@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Loader2, AlertTriangle, User, Baby } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +71,8 @@ export function PatientForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cpfError) return;
+    if (birthDateError) return;
     // For child patients, auto-fill phone from parent phone
     if (form.patientType === 'child') {
       const parentPhone = form.motherPhone || form.fatherPhone;
@@ -107,6 +109,38 @@ export function PatientForm({
     const numbers = value.replace(/\D/g, '');
     return numbers.replace(/(\d{5})(\d)/, '$1-$2').slice(0, 9);
   };
+
+  const validateCPF = useCallback((cpf: string): boolean => {
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(digits)) return false;
+    for (let t = 9; t <= 10; t++) {
+      let sum = 0;
+      for (let i = 0; i < t; i++) sum += parseInt(digits[i]) * (t + 1 - i);
+      const remainder = (sum * 10) % 11;
+      if ((remainder === 10 ? 0 : remainder) !== parseInt(digits[t])) return false;
+    }
+    return true;
+  }, []);
+
+  const validateBirthDate = useCallback((date: string): string | null => {
+    if (!date) return null;
+    const d = new Date(date + 'T00:00:00');
+    const now = new Date();
+    if (isNaN(d.getTime())) return 'Data inválida';
+    if (d.getFullYear() < 1900) return 'Data muito antiga';
+    if (d > now) return 'Data não pode ser futura';
+    return null;
+  }, []);
+
+  const cpfError = useMemo(() => {
+    const digits = form.cpf.replace(/\D/g, '');
+    if (digits.length === 0) return '';
+    if (digits.length < 11) return '';
+    return validateCPF(form.cpf) ? '' : 'CPF inválido';
+  }, [form.cpf, validateCPF]);
+
+  const birthDateError = useMemo(() => validateBirthDate(form.birthDate), [form.birthDate, validateBirthDate]);
 
   const calculatedAge = useMemo(() => {
     if (!form.birthDate) return '';
@@ -227,7 +261,10 @@ export function PatientForm({
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => updateField('birthDate', e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
                 />
+                {birthDateError && <p className="text-xs text-red-500">{birthDateError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cpf">CPF</Label>
@@ -237,6 +274,7 @@ export function PatientForm({
                   onChange={(e) => updateField('cpf', formatCPF(e.target.value))}
                   placeholder="000.000.000-00"
                 />
+                {cpfError && <p className="text-xs text-red-500">{cpfError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rg">RG</Label>
@@ -402,7 +440,10 @@ export function PatientForm({
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => updateField('birthDate', e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  min="1900-01-01"
                 />
+                {birthDateError && <p className="text-xs text-red-500">{birthDateError}</p>}
                 {calculatedAge && (
                   <p className="text-sm text-muted-foreground">
                     Idade: {calculatedAge}
@@ -432,6 +473,7 @@ export function PatientForm({
                   onChange={(e) => updateField('cpf', formatCPF(e.target.value))}
                   placeholder="000.000.000-00"
                 />
+                {cpfError && <p className="text-xs text-red-500">{cpfError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="child-birthplace">Naturalidade</Label>

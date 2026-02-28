@@ -95,14 +95,14 @@ export async function checkRateLimit(
       throw new RateLimitError();
     }
 
-    // Record this request (fire-and-forget, don't block on insert)
-    supabase
+    // Record this request atomically (await to prevent race conditions)
+    const { error: insertError } = await supabase
       .from("api_rate_limits")
-      .insert({ identifier, endpoint: config.endpoint })
-      .then(() => {})
-      .catch((err: any) =>
-        console.warn(`[rateLimit] Insert error: ${err.message}`)
-      );
+      .insert({ identifier, endpoint: config.endpoint });
+
+    if (insertError) {
+      console.warn(`[rateLimit] Insert error: ${insertError.message}`);
+    }
   } catch (error) {
     if (error instanceof RateLimitError) throw error;
     console.warn(`[rateLimit] Unexpected error, using in-memory fallback: ${error}`);

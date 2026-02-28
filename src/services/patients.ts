@@ -225,10 +225,21 @@ export async function deletePatient(id: string): Promise<void> {
 }
 
 export async function searchPatients(query: string): Promise<Patient[]> {
+  if (!query || query.trim().length < 2) return [];
+
+  // Sanitize: escape PostgREST special chars and SQL wildcards
+  const sanitized = query
+    .trim()
+    .slice(0, 100)
+    .replace(/[%_\\]/g, '\\$&')
+    .replace(/[,()]/g, '');
+
+  if (!sanitized) return [];
+
   const { data, error } = await supabase
     .from('patients_secure')
     .select('*')
-    .or(`name.ilike.%${query}%,phone.ilike.%${query}%,cpf_last4.ilike.%${query}%,email.ilike.%${query}%`)
+    .or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,cpf_last4.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
     .order('name')
     .limit(20) as { data: Patient[] | null; error: any };
 

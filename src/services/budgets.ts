@@ -2,6 +2,20 @@ import { supabase } from '@/lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
 import { calculateBudgetStatus } from '@/utils/budgetUtils';
 
+const MAX_ITEM_VALUE_CENTS = 10_000_000; // R$ 100.000,00
+
+function validateBudgetItems(items: Omit<BudgetItemInsert, 'budget_id'>[]) {
+    for (const item of items) {
+        const val = (item as any).value;
+        if (val !== undefined && val !== null) {
+            const num = typeof val === 'string' ? Number(val) : val;
+            if (!Number.isFinite(num) || num < 0 || num > MAX_ITEM_VALUE_CENTS) {
+                throw new Error('Valor do item inválido. Deve ser entre R$ 0,00 e R$ 100.000,00.');
+            }
+        }
+    }
+}
+
 export const budgetsService = {
     async getByPatient(patientId: string): Promise<BudgetWithItems[]> {
         const { data, error } = await supabase
@@ -37,6 +51,8 @@ export const budgetsService = {
     },
 
     async create(budget: BudgetInsert, items: Omit<BudgetItemInsert, 'budget_id'>[]): Promise<BudgetWithItems> {
+        validateBudgetItems(items);
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
 
