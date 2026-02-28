@@ -105,7 +105,7 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
               className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate('/agenda', { state: { openNewAppointment: true, patientId: orthoCase.patient_id, patientName: orthoCase.patient_name } });
+                navigate('/agenda');
               }}
             >
               <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
