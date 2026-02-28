@@ -1,4 +1,6 @@
 import type { Procedure, Exam, Patient } from '@/types/database';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface ReportOptions {
     patient: Patient;
@@ -18,72 +20,34 @@ interface ReportOptions {
     procedureNames?: Record<string, string>;
 }
 
-export const generatePatientReport = async ({
-    patient,
-    procedures,
-    exams,
-    includeHeader,
-    notes,
-    clinicName = 'Organiza Odonto',
-    clinicLogo,
-    dentistName,
-    dentistCRO,
-    clinicAddress,
-    clinicPhone,
-    clinicEmail,
-    reportNumber,
-    procedureNames = {},
-}: ReportOptions) => {
+const formatDate = (date: string) => new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
 
-    const formatDate = (date: string) => new Date(date + 'T00:00:00').toLocaleDateString('pt-BR');
+const formatDateFull = (date: Date) => {
+    const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
+};
 
-    // Helper to sanitize description removing values
-    const sanitizeDescription = (description: string) => {
-        if (!description) return '';
+const getDentistTitle = (name: string) => {
+    if (!name) return 'Dr(a).';
+    const firstName = name.split(' ')[0].toLowerCase();
+    const femaleEndings = ['a', 'e', 'i'];
+    const femaleNames = ['ana', 'maria', 'julia', 'juliana', 'fernanda', 'amanda', 'camila', 'carla', 'paula', 'patricia', 'mariana', 'beatriz', 'leticia', 'larissa', 'bruna', 'gabriela', 'rafaela', 'daniela', 'vanessa', 'jessica', 'aline', 'priscila', 'tatiana', 'renata', 'natalia', 'luciana', 'adriana', 'fabiana', 'cristiane', 'simone', 'denise', 'monica', 'claudia', 'sandra', 'regina', 'silvia', 'vera', 'lucia', 'rose', 'rosa', 'elaine', 'sueli', 'edilene', 'ivone', 'marta', 'edna', 'neide', 'tania', 'solange', 'cleide', 'celia', 'teresinha', 'elizabete', 'iracema', 'francisca', 'antonia', 'josefa', 'marlene', 'marcia', 'tereza', 'rita', 'lourdes', 'irene', 'dalva', 'nilza', 'luiza', 'lidia', 'aurora', 'ines', 'alice', 'helena', 'joana', 'cecilia', 'vitoria', 'isadora', 'valentina', 'sofia', 'laura', 'lorena', 'luana', 'bianca'];
+    if (femaleNames.includes(firstName)) return 'Dra.';
+    if (femaleEndings.includes(firstName.slice(-1)) && !['jose', 'jorge', 'carlos', 'marcos', 'lucas', 'matheus', 'felipe', 'andre', 'alexandre', 'ricardo'].includes(firstName)) return 'Dra.';
+    return 'Dr.';
+};
 
-        // Split potential Obs part
-        const parts = description.split('\n\nObs: ');
-        const itemsPart = parts[0];
-        const obsPart = parts.length > 1 ? parts[1] : (itemsPart.startsWith('Obs: ') ? itemsPart.replace('Obs: ', '') : null);
+const formatCRO = (cro: string | undefined) => {
+    if (!cro) return '';
+    if (cro.includes('-')) return `CRO-${cro}`;
+    const match = cro.match(/([A-Za-z]{2})[\s-]?(\d+)/);
+    if (match) return `CRO-${match[1].toUpperCase()} ${match[2]}`;
+    return `CRO ${cro}`;
+};
 
-        const lines = itemsPart.split('\n');
-        const sanitizedLines: string[] = [];
-
-        lines.forEach(line => {
-            const cleanLine = line.trim().replace(/^•\s*/, '');
-            if (!cleanLine) return;
-
-            // Check for structure like "Treatment | Tooth | Value" or "Treatment - Tooth - Value"
-            let sections = cleanLine.split(' | ');
-            if (sections.length < 3) {
-                sections = cleanLine.split(' - ');
-            }
-
-            if (sections.length >= 3) {
-                // Keep only Treatment and Tooth, discard Value
-                sanitizedLines.push(`${sections[0].trim()} - ${sections[1].trim()}`);
-            } else if (!cleanLine.startsWith('Obs:')) {
-                // Keep unstructured lines as is
-                sanitizedLines.push(line);
-            }
-        });
-
-        const result = sanitizedLines.join('\n');
-        return obsPart ? `${result}\n\nObs: ${obsPart}` : result;
-    };
-
-    // Process exams to resolve image URLs
-    // On web, URLs are typically accessible if they are consistent with how the app loads them.
-    // If they are public URLs or signed URLs already, they should work in an img tag.
-    // We'll assume the exam objects passed in already have accessible URLs or the component logic handles it.
-    // However, if we need to resolve them like in mobile, we might need a helper.
-    // For now, mapping resolvedImages similar to mobile logic but using the URL directly if available.
-    // Ideally the caller passes fully resolved URLs or we assume file_urls are usable.
-
-    // NOTE: On web, we might encounter cross-origin issues with images in print. 
-    // Converting to base64 is safer for specific print libraries, but browser print often handles links fine if accessible.
-
-    const examsWithImages = exams.map((exam) => {
+const processExamsWithImages = (exams: Exam[]) => {
+    return exams.map((exam) => {
         const uniquePaths = new Set<string>();
         if (exam.file_url) uniquePaths.add(exam.file_url);
         if (exam.file_urls && exam.file_urls.length > 0) {
@@ -100,8 +64,6 @@ export const generatePatientReport = async ({
         };
 
         uniquePaths.forEach(path => {
-            // Check if path is a full URL or relative. 
-            // In this app, file_url seems to be a full URL (signed or public).
             if (path && isImage(path)) {
                 images.push(path);
             }
@@ -109,41 +71,29 @@ export const generatePatientReport = async ({
 
         return { ...exam, resolvedImages: images };
     });
+};
 
-    // Helper to format date in full Brazilian format
-    const formatDateFull = (date: Date) => {
-        const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-                       'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-        return `${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
-    };
-
-    // Helper to detect gender from name for Dr/Dra
-    const getDentistTitle = (name: string) => {
-        if (!name) return 'Dr(a).';
-        const firstName = name.split(' ')[0].toLowerCase();
-        const femaleEndings = ['a', 'e', 'i'];
-        const femaleNames = ['ana', 'maria', 'julia', 'juliana', 'fernanda', 'amanda', 'camila', 'carla', 'paula', 'patricia', 'mariana', 'beatriz', 'leticia', 'larissa', 'bruna', 'gabriela', 'rafaela', 'daniela', 'vanessa', 'jessica', 'aline', 'priscila', 'tatiana', 'renata', 'natalia', 'luciana', 'adriana', 'fabiana', 'cristiane', 'simone', 'denise', 'monica', 'claudia', 'sandra', 'regina', 'silvia', 'vera', 'lucia', 'rose', 'rosa', 'elaine', 'sueli', 'edilene', 'ivone', 'marta', 'edna', 'neide', 'tania', 'solange', 'cleide', 'celia', 'teresinha', 'elizabete', 'iracema', 'francisca', 'antonia', 'josefa', 'marlene', 'marcia', 'tereza', 'rita', 'lourdes', 'irene', 'dalva', 'nilza', 'luiza', 'lidia', 'aurora', 'ines', 'alice', 'helena', 'joana', 'cecilia', 'vitoria', 'isadora', 'valentina', 'sofia', 'laura', 'lorena', 'luana', 'bianca'];
-        if (femaleNames.includes(firstName)) return 'Dra.';
-        if (femaleEndings.includes(firstName.slice(-1)) && !['jose', 'jorge', 'carlos', 'marcos', 'lucas', 'matheus', 'felipe', 'andre', 'alexandre', 'ricardo'].includes(firstName)) return 'Dra.';
-        return 'Dr.';
-    };
-
-    // Get formatted CRO
-    const formatCRO = (cro: string | undefined) => {
-        if (!cro) return '';
-        // If already formatted, return as is
-        if (cro.includes('-')) return `CRO-${cro}`;
-        // Try to extract state and number
-        const match = cro.match(/([A-Za-z]{2})[\s-]?(\d+)/);
-        if (match) return `CRO-${match[1].toUpperCase()} ${match[2]}`;
-        return `CRO ${cro}`;
-    };
-
+export function buildReportHtml({
+    patient,
+    procedures,
+    exams,
+    includeHeader,
+    notes,
+    clinicName = 'Organiza Odonto',
+    clinicLogo,
+    dentistName,
+    dentistCRO,
+    clinicAddress,
+    clinicPhone,
+    clinicEmail,
+    reportNumber,
+    procedureNames = {},
+}: ReportOptions): string {
+    const examsWithImages = processExamsWithImages(exams);
     const dentistTitle = getDentistTitle(dentistName || '');
     const formattedCRO = formatCRO(dentistCRO);
-    const currentReportNumber = reportNumber || `#${new Date().getFullYear()}-001`;
 
-    const htmlContent = `
+    return `
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
@@ -520,15 +470,12 @@ export const generatePatientReport = async ({
                     </thead>
                     <tbody>
                         ${procedures.map((p) => {
-                            // Use resolved procedure name from budget links if available
                             const resolvedName = procedureNames[p.id] || '';
                             const description = p.description || '';
 
-                            // Clean description for observations column
                             let obs = description;
                             if (obs.startsWith('Obs: ')) obs = obs.substring(5);
 
-                            // If no resolved name, try to extract from description (legacy format)
                             let procName = resolvedName;
                             if (!procName && description) {
                                 const parts = description.split('\n\nObs: ');
@@ -554,7 +501,6 @@ export const generatePatientReport = async ({
                                 }
                             }
 
-                            // If we have a resolved name, use description as observations
                             if (resolvedName) {
                                 obs = description.startsWith('Obs: ') ? description.substring(5) : description;
                             }
@@ -637,19 +583,89 @@ export const generatePatientReport = async ({
     </body>
     </html>
     `;
+}
 
-    // Open in new window and print
+export const generatePatientReport = async (options: ReportOptions) => {
+    const htmlContent = buildReportHtml(options);
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(htmlContent);
         printWindow.document.close();
         printWindow.focus();
 
-        // Wait for images to load before printing
         setTimeout(() => {
             printWindow.print();
-            // Optional: Close window after print (some browsers block this or it's annoying)
-            // printWindow.close(); 
         }, 1000);
+    }
+};
+
+export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blob> => {
+    const htmlContent = buildReportHtml(options);
+
+    // Create a hidden container to render the HTML
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '794px'; // A4 width in pixels at 96dpi
+    container.style.background = 'white';
+    document.body.appendChild(container);
+
+    // Extract body content from full HTML (strip <html>, <head>, etc.)
+    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    const styleMatch = htmlContent.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+
+    if (styleMatch) {
+        const styleEl = document.createElement('style');
+        styleEl.textContent = styleMatch[1];
+        container.appendChild(styleEl);
+    }
+
+    const contentDiv = document.createElement('div');
+    contentDiv.innerHTML = bodyMatch ? bodyMatch[1] : htmlContent;
+    contentDiv.style.padding = '40px';
+    contentDiv.style.fontFamily = "'Helvetica', 'Arial', sans-serif";
+    contentDiv.style.color = '#1f2937';
+    contentDiv.style.lineHeight = '1.5';
+    container.appendChild(contentDiv);
+
+    try {
+        // Wait a bit for styles to apply
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: '#ffffff',
+            width: 794,
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        // Handle multi-page if content is taller than one page
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            position -= pdfHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+
+        return pdf.output('blob');
+    } finally {
+        document.body.removeChild(container);
     }
 };

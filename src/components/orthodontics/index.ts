@@ -7,3 +7,4 @@ export { CaseList } from './CaseList';
 export { OrthoKanbanBoard } from './OrthoKanbanBoard';
 export { OrthoKanbanColumn } from './OrthoKanbanColumn';
 export { OrthoKanbanCard, OrthoKanbanCardOverlay } from './OrthoKanbanCard';
+export { MaintenanceScheduleDialog } from './MaintenanceScheduleDialog';

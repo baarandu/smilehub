@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, AlertTriangle, Clock, CalendarCheck, Calenda
 import { useNavigate } from 'react-router-dom';
 import type { OrthodonticCase } from '@/types/orthodontics';
 import { TREATMENT_TYPE_LABELS } from '@/types/orthodontics';
-import { getOverdueStatus, getDaysUntilNextAppointment } from '@/utils/orthodontics';
+import { getOverdueStatus, getDaysUntilNextAppointment, getMaintenanceAlert } from '@/utils/orthodontics';
 
 interface OrthoKanbanCardProps {
   orthoCase: OrthodonticCase;
@@ -13,9 +13,10 @@ interface OrthoKanbanCardProps {
   scheduledDate?: string | null;
   onMoveLeft?: () => void;
   onMoveRight?: () => void;
+  onSchedule?: () => void;
 }
 
-export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft, onMoveRight }: OrthoKanbanCardProps) {
+export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft, onMoveRight, onSchedule }: OrthoKanbanCardProps) {
   const navigate = useNavigate();
   const {
     attributes,
@@ -34,6 +35,7 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
 
   const overdueStatus = getOverdueStatus(orthoCase);
   const daysUntil = getDaysUntilNextAppointment(orthoCase.next_appointment_at);
+  const maintenanceAlert = getMaintenanceAlert(orthoCase);
 
   return (
     <div
@@ -79,6 +81,24 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
             Em {daysUntil}d
           </Badge>
         )}
+        {maintenanceAlert?.level === 'late' && (
+          <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-[10px] px-1.5 py-0 shrink-0">
+            <Clock className="w-3 h-3 mr-0.5" />
+            Manutenção +{maintenanceAlert.daysSince - (orthoCase.return_frequency_days || 30)}d
+          </Badge>
+        )}
+        {maintenanceAlert?.level === 'very_late' && (
+          <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0 shrink-0">
+            <AlertTriangle className="w-3 h-3 mr-0.5" />
+            Atrasado {maintenanceAlert.daysSince}d
+          </Badge>
+        )}
+        {maintenanceAlert?.level === 'absent' && (
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 shrink-0">
+            <AlertTriangle className="w-3 h-3 mr-0.5" />
+            Ausente {maintenanceAlert.daysSince}d
+          </Badge>
+        )}
       </div>
 
       {orthoCase.dentist_name && (
@@ -91,7 +111,7 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
         </Badge>
       </div>
 
-      {orthoCase.status === 'documentation_received' && (
+      {(orthoCase.status === 'documentation_received' || orthoCase.status === 'active') && (
         <div className="mt-2 flex gap-1.5">
           {scheduledDate ? (
             <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
@@ -105,7 +125,11 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
               className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate('/agenda');
+                if (orthoCase.status === 'active' && onSchedule) {
+                  onSchedule();
+                } else {
+                  navigate('/agenda');
+                }
               }}
             >
               <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />

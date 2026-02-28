@@ -46,6 +46,7 @@ export interface OrthodonticCase {
   needs_prior_treatment: boolean;
   position: number;
   notes: string | null;
+  maintenance_fee: number | null;
   budget_id: string | null;
   created_by: string | null;
   created_at: string;
@@ -72,6 +73,7 @@ export interface CaseInsert {
   total_aligners?: number | null;
   next_appointment_at?: string | null;
   documentation_notes?: string | null;
+  maintenance_fee?: number | null;
   notes?: string | null;
   budget_id?: string | null;
   created_by?: string | null;
@@ -89,6 +91,7 @@ export interface CaseFormData {
   applianceDetails: string;
   totalAligners: string;
   nextAppointmentAt: string;
+  maintenanceFee: string;
   documentationNotes: string;
   notes: string;
 }

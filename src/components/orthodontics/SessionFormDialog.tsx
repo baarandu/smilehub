@@ -13,10 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useCreateSession, useUpdateSession } from '@/hooks/useOrthodontics';
+import { financialService } from '@/services/financial';
 import type {
   OrthodonticCase,
   OrthodonticSession,
@@ -56,8 +59,12 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
   const updateSession = useUpdateSession();
 
   const [form, setForm] = useState<SessionFormData>(emptyForm);
+  const [registerPayment, setRegisterPayment] = useState(true);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('pix');
   const isEditing = !!session;
   const isAligners = orthoCase.treatment_type === 'aligners';
+  const showPaymentSection = !isEditing && orthoCase.maintenance_fee != null && orthoCase.maintenance_fee > 0;
 
   useEffect(() => {
     if (open && session) {
@@ -83,6 +90,9 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
           ? String((orthoCase.current_aligner_number || 0) + 1)
           : '',
       });
+      setRegisterPayment(true);
+      setPaymentAmount(orthoCase.maintenance_fee != null ? String(orthoCase.maintenance_fee) : '');
+      setPaymentMethod('pix');
     }
   }, [open, session, orthoCase]);
 
@@ -138,6 +148,30 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
           observations: form.observations || null,
           created_by: user?.id || null,
         });
+
+        // Register maintenance payment if enabled
+        if (showPaymentSection && registerPayment && paymentAmount) {
+          const amount = parseFloat(paymentAmount);
+          if (amount > 0) {
+            try {
+              await financialService.createTransaction({
+                type: 'income',
+                amount,
+                description: `Manutenção Orto — ${orthoCase.patient_name || 'Paciente'}`,
+                category: 'Manutenção Ortodôntica',
+                patient_id: orthoCase.patient_id,
+                payment_method: paymentMethod,
+                date: form.appointmentDate,
+                related_entity_id: orthoCase.id,
+              } as any);
+            } catch {
+              toast({ title: 'Sessão registrada, mas erro ao registrar pagamento', variant: 'destructive' });
+              onOpenChange(false);
+              return;
+            }
+          }
+        }
+
         toast({ title: 'Sessão registrada' });
       }
       onOpenChange(false);
@@ -294,6 +328,56 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
                 rows={2}
               />
             </div>
+
+            {/* Maintenance Payment */}
+            {showPaymentSection && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Pagamento da Manutenção</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="register-payment" className="text-xs text-muted-foreground">
+                        Registrar pagamento
+                      </Label>
+                      <Switch
+                        id="register-payment"
+                        checked={registerPayment}
+                        onCheckedChange={setRegisterPayment}
+                      />
+                    </div>
+                  </div>
+                  {registerPayment && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label className="text-xs">Valor (R$)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={paymentAmount}
+                          onChange={e => setPaymentAmount(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Forma de Pagamento</Label>
+                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pix">Pix</SelectItem>
+                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                            <SelectItem value="credito">Cartão Crédito</SelectItem>
+                            <SelectItem value="debito">Cartão Débito</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Submit */}
             <div className="flex gap-2 pt-2">

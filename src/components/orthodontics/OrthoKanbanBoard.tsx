@@ -22,6 +22,7 @@ import { ORTHO_KANBAN_COLUMNS } from '@/types/orthodontics';
 import { getStatusLabel, getNextStatus, getPreviousStatus } from '@/utils/orthodontics';
 import { OrthoKanbanColumn } from './OrthoKanbanColumn';
 import { OrthoKanbanCardOverlay } from './OrthoKanbanCard';
+import { MaintenanceScheduleDialog } from './MaintenanceScheduleDialog';
 
 interface OrthoKanbanBoardProps {
   cases: OrthodonticCase[];
@@ -36,24 +37,30 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
   const batchUpdatePositions = useBatchUpdatePositions();
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [scheduleCase, setScheduleCase] = useState<OrthodonticCase | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Fetch future appointments for documentation_received patients
+  // Fetch future appointments for documentation_received + active patients
   const [patientAppointments, setPatientAppointments] = useState<Record<string, string>>({});
-  const docReceivedPatientIds = useMemo(
-    () => [...new Set(cases.filter(c => c.status === 'documentation_received').map(c => c.patient_id))],
+  const appointmentCheckPatientIds = useMemo(
+    () => [...new Set(
+      cases
+        .filter(c => c.status === 'documentation_received' || c.status === 'active')
+        .map(c => c.patient_id)
+    )],
     [cases]
   );
 
   useEffect(() => {
-    if (docReceivedPatientIds.length === 0) {
+    if (appointmentCheckPatientIds.length === 0) {
       setPatientAppointments({});
       return;
     }
     const today = new Date().toISOString().split('T')[0];
     supabase.from('appointments')
       .select('patient_id, date')
-      .in('patient_id', docReceivedPatientIds)
+      .in('patient_id', appointmentCheckPatientIds)
       .gte('date', today)
       .not('status', 'in', '("cancelled","no_show")')
       .order('date', { ascending: true })
@@ -66,7 +73,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
         });
         setPatientAppointments(map);
       });
-  }, [docReceivedPatientIds]);
+  }, [appointmentCheckPatientIds, refreshKey]);
 
   // Group cases by status (excluding paused from Kanban)
   const casesByStatus = useMemo(() => {
@@ -166,9 +173,13 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                 column={column}
                 cases={casesByStatus[column.id] || []}
                 onCardClick={onCardClick}
-                patientAppointments={column.id === 'documentation_received' ? patientAppointments : undefined}
+                patientAppointments={
+                  (column.id === 'documentation_received' || column.id === 'active')
+                    ? patientAppointments : undefined
+                }
                 onAdvanceStatus={handleAdvanceStatus}
                 onRetreatStatus={handleRetreatStatus}
+                onSchedule={column.id === 'active' ? setScheduleCase : undefined}
                 isFirst={idx === 0}
                 isLast={idx === ORTHO_KANBAN_COLUMNS.length - 1}
               />
@@ -198,7 +209,8 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                 ) : (
                   (casesByStatus[col.id] || []).map(orthoCase => {
                     const next = getNextStatus(orthoCase.status);
-                    const isDocReceived = orthoCase.status === 'documentation_received';
+                    const showActions = orthoCase.status === 'documentation_received' || orthoCase.status === 'active';
+                    const isActive = orthoCase.status === 'active';
                     return (
                       <div
                         key={orthoCase.id}
@@ -209,7 +221,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                         {orthoCase.dentist_name && (
                           <p className="text-xs text-muted-foreground">{orthoCase.dentist_name}</p>
                         )}
-                        {isDocReceived && (
+                        {showActions && (
                           <div className="mt-1.5 flex gap-1.5">
                             {patientAppointments[orthoCase.patient_id] ? (
                               <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
@@ -223,7 +235,11 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                                 className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate('/agenda');
+                                  if (isActive) {
+                                    setScheduleCase(orthoCase);
+                                  } else {
+                                    navigate('/agenda');
+                                  }
                                 }}
                               >
                                 <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
@@ -266,6 +282,15 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
           ))}
         </Tabs>
       </div>
+
+      {scheduleCase && (
+        <MaintenanceScheduleDialog
+          open={!!scheduleCase}
+          onOpenChange={(open) => { if (!open) setScheduleCase(null); }}
+          orthoCase={scheduleCase}
+          onSuccess={() => setRefreshKey(k => k + 1)}
+        />
+      )}
     </>
   );
 }

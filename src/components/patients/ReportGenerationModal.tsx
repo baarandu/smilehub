@@ -12,13 +12,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FileText, Calendar, Search } from 'lucide-react';
+import { FileText, Calendar, Search, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useProcedures } from '@/hooks/useProcedures';
 import { useExams } from '@/hooks/useExams';
-import { generatePatientReport } from '@/utils/patientReportGenerator';
+import { generatePatientReport, generateReportPdfBlob } from '@/utils/patientReportGenerator';
 import { budgetsService } from '@/services/budgets';
+import { saveAs } from 'file-saver';
+import { toast } from 'sonner';
 import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 import type { Patient } from '@/types/database';
 import type { BudgetLink } from '@/services/procedures';
@@ -75,6 +77,7 @@ export function ReportGenerationModal({
     const [selectedExams, setSelectedExams] = useState<string[]>([]);
     const [notes, setNotes] = useState('');
     const [generating, setGenerating] = useState(false);
+    const [sharing, setSharing] = useState(false);
 
     // Auto-select all when data loads or modal opens
     useEffect(() => {
@@ -97,79 +100,107 @@ export function ReportGenerationModal({
         );
     };
 
+    const collectReportData = async () => {
+        const proceduresToInclude = procedures.filter((p) =>
+            selectedProcedures.includes(p.id)
+        );
+        const examsToInclude = exams.filter((e) => selectedExams.includes(e.id));
+
+        const { data: { user } } = await supabase.auth.getUser();
+        const metadata = user?.user_metadata || {};
+
+        let clinicId: string | null = null;
+        if (user) {
+            const { data: clinicUser } = await supabase
+                .from('clinic_users')
+                .select('clinic_id')
+                .eq('user_id', user.id)
+                .single();
+            clinicId = (clinicUser as any)?.clinic_id || null;
+        }
+
+        let dentistCRO: string | undefined;
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('cro')
+                .eq('id', user.id)
+                .maybeSingle();
+            dentistCRO = (profile as any)?.cro || undefined;
+        }
+
+        let clinicPhone: string | undefined;
+        let clinicEmail: string | undefined;
+        let clinicAddress: string | undefined;
+        if (clinicId) {
+            const { data: secretarySettings } = await supabase
+                .from('ai_secretary_settings')
+                .select('clinic_phone, clinic_email, clinic_address')
+                .eq('clinic_id', clinicId)
+                .single();
+            if (secretarySettings) {
+                clinicPhone = (secretarySettings as any).clinic_phone || undefined;
+                clinicEmail = (secretarySettings as any).clinic_email || undefined;
+                clinicAddress = (secretarySettings as any).clinic_address || undefined;
+            }
+        }
+
+        const reportNumber = `#${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
+
+        return {
+            patient,
+            procedures: proceduresToInclude,
+            exams: examsToInclude,
+            includeHeader: true,
+            notes: notes.trim(),
+            clinicName: metadata.clinic_name || 'Organiza Odonto',
+            dentistName: metadata.full_name || '',
+            dentistCRO,
+            clinicPhone,
+            clinicEmail,
+            clinicAddress,
+            reportNumber,
+            procedureNames: procedureNameMap,
+        };
+    };
+
     const handleGenerate = async () => {
         try {
             setGenerating(true);
-            const proceduresToInclude = procedures.filter((p) =>
-                selectedProcedures.includes(p.id)
-            );
-            const examsToInclude = exams.filter((e) => selectedExams.includes(e.id));
-
-            const { data: { user } } = await supabase.auth.getUser();
-            const metadata = user?.user_metadata || {};
-
-            // Get clinic_id from clinic_users table
-            let clinicId: string | null = null;
-            if (user) {
-                const { data: clinicUser } = await supabase
-                    .from('clinic_users')
-                    .select('clinic_id')
-                    .eq('user_id', user.id)
-                    .single();
-                clinicId = (clinicUser as any)?.clinic_id || null;
-            }
-
-            // Fetch CRO from logged-in dentist's profile
-            let dentistCRO: string | undefined;
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('cro')
-                    .eq('id', user.id)
-                    .maybeSingle();
-                dentistCRO = (profile as any)?.cro || undefined;
-            }
-
-            // Fetch clinic contact info from ai_secretary_settings
-            let clinicPhone: string | undefined;
-            let clinicEmail: string | undefined;
-            let clinicAddress: string | undefined;
-            if (clinicId) {
-                const { data: secretarySettings } = await supabase
-                    .from('ai_secretary_settings')
-                    .select('clinic_phone, clinic_email, clinic_address')
-                    .eq('clinic_id', clinicId)
-                    .single();
-                if (secretarySettings) {
-                    clinicPhone = (secretarySettings as any).clinic_phone || undefined;
-                    clinicEmail = (secretarySettings as any).clinic_email || undefined;
-                    clinicAddress = (secretarySettings as any).clinic_address || undefined;
-                }
-            }
-
-            // Generate report number
-            const reportNumber = `#${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`;
-
-            await generatePatientReport({
-                patient,
-                procedures: proceduresToInclude,
-                exams: examsToInclude,
-                includeHeader: true,
-                notes: notes.trim(),
-                clinicName: metadata.clinic_name || 'Organiza Odonto',
-                dentistName: metadata.full_name || '',
-                dentistCRO,
-                clinicPhone,
-                clinicEmail,
-                clinicAddress,
-                reportNumber,
-                procedureNames: procedureNameMap,
-            });
+            const reportData = await collectReportData();
+            await generatePatientReport(reportData);
             onOpenChange(false);
         } catch (error) {
             console.error('Error generating report:', error);
         } finally {
             setGenerating(false);
+        }
+    };
+
+    const handleShare = async () => {
+        try {
+            setSharing(true);
+            const reportData = await collectReportData();
+            const pdfBlob = await generateReportPdfBlob(reportData);
+            const fileName = `Relatorio_${patient.name.replace(/\s+/g, '_')}.pdf`;
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            if (navigator.share && navigator.canShare?.({ files: [pdfFile] })) {
+                await navigator.share({
+                    files: [pdfFile],
+                    title: `Relatório - ${patient.name}`,
+                });
+            } else {
+                saveAs(pdfBlob, fileName);
+                toast.info('PDF baixado. Compartilhe pelo WhatsApp ou email.');
+            }
+        } catch (error: any) {
+            if (error?.name !== 'AbortError') {
+                console.error('Error sharing report:', error);
+                toast.error('Erro ao compartilhar relatório.');
+            }
+        } finally {
+            setSharing(false);
         }
     };
 
@@ -366,8 +397,16 @@ export function ReportGenerationModal({
                         Cancelar
                     </Button>
                     <Button
+                        variant="outline"
+                        onClick={handleShare}
+                        disabled={sharing || generating}
+                    >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        {sharing ? 'Compartilhando...' : 'Compartilhar'}
+                    </Button>
+                    <Button
                         onClick={handleGenerate}
-                        disabled={generating}
+                        disabled={generating || sharing}
                         className="bg-[#a03f3d] hover:bg-[#8b3634] text-white"
                     >
                         {generating ? 'Gerando...' : 'Gerar Relatório PDF'}

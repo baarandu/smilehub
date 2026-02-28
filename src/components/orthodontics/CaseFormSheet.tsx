@@ -43,6 +43,7 @@ const emptyForm: CaseFormData = {
   returnFrequencyDays: '30',
   applianceDetails: '',
   totalAligners: '',
+  maintenanceFee: '',
   nextAppointmentAt: '',
   documentationNotes: '',
   notes: '',
@@ -112,6 +113,7 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
         treatmentPlanNotes: orthoCase.treatment_plan_notes || '',
         estimatedDurationMonths: orthoCase.estimated_duration_months != null ? String(orthoCase.estimated_duration_months) : '',
         returnFrequencyDays: orthoCase.return_frequency_days != null ? String(orthoCase.return_frequency_days) : '30',
+        maintenanceFee: orthoCase.maintenance_fee != null ? String(orthoCase.maintenance_fee) : '',
         applianceDetails: orthoCase.appliance_details || '',
         totalAligners: orthoCase.total_aligners != null ? String(orthoCase.total_aligners) : '',
         nextAppointmentAt: orthoCase.next_appointment_at ? orthoCase.next_appointment_at.split('T')[0] : '',
@@ -168,6 +170,7 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
             treatment_plan_notes: form.treatmentPlanNotes || null,
             estimated_duration_months: form.estimatedDurationMonths ? parseInt(form.estimatedDurationMonths) : null,
             return_frequency_days: form.returnFrequencyDays ? parseInt(form.returnFrequencyDays) : null,
+            maintenance_fee: form.maintenanceFee ? parseFloat(form.maintenanceFee) : null,
             appliance_details: form.applianceDetails || null,
             total_aligners: form.totalAligners ? parseInt(form.totalAligners) : null,
             next_appointment_at: form.nextAppointmentAt ? new Date(form.nextAppointmentAt).toISOString() : null,
@@ -188,6 +191,7 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
           treatment_plan_notes: form.treatmentPlanNotes || null,
           estimated_duration_months: form.estimatedDurationMonths ? parseInt(form.estimatedDurationMonths) : null,
           return_frequency_days: form.returnFrequencyDays ? parseInt(form.returnFrequencyDays) : null,
+          maintenance_fee: form.maintenanceFee ? parseFloat(form.maintenanceFee) : null,
           appliance_details: form.applianceDetails || null,
           total_aligners: form.totalAligners ? parseInt(form.totalAligners) : null,
           next_appointment_at: form.nextAppointmentAt ? new Date(form.nextAppointmentAt).toISOString() : null,
@@ -353,6 +357,19 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
                   onChange={e => updateField('returnFrequencyDays', e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Maintenance Fee */}
+            <div className="space-y-2">
+              <Label>Valor da Manutenção (R$)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Ex: 200.00"
+                value={form.maintenanceFee}
+                onChange={e => updateField('maintenanceFee', e.target.value)}
+              />
             </div>
 
             {/* Appliance Details */}

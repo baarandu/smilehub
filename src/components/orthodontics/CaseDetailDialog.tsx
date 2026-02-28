@@ -39,6 +39,7 @@ import {
   getAlignerProgress,
   getDaysUntilNextAppointment,
   getOverdueStatus,
+  getMaintenanceAlert,
   formatDuration,
   getComplianceColor,
 } from '@/utils/orthodontics';
@@ -66,6 +67,7 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
   const alignerProgress = getAlignerProgress(orthoCase);
   const overdueStatus = getOverdueStatus(orthoCase);
   const daysUntilNext = getDaysUntilNextAppointment(orthoCase.next_appointment_at);
+  const maintenanceAlert = getMaintenanceAlert(orthoCase);
 
   const handleStatusChange = async (newStatus: OrthodonticStatus) => {
     try {
@@ -138,6 +140,39 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
                   <div>
                     <span className="text-xs text-muted-foreground">Frequência de Retorno</span>
                     <p className="font-medium">{orthoCase.return_frequency_days} dias</p>
+                  </div>
+                )}
+                {orthoCase.maintenance_fee != null && orthoCase.maintenance_fee > 0 && (
+                  <div>
+                    <span className="text-xs text-muted-foreground">Valor Manutenção</span>
+                    <p className="font-medium">
+                      R$ {orthoCase.maintenance_fee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                )}
+                {maintenanceAlert && maintenanceAlert.level !== 'ok' && (
+                  <div className="col-span-2">
+                    <span className="text-xs text-muted-foreground">Alerta de Manutenção</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {maintenanceAlert.level === 'late' && (
+                        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-xs">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Manutenção atrasada (+{maintenanceAlert.daysSince - (orthoCase.return_frequency_days || 30)}d)
+                        </Badge>
+                      )}
+                      {maintenanceAlert.level === 'very_late' && (
+                        <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Atrasado {maintenanceAlert.daysSince}d sem sessão
+                        </Badge>
+                      )}
+                      {maintenanceAlert.level === 'absent' && (
+                        <Badge variant="destructive" className="text-xs">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Ausente — {maintenanceAlert.daysSince}d sem sessão
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 )}
 

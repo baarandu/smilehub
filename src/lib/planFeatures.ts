@@ -11,6 +11,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   imposto_renda: 'Imposto de Renda',
   comissoes: 'Comissões de dentistas',
   central_protese: 'Central de Próteses',
+  central_ortodontia: 'Central de Ortodontia',
   suporte_chat: 'Suporte por chat',
   consulta_voz: 'Consulta por Voz (IA)',
   dentista_ia: 'Dentista IA',
@@ -53,7 +54,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
   profissional_v2: [
     'estoque_importacao', 'assinatura_digital',
     'dentista_ia', 'contabilidade_ia',
-    'comissoes', 'central_protese', 'imposto_renda',
+    'comissoes', 'central_protese', 'central_ortodontia', 'imposto_renda',
     'whatsapp_confirmacao', 'multi_unidades', 'relatorios_avancados',
     'suporte_chat',
   ],
