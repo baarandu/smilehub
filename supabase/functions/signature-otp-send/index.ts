@@ -76,11 +76,31 @@ serve(async (req: Request) => {
       });
     }
 
-    // Get patient email
+    // Verify record belongs to clinic AND patient
+    const recordTable = recordType === "procedure" ? "procedures"
+      : recordType === "anamnesis" ? "anamneses"
+      : "exams";
+    const { data: record, error: recordError } = await supabase
+      .from(recordTable)
+      .select("patient_id")
+      .eq("id", recordId)
+      .eq("clinic_id", clinicId)
+      .single();
+
+    if (recordError || !record) {
+      throw new ValidationError("Registro clínico não encontrado nesta clínica.");
+    }
+
+    if (record.patient_id !== patientId) {
+      throw new ValidationError("Paciente não corresponde ao registro clínico.");
+    }
+
+    // Get patient email (scoped to clinic)
     const { data: patient, error: patientError } = await supabase
       .from("patients")
       .select("name, email, birth_date, guardian_email, mother_email")
       .eq("id", patientId)
+      .eq("clinic_id", clinicId)
       .single();
 
     if (patientError || !patient) {

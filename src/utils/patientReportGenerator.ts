@@ -590,9 +590,11 @@ export const generatePatientReport = async (options: ReportOptions) => {
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
+        const parsed = new DOMParser().parseFromString(htmlContent, 'text/html');
+        printWindow.document.replaceChild(
+            printWindow.document.importNode(parsed.documentElement, true),
+            printWindow.document.documentElement
+        );
         printWindow.focus();
 
         setTimeout(() => {

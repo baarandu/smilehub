@@ -215,6 +215,7 @@ serve(async (req: Request) => {
         .from("patients")
         .select("name")
         .eq("id", row.patient_id)
+        .eq("clinic_id", clinicId)
         .single();
 
       const hash = await computeRecordHash(row as Record<string, unknown>, rec.record_type);

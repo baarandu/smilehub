@@ -287,13 +287,22 @@ async function findPatientByIdentifier(
 ): Promise<Patient | null> {
   if (!identifier) return null;
 
+  // Sanitize: escape PostgREST special chars and SQL wildcards
+  const sanitized = identifier
+    .trim()
+    .slice(0, 100)
+    .replace(/[%_\\]/g, '\\$&')
+    .replace(/[,()]/g, '');
+
+  if (!sanitized) return null;
+
   // Try to find by exact match on name, CPF, or phone
   // Uses patients_secure view for decrypted CPF matching
   const { data } = await supabase
     .from('patients_secure')
     .select('*')
     .eq('clinic_id', clinicId)
-    .or(`name.ilike.%${identifier}%,cpf.eq.${identifier},phone.eq.${identifier}`)
+    .or(`name.ilike.%${sanitized}%,cpf.eq.${sanitized},phone.eq.${sanitized}`)
     .limit(1)
     .single();
 

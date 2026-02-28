@@ -53,7 +53,7 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
 
       try {
         if (newWindow) {
-          newWindow.document.write('Carregando documento...');
+          newWindow.document.title = 'Carregando documento...';
         }
 
         const signedUrl = await getAccessibleUrl(url);

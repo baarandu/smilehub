@@ -181,6 +181,11 @@ serve(async (req: Request) => {
       throw new ValidationError("Registro clínico não encontrado.");
     }
 
+    // Verify patient_id matches the record's actual patient
+    if ((record as any).patient_id !== patientId) {
+      throw new ValidationError("Paciente não corresponde ao registro clínico.");
+    }
+
     const serverHash = await computeRecordHash(record, recordType);
 
     // Compare frontend hash vs server hash

@@ -753,8 +753,11 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
-            printWindow.document.write(html);
-            printWindow.document.close();
+            const parsed = new DOMParser().parseFromString(html, 'text/html');
+            printWindow.document.replaceChild(
+                printWindow.document.importNode(parsed.documentElement, true),
+                printWindow.document.documentElement
+            );
             printWindow.print();
         }
     };
