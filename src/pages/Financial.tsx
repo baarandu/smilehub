@@ -221,7 +221,7 @@ export default function Financial() {
         </TabsList>
 
         <TabsContent value="income">
-          <IncomeTab transactions={transactions} loading={loading} />
+          <IncomeTab transactions={transactions} loading={loading} onRefresh={loadData} />
         </TabsContent>
 
         <TabsContent value="expenses">

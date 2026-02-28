@@ -42,17 +42,17 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Transaction } from '@/components/financial/types';
 import { financialService } from '@/services/financial';
 import { locationsService, Location } from '@/services/locations';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 interface IncomeTabProps {
     transactions: Transaction[];
     loading: boolean;
+    onRefresh?: () => void;
 }
 
 type IncomeSubTab = 'gross' | 'net';
 
-export function IncomeTab({ transactions, loading }: IncomeTabProps) {
-    const queryClient = useQueryClient();
+export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
     // Filter State
@@ -837,7 +837,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                     setConfirmDeleteOpen(false);
                                     setDetailModalOpen(false);
                                     setSelectedTransaction(null);
-                                    queryClient.invalidateQueries({ queryKey: ['financial'] });
+                                    onRefresh?.();
                                 } catch (error) {
                                     console.error('Error deleting:', error);
                                     alert('Erro ao excluir receita');
