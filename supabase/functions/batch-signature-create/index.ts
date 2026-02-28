@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/errorHandler.ts";
 import { extractBearerToken, validateUUID, ValidationError } from "../_shared/validation.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { computeRecordHash } from "../_shared/contentHash.ts";
 
 const FUNCTION_NAME = "batch-signature-create";
@@ -157,6 +158,12 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    await checkRateLimit(supabase, user.id, {
+      endpoint: FUNCTION_NAME,
+      maxRequests: 10,
+      windowMinutes: 60,
     });
 
     const body = await req.json();

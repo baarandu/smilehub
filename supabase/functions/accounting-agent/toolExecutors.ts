@@ -1,5 +1,15 @@
+import { sanitizeSearchTerm } from "../_shared/validation.ts";
+
 interface ToolArgs {
   [key: string]: any;
+}
+
+/** Sanitize a value for use in PostgREST .or() filter */
+function sanitizeFilterValue(value: string): string {
+  return value
+    .slice(0, 100)
+    .replace(/[%_\\]/g, "\\$&")
+    .replace(/[,()]/g, "");
 }
 
 // Mask CPF: show only last 2 digits → ***.***.***-XX
@@ -303,7 +313,7 @@ async function executeClassifyTransaction(
       .from("financial_transactions")
       .select("category")
       .eq("clinic_id", clinicId)
-      .or(`description.ilike.%${description.split(" ")[0]}%,supplier_name.ilike.%${supplier_name || ""}%`)
+      .or(`description.ilike.%${sanitizeFilterValue(description.split(" ")[0] || "")}%,supplier_name.ilike.%${sanitizeFilterValue(supplier_name || "")}%`)
       .not("category", "is", null)
       .limit(5);
 
