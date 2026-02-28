@@ -133,7 +133,7 @@ Fixes de 1-5 linhas em arquivos isolados. Testáveis individualmente.
 
 ---
 
-## TIER 3 — RISCO MÉDIO (Mudanças que afetam múltiplos arquivos ou padrões) — 6/8 COMPLETO
+## TIER 3 — RISCO MÉDIO (Mudanças que afetam múltiplos arquivos ou padrões) — 7/8 COMPLETO
 
 Testar com cuidado antes de mergear. Cada PR separado.
 
@@ -145,10 +145,10 @@ Testar com cuidado antes de mergear. Cada PR separado.
 - **O que**: Hook `useConfirmDialog` aplicado em 14 componentes. 2 restantes em hooks (sem JSX).
 - **Implementado em**: AnamneseTab, ChildAnamneseTab, DocumentUpload, LocationsModal, Materials, FinancialSettings, ProfileSettingsModal, Alerts, NewExpenseForm, CouponsTab, OrderDetailDialog, BudgetViewDialog, DocumentsModal, ExamsTab
 
-### ⬜ 3.3 Agenda.tsx — migrar para React Query
-- **O que**: Reescrever 805 linhas usando `useQuery`/`useMutation` do `useAppointments.ts`.
-- **Por quê**: 6 useEffects + manual state. Não sincroniza com cache do React Query.
-- **Status**: Pendente — página complexa, requer sessão dedicada
+### ✅ 3.3 Agenda.tsx — migrar para React Query
+- **O que**: Substituídos 5 useEffects de data-fetching por useQuery hooks.
+- **Implementado em**: `src/pages/Agenda.tsx`, `src/hooks/useAppointments.ts` (added `useMonthDates`, `useAppointmentSearch`)
+- **Detalhes**: Optimistic update no status change, invalidateQueries no create/update/delete, search via React Query com `enabled`
 
 ### ✅ 3.4 PrivateRoute — paralelizar queries
 - **O que**: `Promise.all` para as queries sequenciais do `checkAccess`.
@@ -229,14 +229,13 @@ Testar com cuidado antes de mergear. Cada PR separado.
 | **T0** | 7 | ✅ Completo | 7/7 |
 | **T1** | 11 | ✅ Completo | 11/11 |
 | **T2** | 8 | ✅ Completo | 8/8 |
-| **T3** | 8 | 🔶 Quase completo | 6/8 |
+| **T3** | 8 | 🔶 Quase completo | 7/8 |
 | **T4** | 5 | ⬜ Pendente | 0/5 |
 | **T5** | 5 | ⬜ Pendente | 0/5 |
 
-**Total: 32/44 itens concluídos (73%).**
+**Total: 33/44 itens concluídos (75%).**
 
 ### Pendentes T3 (médio prazo):
-- **3.3**: Agenda.tsx → React Query (refator grande, sessão dedicada)
 - **3.7**: usePatients → busca paginada nos selects (3 componentes)
 
 ### Para ir a produção:

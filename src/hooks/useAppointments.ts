@@ -103,6 +103,23 @@ export function useDeleteAppointment() {
   });
 }
 
+export function useMonthDates(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ['appointments', 'month-dates', startDate, endDate],
+    queryFn: () => appointmentsService.getDatesWithAppointments(startDate, endDate),
+    enabled: !!startDate && !!endDate,
+  });
+}
+
+export function useAppointmentSearch(query: string) {
+  return useQuery({
+    queryKey: ['appointments', 'search', query],
+    queryFn: () => appointmentsService.search(query),
+    enabled: query.length >= 2,
+    staleTime: 30_000,
+  });
+}
+
 
 
 

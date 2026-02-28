@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { appointmentsService } from '@/services/appointments';
-import { locationsService, type Location } from '@/services/locations';
+import { locationsService } from '@/services/locations';
 import { scheduleSettingsService } from '@/services/scheduleSettings';
+import { useAppointmentsByDate, useMonthDates, useAppointmentSearch } from '@/hooks/useAppointments';
 import { usePatients, useCreatePatient } from '@/hooks/usePatients';
 import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
@@ -49,25 +51,43 @@ export default function Agenda() {
   const navigate = useNavigate();
   const location = useLocation();
   const { clinicId } = useClinic();
+  const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
-  const [datesWithAppointments, setDatesWithAppointments] = useState<Date[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState<AppointmentWithPatient | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<AppointmentWithPatient | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [searchResults, setSearchResults] = useState<AppointmentWithPatient[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const [dentists, setDentists] = useState<{ id: string; name: string; specialty: string }[]>([]);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+
+  // Derived date strings for queries
+  const dateString = format(selectedDate, 'yyyy-MM-dd');
+  const monthStart = format(startOfMonth(calendarMonth), 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(calendarMonth), 'yyyy-MM-dd');
+
+  // React Query data fetching
+  const { data: appointments = [], isLoading: loading } = useAppointmentsByDate(dateString);
+  const { data: monthDates = [] } = useMonthDates(monthStart, monthEnd);
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => locationsService.getAll(),
+  });
+  const { data: dentists = [] } = useQuery({
+    queryKey: ['dentists', clinicId],
+    queryFn: () => scheduleSettingsService.getDentists(clinicId!),
+    enabled: !!clinicId,
+  });
+  const { data: searchResults = [], isFetching: isSearching } = useAppointmentSearch(debouncedSearch);
+
+  const datesWithAppointments = useMemo(
+    () => monthDates.map(d => new Date(d + 'T00:00:00')),
+    [monthDates],
+  );
 
   // React Query hooks for patients
   const { data: patients = [] } = usePatients();
@@ -77,18 +97,14 @@ export default function Agenda() {
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
+  // Show/hide search results dropdown based on query and results
   useEffect(() => {
-    loadDayAppointments();
-  }, [selectedDate]);
-
-  useEffect(() => {
-    loadMonthDates();
-  }, [calendarMonth]);
-
-  useEffect(() => {
-    loadLocations();
-    loadDentists();
-  }, [clinicId]);
+    if (debouncedSearch.length >= 2 && searchResults.length > 0) {
+      setShowSearchResults(true);
+    } else if (debouncedSearch.length < 2) {
+      setShowSearchResults(false);
+    }
+  }, [debouncedSearch, searchResults]);
 
   // Auto-open new appointment dialog or navigate to date when coming from other pages
   useEffect(() => {
@@ -109,39 +125,6 @@ export default function Agenda() {
     }
   }, [location.state]);
 
-  // Global search
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const performSearch = async () => {
-      if (debouncedSearch.length < 2) {
-        setSearchResults([]);
-        setShowSearchResults(false);
-        return;
-      }
-
-      setIsSearching(true);
-      try {
-        const results = await appointmentsService.search(debouncedSearch);
-        if (!controller.signal.aborted) {
-          setSearchResults(results);
-          setShowSearchResults(true);
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error('Error searching appointments:', error);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsSearching(false);
-        }
-      }
-    };
-
-    performSearch();
-    return () => controller.abort();
-  }, [debouncedSearch]);
-
   // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -154,53 +137,6 @@ export default function Agenda() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadDayAppointments = async () => {
-    try {
-      setLoading(true);
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const data = await appointmentsService.getByDate(dateStr);
-      setAppointments(data);
-    } catch (error) {
-      console.error('Error loading appointments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMonthDates = async () => {
-    try {
-      const start = startOfMonth(calendarMonth);
-      const end = endOfMonth(calendarMonth);
-      const startStr = format(start, 'yyyy-MM-dd');
-      const endStr = format(end, 'yyyy-MM-dd');
-
-      const dates = await appointmentsService.getDatesWithAppointments(startStr, endStr);
-      setDatesWithAppointments(dates.map(d => new Date(d + 'T00:00:00')));
-    } catch (error) {
-      console.error('Error loading month dates:', error);
-    }
-  };
-
-  const loadLocations = async () => {
-    try {
-      const data = await locationsService.getAll();
-      setLocations(data);
-    } catch (error) {
-      console.error('Error loading locations:', error);
-    }
-  };
-
-  const loadDentists = async () => {
-    if (!clinicId) return;
-    try {
-      const data = await scheduleSettingsService.getDentists(clinicId);
-      setDentists(data);
-    } catch (error) {
-      console.error('Error loading dentists:', error);
-    }
-  };
-
-  const dateString = format(selectedDate, 'yyyy-MM-dd');
 
   // Filter appointments by status only (search is now global)
   const filteredAppointments = appointments
@@ -208,15 +144,17 @@ export default function Agenda() {
     .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
   const handleStatusChange = async (appointmentId: string, status: AppointmentWithPatient['status']) => {
+    // Optimistic update
+    const queryKey = ['appointments', 'date', dateString];
+    const previous = queryClient.getQueryData<AppointmentWithPatient[]>(queryKey);
+    queryClient.setQueryData<AppointmentWithPatient[]>(queryKey, old =>
+      old?.map(a => a.id === appointmentId ? { ...a, status } : a) ?? []
+    );
     try {
       await appointmentsService.updateStatus(appointmentId, status);
-      setAppointments(
-        appointments.map((a) =>
-          a.id === appointmentId ? { ...a, status } : a
-        )
-      );
       toast.success('Status atualizado!');
     } catch (error) {
+      queryClient.setQueryData(queryKey, previous);
       console.error('Error updating status:', error);
       toast.error('Erro ao atualizar status');
     }
@@ -252,8 +190,7 @@ export default function Agenda() {
 
       setDialogOpen(false);
       toast.success('Consulta agendada com sucesso!');
-      loadDayAppointments();
-      loadMonthDates();
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     } catch (error) {
       console.error('Error creating appointment:', error);
       toast.error('Erro ao agendar consulta');
@@ -286,8 +223,7 @@ export default function Agenda() {
       setDialogOpen(false);
       setEditingAppointment(null);
       toast.success('Consulta atualizada com sucesso!');
-      loadDayAppointments();
-      loadMonthDates();
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     } catch (error) {
       console.error('Error updating appointment:', error);
       toast.error('Erro ao atualizar consulta');
@@ -328,8 +264,7 @@ export default function Agenda() {
     try {
       await appointmentsService.delete(appointmentToDelete.id);
       toast.success('Consulta excluída com sucesso!');
-      loadDayAppointments();
-      loadMonthDates();
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     } catch (error) {
       console.error('Error deleting appointment:', error);
       toast.error('Erro ao excluir consulta');
