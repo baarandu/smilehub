@@ -66,7 +66,6 @@ export function MaintenanceScheduleDialog({ open, onOpenChange, orthoCase, onSuc
           time,
           status: 'scheduled',
           procedure_name: 'Manutenção Ortodôntica',
-          dentist_id: orthoCase.dentist_id,
           notes: 'Manutenção ortodôntica',
         });
         if (!earliestDate || formattedDate < earliestDate) {

@@ -213,7 +213,6 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
         time: nextTime,
         status: 'scheduled',
         procedure_name: 'Manutenção Ortodôntica',
-        dentist_id: orthoCase.dentist_id,
         notes: 'Manutenção ortodôntica',
       });
 
