@@ -2,7 +2,7 @@
 
 export type OrthodonticStatus =
   | 'awaiting_documentation' | 'documentation_received' | 'evaluation'
-  | 'prior_treatment' | 'ready_to_install' | 'active' | 'retention' | 'completed'
+  | 'prior_treatment' | 'active' | 'completed'
   | 'paused';
 
 export type OrthodonticTreatmentType =
@@ -170,9 +170,7 @@ export const STATUS_LABELS: Record<OrthodonticStatus, string> = {
   documentation_received: 'Documentação Recebida',
   evaluation: 'Avaliação',
   prior_treatment: 'Tratamento Prévio',
-  ready_to_install: 'Apto p/ Instalação',
   active: 'Em Tratamento',
-  retention: 'Contenção',
   completed: 'Alta',
   paused: 'Pausado',
 };
@@ -192,9 +190,7 @@ export const ORTHO_KANBAN_COLUMNS: OrthoKanbanColumn[] = [
   { id: 'documentation_received', title: 'Documentação Recebida', color: 'text-cyan-700', bgColor: 'bg-cyan-50/50', borderColor: 'border-cyan-200' },
   { id: 'evaluation', title: 'Avaliação', color: 'text-indigo-700', bgColor: 'bg-indigo-50/50', borderColor: 'border-indigo-200' },
   { id: 'prior_treatment', title: 'Tratamento Prévio', color: 'text-orange-700', bgColor: 'bg-orange-50/50', borderColor: 'border-orange-200' },
-  { id: 'ready_to_install', title: 'Apto p/ Instalação', color: 'text-purple-700', bgColor: 'bg-purple-50/50', borderColor: 'border-purple-200' },
   { id: 'active', title: 'Em Tratamento', color: 'text-green-700', bgColor: 'bg-green-50/50', borderColor: 'border-green-200' },
-  { id: 'retention', title: 'Contenção', color: 'text-amber-700', bgColor: 'bg-amber-50/50', borderColor: 'border-amber-200' },
   { id: 'completed', title: 'Alta', color: 'text-emerald-700', bgColor: 'bg-emerald-50/50', borderColor: 'border-emerald-200' },
 ];
 

@@ -6,7 +6,7 @@ ALTER TABLE orthodontic_cases DROP CONSTRAINT IF EXISTS orthodontic_cases_status
 ALTER TABLE orthodontic_cases ADD CONSTRAINT orthodontic_cases_status_check
   CHECK (status IN (
     'awaiting_documentation', 'documentation_received', 'evaluation',
-    'prior_treatment', 'ready_to_install', 'active', 'retention', 'completed', 'paused'
+    'prior_treatment', 'active', 'completed', 'paused'
   ));
 
 -- 2. Change default status
@@ -20,5 +20,7 @@ ALTER TABLE orthodontic_cases
   ADD COLUMN IF NOT EXISTS needs_prior_treatment boolean DEFAULT false,
   ADD COLUMN IF NOT EXISTS position int DEFAULT 0;
 
--- 4. Migrate existing data: 'planning' → 'ready_to_install'
-UPDATE orthodontic_cases SET status = 'ready_to_install' WHERE status = 'planning';
+-- 4. Migrate existing data
+UPDATE orthodontic_cases SET status = 'active' WHERE status = 'planning';
+UPDATE orthodontic_cases SET status = 'active' WHERE status = 'ready_to_install';
+UPDATE orthodontic_cases SET status = 'completed' WHERE status = 'retention';

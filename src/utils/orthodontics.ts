@@ -5,7 +5,7 @@ import { STATUS_LABELS, TREATMENT_TYPE_LABELS, COMPLIANCE_LABELS } from '@/types
 
 const STATUS_FLOW: OrthodonticStatus[] = [
   'awaiting_documentation', 'documentation_received', 'evaluation',
-  'prior_treatment', 'ready_to_install', 'active', 'retention', 'completed',
+  'prior_treatment', 'active', 'completed',
 ];
 // 'paused' is a side-branch — not in the main flow
 
@@ -33,9 +33,7 @@ export function getStatusColor(status: OrthodonticStatus): { bg: string; text: s
     documentation_received: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' },
     evaluation: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
     prior_treatment: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
-    ready_to_install: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
     active: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-    retention: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
     completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
     paused: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   };

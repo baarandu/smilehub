@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   FileCheck,
   Wrench,
-  CheckCircle2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -406,27 +405,16 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleStatusChange('ready_to_install')}
+                      onClick={() => handleStatusChange('active')}
                       disabled={changeStatus.isPending}
                     >
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
-                      Apto p/ Instalação
+                      Instalar Aparelho
+                      <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
                   </>
                 )}
 
                 {orthoCase.status === 'prior_treatment' && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleStatusChange('ready_to_install')}
-                    disabled={changeStatus.isPending}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-1" />
-                    Apto p/ Instalação
-                  </Button>
-                )}
-
-                {orthoCase.status === 'ready_to_install' && (
                   <Button
                     size="sm"
                     onClick={() => handleStatusChange('active')}
@@ -437,7 +425,7 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
                   </Button>
                 )}
 
-                {(orthoCase.status === 'documentation_received' || orthoCase.status === 'active' || orthoCase.status === 'retention') && nextStatus && (
+                {(orthoCase.status === 'documentation_received' || orthoCase.status === 'active') && nextStatus && (
                   <Button
                     size="sm"
                     onClick={() => handleStatusChange(nextStatus)}
