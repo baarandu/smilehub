@@ -108,11 +108,31 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
         return null; // Return null if invalid, or keep original if already formatted? logic here assumes input is DD/MM/YYYY
     };
 
+    const validateCPF = (cpf: string): boolean => {
+        const digits = cpf.replace(/\D/g, '');
+        if (digits.length !== 11) return false;
+        if (/^(\d)\1{10}$/.test(digits)) return false;
+        for (let t = 9; t < 11; t++) {
+            let sum = 0;
+            for (let i = 0; i < t; i++) {
+                sum += parseInt(digits[i]) * (t + 1 - i);
+            }
+            const remainder = (sum * 10) % 11;
+            if ((remainder === 10 ? 0 : remainder) !== parseInt(digits[t])) return false;
+        }
+        return true;
+    };
+
     const handleSave = async () => {
         if (!patient) return;
 
         if (!form.name || !form.phone) {
             Alert.alert('Erro', 'Nome e telefone são obrigatórios');
+            return;
+        }
+
+        if (form.cpf && form.cpf.replace(/\D/g, '').length > 0 && !validateCPF(form.cpf)) {
+            Alert.alert('Erro', 'CPF inválido. Verifique os dígitos.');
             return;
         }
         try {

@@ -363,11 +363,23 @@ export function NewBudgetModal({
                 faces: t.faces || [],
             }));
 
+            const grandTotal = getGrandTotal();
+            if (!isFinite(grandTotal) || grandTotal <= 0) {
+                Alert.alert('Erro', 'Valor do orçamento inválido.');
+                setSaving(false);
+                return;
+            }
+            if (grandTotal > 999999.99) {
+                Alert.alert('Erro', 'Valor do orçamento excede o máximo permitido (R$ 999.999,99).');
+                setSaving(false);
+                return;
+            }
+
             const budgetData: BudgetInsert = {
                 patient_id: patientId,
                 date: date.includes('-') ? date : `${date.slice(6, 10)}-${date.slice(3, 5)}-${date.slice(0, 2)}`,
                 treatment: allTreatments.join(', '),
-                value: getGrandTotal(),
+                value: grandTotal,
                 notes: notesData,
                 location_rate: locationRate ? parseFloat(locationRate) : 0,
                 status: calculateBudgetStatus(teethList),
