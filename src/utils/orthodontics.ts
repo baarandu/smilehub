@@ -1,5 +1,18 @@
-import type { OrthodonticStatus, OrthodonticCase, PatientCompliance } from '@/types/orthodontics';
+import type { OrthodonticStatus, OrthodonticCase, OrthodonticTreatmentType, PatientCompliance } from '@/types/orthodontics';
 import { STATUS_LABELS, TREATMENT_TYPE_LABELS, COMPLIANCE_LABELS } from '@/types/orthodontics';
+
+// ==================== Treatment Detection ====================
+
+const ORTHODONTIC_TREATMENTS = ['Aparelho Ortodôntico', 'Aparelho ortopédico'];
+
+export function isOrthodonticTreatment(treatments: string[]): boolean {
+  return treatments.some(t => ORTHODONTIC_TREATMENTS.includes(t));
+}
+
+export function getOrthoTypeFromTreatments(treatments: string[]): OrthodonticTreatmentType {
+  if (treatments.includes('Aparelho ortopédico')) return 'interceptive';
+  return 'fixed_metallic';
+}
 
 // ==================== Status Flow ====================
 
@@ -76,6 +89,39 @@ export function getOverdueStatus(orthoCase: OrthodonticCase): 'overdue' | 'due_s
   if (days < 0) return 'overdue';
   if (days <= 3) return 'due_soon';
   return 'ok';
+}
+
+// ==================== Maintenance Alert ====================
+
+export type MaintenanceAlertLevel = 'ok' | 'late' | 'very_late' | 'absent';
+
+export interface MaintenanceAlert {
+  level: MaintenanceAlertLevel;
+  daysSince: number;
+}
+
+export function getMaintenanceAlert(orthoCase: OrthodonticCase): MaintenanceAlert | null {
+  if (orthoCase.status !== 'active' || !orthoCase.last_session_at) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lastSession = new Date(orthoCase.last_session_at);
+  lastSession.setHours(0, 0, 0, 0);
+  const daysSince = Math.floor((today.getTime() - lastSession.getTime()) / (1000 * 60 * 60 * 24));
+  const freq = orthoCase.return_frequency_days || 30;
+
+  let level: MaintenanceAlertLevel;
+  if (daysSince <= freq) {
+    level = 'ok';
+  } else if (daysSince <= freq + 14) {
+    level = 'late';
+  } else if (daysSince <= freq + 30) {
+    level = 'very_late';
+  } else {
+    level = 'absent';
+  }
+
+  return { level, daysSince };
 }
 
 // ==================== Progress ====================

@@ -285,7 +285,29 @@ export const financialService = {
             }
         }
 
-        // 3. Delete the transaction
+        // 3. If the reverted tooth has orthodontic treatment, delete the linked ortho case
+        if (txn.related_entity_id) {
+            const ORTHO_TREATMENTS = ['Aparelho Ortodôntico', 'Aparelho ortopédico'];
+            const description = txn.description || '';
+            const hasOrtho = ORTHO_TREATMENTS.some(t => description.includes(t));
+
+            if (hasOrtho) {
+                const { data: orthoCase } = await supabase
+                    .from('orthodontic_cases')
+                    .select('id')
+                    .eq('budget_id', txn.related_entity_id)
+                    .maybeSingle();
+
+                if (orthoCase) {
+                    await supabase
+                        .from('orthodontic_cases')
+                        .delete()
+                        .eq('id', orthoCase.id);
+                }
+            }
+        }
+
+        // 4. Delete the transaction
         const { error: deleteError } = await supabase
             .from('financial_transactions')
             .delete()

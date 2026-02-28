@@ -4,6 +4,8 @@ import { financialService } from '@/services/financial';
 import { prosthesisService } from '@/services/prosthesis';
 import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment } from '@/utils/prosthesis';
+import { isOrthodonticTreatment, getOrthoTypeFromTreatments } from '@/utils/orthodontics';
+import { orthodonticsService } from '@/services/orthodontics';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -78,6 +80,33 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             return true;
         } catch (err) {
             console.error('Erro ao criar ordem de prótese automaticamente:', err);
+            return false;
+        }
+    };
+
+    const autoCreateOrthoCase = async (tooth: ToothEntry, budgetId: string): Promise<boolean> => {
+        if (!clinicId) return false;
+        if (!isOrthodonticTreatment(tooth.treatments)) return false;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return false;
+
+            const treatmentType = getOrthoTypeFromTreatments(tooth.treatments);
+
+            await orthodonticsService.createCase({
+                clinic_id: clinicId,
+                patient_id: patientId,
+                dentist_id: user.id,
+                treatment_type: treatmentType,
+                budget_id: budgetId,
+                created_by: user.id,
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['orthodontic-cases'] });
+            return true;
+        } catch (err) {
+            console.error('Erro ao criar caso ortodôntico automaticamente:', err);
             return false;
         }
     };
@@ -245,10 +274,15 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             // Auto-create prosthesis order if item is prosthetic with lab
             const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
 
+            // Auto-create ortho case if item is orthodontic
+            const orthoCreated = await autoCreateOrthoCase(selectedTooth, budget.id);
+
             toast({
                 title: "Pagamento Registrado",
                 description: prosthesisCreated
                     ? "Ordem de prótese criada! Acesse a Central de Prótese para configurar o envio ao laboratório."
+                    : orthoCreated
+                    ? "Caso ortodôntico criado! Acesse a Central de Ortodontia para acompanhar."
                     : "O item foi marcado como pago e lançado no financeiro.",
             });
             onSuccess();
@@ -384,10 +418,21 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 if (created) prosthesisCount++;
             }
 
+            // Auto-create ortho cases for orthodontic items
+            let orthoCount = 0;
+            for (const idx of indices) {
+                const created = await autoCreateOrthoCase(currentTeeth[idx], budget.id);
+                if (created) orthoCount++;
+            }
+
+            const extras: string[] = [];
+            if (prosthesisCount > 0) extras.push(`${prosthesisCount} ordem(ns) de prótese criada(s)`);
+            if (orthoCount > 0) extras.push(`${orthoCount} caso(s) ortodôntico(s) criado(s)`);
+
             toast({
                 title: "Pagamento Registrado",
-                description: prosthesisCount > 0
-                    ? `${indices.length} item(ns) pago(s). ${prosthesisCount} ordem(ns) de prótese criada(s)! Acesse a Central de Prótese para configurar o envio.`
+                description: extras.length > 0
+                    ? `${indices.length} item(ns) pago(s). ${extras.join('. ')}!`
                     : `${indices.length} item(ns) marcado(s) como pago(s) e lançado(s) no financeiro.`,
             });
             onSuccess();

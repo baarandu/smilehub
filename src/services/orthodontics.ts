@@ -164,6 +164,26 @@ export const orthodonticsService = {
     return mapCase(updated);
   },
 
+  async deleteCase(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('orthodontic_cases')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async getCaseByBudgetId(budgetId: string): Promise<OrthodonticCase | null> {
+    const { data, error } = await supabase
+      .from('orthodontic_cases')
+      .select(CASE_SELECT)
+      .eq('budget_id', budgetId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapCase(data) : null;
+  },
+
   async getCasesByPatient(patientId: string): Promise<OrthodonticCase[]> {
     const { data, error } = await supabase
       .from('orthodontic_cases')
