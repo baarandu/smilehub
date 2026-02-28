@@ -38,7 +38,6 @@ export interface AppointmentFormData {
 export interface NewAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  patients: Patient[];
   locations: Location[];
   selectedDate: string;
   onAdd: (data: AppointmentFormData) => void;

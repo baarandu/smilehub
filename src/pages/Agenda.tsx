@@ -6,7 +6,7 @@ import { appointmentsService } from '@/services/appointments';
 import { locationsService } from '@/services/locations';
 import { scheduleSettingsService } from '@/services/scheduleSettings';
 import { useAppointmentsByDate, useMonthDates, useAppointmentSearch } from '@/hooks/useAppointments';
-import { usePatients, useCreatePatient } from '@/hooks/usePatients';
+import { useCreatePatient } from '@/hooks/usePatients';
 import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
@@ -89,8 +89,6 @@ export default function Agenda() {
     [monthDates],
   );
 
-  // React Query hooks for patients
-  const { data: patients = [] } = usePatients();
   const createPatientMutation = useCreatePatient();
 
   // Patient creation flow
@@ -447,7 +445,6 @@ export default function Agenda() {
                 setPreSelectedPatient(null);
               }
             }}
-            patients={patients}
             locations={locations}
             selectedDate={dateString}
             onAdd={handleAddAppointment}

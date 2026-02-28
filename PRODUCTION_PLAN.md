@@ -133,7 +133,7 @@ Fixes de 1-5 linhas em arquivos isolados. Testáveis individualmente.
 
 ---
 
-## TIER 3 — RISCO MÉDIO (Mudanças que afetam múltiplos arquivos ou padrões) — 7/8 COMPLETO
+## TIER 3 — RISCO MÉDIO (Mudanças que afetam múltiplos arquivos ou padrões) ✅ COMPLETO
 
 Testar com cuidado antes de mergear. Cada PR separado.
 
@@ -163,9 +163,9 @@ Testar com cuidado antes de mergear. Cada PR separado.
 - **Implementado em**: `src/components/patients/DocumentsModal.tsx`
 - **Nota**: jsPDF já estava em chunk separado (vendor-pdf), mantido como está
 
-### ⬜ 3.7 `usePatients()` — trocar por busca paginada nos selects
-- **O que**: Em Agenda, OrderForm, CaseForm — usar `usePatientSearch` ao invés de carregar todos.
-- **Status**: Pendente — afeta 3 componentes com select de pacientes
+### ✅ 3.7 `usePatients()` — trocar por busca paginada nos selects
+- **O que**: NewAppointmentDialog, CaseFormSheet, OrderFormSheet — trocados de `usePatients()` (carrega todos) para `usePatientSearch` (server-side, limit 20, debounced 300ms).
+- **Implementado em**: `NewAppointmentDialog.tsx`, `CaseFormSheet.tsx`, `OrderFormSheet.tsx`, `Agenda.tsx`, `types.ts`
 
 ### ✅ 3.8 ErrorBoundary granular
 - **O que**: `SectionErrorBoundary` criado e aplicado no AppLayout (wrapping `{children}`) + Dashboard charts.
@@ -229,14 +229,11 @@ Testar com cuidado antes de mergear. Cada PR separado.
 | **T0** | 7 | ✅ Completo | 7/7 |
 | **T1** | 11 | ✅ Completo | 11/11 |
 | **T2** | 8 | ✅ Completo | 8/8 |
-| **T3** | 8 | 🔶 Quase completo | 7/8 |
+| **T3** | 8 | ✅ Completo | 8/8 |
 | **T4** | 5 | ⬜ Pendente | 0/5 |
 | **T5** | 5 | ⬜ Pendente | 0/5 |
 
-**Total: 33/44 itens concluídos (75%).**
-
-### Pendentes T3 (médio prazo):
-- **3.7**: usePatients → busca paginada nos selects (3 componentes)
+**Total: 34/44 itens concluídos (77%).**
 
 ### Para ir a produção:
 Todos os itens bloqueantes de segurança (T0 + T1) estão ✅ implementados. T2 e maior parte de T3 também concluídos. O app está pronto para deploy de produção com os itens pendentes de T3 sendo melhorias de qualidade não-bloqueantes.

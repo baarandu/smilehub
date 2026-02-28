@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
+import { usePatientSearch } from '@/hooks/usePatients';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +66,6 @@ function generateTimeSlots(
 export function NewAppointmentDialog({
   open,
   onOpenChange,
-  patients,
   locations,
   selectedDate,
   onAdd,
@@ -89,6 +90,8 @@ export function NewAppointmentDialog({
     dentistId: '',
   });
   const [patientSearch, setPatientSearch] = useState('');
+  const debouncedPatientSearch = useDebounce(patientSearch, 300);
+  const { data: filteredPatients = [], isFetching: isSearchingPatients } = usePatientSearch(debouncedPatientSearch);
   const [showPatientList, setShowPatientList] = useState(false);
   const [scheduleSettings, setScheduleSettings] = useState<ScheduleSetting[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -176,13 +179,6 @@ export function NewAppointmentDialog({
   const filteredLocations = selectedSlot && selectedSlot.locationIds.length > 0
     ? locations.filter(l => selectedSlot.locationIds.includes(l.id))
     : locations;
-
-  const filteredPatients = patientSearch.length > 0
-    ? patients.filter(p =>
-      p.name.toLowerCase().includes(patientSearch.toLowerCase()) ||
-      p.phone?.includes(patientSearch)
-    )
-    : [];
 
   const handleSelectPatient = (patient: { id: string; name: string }) => {
     setForm({ ...form, patientId: patient.id, patientName: patient.name });
@@ -281,7 +277,7 @@ export function NewAppointmentDialog({
                     ))}
                   </div>
                 )}
-                {showPatientList && patientSearch.length > 0 && filteredPatients.length === 0 && (
+                {showPatientList && debouncedPatientSearch.length >= 2 && !isSearchingPatients && filteredPatients.length === 0 && (
                   <div
                     className="absolute z-50 w-full mt-1 bg-amber-50 border border-amber-200 rounded-md shadow-lg p-4 text-center"
                     onClick={(e) => e.stopPropagation()}

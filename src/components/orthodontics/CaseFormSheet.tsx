@@ -17,7 +17,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useCreateCase, useUpdateCase } from '@/hooks/useOrthodontics';
-import { usePatients } from '@/hooks/usePatients';
+import { usePatientSearch } from '@/hooks/usePatients';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { OrthodonticCase, CaseFormData, OrthodonticTreatmentType } from '@/types/orthodontics';
 import { TREATMENT_TYPE_LABELS } from '@/types/orthodontics';
 
@@ -54,11 +55,11 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
   const { toast } = useToast();
   const createCase = useCreateCase();
   const updateCase = useUpdateCase();
-  const { data: patients = [] } = usePatients();
-
   const [form, setForm] = useState<CaseFormData>(emptyForm);
   const [dentists, setDentists] = useState<DentistOption[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
+  const debouncedPatientSearch = useDebounce(patientSearch, 300);
+  const { data: filteredPatients = [] } = usePatientSearch(debouncedPatientSearch);
   const [showPatientList, setShowPatientList] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState('');
 
@@ -135,10 +136,6 @@ export function CaseFormSheet({ open, onOpenChange, orthoCase }: CaseFormSheetPr
       return () => document.removeEventListener('click', handler);
     }
   }, [showPatientList]);
-
-  const filteredPatients = patientSearch.length >= 2
-    ? patients.filter((p: any) => p.name.toLowerCase().includes(patientSearch.toLowerCase())).slice(0, 10)
-    : [];
 
   const handleSelectPatient = (patient: { id: string; name: string }) => {
     setForm(prev => ({ ...prev, patientId: patient.id }));

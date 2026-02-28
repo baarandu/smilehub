@@ -17,7 +17,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useCreateOrder, useUpdateOrder, useActiveProsthesisLabs } from '@/hooks/useProsthesis';
-import { usePatients } from '@/hooks/usePatients';
+import { usePatientSearch } from '@/hooks/usePatients';
+import { useDebounce } from '@/hooks/useDebounce';
 import type { ProsthesisOrder, ProsthesisOrderFormData } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
 import { useProstheticBudgetItems, type ProstheticBudgetItem } from '@/hooks/useProstheticBudgetItems';
@@ -56,13 +57,14 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
   const { toast } = useToast();
   const createOrder = useCreateOrder();
   const updateOrder = useUpdateOrder();
-  const { data: patients = [] } = usePatients();
   const { data: labs = [] } = useActiveProsthesisLabs();
 
   const [form, setForm] = useState<ProsthesisOrderFormData>(emptyForm);
   const [materialCustom, setMaterialCustom] = useState('');
   const [dentists, setDentists] = useState<DentistOption[]>([]);
   const [patientSearch, setPatientSearch] = useState('');
+  const debouncedPatientSearch = useDebounce(patientSearch, 300);
+  const { data: filteredPatients = [] } = usePatientSearch(debouncedPatientSearch);
   const [showPatientList, setShowPatientList] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState('');
   const [budgetLink, setBudgetLink] = useState<{ budgetId: string; toothIndex: number } | null>(null);
@@ -148,10 +150,6 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
       return () => document.removeEventListener('click', handler);
     }
   }, [showPatientList]);
-
-  const filteredPatients = patientSearch.length >= 2
-    ? patients.filter((p: any) => p.name.toLowerCase().includes(patientSearch.toLowerCase())).slice(0, 10)
-    : [];
 
   const handleSelectPatient = (patient: { id: string; name: string }) => {
     setForm(prev => ({ ...prev, patientId: patient.id }));
