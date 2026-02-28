@@ -1,0 +1,200 @@
+import { useState, useMemo, useCallback } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useChangeStatus, useBatchUpdatePositions } from '@/hooks/useOrthodontics';
+import type { OrthodonticCase, OrthodonticStatus, CaseFilters } from '@/types/orthodontics';
+import { ORTHO_KANBAN_COLUMNS } from '@/types/orthodontics';
+import { getStatusLabel, getNextStatus, getPreviousStatus } from '@/utils/orthodontics';
+import { OrthoKanbanColumn } from './OrthoKanbanColumn';
+import { OrthoKanbanCardOverlay } from './OrthoKanbanCard';
+
+interface OrthoKanbanBoardProps {
+  cases: OrthodonticCase[];
+  isLoading: boolean;
+  onCardClick: (orthoCase: OrthodonticCase) => void;
+}
+
+export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanBoardProps) {
+  const { toast } = useToast();
+  const changeStatus = useChangeStatus();
+  const batchUpdatePositions = useBatchUpdatePositions();
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Group cases by status (excluding paused from Kanban)
+  const casesByStatus = useMemo(() => {
+    const grouped: Record<string, OrthodonticCase[]> = {};
+    ORTHO_KANBAN_COLUMNS.forEach(col => { grouped[col.id] = []; });
+    cases.forEach(c => {
+      if (c.status === 'paused') return;
+      if (grouped[c.status]) grouped[c.status].push(c);
+    });
+    // Sort each column by position
+    Object.values(grouped).forEach(arr =>
+      arr.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    );
+    return grouped;
+  }, [cases]);
+
+  const activeCase = activeId ? cases.find(c => c.id === activeId) ?? null : null;
+
+  const getUserId = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id || '';
+  };
+
+  const handleMoveCase = useCallback(async (orthoCase: OrthodonticCase, newStatus: OrthodonticStatus) => {
+    const userId = await getUserId();
+    try {
+      await changeStatus.mutateAsync({
+        caseId: orthoCase.id,
+        newStatus,
+        userId,
+      });
+    } catch {
+      toast({ title: 'Erro ao mover caso', variant: 'destructive' });
+    }
+  }, [changeStatus, toast]);
+
+  const handleAdvanceStatus = useCallback((orthoCase: OrthodonticCase) => {
+    const next = getNextStatus(orthoCase.status);
+    if (next) handleMoveCase(orthoCase, next);
+  }, [handleMoveCase]);
+
+  const handleRetreatStatus = useCallback((orthoCase: OrthodonticCase) => {
+    const prev = getPreviousStatus(orthoCase.status);
+    if (prev) handleMoveCase(orthoCase, prev);
+  }, [handleMoveCase]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || !active) return;
+
+    const draggedCase = cases.find(c => c.id === active.id);
+    if (!draggedCase) return;
+
+    const overId = over.id as string;
+    const isColumn = ORTHO_KANBAN_COLUMNS.some(c => c.id === overId);
+    const targetStatus = isColumn
+      ? (overId as OrthodonticStatus)
+      : cases.find(c => c.id === overId)?.status ?? draggedCase.status;
+
+    if (targetStatus === 'paused') return;
+
+    if (targetStatus !== draggedCase.status) {
+      await handleMoveCase(draggedCase, targetStatus);
+    } else {
+      // Reorder within same column
+      const columnCases = casesByStatus[targetStatus].filter(c => c.id !== draggedCase.id);
+      const overIndex = columnCases.findIndex(c => c.id === overId);
+      const newIndex = overIndex >= 0 ? overIndex : columnCases.length;
+      columnCases.splice(newIndex, 0, draggedCase);
+      const updates = columnCases.map((c, idx) => ({ id: c.id, position: idx }));
+      batchUpdatePositions.mutate(updates);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Desktop: Horizontal Kanban */}
+      <div className="hidden md:block">
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="flex gap-2 pb-4 overflow-x-auto">
+            {ORTHO_KANBAN_COLUMNS.map((column, idx) => (
+              <OrthoKanbanColumn
+                key={column.id}
+                column={column}
+                cases={casesByStatus[column.id] || []}
+                onCardClick={onCardClick}
+                onAdvanceStatus={handleAdvanceStatus}
+                onRetreatStatus={handleRetreatStatus}
+                isFirst={idx === 0}
+                isLast={idx === ORTHO_KANBAN_COLUMNS.length - 1}
+              />
+            ))}
+          </div>
+          <DragOverlay>
+            {activeCase ? <OrthoKanbanCardOverlay orthoCase={activeCase} /> : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Mobile: Tabs */}
+      <div className="md:hidden">
+        <Tabs defaultValue="awaiting_documentation">
+          <TabsList className="w-full overflow-x-auto flex">
+            {ORTHO_KANBAN_COLUMNS.map(col => (
+              <TabsTrigger key={col.id} value={col.id} className="text-[10px] px-1.5 shrink-0">
+                {col.title.split(' ')[0]} ({(casesByStatus[col.id] || []).length})
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {ORTHO_KANBAN_COLUMNS.map(col => (
+            <TabsContent key={col.id} value={col.id}>
+              <div className="space-y-2">
+                {(casesByStatus[col.id] || []).length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhum caso</p>
+                ) : (
+                  (casesByStatus[col.id] || []).map(orthoCase => {
+                    const next = getNextStatus(orthoCase.status);
+                    return (
+                      <div
+                        key={orthoCase.id}
+                        className="bg-white rounded-lg border p-3 shadow-sm"
+                        onClick={() => onCardClick(orthoCase)}
+                      >
+                        <p className="font-medium text-sm">{orthoCase.patient_name}</p>
+                        {orthoCase.dentist_name && (
+                          <p className="text-xs text-muted-foreground">{orthoCase.dentist_name}</p>
+                        )}
+                        {next && (
+                          <div className="mt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={e => { e.stopPropagation(); handleAdvanceStatus(orthoCase); }}
+                            >
+                              <ArrowRight className="w-3 h-3 mr-1" />
+                              {getStatusLabel(next)}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+    </>
+  );
+}

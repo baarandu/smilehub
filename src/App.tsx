@@ -27,6 +27,7 @@ const IncomeTax = lazy(() => import("./pages/IncomeTax"));
 const AccountingAgent = lazy(() => import("./pages/AccountingAgent"));
 const DentistAgent = lazy(() => import("./pages/DentistAgent"));
 const ProsthesisCenter = lazy(() => import("./pages/ProsthesisCenter"));
+const Ortodontia = lazy(() => import("./pages/Ortodontia"));
 const DashboardPreview = lazy(() => import("./pages/DashboardPreview"));
 const DashboardV2 = lazy(() => import("./pages/DashboardV2"));
 const LandingV2 = lazy(() => import("./pages/LandingV2"));
@@ -127,6 +128,7 @@ const AppContent = () => (
         <Route path="/contabilidade-ia" element={<AppLayout><AccountingAgent /></AppLayout>} />
         <Route path="/dentista-ia" element={<AppLayout><DentistAgent /></AppLayout>} />
         <Route path="/protese" element={<AppLayout><ProsthesisCenter /></AppLayout>} />
+        <Route path="/ortodontia" element={<AppLayout><Ortodontia /></AppLayout>} />
         <Route path="/dashboard-preview" element={<AppLayout><DashboardPreview /></AppLayout>} />
         <Route path="/dashboard-v2" element={<AppLayout><DashboardV2 /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
