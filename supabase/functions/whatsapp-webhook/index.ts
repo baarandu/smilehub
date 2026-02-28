@@ -230,28 +230,6 @@ serve(async (req) => {
   const log = createLogger("whatsapp-webhook");
   const t0 = Date.now();
 
-  // ── DEBUG: Log raw request to DB (temporary) ─────────────────────
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const debugSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const rawBody = await req.clone().text();
-    await debugSupabase.from("audit_logs").insert({
-      action: "WEBHOOK_DEBUG",
-      table_name: "whatsapp-webhook",
-      details: {
-        method: req.method,
-        headers: Object.fromEntries(req.headers.entries()),
-        body_preview: rawBody.substring(0, 2000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (_debugErr) {
-    // ignore debug errors
-  }
-
   try {
     // ── 1. Validate API key ──────────────────────────────────────────
     const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey");

@@ -88,6 +88,21 @@ serve(async (req: Request) => {
       throw new ValidationError("Desafio OTP não encontrado.");
     }
 
+    // Verify user belongs to the challenge's clinic
+    const { data: membership } = await supabase
+      .from("clinic_users")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("clinic_id", challenge.clinic_id)
+      .maybeSingle();
+
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check status
     if (challenge.status === "verified") {
       throw new ValidationError("Código já foi utilizado.");

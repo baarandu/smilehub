@@ -13,6 +13,27 @@ import type {
 } from '@/types/fiscalDocuments';
 
 const BUCKET_NAME = 'fiscal-documents';
+const SIGNED_URL_EXPIRY = 3600; // 1 hour
+
+// Generate a signed URL for a fiscal document file path
+export async function getFiscalDocumentSignedUrl(filePathOrUrl: string): Promise<string> {
+    // Extract storage path from a full public URL if needed
+    let storagePath = filePathOrUrl;
+    const bucketMarker = `/object/public/${BUCKET_NAME}/`;
+    const bucketIdx = filePathOrUrl.indexOf(bucketMarker);
+    if (bucketIdx !== -1) {
+        storagePath = decodeURIComponent(filePathOrUrl.substring(bucketIdx + bucketMarker.length));
+    }
+
+    const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(storagePath, SIGNED_URL_EXPIRY);
+
+    if (error || !data?.signedUrl) {
+        throw new Error(`Erro ao gerar URL de acesso: ${error?.message || 'URL não gerada'}`);
+    }
+    return data.signedUrl;
+}
 
 // Allowed MIME types for security
 const ALLOWED_MIME_TYPES = [
@@ -81,12 +102,11 @@ async function uploadFile(
         throw new Error(`Erro no upload: ${error.message}`);
     }
 
-    const { data: urlData } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(data.path);
+    // Generate signed URL (bucket is private)
+    const signedUrl = await getFiscalDocumentSignedUrl(data.path);
 
     return {
-        url: urlData.publicUrl,
+        url: signedUrl,
         path: data.path,
     };
 }

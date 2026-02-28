@@ -47,6 +47,20 @@ import JSZip from 'jszip';
 import { useClinic } from '../../contexts/ClinicContext';
 import { supabase } from '../../lib/supabase';
 import { fiscalDocumentsService } from '../../services/fiscalDocuments';
+
+// Resolve signed URL from stored path or old public URL
+async function getSignedUrl(filePathOrUrl: string): Promise<string> {
+    let storagePath = filePathOrUrl;
+    const marker = '/object/public/fiscal-documents/';
+    const idx = filePathOrUrl.indexOf(marker);
+    if (idx !== -1) {
+        storagePath = decodeURIComponent(filePathOrUrl.substring(idx + marker.length));
+    }
+    const { data } = await supabase.storage
+        .from('fiscal-documents')
+        .createSignedUrl(storagePath, 3600);
+    return data?.signedUrl || filePathOrUrl;
+}
 import { fiscalRemindersService, type FiscalAlert } from '../../services/fiscalReminders';
 import type {
     FiscalDocument,
@@ -105,6 +119,16 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
 
     // Preview modal state
     const [previewDoc, setPreviewDoc] = useState<FiscalDocument | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+
+    useEffect(() => {
+        if (!previewDoc) { setPreviewUrl(''); return; }
+        let cancelled = false;
+        getSignedUrl(previewDoc.file_url)
+            .then(url => { if (!cancelled) setPreviewUrl(url); })
+            .catch(() => { if (!cancelled) setPreviewUrl(previewDoc.file_url); });
+        return () => { cancelled = true; };
+    }, [previewDoc]);
 
     // Delete state
     const [deleting, setDeleting] = useState(false);
@@ -331,9 +355,12 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                 throw storageError;
             }
 
-            const { data: urlData } = supabase.storage
+            // Generate signed URL (bucket is private)
+            const { data: signedData, error: signedError } = await supabase.storage
                 .from('fiscal-documents')
-                .getPublicUrl(storageData.path);
+                .createSignedUrl(storageData.path, 3600);
+
+            const fileUrl = signedData?.signedUrl || storageData.path;
 
             // Determine file type
             const fileType = uploadFile.type.startsWith('image/')
@@ -349,7 +376,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                     clinic_id: clinicId,
                     name: uploadName || uploadFile.name,
                     description: uploadDescription || null,
-                    file_url: urlData.publicUrl,
+                    file_url: storageData.path,
                     file_type: fileType,
                     file_size: uploadFile.size,
                     tax_regime: taxRegime,
@@ -402,11 +429,16 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
     };
 
     // Open document
-    const openDocument = (doc: FiscalDocument) => {
+    const openDocument = async (doc: FiscalDocument) => {
         if (doc.file_type === 'image') {
             setPreviewDoc(doc);
         } else {
-            Linking.openURL(doc.file_url);
+            try {
+                const url = await getSignedUrl(doc.file_url);
+                Linking.openURL(url);
+            } catch {
+                Linking.openURL(doc.file_url);
+            }
         }
     };
 
@@ -420,11 +452,12 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                 return;
             }
 
-            // Download the file to cache
-            const fileExt = doc.file_url.split('.').pop() || 'file';
+            // Download the file to cache via signed URL
+            const signedUrl = await getSignedUrl(doc.file_url);
+            const fileExt = doc.file_url.split('.').pop()?.split('?')[0] || 'file';
             const localUri = `${FileSystem.cacheDirectory}${doc.name}.${fileExt}`;
 
-            const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
+            const downloadResult = await FileSystem.downloadAsync(signedUrl, localUri);
 
             if (downloadResult.status !== 200) {
                 throw new Error('Falha ao baixar arquivo');
@@ -567,10 +600,11 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
 
                 for (const doc of docs) {
                     try {
-                        const fileExt = doc.file_url.split('.').pop() || 'file';
+                        const signedUrl = await getSignedUrl(doc.file_url);
+                        const fileExt = doc.file_url.split('.').pop()?.split('?')[0] || 'file';
                         const localUri = `${FileSystem.cacheDirectory}temp_${Date.now()}.${fileExt}`;
 
-                        const downloadResult = await FileSystem.downloadAsync(doc.file_url, localUri);
+                        const downloadResult = await FileSystem.downloadAsync(signedUrl, localUri);
                         if (downloadResult.status === 200) {
                             // Read file as base64
                             const base64 = await FileSystem.readAsStringAsync(downloadResult.uri, {
@@ -1196,7 +1230,7 @@ export function FiscalDocumentsTab({ year, taxRegime, refreshing, onRefresh }: P
                     </View>
                     {previewDoc && (
                         <Image
-                            source={{ uri: previewDoc.file_url }}
+                            source={{ uri: previewUrl || previewDoc.file_url }}
                             className="flex-1"
                             resizeMode="contain"
                         />

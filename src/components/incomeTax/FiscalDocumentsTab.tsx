@@ -66,7 +66,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { fiscalDocumentsService } from '@/services/fiscalDocuments';
+import { fiscalDocumentsService, getFiscalDocumentSignedUrl } from '@/services/fiscalDocuments';
 import { fiscalRemindersService, type FiscalAlert } from '@/services/fiscalReminders';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
@@ -136,6 +136,27 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
     // Preview dialog state
     const [previewDoc, setPreviewDoc] = useState<FiscalDocument | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>('');
+
+    // Resolve signed URL when preview opens
+    useEffect(() => {
+        if (!previewDoc) { setPreviewUrl(''); return; }
+        let cancelled = false;
+        getFiscalDocumentSignedUrl(previewDoc.file_url)
+            .then(url => { if (!cancelled) setPreviewUrl(url); })
+            .catch(() => { if (!cancelled) setPreviewUrl(previewDoc.file_url); });
+        return () => { cancelled = true; };
+    }, [previewDoc]);
+
+    // Helper: get signed URL for download
+    const handleDownload = useCallback(async (doc: FiscalDocument) => {
+        try {
+            const url = await getFiscalDocumentSignedUrl(doc.file_url);
+            window.open(url, '_blank');
+        } catch {
+            window.open(doc.file_url, '_blank');
+        }
+    }, []);
 
     // Delete confirmation state
     const [deleteDoc, setDeleteDoc] = useState<FiscalDocument | null>(null);
@@ -346,9 +367,10 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
 
                 for (const doc of docs) {
                     try {
-                        const response = await fetch(doc.file_url);
+                        const signedUrl = await getFiscalDocumentSignedUrl(doc.file_url);
+                        const response = await fetch(signedUrl);
                         const blob = await response.blob();
-                        const ext = doc.file_url.split('.').pop() || 'file';
+                        const ext = doc.file_url.split('.').pop()?.split('?')[0] || 'file';
                         const fileName = `${doc.name}.${ext}`;
                         folder?.file(fileName, blob);
                     } catch (error) {
@@ -788,11 +810,9 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                                                                         variant="ghost"
                                                                                         size="icon"
                                                                                         className="h-7 w-7"
-                                                                                        asChild
+                                                                                        onClick={() => handleDownload(doc)}
                                                                                     >
-                                                                                        <a href={doc.file_url} target="_blank" rel="noopener noreferrer" download>
-                                                                                            <Download className="w-3 h-3" />
-                                                                                        </a>
+                                                                                        <Download className="w-3 h-3" />
                                                                                     </Button>
                                                                                     <Button
                                                                                         variant="ghost"
@@ -966,15 +986,19 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 overflow-auto">
-                        {previewDoc?.file_type === 'image' ? (
+                        {!previewUrl ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                            </div>
+                        ) : previewDoc?.file_type === 'image' ? (
                             <img
-                                src={previewDoc.file_url}
+                                src={previewUrl}
                                 alt={previewDoc.name}
                                 className="max-w-full h-auto mx-auto"
                             />
                         ) : previewDoc?.file_type === 'pdf' ? (
                             <iframe
-                                src={previewDoc.file_url}
+                                src={previewUrl}
                                 className="w-full h-[70vh]"
                                 title={previewDoc.name}
                             />
@@ -984,11 +1008,9 @@ export function FiscalDocumentsTab({ year, taxRegime }: FiscalDocumentsTabProps)
                                 <p className="text-muted-foreground">
                                     Visualização não disponível para este tipo de arquivo
                                 </p>
-                                <Button asChild className="mt-4">
-                                    <a href={previewDoc?.file_url} target="_blank" rel="noopener noreferrer" download>
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Baixar arquivo
-                                    </a>
+                                <Button className="mt-4" onClick={() => previewDoc && handleDownload(previewDoc)}>
+                                    <Download className="w-4 h-4 mr-2" />
+                                    Baixar arquivo
                                 </Button>
                             </div>
                         )}

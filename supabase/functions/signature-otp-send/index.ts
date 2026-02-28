@@ -61,6 +61,21 @@ serve(async (req: Request) => {
       throw new ValidationError("record_type inválido.");
     }
 
+    // Verify user belongs to clinic
+    const { data: membership, error: membershipError } = await supabase
+      .from("clinic_users")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("clinic_id", clinicId)
+      .maybeSingle();
+
+    if (membershipError || !membership) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get patient email
     const { data: patient, error: patientError } = await supabase
       .from("patients")

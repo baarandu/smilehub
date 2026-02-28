@@ -131,6 +131,21 @@ serve(async (req: Request) => {
       throw new ValidationError("signer_type inválido.");
     }
 
+    // Verify user belongs to clinic
+    const { data: membership } = await supabase
+      .from("clinic_users")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("clinic_id", clinicId)
+      .maybeSingle();
+
+    if (!membership) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // For patient signatures, validate OTP token (if provided)
     let otpMethod: string | null = null;
     let otpEmailMasked: string | null = null;

@@ -48,24 +48,27 @@ serve(async (req: Request) => {
 
     const body = await req.text();
 
-    if (signatureHeader) {
-      const encoder = new TextEncoder();
-      const key = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode(webhookSecret),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"]
-      );
-      const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-      const expected = Array.from(new Uint8Array(signature))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
+    if (!signatureHeader) {
+      logger.error("Missing webhook signature header");
+      return new Response("Missing signature", { status: 401 });
+    }
 
-      if (expected !== signatureHeader.replace("sha256=", "")) {
-        logger.error("Webhook signature verification failed");
-        return new Response("Invalid signature", { status: 401 });
-      }
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(webhookSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+    const expected = Array.from(new Uint8Array(signature))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    if (expected !== signatureHeader.replace("sha256=", "")) {
+      logger.error("Webhook signature verification failed");
+      return new Response("Invalid signature", { status: 401 });
     }
 
     const event = JSON.parse(body);
