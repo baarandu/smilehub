@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Phone, Mail, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Patient } from '@/types/database';
@@ -7,7 +8,7 @@ interface PatientCardProps {
   index: number;
 }
 
-export function PatientCard({ patient, index }: PatientCardProps) {
+export const PatientCard = memo(function PatientCard({ patient, index }: PatientCardProps) {
   const navigate = useNavigate();
 
   const getInitials = (name: string) => {
@@ -23,7 +24,6 @@ export function PatientCard({ patient, index }: PatientCardProps) {
     <div
       onClick={() => navigate(`/pacientes/${patient.id}`)}
       className="bg-card rounded-xl p-4 shadow-card border border-border hover:shadow-elevated hover:border-primary/20 transition-all duration-200 cursor-pointer animate-slide-up"
-      style={{ animationDelay: `${index * 50}ms` }}
     >
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0">
@@ -60,4 +60,4 @@ export function PatientCard({ patient, index }: PatientCardProps) {
       </div>
     </div>
   );
-}
+});

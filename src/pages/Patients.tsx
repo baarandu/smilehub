@@ -7,6 +7,7 @@ import { NewPatientDialog } from '@/components/patients/NewPatientDialog';
 import { DocumentsModal } from '@/components/patients/DocumentsModal';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
 import { useInfinitePatients, usePatientSearch, useCreatePatient } from '@/hooks/usePatients';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { budgetsService } from '@/services/budgets';
@@ -16,6 +17,7 @@ import type { PatientFormData } from '@/types/database';
 export default function Patients() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -35,7 +37,7 @@ export default function Patients() {
   const {
     data: searchResults,
     isLoading: isSearchLoading
-  } = usePatientSearch(search);
+  } = usePatientSearch(debouncedSearch);
 
   const createPatient = useCreatePatient();
 
@@ -60,7 +62,7 @@ export default function Patients() {
   };
 
   // Determine which list to show
-  const isSearching = search.length >= 2;
+  const isSearching = debouncedSearch.length >= 2;
   const isLoading = isSearching ? isSearchLoading : isInfiniteLoading;
 
   const currentPatients = useMemo(() => {
@@ -127,13 +129,14 @@ export default function Patients() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="icon"
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="h-10 w-10"
+            aria-label="Atualizar lista"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
@@ -143,7 +146,7 @@ export default function Patients() {
             className="relative"
           >
             <FileClock className="w-4 h-4 mr-2 text-amber-500" />
-            Orçamentos Pendentes
+            <span className="hidden sm:inline">Orçamentos Pendentes</span>
             {pendingCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-background min-w-[20px] h-[20px] flex items-center justify-center">
                 {pendingCount}
@@ -152,11 +155,11 @@ export default function Patients() {
           </Button>
           <Button variant="outline" onClick={() => navigate('/assinaturas')}>
             <PenLine className="w-4 h-4 mr-2" />
-            Assinar Prontuários
+            <span className="hidden sm:inline">Assinar Prontuários</span>
           </Button>
           <Button variant="outline" onClick={() => setShowDocumentsModal(true)}>
             <FileText className="w-4 h-4 mr-2" />
-            Documentos
+            <span className="hidden sm:inline">Documentos</span>
           </Button>
           <NewPatientDialog onAdd={handleAddPatient} isLoading={createPatient.isPending} />
         </div>

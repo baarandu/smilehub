@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { appointmentsService } from '@/services/appointments';
 import type { AppointmentInsert, AppointmentUpdate, Appointment } from '@/types/database';
+import { toast } from 'sonner';
 
 export function useAppointments() {
   return useQuery({
@@ -41,47 +42,63 @@ export function useTodayAppointmentsCount() {
 
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (appointment: AppointmentInsert) => 
+    mutationFn: (appointment: AppointmentInsert) =>
       appointmentsService.create(appointment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao salvar agendamento. Tente novamente.');
+      console.error(error);
     },
   });
 }
 
 export function useUpdateAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: AppointmentUpdate }) => 
+    mutationFn: ({ id, data }: { id: string; data: AppointmentUpdate }) =>
       appointmentsService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao salvar agendamento. Tente novamente.');
+      console.error(error);
     },
   });
 }
 
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Appointment['status'] }) => 
+    mutationFn: ({ id, status }: { id: string; status: Appointment['status'] }) =>
       appointmentsService.updateStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao salvar agendamento. Tente novamente.');
+      console.error(error);
     },
   });
 }
 
 export function useDeleteAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: string) => appointmentsService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir agendamento. Tente novamente.');
+      console.error(error);
     },
   });
 }

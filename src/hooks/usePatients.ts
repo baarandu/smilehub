@@ -8,6 +8,7 @@ import {
   searchPatients,
 } from '@/services/patients';
 import type { PatientFormData, Patient } from '@/types/database';
+import { toast } from 'sonner';
 
 export function usePatients() {
   return useQuery({
@@ -51,6 +52,10 @@ export function useCreatePatient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
+    onError: (error) => {
+      toast.error('Erro ao salvar. Tente novamente.');
+      console.error(error);
+    },
   });
 }
 
@@ -64,6 +69,10 @@ export function useUpdatePatient() {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patients', variables.id] });
     },
+    onError: (error) => {
+      toast.error('Erro ao salvar. Tente novamente.');
+      console.error(error);
+    },
   });
 }
 
@@ -75,13 +84,22 @@ export function useDeletePatient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
+    onError: (error) => {
+      toast.error('Erro ao excluir. Tente novamente.');
+      console.error(error);
+    },
   });
 }
 
 export function usePatientsCount() {
-  const { data: patients, isLoading } = usePatients();
-  return {
-    data: patients?.length || 0,
-    isLoading,
-  };
+  return useQuery({
+    queryKey: ['patients', 'count'],
+    queryFn: async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const { count } = await supabase
+        .from('patients_secure')
+        .select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
 }

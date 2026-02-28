@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PatientFormData } from '@/types/database';
+import { PatientFormData, Patient } from '@/types/database';
 import { usePatientSearch } from '@/hooks/usePatients';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface PatientFormProps {
   initialData?: Partial<PatientFormData>;
@@ -55,6 +56,41 @@ const emptyForm: PatientFormData = {
   siblingsAges: '',
 };
 
+interface DuplicateWarningProps {
+  existingPatients: Patient[];
+}
+
+function DuplicateWarning({ existingPatients }: DuplicateWarningProps) {
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2" role="alert">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+        <div className="text-sm">
+          <p className="font-medium text-amber-800">
+            Paciente(s) com nome parecido encontrado(s):
+          </p>
+          <ul className="mt-1 space-y-1">
+            {existingPatients.slice(0, 5).map((patient) => (
+              <li key={patient.id} className="text-amber-700">
+                <span className="font-medium">{patient.name}</span>
+                {patient.phone && (
+                  <span className="text-amber-600"> - Tel: {patient.phone}</span>
+                )}
+                {patient.cpf && (
+                  <span className="text-amber-600"> - CPF: {patient.cpf}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="text-amber-600 mt-2 text-xs">
+            Verifique se não é o mesmo paciente antes de continuar.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function PatientForm({
   initialData,
   onSubmit,
@@ -64,9 +100,10 @@ export function PatientForm({
   isEditing = false,
 }: PatientFormProps) {
   const [form, setForm] = useState<PatientFormData>({ ...emptyForm, ...initialData });
+  const debouncedName = useDebounce(form.name, 300);
 
   // Busca pacientes existentes pelo nome (apenas no cadastro, não na edição)
-  const { data: existingPatients } = usePatientSearch(isEditing ? '' : form.name);
+  const { data: existingPatients } = usePatientSearch(isEditing ? '' : debouncedName);
   const showDuplicateWarning = !isEditing && existingPatients && existingPatients.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -162,37 +199,6 @@ export function PatientForm({
 
   const isChild = form.patientType === 'child';
 
-  const DuplicateWarning = () => {
-    if (!showDuplicateWarning) return null;
-    return (
-      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2">
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-800">
-              Paciente(s) com nome parecido encontrado(s):
-            </p>
-            <ul className="mt-1 space-y-1">
-              {existingPatients!.slice(0, 5).map((patient) => (
-                <li key={patient.id} className="text-amber-700">
-                  <span className="font-medium">{patient.name}</span>
-                  {patient.phone && (
-                    <span className="text-amber-600"> - Tel: {patient.phone}</span>
-                  )}
-                  {patient.cpf && (
-                    <span className="text-amber-600"> - CPF: {patient.cpf}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="text-amber-600 mt-2 text-xs">
-              Verifique se não é o mesmo paciente antes de continuar.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -252,7 +258,7 @@ export function PatientForm({
                   placeholder="Maria da Silva"
                   required
                 />
-                <DuplicateWarning />
+                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} />}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthDate">Data de Nascimento</Label>
@@ -431,7 +437,7 @@ export function PatientForm({
                   placeholder="Nome da criança"
                   required
                 />
-                <DuplicateWarning />
+                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} />}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="child-birthDate">Data de Nascimento</Label>
