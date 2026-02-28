@@ -291,6 +291,24 @@ serve(async (req) => {
 
       if (convError) throw convError;
       conversationId = newConv.id;
+    } else {
+      const { data: conv, error: convCheckError } = await supabase
+        .from("dentist_agent_conversations")
+        .select("clinic_id")
+        .eq("id", conversationId)
+        .single();
+      if (convCheckError || !conv) throw new Error("Conversa não encontrada.");
+      if (conv.clinic_id !== clinic_id) {
+        log.audit(supabase, {
+          action: "UNAUTHORIZED_ACCESS_ATTEMPT",
+          table_name: "dentist_agent_conversations",
+          record_id: conversationId,
+          user_id: user.id,
+          clinic_id,
+          details: { target_clinic_id: conv.clinic_id },
+        });
+        throw new Error("Unauthorized");
+      }
     }
 
     // Get conversation history (last 20 messages — balances context vs token usage)

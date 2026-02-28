@@ -142,7 +142,12 @@ serve(async (req: Request) => {
     const verifyIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
     const verifyUa = req.headers.get("user-agent") || null;
 
-    if (inputHash !== challenge.otp_hash) {
+    const inputHashBytes = new TextEncoder().encode(inputHash);
+    const storedHashBytes = new TextEncoder().encode(challenge.otp_hash);
+    const hashesMatch = inputHashBytes.byteLength === storedHashBytes.byteLength &&
+      crypto.subtle.timingSafeEqual(inputHashBytes, storedHashBytes);
+
+    if (!hashesMatch) {
       // Increment attempts
       const newAttempts = challenge.attempts + 1;
       const newStatus = newAttempts >= challenge.max_attempts ? "locked" : "sent";

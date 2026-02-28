@@ -34,7 +34,7 @@ function checkMemoryRateLimit(
 
   if (entry && now - entry.windowStart < windowMs) {
     entry.count++;
-    if (entry.count > config.maxRequests) {
+    if (entry.count >= config.maxRequests) {
       throw new RateLimitError();
     }
   } else {
@@ -85,7 +85,7 @@ export async function checkRateLimit(
       return; // Already inserted, skip check gracefully
     }
 
-    if ((count || 0) > config.maxRequests) {
+    if ((count || 0) >= config.maxRequests) {
       console.warn(
         `[rateLimit] Exceeded: ${identifier} on ${config.endpoint} (${count}/${config.maxRequests} in ${config.windowMinutes}min)`
       );

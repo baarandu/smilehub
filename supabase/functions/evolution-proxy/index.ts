@@ -58,7 +58,7 @@ async function evolutionHealthCheck(): Promise<boolean> {
 async function authenticateUser(
   request: Request
 ): Promise<{ userId: string; clinicId: string }> {
-  const token = extractBearerToken(request);
+  const token = extractBearerToken(request.headers.get("Authorization"));
   if (!token) throw new Error("Unauthorized");
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -70,14 +70,15 @@ async function authenticateUser(
   // Get clinic_id from clinic_users
   const { data: clinicUser, error: cuError } = await supabase
     .from("clinic_users")
-    .select("clinic_id, role")
+    .select("clinic_id, role, roles")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (cuError || !clinicUser) throw new Error("User not authorized for this clinic");
 
   // Only admins and dentists can manage WhatsApp
-  if (clinicUser.role !== "admin" && clinicUser.role !== "dentist") {
+  const userRoles: string[] = clinicUser.roles || (clinicUser.role ? [clinicUser.role] : []);
+  if (!userRoles.some((r: string) => ["admin", "dentist"].includes(r))) {
     throw new Error("Apenas dentistas e administradores podem gerenciar o WhatsApp");
   }
 

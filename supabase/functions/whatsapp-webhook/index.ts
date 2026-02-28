@@ -235,7 +235,15 @@ serve(async (req) => {
     const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey");
     const expectedKey = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY");
 
-    if (!expectedKey || apiKey !== expectedKey) {
+    if (!expectedKey || !apiKey) {
+      log.warn("Invalid API key");
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const encoder = new TextEncoder();
+    const a = encoder.encode(apiKey);
+    const b = encoder.encode(expectedKey);
+    if (a.byteLength !== b.byteLength || !crypto.subtle.timingSafeEqual(a, b)) {
       log.warn("Invalid API key");
       return new Response("Unauthorized", { status: 401 });
     }
