@@ -34,7 +34,7 @@ export function getStatusColor(status: OrthodonticStatus): { bg: string; text: s
     evaluation: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
     prior_treatment: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
     active: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
-    completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    completed: { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
     paused: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   };
   return colors[status] || colors.awaiting_documentation;

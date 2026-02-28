@@ -191,7 +191,7 @@ export const ORTHO_KANBAN_COLUMNS: OrthoKanbanColumn[] = [
   { id: 'evaluation', title: 'Avaliação', color: 'text-indigo-700', bgColor: 'bg-indigo-50/50', borderColor: 'border-indigo-200' },
   { id: 'prior_treatment', title: 'Tratamento Prévio', color: 'text-orange-700', bgColor: 'bg-orange-50/50', borderColor: 'border-orange-200' },
   { id: 'active', title: 'Em Tratamento', color: 'text-green-700', bgColor: 'bg-green-50/50', borderColor: 'border-green-200' },
-  { id: 'completed', title: 'Alta', color: 'text-emerald-700', bgColor: 'bg-emerald-50/50', borderColor: 'border-emerald-200' },
+  { id: 'completed', title: 'Alta', color: 'text-teal-700', bgColor: 'bg-teal-50/50', borderColor: 'border-teal-200' },
 ];
 
 export const TREATMENT_TYPE_LABELS: Record<OrthodonticTreatmentType, string> = {
