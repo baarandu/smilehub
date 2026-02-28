@@ -111,6 +111,8 @@ export default function Agenda() {
 
   // Global search
   useEffect(() => {
+    const controller = new AbortController();
+
     const performSearch = async () => {
       if (debouncedSearch.length < 2) {
         setSearchResults([]);
@@ -121,16 +123,23 @@ export default function Agenda() {
       setIsSearching(true);
       try {
         const results = await appointmentsService.search(debouncedSearch);
-        setSearchResults(results);
-        setShowSearchResults(true);
+        if (!controller.signal.aborted) {
+          setSearchResults(results);
+          setShowSearchResults(true);
+        }
       } catch (error) {
-        console.error('Error searching appointments:', error);
+        if (!controller.signal.aborted) {
+          console.error('Error searching appointments:', error);
+        }
       } finally {
-        setIsSearching(false);
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
+        }
       }
     };
 
     performSearch();
+    return () => controller.abort();
   }, [debouncedSearch]);
 
   // Close search results when clicking outside

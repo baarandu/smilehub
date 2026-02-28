@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 
 type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
@@ -56,12 +56,27 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 return;
             }
 
-            // Get user's profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name, gender')
-                .eq('id', user.id)
-                .single();
+            // Parallelize profile and clinic queries
+            const [profileResult, clinicUsersResult] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('full_name, gender')
+                    .eq('id', user.id)
+                    .single(),
+                supabase
+                    .from('clinic_users')
+                    .select(`
+              clinic_id,
+              role,
+              roles,
+              clinics (name)
+            `)
+                    .eq('user_id', user.id)
+                    .order('role', { ascending: true }),
+            ]);
+
+            const profile = profileResult.data;
+            const clinicUsers = clinicUsersResult.data;
 
             const fullName = (profile as any)?.full_name || user.user_metadata?.full_name || null;
             const userGender = (profile as any)?.gender || user.user_metadata?.gender || null;
@@ -76,18 +91,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             } else {
                 setDisplayName(null);
             }
-
-            // Get user's clinic and role (prioritize admin role if user has multiple clinics)
-            const { data: clinicUsers } = await supabase
-                .from('clinic_users')
-                .select(`
-          clinic_id,
-          role,
-          roles,
-          clinics (name)
-        `)
-                .eq('user_id', user.id)
-                .order('role', { ascending: true }); // 'admin' comes before 'dentist' alphabetically
 
             // Get the first clinic (preferring admin role)
             const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
@@ -143,7 +146,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
-    const value: ClinicContextType = {
+    const value = useMemo<ClinicContextType>(() => ({
         clinicId,
         clinicName,
         userName,
@@ -157,7 +160,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         loading,
         members,
         refetch: fetchClinicData,
-    };
+    }), [clinicId, clinicName, userName, displayName, gender, role, roles, loading, members]);
 
     return (
         <ClinicContext.Provider value={value}>
