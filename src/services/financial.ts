@@ -195,7 +195,7 @@ export const financialService = {
     },
 
     // Delete income and revert linked budget tooth to approved status
-    async deleteIncomeAndRevertBudget(transactionId: string): Promise<void> {
+    async deleteIncomeAndRevertBudget(transactionId: string, orthoAction: 'delete' | 'pause' | 'keep' = 'delete'): Promise<void> {
         // 1. Get the transaction to find the linked budget
         const { data: transaction, error: fetchError } = await supabase
             .from('financial_transactions')
@@ -285,8 +285,8 @@ export const financialService = {
             }
         }
 
-        // 3. If the reverted tooth has orthodontic treatment, delete the linked ortho case
-        if (txn.related_entity_id) {
+        // 3. If the reverted tooth has orthodontic treatment, handle the linked ortho case
+        if (txn.related_entity_id && orthoAction !== 'keep') {
             const ORTHO_TREATMENTS = ['Aparelho Ortodôntico', 'Aparelho ortopédico'];
             const description = txn.description || '';
             const hasOrtho = ORTHO_TREATMENTS.some(t => description.includes(t));
@@ -299,10 +299,17 @@ export const financialService = {
                     .maybeSingle();
 
                 if (orthoCase) {
-                    await supabase
-                        .from('orthodontic_cases')
-                        .delete()
-                        .eq('id', orthoCase.id);
+                    if (orthoAction === 'delete') {
+                        await supabase
+                            .from('orthodontic_cases')
+                            .delete()
+                            .eq('id', orthoCase.id);
+                    } else if (orthoAction === 'pause') {
+                        await supabase
+                            .from('orthodontic_cases')
+                            .update({ status: 'paused' })
+                            .eq('id', orthoCase.id);
+                    }
                 }
             }
         }

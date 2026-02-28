@@ -5,6 +5,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -22,10 +33,11 @@ import {
   AlertTriangle,
   FileCheck,
   Wrench,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
-import { useChangeStatus, useOrthodonticSessions } from '@/hooks/useOrthodontics';
+import { useChangeStatus, useOrthodonticSessions, useDeleteCase } from '@/hooks/useOrthodontics';
 import { StatusTimeline } from './StatusTimeline';
 import { SessionFormDialog } from './SessionFormDialog';
 import type { OrthodonticCase, OrthodonticStatus } from '@/types/orthodontics';
@@ -54,6 +66,7 @@ interface CaseDetailDialogProps {
 export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: CaseDetailDialogProps) {
   const { toast } = useToast();
   const changeStatus = useChangeStatus();
+  const deleteCase = useDeleteCase();
   const { data: sessions = [] } = useOrthodonticSessions(orthoCase?.id ?? null);
   const [showSessionForm, setShowSessionForm] = useState(false);
 
@@ -80,6 +93,16 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
       toast({ title: `Status alterado para ${getStatusLabel(newStatus)}` });
     } catch {
       toast({ title: 'Erro ao alterar status', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteCase = async () => {
+    try {
+      await deleteCase.mutateAsync(orthoCase.id);
+      toast({ title: 'Caso excluído' });
+      onOpenChange(false);
+    } catch {
+      toast({ title: 'Erro ao excluir caso', variant: 'destructive' });
     }
   };
 
@@ -470,6 +493,38 @@ export function CaseDetailDialog({ open, onOpenChange, orthoCase, onEdit }: Case
                     <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 )}
+
+                <div className="flex-1" />
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir caso ortodôntico?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        O caso de <strong>{orthoCase.patient_name}</strong> será excluído permanentemente, incluindo todas as sessões e histórico. Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteCase}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
 
               {orthoCase.notes && (

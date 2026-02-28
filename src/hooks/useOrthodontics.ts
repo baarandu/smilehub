@@ -137,6 +137,18 @@ export function useDeleteSession() {
   });
 }
 
+export function useDeleteCase() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => orthodonticsService.deleteCase(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orthodontic-cases'] });
+      queryClient.invalidateQueries({ queryKey: ['orthodontic-case'] });
+      queryClient.invalidateQueries({ queryKey: ['orthodontic-history'] });
+    },
+  });
+}
+
 // ==================== History ====================
 
 export function useCaseHistory(caseId: string | null) {

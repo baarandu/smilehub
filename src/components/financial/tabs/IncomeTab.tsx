@@ -37,6 +37,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Transaction } from '@/components/financial/types';
 import { financialService } from '@/services/financial';
 import { locationsService, Location } from '@/services/locations';
@@ -65,6 +67,7 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [orthoAction, setOrthoAction] = useState<'delete' | 'pause' | 'keep'>('pause');
 
     // Card visibility state
     const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
@@ -773,19 +776,51 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                             Confirmar Exclusão
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="py-4">
+                    <div className="py-4 space-y-4">
                         <p className="text-muted-foreground">
                             Tem certeza que deseja excluir esta receita?
                         </p>
-                        <p className="text-sm text-muted-foreground mt-2">
+                        <p className="text-sm text-muted-foreground">
                             Se houver orçamentos vinculados, eles voltarão ao status "pendente".
                         </p>
                         {selectedTransaction && (
-                            <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-100">
+                            <div className="p-3 bg-red-50 rounded-lg border border-red-100">
                                 <p className="font-medium text-foreground">{selectedTransaction.patients?.name || 'Receita'}</p>
                                 <p className="text-lg font-bold text-red-600">{formatCurrency(selectedTransaction.amount)}</p>
                             </div>
                         )}
+                        {selectedTransaction && (() => {
+                            const desc = selectedTransaction.description || '';
+                            const isOrtho = ['Aparelho Ortodôntico', 'Aparelho ortopédico'].some(t => desc.includes(t));
+                            if (!isOrtho) return null;
+                            return (
+                                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 space-y-3">
+                                    <p className="text-sm font-medium text-amber-800">
+                                        Esta receita está vinculada a um caso ortodôntico. O que fazer com o caso?
+                                    </p>
+                                    <RadioGroup value={orthoAction} onValueChange={(v) => setOrthoAction(v as any)}>
+                                        <div className="flex items-center gap-2">
+                                            <RadioGroupItem value="pause" id="ortho-pause" />
+                                            <Label htmlFor="ortho-pause" className="text-sm cursor-pointer">
+                                                Pausar o caso na Central de Orto
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <RadioGroupItem value="delete" id="ortho-delete" />
+                                            <Label htmlFor="ortho-delete" className="text-sm cursor-pointer">
+                                                Excluir o caso da Central de Orto
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <RadioGroupItem value="keep" id="ortho-keep" />
+                                            <Label htmlFor="ortho-keep" className="text-sm cursor-pointer">
+                                                Manter o caso (não alterar)
+                                            </Label>
+                                        </div>
+                                    </RadioGroup>
+                                </div>
+                            );
+                        })()}
                     </div>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>
@@ -797,11 +832,10 @@ export function IncomeTab({ transactions, loading }: IncomeTabProps) {
                                 if (!selectedTransaction) return;
                                 setDeleting(true);
                                 try {
-                                    await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id);
+                                    await financialService.deleteIncomeAndRevertBudget(selectedTransaction.id, orthoAction);
                                     setConfirmDeleteOpen(false);
                                     setDetailModalOpen(false);
                                     setSelectedTransaction(null);
-                                    // Trigger reload by navigating to same page
                                     window.location.reload();
                                 } catch (error) {
                                     console.error('Error deleting:', error);
