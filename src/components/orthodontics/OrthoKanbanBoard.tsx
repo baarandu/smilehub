@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -10,9 +10,12 @@ import {
 } from '@dnd-kit/core';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CalendarClock, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useChangeStatus, useBatchUpdatePositions } from '@/hooks/useOrthodontics';
 import type { OrthodonticCase, OrthodonticStatus, CaseFilters } from '@/types/orthodontics';
 import { ORTHO_KANBAN_COLUMNS } from '@/types/orthodontics';
@@ -28,11 +31,42 @@ interface OrthoKanbanBoardProps {
 
 export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanBoardProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const changeStatus = useChangeStatus();
   const batchUpdatePositions = useBatchUpdatePositions();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Fetch future appointments for documentation_received patients
+  const [patientAppointments, setPatientAppointments] = useState<Record<string, string>>({});
+  const docReceivedPatientIds = useMemo(
+    () => [...new Set(cases.filter(c => c.status === 'documentation_received').map(c => c.patient_id))],
+    [cases]
+  );
+
+  useEffect(() => {
+    if (docReceivedPatientIds.length === 0) {
+      setPatientAppointments({});
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    supabase.from('appointments')
+      .select('patient_id, date')
+      .in('patient_id', docReceivedPatientIds)
+      .gte('date', today)
+      .not('status', 'in', '("cancelled","no_show")')
+      .order('date', { ascending: true })
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach(a => {
+          if (!map[a.patient_id]) {
+            map[a.patient_id] = format(parseISO(a.date), "dd/MM", { locale: ptBR });
+          }
+        });
+        setPatientAppointments(map);
+      });
+  }, [docReceivedPatientIds]);
 
   // Group cases by status (excluding paused from Kanban)
   const casesByStatus = useMemo(() => {
@@ -132,6 +166,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                 column={column}
                 cases={casesByStatus[column.id] || []}
                 onCardClick={onCardClick}
+                patientAppointments={column.id === 'documentation_received' ? patientAppointments : undefined}
                 onAdvanceStatus={handleAdvanceStatus}
                 onRetreatStatus={handleRetreatStatus}
                 isFirst={idx === 0}
@@ -163,6 +198,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                 ) : (
                   (casesByStatus[col.id] || []).map(orthoCase => {
                     const next = getNextStatus(orthoCase.status);
+                    const isDocReceived = orthoCase.status === 'documentation_received';
                     return (
                       <div
                         key={orthoCase.id}
@@ -172,6 +208,41 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                         <p className="font-medium text-sm">{orthoCase.patient_name}</p>
                         {orthoCase.dentist_name && (
                           <p className="text-xs text-muted-foreground">{orthoCase.dentist_name}</p>
+                        )}
+                        {isDocReceived && (
+                          <div className="mt-1.5 flex gap-1.5">
+                            {patientAppointments[orthoCase.patient_id] ? (
+                              <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
+                                <CalendarCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                                <span className="text-[9px] font-medium text-emerald-700">
+                                  Agendado {patientAppointments[orthoCase.patient_id]}
+                                </span>
+                              </div>
+                            ) : (
+                              <div
+                                className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate('/agenda', { state: { openNewAppointment: true, patientId: orthoCase.patient_id, patientName: orthoCase.patient_name } });
+                                }}
+                              >
+                                <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+                                <span className="text-[9px] font-medium text-amber-700">Agendar</span>
+                              </div>
+                            )}
+                            {orthoCase.patient_phone && (
+                              <a
+                                href={`https://wa.me/55${orthoCase.patient_phone.replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MessageCircle className="w-3 h-3 text-green-600 shrink-0" />
+                                <span className="text-[9px] font-medium text-green-700">WhatsApp</span>
+                              </a>
+                            )}
+                          </div>
                         )}
                         {next && (
                           <div className="mt-2">

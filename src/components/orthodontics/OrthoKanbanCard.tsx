@@ -1,7 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, AlertTriangle, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, Clock, CalendarCheck, CalendarClock, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { OrthodonticCase } from '@/types/orthodontics';
 import { TREATMENT_TYPE_LABELS } from '@/types/orthodontics';
 import { getOverdueStatus, getDaysUntilNextAppointment } from '@/utils/orthodontics';
@@ -9,11 +10,13 @@ import { getOverdueStatus, getDaysUntilNextAppointment } from '@/utils/orthodont
 interface OrthoKanbanCardProps {
   orthoCase: OrthodonticCase;
   onClick: () => void;
+  scheduledDate?: string | null;
   onMoveLeft?: () => void;
   onMoveRight?: () => void;
 }
 
-export function OrthoKanbanCard({ orthoCase, onClick, onMoveLeft, onMoveRight }: OrthoKanbanCardProps) {
+export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft, onMoveRight }: OrthoKanbanCardProps) {
+  const navigate = useNavigate();
   const {
     attributes,
     listeners,
@@ -87,6 +90,42 @@ export function OrthoKanbanCard({ orthoCase, onClick, onMoveLeft, onMoveRight }:
           {TREATMENT_TYPE_LABELS[orthoCase.treatment_type] || orthoCase.treatment_type}
         </Badge>
       </div>
+
+      {orthoCase.status === 'documentation_received' && (
+        <div className="mt-2 flex gap-1.5">
+          {scheduledDate ? (
+            <div className="flex-1 flex items-center justify-center gap-1 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-1">
+              <CalendarCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span className="text-[9px] font-medium text-emerald-700">
+                Agendado {scheduledDate}
+              </span>
+            </div>
+          ) : (
+            <div
+              className="flex-1 flex items-center justify-center gap-1 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-amber-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/agenda', { state: { openNewAppointment: true, patientId: orthoCase.patient_id, patientName: orthoCase.patient_name } });
+              }}
+            >
+              <CalendarClock className="w-3 h-3 text-amber-600 shrink-0" />
+              <span className="text-[9px] font-medium text-amber-700">Agendar</span>
+            </div>
+          )}
+          {orthoCase.patient_phone && (
+            <a
+              href={`https://wa.me/55${orthoCase.patient_phone.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MessageCircle className="w-3 h-3 text-green-600 shrink-0" />
+              <span className="text-[9px] font-medium text-green-700">WhatsApp</span>
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
