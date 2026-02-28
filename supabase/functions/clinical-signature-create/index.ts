@@ -57,11 +57,12 @@ async function verifyOtpToken(token: string): Promise<{
   }
 }
 
-/** Fetch the record from the appropriate table */
+/** Fetch the record from the appropriate table, scoped to clinic */
 async function fetchRecord(
   supabase: any,
   recordType: string,
   recordId: string,
+  clinicId: string,
 ): Promise<Record<string, unknown> | null> {
   const table = recordType === "procedure" ? "procedures"
     : recordType === "anamnesis" ? "anamneses"
@@ -71,6 +72,7 @@ async function fetchRecord(
     .from(table)
     .select("*")
     .eq("id", recordId)
+    .eq("clinic_id", clinicId)
     .single();
 
   if (error || !data) return null;
@@ -174,7 +176,7 @@ serve(async (req: Request) => {
     }
 
     // Fetch record from DB and recompute hash server-side
-    const record = await fetchRecord(supabase, recordType, recordId);
+    const record = await fetchRecord(supabase, recordType, recordId, clinicId);
     if (!record) {
       throw new ValidationError("Registro clínico não encontrado.");
     }

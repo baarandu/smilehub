@@ -59,7 +59,20 @@ export async function checkRateLimit(
       Date.now() - config.windowMinutes * 60 * 1000
     ).toISOString();
 
-    // Count recent requests within window
+    // Insert first, then count — eliminates TOCTOU race condition.
+    // Even under concurrent requests, each inserts before counting,
+    // so the count always reflects the true number of requests.
+    const { error: insertError } = await supabase
+      .from("api_rate_limits")
+      .insert({ identifier, endpoint: config.endpoint });
+
+    if (insertError) {
+      console.warn(`[rateLimit] Insert error, using in-memory fallback: ${insertError.message}`);
+      checkMemoryRateLimit(identifier, config);
+      return;
+    }
+
+    // Count all requests in window (including the one just inserted)
     const { count, error } = await supabase
       .from("api_rate_limits")
       .select("*", { count: "exact", head: true })
@@ -68,12 +81,11 @@ export async function checkRateLimit(
       .gte("created_at", windowStart);
 
     if (error) {
-      console.warn(`[rateLimit] DB error, using in-memory fallback: ${error.message}`);
-      checkMemoryRateLimit(identifier, config);
-      return;
+      console.warn(`[rateLimit] DB count error: ${error.message}`);
+      return; // Already inserted, skip check gracefully
     }
 
-    if ((count || 0) >= config.maxRequests) {
+    if ((count || 0) > config.maxRequests) {
       console.warn(
         `[rateLimit] Exceeded: ${identifier} on ${config.endpoint} (${count}/${config.maxRequests} in ${config.windowMinutes}min)`
       );
@@ -93,15 +105,6 @@ export async function checkRateLimit(
         .catch(() => {});
 
       throw new RateLimitError();
-    }
-
-    // Record this request atomically (await to prevent race conditions)
-    const { error: insertError } = await supabase
-      .from("api_rate_limits")
-      .insert({ identifier, endpoint: config.endpoint });
-
-    if (insertError) {
-      console.warn(`[rateLimit] Insert error: ${insertError.message}`);
     }
   } catch (error) {
     if (error instanceof RateLimitError) throw error;

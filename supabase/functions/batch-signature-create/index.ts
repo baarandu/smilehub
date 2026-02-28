@@ -203,6 +203,7 @@ serve(async (req: Request) => {
         .from(table)
         .select("*")
         .eq("id", rec.record_id)
+        .eq("clinic_id", clinicId)
         .single();
 
       if (!row) {
