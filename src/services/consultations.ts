@@ -15,6 +15,7 @@ export const consultationsService = {
         *,
         patients (name)
       `)
+      .is('deleted_at', null)
       .order('date', { ascending: false });
     
     if (error) throw error;
@@ -26,6 +27,7 @@ export const consultationsService = {
       .from('consultations')
       .select('*')
       .eq('patient_id', patientId)
+      .is('deleted_at', null)
       .order('date', { ascending: false });
     
     if (error) throw error;
@@ -70,11 +72,12 @@ export const consultationsService = {
   },
 
   async delete(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('consultations')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id } as any)
       .eq('id', id);
-    
+
     if (error) throw error;
   },
 
@@ -88,6 +91,7 @@ export const consultationsService = {
         suggested_return_date,
         patients (name, phone)
       `)
+      .is('deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today)
       .order('suggested_return_date');
@@ -118,6 +122,7 @@ export const consultationsService = {
     const { count, error } = await supabase
       .from('consultations')
       .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today);
     

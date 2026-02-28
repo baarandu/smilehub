@@ -342,9 +342,10 @@ export function NewAnamneseDialog({
 
       onSuccess?.();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving anamnese:', error);
-      toast.error(`Não foi possível ${anamnese ? 'atualizar' : 'registrar'} a anamnese`);
+      const detail = error?.message || error?.details || '';
+      toast.error(`Não foi possível ${anamnese ? 'atualizar' : 'registrar'} a anamnese${detail ? `: ${detail}` : '. Tente novamente.'}`);
     } finally {
       setSaving(false);
     }
@@ -352,7 +353,11 @@ export function NewAnamneseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
+      <DialogContent
+        className="max-w-3xl max-h-[90vh]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { if (saving) e.preventDefault(); }}
+      >
         <DialogHeader>
           <DialogTitle>{anamnese ? 'Editar Anamnese' : 'Nova Anamnese'}</DialogTitle>
         </DialogHeader>

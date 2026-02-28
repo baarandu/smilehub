@@ -7,6 +7,7 @@ export const anamnesesService = {
       .from('anamneses')
       .select('*')
       .eq('patient_id', patientId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -39,11 +40,13 @@ export const anamnesesService = {
   },
 
   async delete(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('anamneses')
-      .delete()
+      // @ts-expect-error - Supabase type generation issue with anamneses table
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id })
       .eq('id', id);
-    
+
     if (error) throw error;
   },
 };

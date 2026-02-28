@@ -7,6 +7,7 @@ export const childAnamnesesService = {
       .from('child_anamneses' as any)
       .select('*')
       .eq('patient_id', patientId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -37,9 +38,10 @@ export const childAnamnesesService = {
   },
 
   async delete(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('child_anamneses' as any)
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id } as any)
       .eq('id', id);
 
     if (error) throw error;

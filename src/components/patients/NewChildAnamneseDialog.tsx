@@ -676,7 +676,10 @@ export function NewChildAnamneseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
+      <DialogContent
+        className="max-w-3xl max-h-[90vh]"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{anamnesis ? 'Editar Anamnese Infantil' : 'Nova Anamnese Infantil'}</DialogTitle>
         </DialogHeader>

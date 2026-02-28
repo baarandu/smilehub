@@ -12,6 +12,7 @@ export const proceduresService = {
       .from('procedures')
       .select('*')
       .eq('patient_id', patientId)
+      .is('deleted_at', null)
       .order('date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -64,9 +65,10 @@ export const proceduresService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('procedures')
-      .delete()
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await (supabase
+      .from('procedures') as any)
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id })
       .eq('id', id);
 
     if (error) throw error;
