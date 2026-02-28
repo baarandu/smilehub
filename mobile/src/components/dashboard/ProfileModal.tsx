@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert, ScrollView } from 'react-native';
-import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers, Activity } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -238,6 +238,19 @@ export function ProfileModal({
                                 >
                                     <Layers size={20} color="#6B7280" />
                                     <Text className="text-gray-700 font-medium">Central de Prótese</Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {isDentist && (
+                                <TouchableOpacity
+                                    className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                    onPress={() => {
+                                        onClose();
+                                        router.push('/orthodontics');
+                                    }}
+                                >
+                                    <Activity size={20} color="#6B7280" />
+                                    <Text className="text-gray-700 font-medium">Central de Ortodontia</Text>
                                 </TouchableOpacity>
                             )}
 

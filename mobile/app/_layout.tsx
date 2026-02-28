@@ -128,6 +128,7 @@ function RootLayoutNav() {
                 <Stack.Screen name="trial-expired" />
                 <Stack.Screen name="batch-signature" options={{ presentation: 'card', animation: 'slide_from_right' }} />
                 <Stack.Screen name="prosthesis-center" options={{ presentation: 'card', animation: 'slide_from_right' }} />
+                <Stack.Screen name="orthodontics" options={{ presentation: 'card', animation: 'slide_from_right' }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="admin" options={{ headerShown: false }} />
             </Stack>
