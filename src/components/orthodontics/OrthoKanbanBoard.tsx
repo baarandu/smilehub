@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CalendarCheck, CalendarClock, MessageCircle } from 'lucide-react';
+import { ArrowRight, CalendarCheck, CalendarClock, ClipboardPlus, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,7 @@ import { getStatusLabel, getNextStatus, getPreviousStatus } from '@/utils/orthod
 import { OrthoKanbanColumn } from './OrthoKanbanColumn';
 import { OrthoKanbanCardOverlay } from './OrthoKanbanCard';
 import { MaintenanceScheduleDialog } from './MaintenanceScheduleDialog';
+import { SessionFormDialog } from './SessionFormDialog';
 
 interface OrthoKanbanBoardProps {
   cases: OrthodonticCase[];
@@ -38,6 +39,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [scheduleCase, setScheduleCase] = useState<OrthodonticCase | null>(null);
+  const [maintenanceCase, setMaintenanceCase] = useState<OrthodonticCase | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -180,6 +182,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                 onAdvanceStatus={handleAdvanceStatus}
                 onRetreatStatus={handleRetreatStatus}
                 onSchedule={column.id === 'active' ? setScheduleCase : undefined}
+                onRegisterMaintenance={column.id === 'active' ? setMaintenanceCase : undefined}
                 isFirst={idx === 0}
                 isLast={idx === ORTHO_KANBAN_COLUMNS.length - 1}
               />
@@ -260,6 +263,18 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                             )}
                           </div>
                         )}
+                        {isActive && (
+                          <div
+                            className="mt-1.5 flex items-center justify-center gap-1 bg-violet-50 border border-violet-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-violet-100 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMaintenanceCase(orthoCase);
+                            }}
+                          >
+                            <ClipboardPlus className="w-3 h-3 text-violet-600 shrink-0" />
+                            <span className="text-[9px] font-medium text-violet-700">Registrar Manutenção</span>
+                          </div>
+                        )}
                         {next && (
                           <div className="mt-2">
                             <Button
@@ -289,6 +304,19 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
           onOpenChange={(open) => { if (!open) setScheduleCase(null); }}
           orthoCase={scheduleCase}
           onSuccess={() => setRefreshKey(k => k + 1)}
+        />
+      )}
+
+      {maintenanceCase && (
+        <SessionFormDialog
+          open={!!maintenanceCase}
+          onOpenChange={(open) => {
+            if (!open) {
+              setMaintenanceCase(null);
+              setRefreshKey(k => k + 1);
+            }
+          }}
+          orthoCase={maintenanceCase}
         />
       )}
     </>

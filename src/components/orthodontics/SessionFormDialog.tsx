@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,11 +15,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { CalendarPlus, CalendarCheck, Loader2 } from 'lucide-react';
+import { addDays, format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/components/ui/use-toast';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useCreateSession, useUpdateSession } from '@/hooks/useOrthodontics';
+import { appointmentsService } from '@/services/appointments';
+import { orthodonticsService } from '@/services/orthodontics';
 import { financialService } from '@/services/financial';
+import { useQueryClient } from '@tanstack/react-query';
 import type {
   OrthodonticCase,
   OrthodonticSession,
@@ -55,6 +61,7 @@ const emptyForm: SessionFormData = {
 export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: SessionFormDialogProps) {
   const { clinicId } = useClinic();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const createSession = useCreateSession();
   const updateSession = useUpdateSession();
 
@@ -62,12 +69,19 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
   const [registerPayment, setRegisterPayment] = useState(true);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [step, setStep] = useState<'form' | 'schedule'>('form');
+  const [nextDate, setNextDate] = useState('');
+  const [nextTime, setNextTime] = useState('09:00');
+  const [scheduling, setScheduling] = useState(false);
   const isEditing = !!session;
   const isAligners = orthoCase.treatment_type === 'aligners';
   const showPaymentSection = !isEditing && orthoCase.maintenance_fee != null && orthoCase.maintenance_fee > 0;
 
+  const frequencyDays = orthoCase.return_frequency_days || 30;
+
   useEffect(() => {
     if (open && session) {
+      setStep('form');
       setForm({
         appointmentDate: session.appointment_date,
         proceduresPerformed: session.procedures_performed || [],
@@ -82,6 +96,7 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
         observations: session.observations || '',
       });
     } else if (open) {
+      setStep('form');
       setForm({
         ...emptyForm,
         upperArchWireAfter: orthoCase.upper_arch_wire || '',
@@ -173,6 +188,13 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
         }
 
         toast({ title: 'Sessão registrada' });
+
+        // Show step 2: schedule next appointment
+        const suggestedDate = format(addDays(parseISO(form.appointmentDate), frequencyDays), 'yyyy-MM-dd');
+        setNextDate(suggestedDate);
+        setNextTime('09:00');
+        setStep('schedule');
+        return;
       }
       onOpenChange(false);
     } catch {
@@ -180,9 +202,116 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
     }
   };
 
+  const handleScheduleNext = async () => {
+    if (!nextDate || !nextTime) return;
+    setScheduling(true);
+    try {
+      await appointmentsService.create({
+        patient_id: orthoCase.patient_id,
+        clinic_id: clinicId,
+        date: nextDate,
+        time: nextTime,
+        status: 'scheduled',
+        procedure_name: 'Manutenção Ortodôntica',
+        dentist_id: orthoCase.dentist_id,
+        notes: 'Manutenção ortodôntica',
+      });
+
+      await orthodonticsService.updateCase(orthoCase.id, {
+        next_appointment_at: nextDate,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['orthodontic-cases'] });
+
+      toast({
+        title: 'Próximo retorno agendado',
+        description: `${format(parseISO(nextDate), "dd/MM/yyyy (EEEE)", { locale: ptBR })} às ${nextTime}`,
+      });
+      onOpenChange(false);
+    } catch {
+      toast({ title: 'Erro ao agendar retorno', variant: 'destructive' });
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const suggestedDateFormatted = nextDate
+    ? format(parseISO(nextDate), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+    : '';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] p-0">
+        {step === 'schedule' ? (
+          <>
+            <DialogHeader className="px-6 pt-6 pb-2">
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarPlus className="w-5 h-5" />
+                Agendar Próximo Retorno
+              </DialogTitle>
+              <DialogDescription>
+                {orthoCase.patient_name} — Retorno a cada {frequencyDays} dias
+              </DialogDescription>
+            </DialogHeader>
+            <div className="px-6 pb-6 space-y-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <p className="text-sm text-emerald-700">
+                  Sessão registrada com sucesso! Agende o próximo retorno.
+                </p>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <p className="text-muted-foreground">
+                  Data sugerida: <strong className="text-foreground">{suggestedDateFormatted}</strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Data</Label>
+                  <Input
+                    type="date"
+                    value={nextDate}
+                    onChange={(e) => setNextDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Horário</Label>
+                  <Input
+                    type="time"
+                    value={nextTime}
+                    onChange={(e) => setNextTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => onOpenChange(false)}
+                  disabled={scheduling}
+                >
+                  Pular
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleScheduleNext}
+                  disabled={scheduling || !nextDate || !nextTime}
+                >
+                  {scheduling ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CalendarPlus className="w-4 h-4 mr-2" />
+                  )}
+                  Agendar Retorno
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+        <>
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>{isEditing ? 'Editar Sessão' : 'Nova Sessão'}</DialogTitle>
           <DialogDescription>
@@ -396,6 +525,8 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
             </div>
           </div>
         </ScrollArea>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );

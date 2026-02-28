@@ -1,7 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, AlertTriangle, Clock, CalendarCheck, CalendarClock, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, Clock, CalendarCheck, CalendarClock, MessageCircle, ClipboardPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { OrthodonticCase } from '@/types/orthodontics';
 import { TREATMENT_TYPE_LABELS } from '@/types/orthodontics';
@@ -14,9 +14,10 @@ interface OrthoKanbanCardProps {
   onMoveLeft?: () => void;
   onMoveRight?: () => void;
   onSchedule?: () => void;
+  onRegisterMaintenance?: () => void;
 }
 
-export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft, onMoveRight, onSchedule }: OrthoKanbanCardProps) {
+export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft, onMoveRight, onSchedule, onRegisterMaintenance }: OrthoKanbanCardProps) {
   const navigate = useNavigate();
   const {
     attributes,
@@ -148,6 +149,18 @@ export function OrthoKanbanCard({ orthoCase, onClick, scheduledDate, onMoveLeft,
               <span className="text-[9px] font-medium text-green-700">WhatsApp</span>
             </a>
           )}
+        </div>
+      )}
+      {orthoCase.status === 'active' && onRegisterMaintenance && (
+        <div
+          className="mt-1.5 flex items-center justify-center gap-1 bg-violet-50 border border-violet-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-violet-100 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegisterMaintenance();
+          }}
+        >
+          <ClipboardPlus className="w-3 h-3 text-violet-600 shrink-0" />
+          <span className="text-[9px] font-medium text-violet-700">Registrar Manutenção</span>
         </div>
       )}
     </div>

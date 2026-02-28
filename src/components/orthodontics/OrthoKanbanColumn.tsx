@@ -13,11 +13,12 @@ interface OrthoKanbanColumnProps {
   onAdvanceStatus?: (orthoCase: OrthodonticCase) => void;
   onRetreatStatus?: (orthoCase: OrthodonticCase) => void;
   onSchedule?: (orthoCase: OrthodonticCase) => void;
+  onRegisterMaintenance?: (orthoCase: OrthodonticCase) => void;
   isFirst?: boolean;
   isLast?: boolean;
 }
 
-export function OrthoKanbanColumn({ column, cases, onCardClick, patientAppointments, onAdvanceStatus, onRetreatStatus, onSchedule, isFirst, isLast }: OrthoKanbanColumnProps) {
+export function OrthoKanbanColumn({ column, cases, onCardClick, patientAppointments, onAdvanceStatus, onRetreatStatus, onSchedule, onRegisterMaintenance, isFirst, isLast }: OrthoKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const caseIds = cases.map(c => c.id);
 
@@ -46,6 +47,7 @@ export function OrthoKanbanColumn({ column, cases, onCardClick, patientAppointme
                     onMoveLeft={!isFirst && onRetreatStatus ? () => onRetreatStatus(c) : undefined}
                     onMoveRight={!isLast && onAdvanceStatus ? () => onAdvanceStatus(c) : undefined}
                     onSchedule={onSchedule ? () => onSchedule(c) : undefined}
+                    onRegisterMaintenance={onRegisterMaintenance ? () => onRegisterMaintenance(c) : undefined}
                   />
                 ))
               )}
