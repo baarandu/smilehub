@@ -22,6 +22,7 @@ import {
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { TransactionWithIR, PJSource, PayerFormData, PayerType } from '@/types/incomeTax';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/formatters';
 
 interface PayerDataDialogProps {
   transaction: TransactionWithIR | null;
@@ -51,10 +52,6 @@ const applyCurrencyMask = (value: string): string => {
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
-};
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 export function PayerDataDialog({

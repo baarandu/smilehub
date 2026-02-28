@@ -1,5 +1,6 @@
 import { User, Building, AlertCircle, Receipt, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatCurrency } from '@/utils/formatters';
 
 interface IRSummaryCardsProps {
   pfTotal: number;
@@ -9,10 +10,6 @@ interface IRSummaryCardsProps {
   incompleteCount?: number;
   onIncompleteClick?: () => void;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
 
 export function IRSummaryCards({
   pfTotal,

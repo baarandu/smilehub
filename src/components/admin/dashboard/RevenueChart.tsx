@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 
 import { Skeleton } from '@/components/ui/skeleton';
 import { DollarSign } from 'lucide-react';
 import type { StripeMetrics } from '@/services/admin/analytics';
+import { formatCurrency } from '@/utils/formatters';
 
 interface RevenueChartProps {
     data: StripeMetrics | null | undefined;
@@ -16,15 +17,6 @@ const chartConfig = {
         color: "hsl(var(--primary))",
     },
 };
-
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(value);
-}
 
 export function RevenueChart({ data, isLoading }: RevenueChartProps) {
     if (isLoading) {

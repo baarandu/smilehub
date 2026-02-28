@@ -1,15 +1,12 @@
 import jsPDF from 'jspdf';
 import type { IRSummary } from '@/types/incomeTax';
 import { computePdfHash, generateDocumentId } from '@/utils/pdfHash';
+import { formatDecimal as formatCurrency } from '@/utils/formatters';
 
 export interface IRPdfResult {
   hash: string;
   documentId: string;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 
 const formatDate = (date: Date) => {
   return date.toLocaleDateString('pt-BR');

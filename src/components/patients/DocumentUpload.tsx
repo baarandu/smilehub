@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Upload, X, File, Image, FileText, Trash2, Eye, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,7 @@ interface DocumentUploadProps {
 
 export function DocumentUpload({ patientId }: DocumentUploadProps) {
   const { clinicId } = useClinic();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentName, setDocumentName] = useState('');
@@ -79,7 +81,7 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
   };
 
   const handleDelete = async (document: PatientDocument) => {
-    if (!confirm('Tem certeza que deseja excluir este documento?')) return;
+    if (!await confirm({ description: 'Tem certeza que deseja excluir este documento?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
     try {
       await deleteMutation.mutateAsync(document);
@@ -313,6 +315,7 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
           )}
         </DialogContent>
       </Dialog>
+      {ConfirmDialog}
     </div>
   );
 }

@@ -27,6 +27,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.docker
 mobile/.env
 mobile/.env.local
 supabase/.temp/

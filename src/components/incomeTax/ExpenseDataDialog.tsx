@@ -14,6 +14,7 @@ import {
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { TransactionWithIR, SupplierFormData } from '@/types/incomeTax';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/formatters';
 
 interface ExpenseDataDialogProps {
   transaction: TransactionWithIR | null;
@@ -48,10 +49,6 @@ const applyCPFCNPJMask = (value: string): string => {
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
-};
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
 export function ExpenseDataDialog({

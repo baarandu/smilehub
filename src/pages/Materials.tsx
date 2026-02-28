@@ -12,8 +12,10 @@ import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/ma
 import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
 import { usePlanFeature } from '@/hooks/usePlanFeature';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 export default function Materials() {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   // Orders State
   const [pendingOrders, setPendingOrders] = useState<ShoppingOrder[]>([]);
   const [historyOrders, setHistoryOrders] = useState<ShoppingOrder[]>([]);
@@ -400,7 +402,7 @@ export default function Materials() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este pedido?')) return;
+    if (!await confirm({ description: 'Tem certeza que deseja excluir este pedido?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
     try {
       await (supabase.from('shopping_orders') as any)
@@ -587,8 +589,8 @@ export default function Materials() {
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         title="Excluir nota fiscal"
-                        onClick={() => {
-                          if (confirm('Excluir a nota fiscal anexada?')) {
+                        onClick={async () => {
+                          if (await confirm({ description: 'Excluir a nota fiscal anexada?', variant: 'destructive', confirmLabel: 'Excluir' })) {
                             const match = invoiceUrl?.match(/fiscal-documents\/(.+)$/);
                             if (match) {
                               supabase.storage.from('fiscal-documents').remove([match[1]]);
@@ -843,6 +845,7 @@ export default function Materials() {
         feature="Importação de Materiais"
         description="Importe sua lista de materiais por copiar/colar ou nota fiscal com processamento por IA."
       />
+      {ConfirmDialog}
     </div>
   );
 }

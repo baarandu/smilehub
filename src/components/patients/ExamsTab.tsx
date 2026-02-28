@@ -7,6 +7,7 @@ import { NewExamDialog } from './NewExamDialog';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import { usePlanFeature } from '@/hooks/usePlanFeature';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { Exam } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -26,6 +27,7 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
   const [signingExam, setSigningExam] = useState<Exam | null>(null);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const { hasFeature: hasSignature } = usePlanFeature('assinatura_digital');
+  const { confirm, ConfirmDialog } = useConfirmDialog();
 
   const formatDate = (date: string | null) => {
     if (!date) return '-';
@@ -33,7 +35,7 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
   };
 
   const handleDelete = async (exam: Exam) => {
-    if (!confirm('Tem certeza que deseja excluir este exame?')) return;
+    if (!await confirm({ description: 'Tem certeza que deseja excluir este exame?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
     try {
       await deleteExam.mutateAsync(exam.id);
@@ -73,6 +75,7 @@ export function ExamsTab({ patientId, patientName, patientEmail }: ExamsTabProps
 
   return (
     <>
+      {ConfirmDialog}
       <div className="bg-card rounded-xl p-6 border border-border">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-foreground">Exames Realizados</h3>

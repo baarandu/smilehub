@@ -9,6 +9,7 @@ import { NewAnamneseDialog } from './NewAnamneseDialog';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import { usePlanFeature } from '@/hooks/usePlanFeature';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
 
@@ -21,6 +22,7 @@ interface AnamneseTabProps {
 export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTabProps) {
     const { data: anamneses, isLoading } = useAnamneses(patientId);
     const deleteAnamnese = useDeleteAnamnese();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [selectedAnamnese, setSelectedAnamnese] = useState<Anamnese | null>(null);
     const [showSummaryDialog, setShowSummaryDialog] = useState(false);
     const [showAnamneseDialog, setShowAnamneseDialog] = useState(false);
@@ -83,7 +85,7 @@ export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTa
     const handleDeleteAnamnese = async (e: React.MouseEvent, anamnese: Anamnese) => {
         e.stopPropagation();
 
-        if (!confirm('Tem certeza que deseja excluir esta anamnese?')) return;
+        if (!await confirm({ description: 'Tem certeza que deseja excluir esta anamnese?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
         try {
             await deleteAnamnese.mutateAsync(anamnese.id);
@@ -235,6 +237,7 @@ export function AnamneseTab({ patientId, patientName, patientEmail }: AnamneseTa
                 feature="Assinatura Digital"
                 description="Assine digitalmente anamneses e outros registros clínicos com validade jurídica."
             />
+            {ConfirmDialog}
         </>
     );
 }

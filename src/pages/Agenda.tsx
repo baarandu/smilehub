@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { format, addDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { appointmentsService } from '@/services/appointments';
@@ -380,11 +380,23 @@ export default function Agenda() {
     );
   };
 
-  const hasAppointments = (date: Date) => {
+  const hasAppointments = useCallback((date: Date) => {
     return datesWithAppointments.some(
       d => format(d, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     );
-  };
+  }, [datesWithAppointments]);
+
+  const DayContentComponent = useMemo(() => {
+    const DayContent = ({ date }: { date: Date }) => (
+      <div className="relative w-full h-full flex items-center justify-center">
+        <span>{date.getDate()}</span>
+        {hasAppointments(date) && (
+          <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+        )}
+      </div>
+    );
+    return DayContent;
+  }, [hasAppointments]);
 
   return (
     <div className="space-y-6">
@@ -558,14 +570,7 @@ export default function Agenda() {
               day_disabled: "text-muted-foreground opacity-50",
             }}
             components={{
-              DayContent: ({ date }) => (
-                <div className="relative w-full h-full flex items-center justify-center">
-                  <span>{date.getDate()}</span>
-                  {hasAppointments(date) && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                  )}
-                </div>
-              ),
+              DayContent: DayContentComponent,
             }}
           />
 

@@ -8,6 +8,7 @@ import { ClinicProvider } from '../src/contexts/ClinicContext';
 import { OnboardingProvider } from '../src/contexts/OnboardingContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 // Silence console.logs in production (security + performance)
 if (!__DEV__) {
@@ -148,13 +149,15 @@ function RootLayout() {
                 publishableKey={stripeKey}
                 merchantIdentifier="merchant.com.smilecarehub" // Optional, for Apple Pay
             >
-                <AuthProvider>
-                    <ClinicProvider>
-                        <OnboardingProvider>
-                            <RootLayoutNav />
-                        </OnboardingProvider>
-                    </ClinicProvider>
-                </AuthProvider>
+                <ErrorBoundary>
+                    <AuthProvider>
+                        <ClinicProvider>
+                            <OnboardingProvider>
+                                <RootLayoutNav />
+                            </OnboardingProvider>
+                        </ClinicProvider>
+                    </AuthProvider>
+                </ErrorBoundary>
             </StripeProvider>
         </GestureHandlerRootView>
     );

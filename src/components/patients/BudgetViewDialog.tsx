@@ -13,6 +13,7 @@ import { incomeTaxService } from '@/services/incomeTaxService';
 import type { BudgetWithItems } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useBudgetPayment, useBudgetPdf, PdfItemSelectionDialog } from './budget';
 import { isProstheticTreatment, hasLabTreatment } from '@/utils/prosthesis';
 import { getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
@@ -32,6 +33,7 @@ interface BudgetViewDialogProps {
 
 export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, patientName, patientId, onNavigateToPayments }: BudgetViewDialogProps) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [updating, setUpdating] = useState(false);
 
     // Patient and PJ data for payer selection
@@ -111,7 +113,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
     const handleDelete = async () => {
-        if (!confirm('Tem certeza que deseja excluir este orçamento?')) return;
+        if (!await confirm({ description: 'Tem certeza que deseja excluir este orçamento?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
         try {
             setUpdating(true);
             await budgetsService.delete(budget.id);
@@ -160,7 +162,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
         const itemName = getToothDisplayName(item.tooth);
         const value = payment.getItemValue(item);
 
-        if (!confirm(`Deseja ${action} o item "${itemName}"?\nValor: R$ ${formatMoney(value)}`)) return;
+        if (!await confirm({ description: `Deseja ${action} o item "${itemName}"? Valor: R$ ${formatMoney(value)}`, confirmLabel: action === 'aprovar' ? 'Aprovar' : 'Confirmar' })) return;
 
         try {
             setUpdating(true);
@@ -188,7 +190,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     // Approve selected pending items
     const handleApproveSelected = async () => {
         if (selectedPendingItems.size === 0) return;
-        if (!confirm(`Aprovar ${selectedPendingItems.size} item(ns) selecionado(s)?`)) return;
+        if (!await confirm({ description: `Aprovar ${selectedPendingItems.size} item(ns) selecionado(s)?`, confirmLabel: 'Aprovar' })) return;
 
         try {
             setUpdating(true);
@@ -219,7 +221,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
 
     // Approve all pending items
     const handleApproveAll = async () => {
-        if (!confirm(`Aprovar todos os ${pendingItems.length} itens pendentes?`)) return;
+        if (!await confirm({ description: `Aprovar todos os ${pendingItems.length} itens pendentes?`, confirmLabel: 'Aprovar Todos' })) return;
 
         try {
             setUpdating(true);
@@ -246,22 +248,22 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     };
 
     // Pay selected approved items
-    const handlePaySelected = () => {
+    const handlePaySelected = async () => {
         if (selectedApprovedItems.size === 0) return;
         const totalValue = Array.from(selectedApprovedItems)
             .map(idx => teeth[idx])
             .reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
-        if (!confirm(`Pagar ${selectedApprovedItems.size} item(ns) no valor total de R$ ${formatMoney(totalValue)}?`)) return;
+        if (!await confirm({ description: `Pagar ${selectedApprovedItems.size} item(ns) no valor total de R$ ${formatMoney(totalValue)}?`, confirmLabel: 'Pagar' })) return;
 
         payment.handlePaySelected(selectedApprovedItems, teeth);
         setSelectedApprovedItems(new Set());
     };
 
     // Pay all approved items
-    const handlePayAll = () => {
+    const handlePayAll = async () => {
         const totalValue = approvedItems.reduce((sum, t) => sum + payment.getItemValue(t), 0);
-        if (!confirm(`Pagar todos os ${approvedItems.length} itens aprovados no valor total de R$ ${formatMoney(totalValue)}?`)) return;
+        if (!await confirm({ description: `Pagar todos os ${approvedItems.length} itens aprovados no valor total de R$ ${formatMoney(totalValue)}?`, confirmLabel: 'Pagar Todos' })) return;
         payment.handlePayAll(teeth);
     };
 
@@ -532,6 +534,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                     patientId={patientId}
                 />
             )}
+            {ConfirmDialog}
         </Dialog>
     );
 }

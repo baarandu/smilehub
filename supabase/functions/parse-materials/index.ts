@@ -132,18 +132,17 @@ serve(async (req) => {
       throw new Error("mode must be 'text' or 'invoice'");
     }
 
-    // Verify user belongs to clinic
-    if (clinic_id) {
-      const { data: clinicUser } = await supabase
-        .from("clinic_users")
-        .select("role")
-        .eq("clinic_id", clinic_id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+    // Verify user belongs to clinic (required)
+    validateRequired(clinic_id, "clinic_id");
+    const { data: clinicUser } = await supabase
+      .from("clinic_users")
+      .select("role")
+      .eq("clinic_id", clinic_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-      if (!clinicUser)
-        throw new Error("User not authorized for this clinic");
-    }
+    if (!clinicUser)
+      throw new Error("User not authorized for this clinic");
 
     let gptResponse;
 

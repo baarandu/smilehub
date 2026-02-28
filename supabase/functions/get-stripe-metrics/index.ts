@@ -39,21 +39,16 @@ serve(async (req) => {
             throw new Error("Unauthorized");
         }
 
-        // Verify user is admin of at least one clinic
-        const { data: clinicUserRows, error: adminError } = await supabase
-            .from('clinic_users')
-            .select('role, roles')
-            .eq('user_id', user.id)
-            .limit(10);
+        // Verify user is super_admin (Stripe metrics are cross-tenant)
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_super_admin')
+            .eq('id', user.id)
+            .single();
 
-        const isAdmin = (clinicUserRows || []).some((cu: any) => {
-            const roles: string[] = cu.roles || (cu.role ? [cu.role] : []);
-            return roles.includes('admin');
-        });
-
-        if (adminError || !isAdmin) {
-            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "StripeMetrics", user_id: user.id, details: { reason: "Not admin" } });
-            throw new Error("Unauthorized");
+        if (!profile?.is_super_admin) {
+            log.audit(supabase, { action: "AUTH_FAILURE", table_name: "StripeMetrics", user_id: user.id, details: { reason: "Not super_admin" } });
+            throw new Error("Unauthorized: apenas super administradores podem acessar métricas do Stripe");
         }
 
         // Rate limit: 20 requests per hour

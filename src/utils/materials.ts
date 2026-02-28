@@ -1,7 +1,6 @@
 import { ShoppingItem } from '@/types/materials';
 
-export const formatCurrency = (val: number) =>
-    val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+export { formatCurrency } from './formatters';
 
 /** Migrates old items with `supplier` field to `brand` and ensures type/code */
 export const migrateItems = (items: any[]): ShoppingItem[] =>

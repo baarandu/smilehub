@@ -64,6 +64,12 @@ const handler = async (request: Request): Promise<Response> => {
         validateRequired(record.email, "email");
         validateRequired(record.role, "role");
 
+        // Validate role is a known value and escape HTML to prevent injection
+        const allowedRoles = ['admin', 'dentist', 'assistant', 'manager', 'editor', 'viewer'];
+        const safeRole = allowedRoles.includes(record.role)
+            ? record.role
+            : record.role.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -78,7 +84,7 @@ const handler = async (request: Request): Promise<Response> => {
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Olá!</h2>
             <p>Você foi convidado para participar da equipe no <strong>Organiza Odonto</strong>.</p>
-            <p>Sua função será: <strong>${record.role}</strong></p>
+            <p>Sua função será: <strong>${safeRole}</strong></p>
             <p>Para aceitar o convite, clique no botão abaixo e crie sua conta (ou faça login) usando este email:</p>
             <a href="https://organizaodonto.app/" style="background-color: #0D9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">
               Acessar Plataforma

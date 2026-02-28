@@ -280,9 +280,7 @@ export function formatTaxRate(rate: number): string {
   return `${(rate * 100).toFixed(2)}%`;
 }
 
-export function formatCurrency(value: number): string {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+export { formatCurrency } from '@/utils/formatters';
 
 export function getTaxRegimeLabel(regime: TaxRegime): string {
   return TAX_REGIME_INFO[regime]?.label || regime;

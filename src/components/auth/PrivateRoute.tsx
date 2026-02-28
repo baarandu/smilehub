@@ -40,12 +40,19 @@ export function PrivateRoute() {
                 setSession(session);
             }
 
-            // 1. Check Super Admin
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('is_super_admin')
-                .eq('id', session.user.id)
-                .single<{ is_super_admin: boolean | null }>();
+            // 1. Parallel: Check Super Admin + Clinic User
+            const [{ data: profile }, { data: clinicUser }] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('is_super_admin')
+                    .eq('id', session.user.id)
+                    .single<{ is_super_admin: boolean | null }>(),
+                supabase
+                    .from('clinic_users')
+                    .select('clinic_id, role')
+                    .eq('user_id', session.user.id)
+                    .single<{ clinic_id: string; role: string }>(),
+            ]);
 
             if (profile && profile.is_super_admin) {
                 if (mounted) {
@@ -58,12 +65,7 @@ export function PrivateRoute() {
                 return;
             }
 
-            // 2. Check Clinic Subscription
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id, role')
-                .eq('user_id', session.user.id)
-                .single<{ clinic_id: string; role: string }>();
+            // 2. Check Clinic Subscription (depends on clinicUser)
 
             if (clinicUser) {
                 // Fetch subscription with current_period_end to check expiration

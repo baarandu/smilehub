@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useChildAnamneses, useDeleteChildAnamnesis } from '@/hooks/useChildAnamneses';
 import { ChildAnamneseSummaryDialog } from './ChildAnamneseSummaryDialog';
 import { NewChildAnamneseDialog } from './NewChildAnamneseDialog';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import type { ChildAnamnesis } from '@/types/childAnamnesis';
 
@@ -16,6 +17,7 @@ interface ChildAnamneseTabProps {
 export function ChildAnamneseTab({ patientId }: ChildAnamneseTabProps) {
   const { data: anamneses, isLoading } = useChildAnamneses(patientId);
   const deleteAnamnesis = useDeleteChildAnamnesis();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [selectedAnamnesis, setSelectedAnamnesis] = useState<ChildAnamnesis | null>(null);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [showFormDialog, setShowFormDialog] = useState(false);
@@ -65,7 +67,7 @@ export function ChildAnamneseTab({ patientId }: ChildAnamneseTabProps) {
 
   const handleDelete = async (e: React.MouseEvent, anamnesis: ChildAnamnesis) => {
     e.stopPropagation();
-    if (!confirm('Tem certeza que deseja excluir esta anamnese infantil?')) return;
+    if (!await confirm({ description: 'Tem certeza que deseja excluir esta anamnese infantil?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
     try {
       await deleteAnamnesis.mutateAsync(anamnesis.id);
       toast.success('Anamnese infantil excluída com sucesso!');
@@ -176,6 +178,7 @@ export function ChildAnamneseTab({ patientId }: ChildAnamneseTabProps) {
         patientId={patientId}
         anamnesis={editingAnamnesis}
       />
+      {ConfirmDialog}
     </>
   );
 }

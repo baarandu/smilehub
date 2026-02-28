@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Receipt, ExternalLink, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -21,6 +22,7 @@ export function OrderDetailDialog({
     onAttachInvoice
 }: OrderDetailDialogProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     if (!order) return null;
 
     return (
@@ -79,8 +81,8 @@ export function OrderDetailDialog({
                                         variant="ghost"
                                         size="sm"
                                         className="gap-1 text-destructive hover:text-destructive"
-                                        onClick={() => {
-                                            if (confirm('Excluir a nota fiscal deste pedido?')) {
+                                        onClick={async () => {
+                                            if (await confirm({ description: 'Excluir a nota fiscal deste pedido?', variant: 'destructive', confirmLabel: 'Excluir' })) {
                                                 onDeleteInvoice(order.id);
                                             }
                                         }}
@@ -149,6 +151,7 @@ export function OrderDetailDialog({
                     <Button onClick={() => onOpenChange(false)}>Fechar</Button>
                 </DialogFooter>
             </DialogContent>
+            {ConfirmDialog}
         </Dialog>
     );
 }

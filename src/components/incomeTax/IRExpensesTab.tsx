@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { ExpenseDataDialog } from './ExpenseDataDialog';
 import type { TransactionWithIR } from '@/types/incomeTax';
+import { formatCurrency } from '@/utils/formatters';
 
 interface IRExpensesTabProps {
   transactions: TransactionWithIR[];
@@ -29,10 +30,6 @@ interface IRExpensesTabProps {
   onTransactionUpdated: () => void;
   globalSearch?: string;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
 
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-');

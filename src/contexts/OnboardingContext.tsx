@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useClinic } from './ClinicContext';
 
@@ -165,14 +165,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(getStorageKey(), JSON.stringify(state));
   }, [getStorageKey]);
 
-  const steps: OnboardingStep[] = ONBOARDING_STEPS.map(step => ({
+  const steps: OnboardingStep[] = useMemo(() => ONBOARDING_STEPS.map(step => ({
     ...step,
     completed: completedSteps.includes(step.id),
-  }));
+  })), [completedSteps]);
 
-  const currentStepIndex = steps.findIndex(s => !s.completed);
-  const progress = (completedSteps.length / steps.length) * 100;
-  const isCompleted = completedSteps.length === steps.length;
+  const currentStepIndex = useMemo(() => steps.findIndex(s => !s.completed), [steps]);
+  const progress = useMemo(() => (completedSteps.length / steps.length) * 100, [completedSteps.length, steps.length]);
+  const isCompleted = useMemo(() => completedSteps.length === steps.length, [completedSteps.length, steps.length]);
 
   const markStepCompleted = async (stepId: string) => {
     if (completedSteps.includes(stepId)) return;
@@ -215,7 +215,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
   }, [shouldReturnToOnboarding]);
 
-  const value: OnboardingContextType = {
+  const handleSetShowTooltips = useCallback((show: boolean) => {
+    setShowTooltips(show);
+    saveState(completedSteps, isDismissed, show);
+  }, [completedSteps, isDismissed, saveState]);
+
+  const value: OnboardingContextType = useMemo(() => ({
     isOnboardingOpen,
     setIsOnboardingOpen,
     steps,
@@ -226,16 +231,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     markStepCompleted,
     resetOnboarding,
     showTooltips: showTooltips && !isCompleted,
-    setShowTooltips: (show: boolean) => {
-      setShowTooltips(show);
-      saveState(completedSteps, isDismissed, show);
-    },
+    setShowTooltips: handleSetShowTooltips,
     dismissOnboarding,
     checkAndShowOnboarding,
     shouldReturnToOnboarding,
     setShouldReturnToOnboarding,
     returnToOnboardingIfNeeded,
-  };
+  }), [
+    isOnboardingOpen, steps, currentStepIndex, progress, isCompleted,
+    isFirstAccess, markStepCompleted, resetOnboarding, showTooltips,
+    handleSetShowTooltips, dismissOnboarding, checkAndShowOnboarding,
+    shouldReturnToOnboarding, returnToOnboardingIfNeeded,
+  ]);
 
   return (
     <OnboardingContext.Provider value={value}>

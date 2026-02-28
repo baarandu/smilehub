@@ -35,6 +35,7 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 // ... (existing helper methods)
 
@@ -79,6 +80,7 @@ function StethoscopeIcon(props: any) {
 export function ProfileSettingsModal({ open, onOpenChange, initialTab }: ProfileSettingsModalProps) {
     const { refetch, isAdmin, clinicId, clinicName: contextClinicName, role } = useClinic();
     const { markStepCompleted } = useOnboarding();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
 
     // Clinic Info State
     const [clinicName, setClinicName] = useState('');
@@ -305,7 +307,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
 
 
     const handleRemoveInvite = async (id: string) => {
-        if (!confirm('Remover convite pendente?')) return;
+        if (!await confirm({ description: 'Remover convite pendente?', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await supabase.from('clinic_invites').delete().eq('id', id);
             toast.success('Convite removido');
@@ -316,7 +318,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
     };
 
     const handleRemoveMember = async (id: string) => {
-        if (!confirm('Remover membro da equipe? O usuário perderá o acesso.')) return;
+        if (!await confirm({ description: 'Remover membro da equipe? O usuário perderá o acesso.', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await supabase.from('clinic_users').delete().eq('id', id);
             toast.success('Membro removido');
@@ -779,6 +781,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                     </TabsContent>
                 </Tabs>
             </DialogContent>
+            {ConfirmDialog}
         </Dialog>
     );
 }

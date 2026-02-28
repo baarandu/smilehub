@@ -19,12 +19,14 @@ import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 import { useReminders, useTemplates, useWhatsAppMessaging, AlertAccordion } from './alerts/index';
 
 
 export default function Alerts() {
   const navigate = useNavigate();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   // Get tomorrow's date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -682,8 +684,8 @@ export default function Alerts() {
                       <Button
                         size="sm"
                         className="bg-green-600 hover:bg-green-700 gap-2 text-white"
-                        onClick={() => {
-                          if (confirm(`Deseja confirmar a consulta de ${appointment.patients?.name}?`)) {
+                        onClick={async () => {
+                          if (await confirm({ description: `Deseja confirmar a consulta de ${appointment.patients?.name}?`, confirmLabel: 'Confirmar' })) {
                             updateAppointmentStatus.mutate({ id: appointment.id, status: 'confirmed' }, {
                               onSuccess: () => toast.success('Consulta confirmada!')
                             });
@@ -859,6 +861,7 @@ export default function Alerts() {
           </div>
         </DialogContent>
       </Dialog>
+      {ConfirmDialog}
     </div>
   );
 }

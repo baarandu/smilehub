@@ -40,7 +40,8 @@
         {
           "microphonePermission": "O Organiza Odonto precisa de acesso ao microfone para gravar consultas por voz."
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

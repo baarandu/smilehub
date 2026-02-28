@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Search, Phone, Mail, ChevronRight, Users, UserPlus, X, FileText, FileClock, LayoutGrid, LayoutList, RotateCw, AlertTriangle, Baby } from 'lucide-react-native';
@@ -281,8 +281,10 @@ export default function Patients() {
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView
+            <FlatList
                 className="px-4 py-6"
+                data={filteredPatients}
+                keyExtractor={(item) => item.id}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -295,114 +297,110 @@ export default function Patients() {
                         tintColor="#b94a48"
                     />
                 }
-            >
-                {/* Header */}
-                <View className="flex-row justify-between items-start mb-6">
-                    <View>
-                        <Text className="text-2xl font-bold text-gray-900">Pacientes</Text>
-                        <Text className="text-gray-500 mt-1">
-                            {patients.length} pacientes cadastrados
-                        </Text>
-                    </View>
-                    <View className="flex-row gap-2">
-                        <TouchableOpacity
-                            onPress={() => setShowDocumentsModal(true)}
-                            className="w-10 h-10 bg-[#fef2f2] items-center justify-center rounded-xl"
-                        >
-                            <FileText size={20} color="#b94a48" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => setShowBudgetsModal(true)}
-                            className="w-10 h-10 bg-orange-50 items-center justify-center rounded-xl relative"
-                        >
-                            <FileClock size={20} color="#F59E0B" />
-                            {pendingBudgetsCount > 0 && (
-                                <View className="absolute -top-1 -right-1 bg-orange-500 rounded-full w-5 h-5 items-center justify-center border-2 border-white">
-                                    <Text className="text-white text-[10px] font-bold">{pendingBudgetsCount}</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => setShowModal(true)}
-                            className="bg-[#b94a48] p-3 rounded-xl"
-                        >
-                            <UserPlus size={20} color="#FFFFFF" />
-                        </TouchableOpacity>
-                    </View>
-                </View>
+                ListHeaderComponent={
+                    <>
+                        {/* Header */}
+                        <View className="flex-row justify-between items-start mb-6">
+                            <View>
+                                <Text className="text-2xl font-bold text-gray-900">Pacientes</Text>
+                                <Text className="text-gray-500 mt-1">
+                                    {patients.length} pacientes cadastrados
+                                </Text>
+                            </View>
+                            <View className="flex-row gap-2">
+                                <TouchableOpacity
+                                    onPress={() => setShowDocumentsModal(true)}
+                                    className="w-10 h-10 bg-[#fef2f2] items-center justify-center rounded-xl"
+                                >
+                                    <FileText size={20} color="#b94a48" />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setShowBudgetsModal(true)}
+                                    className="w-10 h-10 bg-orange-50 items-center justify-center rounded-xl relative"
+                                >
+                                    <FileClock size={20} color="#F59E0B" />
+                                    {pendingBudgetsCount > 0 && (
+                                        <View className="absolute -top-1 -right-1 bg-orange-500 rounded-full w-5 h-5 items-center justify-center border-2 border-white">
+                                            <Text className="text-white text-[10px] font-bold">{pendingBudgetsCount}</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() => setShowModal(true)}
+                                    className="bg-[#b94a48] p-3 rounded-xl"
+                                >
+                                    <UserPlus size={20} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
-                {/* Search */}
-                <View className="bg-white rounded-xl border border-gray-200 flex-row items-center px-4 mb-6">
-                    <Search size={20} color="#9CA3AF" />
-                    <TextInput
-                        className="flex-1 py-3 px-3 text-gray-900"
-                        placeholder="Buscar por nome, telefone..."
-                        placeholderTextColor="#9CA3AF"
-                        value={search}
-                        onChangeText={setSearch}
-                    />
-                </View>
-
-                {/* Patients List */}
-                {filteredPatients.length === 0 ? (
+                        {/* Search */}
+                        <View className="bg-white rounded-xl border border-gray-200 flex-row items-center px-4 mb-6">
+                            <Search size={20} color="#9CA3AF" />
+                            <TextInput
+                                className="flex-1 py-3 px-3 text-gray-900"
+                                placeholder="Buscar por nome, telefone..."
+                                placeholderTextColor="#9CA3AF"
+                                value={search}
+                                onChangeText={setSearch}
+                            />
+                        </View>
+                    </>
+                }
+                ListEmptyComponent={
                     <View className="bg-white rounded-xl p-12 items-center">
                         <Users size={48} color="#D1D5DB" />
                         <Text className="text-gray-400 mt-4">
                             {search ? 'Nenhum paciente encontrado' : 'Nenhum paciente cadastrado'}
                         </Text>
                     </View>
-                ) : (
-                    <View className="gap-3">
-                        {filteredPatients.map((patient) => (
-                            <TouchableOpacity
-                                key={patient.id}
-                                onPress={() => handlePatientPress(patient)}
-                                className="bg-white rounded-xl p-4 border border-gray-100"
-                                activeOpacity={0.7}
-                            >
-                                <View className="flex-row items-center gap-4">
-                                    <View className="w-14 h-14 rounded-xl bg-[#b94a48] items-center justify-center">
-                                        <Text className="text-white font-bold text-lg">
-                                            {getInitials(patient.name)}
-                                        </Text>
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="font-semibold text-gray-900 text-base">
-                                            {patient.name}
-                                        </Text>
+                }
+                renderItem={({ item: patient }) => (
+                    <TouchableOpacity
+                        onPress={() => handlePatientPress(patient)}
+                        className="bg-white rounded-xl p-4 border border-gray-100 mb-3"
+                        activeOpacity={0.7}
+                    >
+                        <View className="flex-row items-center gap-4">
+                            <View className="w-14 h-14 rounded-xl bg-[#b94a48] items-center justify-center">
+                                <Text className="text-white font-bold text-lg">
+                                    {getInitials(patient.name)}
+                                </Text>
+                            </View>
+                            <View className="flex-1">
+                                <Text className="font-semibold text-gray-900 text-base">
+                                    {patient.name}
+                                </Text>
 
-                                        <View className="flex-row items-center gap-2 mt-1">
-                                            <Phone size={14} color="#9CA3AF" />
-                                            <Text className="text-gray-500 text-sm">{patient.phone}</Text>
-                                        </View>
-
-                                        {patient.return_alert_flag && (
-                                            <View className="flex-row items-center gap-1 mt-1 self-start bg-orange-50 px-2 py-0.5 rounded-full">
-                                                <AlertTriangle size={12} color="#EA580C" />
-                                                {patient.return_alert_date && (
-                                                    <Text className="text-[10px] font-bold text-orange-700">
-                                                        {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        )}
-
-                                        {patient.email && (
-                                            <View className="flex-row items-center gap-2 mt-1">
-                                                <Mail size={14} color="#9CA3AF" />
-                                                <Text className="text-gray-500 text-sm">{patient.email}</Text>
-                                            </View>
-                                        )}
-                                    </View>
-                                    <ChevronRight size={20} color="#9CA3AF" />
+                                <View className="flex-row items-center gap-2 mt-1">
+                                    <Phone size={14} color="#9CA3AF" />
+                                    <Text className="text-gray-500 text-sm">{patient.phone}</Text>
                                 </View>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
 
-                <View className="h-6" />
-            </ScrollView>
+                                {patient.return_alert_flag && (
+                                    <View className="flex-row items-center gap-1 mt-1 self-start bg-orange-50 px-2 py-0.5 rounded-full">
+                                        <AlertTriangle size={12} color="#EA580C" />
+                                        {patient.return_alert_date && (
+                                            <Text className="text-[10px] font-bold text-orange-700">
+                                                {new Date(patient.return_alert_date).toLocaleDateString('pt-BR')}
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+
+                                {patient.email && (
+                                    <View className="flex-row items-center gap-2 mt-1">
+                                        <Mail size={14} color="#9CA3AF" />
+                                        <Text className="text-gray-500 text-sm">{patient.email}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <ChevronRight size={20} color="#9CA3AF" />
+                        </View>
+                    </TouchableOpacity>
+                )}
+                ListFooterComponent={<View className="h-6" />}
+            />
 
             {/* New Patient Modal */}
             <Modal visible={showModal} animationType="slide" presentationStyle="pageSheet">

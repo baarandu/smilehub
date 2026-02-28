@@ -18,6 +18,7 @@ import { incomeTaxService } from '@/services/incomeTaxService';
 import { generateIRPdf } from '@/utils/incomeTaxPdfGenerator';
 import type { IRSummary, IRValidationIssue } from '@/types/incomeTax';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/formatters';
 
 interface AnnualReportTabProps {
   year: number;
@@ -25,10 +26,6 @@ interface AnnualReportTabProps {
   loading: boolean;
   onRefresh: () => void;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
 
 export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualReportTabProps) {
   const [validationIssues, setValidationIssues] = useState<IRValidationIssue[]>([]);

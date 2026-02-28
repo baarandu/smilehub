@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat } from 'lucide-react';
 import { financialService } from '@/services/financial';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import {
     EXPENSE_CATEGORIES,
@@ -38,8 +39,8 @@ interface NewExpenseFormProps {
 }
 
 export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormProps) {
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [loading, setLoading] = useState(false);
-    const queryClient = useQueryClient();
 
     // Form State
     const [description, setDescription] = useState('');
@@ -156,7 +157,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             if (transactionToEdit) {
                 // Edit Logic
                 if (isInstallment) {
-                    if (!confirm('Ao salvar, a despesa original será excluída e um novo parcelamento será criado. Deseja continuar?')) {
+                    if (!await confirm({ description: 'Ao salvar, a despesa original será excluída e um novo parcelamento será criado. Deseja continuar?', confirmLabel: 'Continuar' })) {
                         setLoading(false);
                         return;
                     }
@@ -214,7 +215,6 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 toast.success('Despesa salva com sucesso!');
                 onSuccess();
             }
-            queryClient.invalidateQueries({ queryKey: ['financial'] });
         } catch (error) {
             console.error(error);
             toast.error('Erro ao salvar despesa');
@@ -525,6 +525,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     transactionToEdit ? 'Salvar Alterações' : 'Salvar Despesa'
                 )}
             </Button>
+        {ConfirmDialog}
         </form>
     );
 }

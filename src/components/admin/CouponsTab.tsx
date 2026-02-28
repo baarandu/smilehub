@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { couponsService } from '@/services/admin/coupons';
 import { DiscountCoupon, DiscountCouponInsert } from '@/types/database';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ export function CouponsTab() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
 
     // Default dates: today and 30 days from now
     const today = new Date().toISOString().split('T')[0];
@@ -120,7 +122,7 @@ export function CouponsTab() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Excluir este cupom?')) return;
+        if (!await confirm({ description: 'Excluir este cupom?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
         try {
             await couponsService.delete(id);
             toast({ title: "Cupom excluído" });
@@ -284,6 +286,7 @@ export function CouponsTab() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            {ConfirmDialog}
         </div>
     );
 }

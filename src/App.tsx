@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PrivateRoute } from "@/components/auth/PrivateRoute";
@@ -60,6 +61,7 @@ const queryClient = new QueryClient({
     mutations: {
       onError: (error) => {
         console.error('Mutation error:', error);
+        toast.error('Erro inesperado. Tente novamente.');
       },
     },
   },

@@ -23,6 +23,7 @@ import {
 import { PayerDataDialog } from './PayerDataDialog';
 import { IRSummaryCards } from './IRSummaryCards';
 import type { TransactionWithIR, PJSource } from '@/types/incomeTax';
+import { formatCurrency } from '@/utils/formatters';
 
 interface IRIncomeTabProps {
   transactions: TransactionWithIR[];
@@ -31,10 +32,6 @@ interface IRIncomeTabProps {
   onTransactionUpdated: () => void;
   globalSearch?: string;
 }
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
 
 const formatDate = (dateStr: string) => {
   const [year, month, day] = dateStr.split('-');

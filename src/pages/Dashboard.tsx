@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, RefreshCw, HeartPulse } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
 import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
@@ -9,10 +10,10 @@ import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultation
 import { useBirthdayAlerts, useProcedureReminders, useProsthesisSchedulingAlerts, useImportantReturnAlerts } from '@/hooks/useAlerts';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePendingReturns';
+import { useRemindersCount, useActiveReminders } from '@/hooks/useReminders';
+import { usePendingBudgetsCount } from '@/hooks/useBudgets';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { budgetsService } from '@/services/budgets';
-import { remindersService, type Reminder } from '@/services/reminders';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
@@ -22,14 +23,15 @@ import { useOnboarding } from '@/contexts/OnboardingContext';
 import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
 import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
 import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpensesChart';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { returnToOnboardingIfNeeded } = useOnboarding();
   const { data: analytics, isLoading: loadingAnalytics } = useDashboardAnalytics();
 
-  // const { data: patientsCount, isLoading: loadingPatients } = usePatientsCount(); // Removing patients stats
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
   const { data: todayCount, isLoading: loadingTodayCount } = useTodayAppointmentsCount();
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
@@ -40,9 +42,11 @@ export default function Dashboard() {
   const { data: importantReturns, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
 
   // Tomorrow's appointments for confirmation alerts
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  }, []);
   const { data: tomorrowAppointments } = useAppointmentsByDate(tomorrowStr);
 
   // Pending Returns (Procedures) Hooks
@@ -55,65 +59,26 @@ export default function Dashboard() {
   const [showProfileSettings, setShowProfileSettings] = useState(false);
   const [profileSettingsTab, setProfileSettingsTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
-  // Reminders Count
-  const [activeRemindersCount, setActiveRemindersCount] = useState(0);
-  const [activeRemindersList, setActiveRemindersList] = useState<Reminder[]>([]);
-  const [loadingReminders, setLoadingReminders] = useState(true);
+  // Reminders via React Query
+  const { data: activeRemindersCount = 0, isLoading: loadingReminders } = useRemindersCount();
+  const { data: activeRemindersList = [] } = useActiveReminders();
 
-  // Pending Budgets State
-  const [pendingBudgetsCount, setPendingBudgetsCount] = useState(0);
-  const [loadingBudgets, setLoadingBudgets] = useState(true);
+  // Pending Budgets via React Query
+  const { data: pendingBudgetsCount = 0, isLoading: loadingBudgets } = usePendingBudgetsCount();
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    // Parallel loading
-    loadPendingBudgets();
-
-    // Load Reminders
-    try {
-      // Dynamic import to avoid circular dependencies if any, though likely safe to import normally
-      const [count, list] = await Promise.all([
-        remindersService.getActiveCount(),
-        remindersService.getActive()
-      ]);
-      setActiveRemindersCount(count);
-      setActiveRemindersList(list);
-    } catch (err) {
-      console.error("Failed to load reminders count", err);
-    } finally {
-      setLoadingReminders(false);
-    }
-  };
-
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadDashboardData();
-    // The React Query hooks will auto-refresh on window focus, but we can manually refetch
+    await queryClient.invalidateQueries();
     refetchPendingReturns();
     setIsRefreshing(false);
   };
 
-  const loadPendingBudgets = async () => {
-    try {
-      setLoadingBudgets(true);
-      const count = await budgetsService.getPendingPatientsCount();
-      setPendingBudgetsCount(count);
-    } catch (error) {
-      console.error('Error loading pending budgets:', error);
-    } finally {
-      setLoadingBudgets(false);
-    }
-  };
-
   const isLoadingAlerts = loadingReturns || loadingBirthdays || loadingProcedures;
 
-  // Prepare Recent Alerts
-  const recentAlerts: RecentAlert[] = [
+  // Prepare Recent Alerts (memoized to avoid recomputing on every render)
+  const recentAlerts: RecentAlert[] = useMemo(() => [
     ...(birthdayAlerts || []).map(a => ({
       id: `b-${a.patient.id}`,
       type: 'birthday' as const,
@@ -124,7 +89,7 @@ export default function Dashboard() {
       urgency: 'urgent' as const
     })),
     ...(procedureAlerts || []).map(a => ({
-      id: `p-${a.patient.id}`, // using patient id as unique base
+      id: `p-${a.patient.id}`,
       type: 'procedure_return' as const,
       patientName: a.patient.name,
       patientPhone: a.patient.phone,
@@ -188,7 +153,7 @@ export default function Dashboard() {
         urgency: (isOverdue || diffDays <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal'
       };
     })
-  ];
+  ], [birthdayAlerts, procedureAlerts, returnAlerts, activeRemindersList, prosthesisAlerts, tomorrowAppointments, tomorrowStr, importantReturns]);
 
   return (
     <div className="space-y-6">
@@ -300,23 +265,29 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid lg:grid-cols-2 gap-6">
-        <WeeklyAppointmentsChart />
-        {loadingAnalytics ? (
-          <Skeleton className="h-[380px] rounded-xl" />
-        ) : (
-          <ProsthesisStatusChart data={analytics?.prosthesisByStatus || []} />
-        )}
+        <SectionErrorBoundary fallbackMessage="Erro ao carregar gráfico de consultas">
+          <WeeklyAppointmentsChart />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary fallbackMessage="Erro ao carregar gráfico de próteses">
+          {loadingAnalytics ? (
+            <Skeleton className="h-[380px] rounded-xl" />
+          ) : (
+            <ProsthesisStatusChart data={analytics?.prosthesisByStatus || []} />
+          )}
+        </SectionErrorBoundary>
       </div>
 
       {/* Revenue vs Expenses */}
-      <RevenueExpensesChart />
+      <SectionErrorBoundary fallbackMessage="Erro ao carregar gráfico financeiro">
+        <RevenueExpensesChart />
+      </SectionErrorBoundary>
 
       {/* Pending Budgets Modal */}
       <PendingBudgetsDialog
         open={showBudgetsModal}
         onClose={() => {
           setShowBudgetsModal(false);
-          loadPendingBudgets();
+          queryClient.invalidateQueries({ queryKey: ['pending-budgets-count'] });
         }}
       />
 

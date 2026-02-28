@@ -196,7 +196,7 @@ export default function Financial() {
           </div>
 
           {/* Botão Configurações */}
-          <Button variant="outline" onClick={() => window.location.href = '/financeiro/configuracoes'} className="gap-2">
+          <Button variant="outline" onClick={() => navigate('/financeiro/configuracoes')} className="gap-2">
             <Settings className="w-4 h-4" />
             <span className="hidden sm:inline">Configurações</span>
           </Button>
@@ -225,7 +225,7 @@ export default function Financial() {
         </TabsContent>
 
         <TabsContent value="expenses">
-          <ExpensesTab transactions={transactions} loading={loading} />
+          <ExpensesTab transactions={transactions} loading={loading} onRefresh={loadData} />
         </TabsContent>
 
         <TabsContent value="closure">

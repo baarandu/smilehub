@@ -11,18 +11,12 @@ import {
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { OverviewMetrics, StripeMetrics } from '@/services/admin/analytics';
+import { formatCurrency } from '@/utils/formatters';
 
 interface AdminStatsCardsProps {
     metrics: OverviewMetrics | undefined;
     stripeMetrics: StripeMetrics | null | undefined;
     isLoading: boolean;
-}
-
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-    }).format(value);
 }
 
 export function AdminStatsCards({ metrics, stripeMetrics, isLoading }: AdminStatsCardsProps) {

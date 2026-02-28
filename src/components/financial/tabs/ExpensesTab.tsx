@@ -45,7 +45,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Transaction } from '@/components/financial/types'; // Assuming types exist or will be shared
-import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { financialService } from '@/services/financial';
 import { locationsService } from '@/services/locations';
 import { toast } from 'sonner';
@@ -56,9 +56,10 @@ import { FinancialInsights } from '../FinancialInsights';
 interface ExpensesTabProps {
     transactions: Transaction[];
     loading: boolean;
+    onRefresh?: () => void;
 }
 
-export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
+export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabProps) {
     const [search, setSearch] = useState('');
     const [newExpenseOpen, setNewExpenseOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -71,13 +72,11 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
     const [loadingMaterialItems, setLoadingMaterialItems] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    const queryClient = useQueryClient();
-
     const deleteMutation = useMutation({
         mutationFn: financialService.deleteTransaction,
         onSuccess: () => {
             toast.success('Despesa excluída com sucesso');
-            queryClient.invalidateQueries({ queryKey: ['financial'] });
+            onRefresh?.();
             setDeleteId(null);
         },
         onError: () => {
@@ -540,7 +539,7 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                                                     ? 'Despesa excluída! Lista de materiais revertida para pendente.'
                                                     : 'Despesa excluída com sucesso!'
                                             );
-                                            queryClient.invalidateQueries({ queryKey: ['financial'] });
+                                            onRefresh?.();
                                             setDetailModalOpen(false);
                                             setSelectedExpense(null);
                                         } catch (error) {
@@ -570,7 +569,10 @@ export function ExpensesTab({ transactions, loading }: ExpensesTabProps) {
                         <DialogTitle>{editingTransaction ? 'Editar Despesa' : 'Nova Despesa'}</DialogTitle>
                     </DialogHeader>
                     <NewExpenseForm
-                        onSuccess={() => setNewExpenseOpen(false)}
+                        onSuccess={() => {
+                            setNewExpenseOpen(false);
+                            onRefresh?.();
+                        }}
                         transactionToEdit={editingTransaction}
                     />
                 </DialogContent>

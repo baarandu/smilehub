@@ -11,6 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { extractBearerToken } from "../_shared/validation.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -367,6 +368,15 @@ serve(async (req: Request) => {
     // Authenticate
     const { userId, clinicId } = await authenticateUser(req);
 
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Rate limit: 60 requests per 5 minutes
+    await checkRateLimit(supabase, userId, {
+      endpoint: "evolution-proxy",
+      maxRequests: 60,
+      windowMinutes: 5,
+    });
+
     // Parse body
     const body = await req.json().catch(() => ({}));
     const action = body.action as string;
@@ -377,8 +387,6 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     logger.info("Processing action", { action, clinicId, userId });
 
@@ -417,6 +425,14 @@ serve(async (req: Request) => {
     }
 
     logger.info("Action completed", { action, success: true });
+
+    logger.audit(supabase, {
+      action: "WHATSAPP_ACTION",
+      table_name: "evolution_proxy",
+      user_id: userId,
+      clinic_id: clinicId,
+      details: { action },
+    });
 
     return new Response(JSON.stringify(result), {
       status: 200,

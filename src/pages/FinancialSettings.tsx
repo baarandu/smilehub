@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 // Helper to format brand names with proper capitalization
 const formatBrandName = (brand: string): string => {
@@ -28,6 +29,7 @@ export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { isAdmin } = useClinic();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
     const [loading, setLoading] = useState(true);
     const [savingTax, setSavingTax] = useState(false);
@@ -124,7 +126,7 @@ export default function FinancialSettings() {
     };
 
     const handleDeleteTax = async (id: string) => {
-        if (!confirm('Remover este imposto?')) return;
+        if (!await confirm({ description: 'Remover este imposto?', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await settingsService.deleteTax(id);
             toast({ title: "Removido", description: "Imposto removido." });
@@ -170,7 +172,7 @@ export default function FinancialSettings() {
     };
 
     const handleDeleteFee = async (id: string) => {
-        if (!confirm('Tem certeza que deseja remover esta regra?')) return;
+        if (!await confirm({ description: 'Tem certeza que deseja remover esta regra?', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await settingsService.deleteCardFee(id);
             toast({ title: "Removido", description: "Regra removida com sucesso." });
@@ -206,7 +208,7 @@ export default function FinancialSettings() {
     };
 
     const handleDeleteBrand = async (id: string, name: string) => {
-        if (!confirm(`Tem certeza que deseja remover "${name}"?`)) return;
+        if (!await confirm({ description: `Tem certeza que deseja remover "${name}"?`, variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await settingsService.deleteCardBrand(id);
             toast({ title: "Removido", description: "Bandeira removida com sucesso." });
@@ -674,6 +676,7 @@ export default function FinancialSettings() {
                     </CardContent>
                 </Card>
             </div>
+            {ConfirmDialog}
         </div>
     );
 }

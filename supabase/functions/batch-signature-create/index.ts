@@ -177,15 +177,16 @@ serve(async (req: Request) => {
       throw new ValidationError("Máximo de 200 registros por lote.");
     }
 
-    // Verify user is dentist/admin
+    // Verify user is dentist/admin (check both role and roles array)
     const { data: clinicUser } = await supabase
       .from("clinic_users")
-      .select("role")
+      .select("role, roles")
       .eq("user_id", user.id)
       .eq("clinic_id", clinicId)
       .single();
 
-    if (!clinicUser || !["admin", "dentist"].includes(clinicUser.role)) {
+    const userRoles: string[] = clinicUser?.roles || (clinicUser?.role ? [clinicUser.role] : []);
+    if (!clinicUser || !userRoles.some((r: string) => ["admin", "dentist"].includes(r))) {
       throw new ValidationError("Apenas dentistas e administradores");
     }
 

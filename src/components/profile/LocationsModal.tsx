@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Plus, Pencil, Trash2, MapPin, Info, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ interface LocationsModalProps {
 }
 
 export function LocationsModal({ open, onOpenChange }: LocationsModalProps) {
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState<'add' | 'edit' | null>(null);
@@ -57,7 +59,7 @@ export function LocationsModal({ open, onOpenChange }: LocationsModalProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este local?')) return;
+    if (!await confirm({ description: 'Tem certeza que deseja excluir este local?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
     
     try {
       await locationsService.delete(id);
@@ -194,6 +196,7 @@ export function LocationsModal({ open, onOpenChange }: LocationsModalProps) {
           </div>
         )}
       </DialogContent>
+      {ConfirmDialog}
     </Dialog>
   );
 }

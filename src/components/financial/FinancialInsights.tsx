@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Transaction } from '@/components/financial/types';
+import { formatCurrency } from '@/utils/formatters';
 
 interface FinancialInsightsProps {
     transactions: Transaction[];
@@ -218,7 +219,3 @@ export function FinancialInsights({ transactions, onSettingsClick }: FinancialIn
     );
 }
 
-// Helper function for use in useMemo
-function formatCurrency(val: number) {
-    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}

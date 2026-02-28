@@ -66,7 +66,19 @@ serve(async (req: Request) => {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    if (expected !== signatureHeader.replace("sha256=", "")) {
+    // Timing-safe comparison to prevent timing attacks
+    const receivedHex = signatureHeader.replace("sha256=", "");
+    if (expected.length !== receivedHex.length) {
+      logger.error("Webhook signature verification failed");
+      return new Response("Invalid signature", { status: 401 });
+    }
+    const expectedBytes = new TextEncoder().encode(expected);
+    const receivedBytes = new TextEncoder().encode(receivedHex);
+    let mismatch = 0;
+    for (let i = 0; i < expectedBytes.length; i++) {
+      mismatch |= expectedBytes[i] ^ receivedBytes[i];
+    }
+    if (mismatch !== 0) {
       logger.error("Webhook signature verification failed");
       return new Response("Invalid signature", { status: 401 });
     }

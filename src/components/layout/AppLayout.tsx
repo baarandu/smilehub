@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   Users,
@@ -23,6 +24,7 @@ import {
   SmilePlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
@@ -147,50 +149,50 @@ export function AppLayout({ children }: AppLayoutProps) {
       }
     });
 
-    const loadCount = async () => {
-      try {
-        const [{ remindersService }, { alertsService }] = await Promise.all([
-          import('@/services/reminders'),
-          import('@/services/alerts')
-        ]);
-
-        const [remindersCount, birthdays, returns, prosthesisAlerts] = await Promise.all([
-          remindersService.getActiveCount(),
-          alertsService.getBirthdayAlerts(),
-          alertsService.getProcedureReminders(),
-          alertsService.getProsthesisSchedulingAlerts().catch(() => [])
-        ]);
-
-        setActiveRemindersCount(remindersCount + birthdays.length + returns.length + prosthesisAlerts.length);
-      } catch (e) { console.error(e); }
-    };
-    loadCount();
-
-    // Poll every minute or listen to custom event if better reliability needed
-    const interval = setInterval(loadCount, 60000);
-
     return () => {
-      clearInterval(interval);
       subscription.unsubscribe();
     };
   }, []);
 
-  // Pre-lab prosthesis count (depends on clinicId)
+  // Alert/reminder count with React Query polling
+  const { data: alertCount } = useQuery({
+    queryKey: ['alert-count'],
+    queryFn: async () => {
+      const [{ remindersService }, { alertsService }] = await Promise.all([
+        import('@/services/reminders'),
+        import('@/services/alerts')
+      ]);
+      const [remindersCount, birthdays, returns, prosthesisAlerts] = await Promise.all([
+        remindersService.getActiveCount(),
+        alertsService.getBirthdayAlerts(),
+        alertsService.getProcedureReminders(),
+        alertsService.getProsthesisSchedulingAlerts().catch(() => [])
+      ]);
+      return remindersCount + birthdays.length + returns.length + prosthesisAlerts.length;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
   useEffect(() => {
-    if (!clinicId) return;
+    if (alertCount != null) setActiveRemindersCount(alertCount);
+  }, [alertCount]);
 
-    const loadPreLabCount = async () => {
-      try {
-        const { prosthesisService } = await import('@/services/prosthesis');
-        const count = await prosthesisService.getPreLabCount(clinicId);
-        setPreLabCount(count);
-      } catch (e) { console.error(e); }
-    };
-    loadPreLabCount();
+  // Pre-lab prosthesis count with React Query polling
+  const { data: preLabData } = useQuery({
+    queryKey: ['pre-lab-count', clinicId],
+    queryFn: async () => {
+      const { prosthesisService } = await import('@/services/prosthesis');
+      return prosthesisService.getPreLabCount(clinicId!);
+    },
+    enabled: !!clinicId,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
 
-    const interval = setInterval(loadPreLabCount, 60000);
-    return () => clearInterval(interval);
-  }, [clinicId]);
+  useEffect(() => {
+    if (preLabData != null) setPreLabCount(preLabData);
+  }, [preLabData]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -367,7 +369,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
         <div className="p-4 lg:p-8 animate-fade-in">
           <TrialBanner />
-          {children}
+          <SectionErrorBoundary>
+            {children}
+          </SectionErrorBoundary>
         </div>
       </main>
     </div>

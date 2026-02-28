@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -141,17 +141,7 @@ export default function Login() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="remember" />
-                                <label
-                                    htmlFor="remember"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-600"
-                                >
-                                    Permanecer conectado
-                                </label>
-                            </div>
-
+                        <div className="flex items-center justify-end">
                             <Link
                                 to="/forgot-password"
                                 className="text-sm text-[#b94a48] hover:text-[#a03f3d]"

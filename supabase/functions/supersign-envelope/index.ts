@@ -358,6 +358,18 @@ async function handleStatus(
     throw new ValidationError("Assinatura não encontrada.");
   }
 
+  // Verify caller belongs to the signature's clinic
+  const { data: memberCheck } = await supabase
+    .from("clinic_users")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("clinic_id", sig.clinic_id)
+    .single();
+
+  if (!memberCheck) {
+    throw new Error("Acesso negado: você não pertence à clínica desta assinatura.");
+  }
+
   // Fetch latest status from SuperSign
   const supersignToken = Deno.env.get("SUPERSIGN_API_TOKEN");
   const supersignAccountId = Deno.env.get("SUPERSIGN_ACCOUNT_ID");
@@ -428,12 +440,24 @@ async function handleSigningUrl(
 
   const { data: sig, error } = await supabase
     .from("digital_signatures")
-    .select("dentist_signature_token, envelope_id")
+    .select("dentist_signature_token, envelope_id, clinic_id")
     .eq("id", signatureId)
     .single();
 
   if (error || !sig) {
     throw new ValidationError("Assinatura não encontrada.");
+  }
+
+  // Verify caller belongs to the signature's clinic
+  const { data: memberCheck } = await supabase
+    .from("clinic_users")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("clinic_id", sig.clinic_id)
+    .single();
+
+  if (!memberCheck) {
+    throw new Error("Acesso negado: você não pertence à clínica desta assinatura.");
   }
 
   if (!sig.dentist_signature_token) {

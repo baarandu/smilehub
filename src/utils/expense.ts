@@ -114,10 +114,8 @@ export function applyDateMask(text: string): string {
     return masked;
 }
 
-// Currency Formatting (Brazilian Real)
-export function formatCurrency(val: number): string {
-    return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+// Currency Formatting (Brazilian Real — no prefix)
+export { formatDecimal as formatCurrency } from './formatters';
 
 // Parse currency string to number
 export function getNumericValue(currencyString: string): number {

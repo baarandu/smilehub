@@ -13,19 +13,18 @@ import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
 import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save, PenTool, AlertCircle, Upload, Image, X, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useCreateSignature } from '@/hooks/useDigitalSignatures';
 import { SigningModal } from './SigningModal';
 import type { DeliveryMethod } from '@/types/digitalSignature';
 import { useClinic } from '@/contexts/ClinicContext';
 import { profileService } from '@/services/profile';
-import * as pdfjsLib from 'pdfjs-dist';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.mjs',
-    import.meta.url
-).toString();
-
 async function pdfToImage(file: File): Promise<File> {
+    const pdfjsLib = await import('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.mjs',
+        import.meta.url
+    ).toString();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
@@ -305,6 +304,7 @@ Data: {{data}}`
 export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const { toast } = useToast();
     const { clinicId } = useClinic();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const [view, setView] = useState<View>('list');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -410,7 +410,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     };
 
     const handleRemoveLetterhead = async () => {
-        if (!confirm('Remover papel timbrado?')) return;
+        if (!await confirm({ description: 'Remover papel timbrado?', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
             await profileService.removeLetterhead();
             setLetterheadUrl(null);
@@ -457,7 +457,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     };
 
     const handleDelete = async (template: DocumentTemplate) => {
-        if (!confirm(`Excluir modelo "${template.name}"?`)) return;
+        if (!await confirm({ description: `Excluir modelo "${template.name}"?`, variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
         try {
             await documentTemplatesService.delete(template.id);
@@ -1399,6 +1399,7 @@ Nesta data {{data}}, declaro que...`}
                 signatureId={signingModal.signatureId}
                 title={signingModal.title}
             />
+            {ConfirmDialog}
         </Dialog>
     );
 }
