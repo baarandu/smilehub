@@ -28,9 +28,6 @@ const AccountingAgent = lazy(() => import("./pages/AccountingAgent"));
 const DentistAgent = lazy(() => import("./pages/DentistAgent"));
 const ProsthesisCenter = lazy(() => import("./pages/ProsthesisCenter"));
 const Ortodontia = lazy(() => import("./pages/Ortodontia"));
-const DashboardPreview = lazy(() => import("./pages/DashboardPreview"));
-const DashboardV2 = lazy(() => import("./pages/DashboardV2"));
-const LandingV2 = lazy(() => import("./pages/LandingV2"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -57,6 +54,13 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    },
+    mutations: {
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      },
     },
   },
 });
@@ -101,7 +105,6 @@ const AppContent = () => (
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
-      <Route path="/v2" element={<LandingV2 />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -129,8 +132,6 @@ const AppContent = () => (
         <Route path="/dentista-ia" element={<AppLayout><DentistAgent /></AppLayout>} />
         <Route path="/protese" element={<AppLayout><ProsthesisCenter /></AppLayout>} />
         <Route path="/ortodontia" element={<AppLayout><Ortodontia /></AppLayout>} />
-        <Route path="/dashboard-preview" element={<AppLayout><DashboardPreview /></AppLayout>} />
-        <Route path="/dashboard-v2" element={<AppLayout><DashboardV2 /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/configuracoes/matriz-risco" element={<AppLayout><LGPDRiskMatrix /></AppLayout>} />
         <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
