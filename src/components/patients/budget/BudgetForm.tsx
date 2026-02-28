@@ -479,6 +479,18 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                                     className="mt-1.5"
                                                 />
                                             )}
+                                            {PROSTHETIC_TREATMENTS.includes(treatment) && (
+                                                <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                                    <Checkbox
+                                                        checked={labTreatments[treatment] !== false}
+                                                        onCheckedChange={(checked) =>
+                                                            setLabTreatments(prev => ({ ...prev, [treatment]: !!checked }))
+                                                        }
+                                                    />
+                                                    <FlaskConical className="w-3.5 h-3.5 text-muted-foreground" />
+                                                    <span className="text-xs text-muted-foreground">Enviar ao laboratório</span>
+                                                </label>
+                                            )}
                                         </div>
                                     )}
                                     {TREATMENTS_WITH_DESCRIPTION.includes(treatment) && (
@@ -492,7 +504,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                         </div>
                                     )}
                                 </div>
-                                {PROSTHETIC_TREATMENTS.includes(treatment) && (
+                                {PROSTHETIC_TREATMENTS.includes(treatment) && !TREATMENTS_WITH_MATERIAL.includes(treatment) && (
                                     <label className="flex items-center gap-2 mt-2 cursor-pointer">
                                         <Checkbox
                                             checked={labTreatments[treatment] !== false}

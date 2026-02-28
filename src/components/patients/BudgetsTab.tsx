@@ -10,7 +10,7 @@ import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, ty
 import type { BudgetWithItems } from '@/types/database';
 import { BudgetViewDialog } from './BudgetViewDialog';
 import { NewBudgetDialog } from './NewBudgetDialog';
-import { isProstheticTreatment, getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
+import { isProstheticTreatment, hasLabTreatment, getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
 import { useProstheticBudgetItems } from '@/hooks/useProstheticBudgetItems';
 
 
@@ -147,7 +147,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                                     : (tooth.status === 'paid' || tooth.status === 'completed');
                                             if (!belongsToGroup) return null;
 
-                                            const isProsthetic = (tooth.status === 'paid' || tooth.status === 'completed') && isProstheticTreatment(tooth.treatments);
+                                            const isProsthetic = (tooth.status === 'paid' || tooth.status === 'completed') && isProstheticTreatment(tooth.treatments) && hasLabTreatment(tooth);
                                             const prostheticItem = isProsthetic
                                                 ? prostheticItems.items.find(pi => pi.budgetId === budget.id && pi.toothIndex === originalIndex)
                                                 : undefined;

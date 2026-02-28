@@ -14,7 +14,7 @@ import type { BudgetWithItems } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
 import { useToast } from '@/hooks/use-toast';
 import { useBudgetPayment, useBudgetPdf, PdfItemSelectionDialog } from './budget';
-import { isProstheticTreatment } from '@/utils/prosthesis';
+import { isProstheticTreatment, hasLabTreatment } from '@/utils/prosthesis';
 import { getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
 import { useProstheticBudgetItems, type ProstheticBudgetItem } from '@/hooks/useProstheticBudgetItems';
 import { SendToProsthesisDialog } from '@/components/prosthesis/SendToProsthesisDialog';
@@ -409,7 +409,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'paid' && item.status !== 'completed') return null;
                                     const total = payment.getItemValue(item);
-                                    const isProsthetic = isProstheticTreatment(item.treatments);
+                                    const isProsthetic = isProstheticTreatment(item.treatments) && hasLabTreatment(item);
                                     const prostheticItem = isProsthetic ? getProstheticItem(index) : undefined;
                                     const hasOrder = prostheticItem?.existingOrderId != null;
                                     const orderStatus = prostheticItem?.existingOrderStatus;
