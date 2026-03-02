@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { FileText, Calendar, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
@@ -100,8 +99,8 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0">
-                <DialogHeader className="p-6 pb-2">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+                <DialogHeader className="shrink-0 p-6 pb-2">
                     <DialogTitle className="flex items-center gap-2">
                         <FileText className="w-5 h-5 text-amber-500" />
                         {selectedPatient
@@ -111,7 +110,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                     </DialogTitle>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 px-6 pb-6">
+                <div className="flex-1 overflow-y-auto px-6 pb-6">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                             <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
@@ -197,7 +196,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                             ))}
                         </div>
                     )}
-                </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     );
