@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, RefreshCw, HeartPulse } from 'lucide-react';
+import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, HeartPulse } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
@@ -66,15 +66,6 @@ export default function Dashboard() {
   // Pending Budgets via React Query
   const { data: pendingBudgetsCount = 0, isLoading: loadingBudgets } = usePendingBudgetsCount();
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await queryClient.invalidateQueries();
-    refetchPendingReturns();
-    setIsRefreshing(false);
-  };
-
   const isLoadingAlerts = loadingReturns || loadingBirthdays || loadingProcedures;
 
   // Prepare Recent Alerts (memoized to avoid recomputing on every render)
@@ -172,19 +163,8 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="h-10 w-10 bg-white border-red-100 hover:bg-red-50 hover:text-[#a03f3d]"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            </Button>
-            <div className="bg-white rounded-xl shadow-sm border border-red-100">
-              <ProfileMenu />
-            </div>
+          <div className="bg-white rounded-xl shadow-sm border border-red-100">
+            <ProfileMenu />
           </div>
         </div>
       </div>

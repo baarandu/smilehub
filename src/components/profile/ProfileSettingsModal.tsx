@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Loader2, Users, UserPlus, Shield, Trash2, Info, Phone, Mail, MapPin, Eye, X, ChevronDown } from 'lucide-react';
+import { Building2, Loader2, Users, UserPlus, Shield, Trash2, Info, Phone, Mail, MapPin, Eye, X, ChevronDown, ChevronsUpDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -29,12 +29,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { profileService } from '@/services/profile';
 import { auditService, type AuditLog } from '@/services/audit';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { MUNICIPIOS } from '@/data/municipios';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 // ... (existing helper methods)
@@ -91,6 +95,19 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
     const [email, setEmail] = useState('');
     const [savingClinicInfo, setSavingClinicInfo] = useState(false);
     const [loadingInfo, setLoadingInfo] = useState(true);
+
+    // City autocomplete from static IBGE data
+    const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+    const [citySearch, setCitySearch] = useState('');
+
+    const filteredMunicipios = citySearch.length >= 2
+        ? (() => {
+            const normalized = citySearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return MUNICIPIOS
+                .filter(([nome]) => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().startsWith(normalized))
+                .slice(0, 10);
+        })()
+        : [];
 
     // Team Management State
     const [activeTab, setActiveTab] = useState(initialTab || 'clinic');
@@ -439,24 +456,71 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                                 {/* City and State */}
                                 <div className="grid grid-cols-3 gap-3">
                                     <div className="col-span-2 space-y-2">
-                                        <Label htmlFor="clinic-city">Cidade</Label>
-                                        <Input
-                                            id="clinic-city"
-                                            value={city}
-                                            onChange={(e) => setCity(e.target.value)}
-                                            placeholder="Ex: São Paulo"
-                                        />
+                                        <Label>Cidade</Label>
+                                        <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen} modal={true}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={cityPopoverOpen}
+                                                    className="w-full justify-between font-normal"
+                                                >
+                                                    {city || "Ex: São Paulo"}
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                                <Command shouldFilter={false}>
+                                                    <CommandInput
+                                                        placeholder="Digite a cidade..."
+                                                        value={citySearch}
+                                                        onValueChange={setCitySearch}
+                                                    />
+                                                    <CommandList>
+                                                        {citySearch.length >= 2 && filteredMunicipios.length === 0 && (
+                                                            <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                                                        )}
+                                                        {filteredMunicipios.length > 0 && (
+                                                            <CommandGroup>
+                                                                {filteredMunicipios.map(([nome, uf]) => (
+                                                                    <CommandItem
+                                                                        key={`${nome}-${uf}`}
+                                                                        value={`${nome}-${uf}`}
+                                                                        onSelect={() => {
+                                                                            setCity(nome);
+                                                                            setState(uf);
+                                                                            setCityPopoverOpen(false);
+                                                                            setCitySearch('');
+                                                                        }}
+                                                                    >
+                                                                        <Check className={cn("mr-2 h-4 w-4", city === nome && state === uf ? "opacity-100" : "opacity-0")} />
+                                                                        <span>{nome}</span>
+                                                                        <span className="ml-auto text-xs text-muted-foreground">{uf}</span>
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        )}
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="clinic-state">Estado</Label>
-                                        <Input
-                                            id="clinic-state"
-                                            value={state}
-                                            onChange={(e) => setState(e.target.value.toUpperCase().slice(0, 2))}
-                                            placeholder="SP"
-                                            maxLength={2}
-                                            className="text-center"
-                                        />
+                                        <Select value={state} onValueChange={setState}>
+                                            <SelectTrigger id="clinic-state">
+                                                <SelectValue placeholder="UF" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {[
+                                                    'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA',
+                                                    'MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN',
+                                                    'RS','RO','RR','SC','SP','SE','TO'
+                                                ].map((uf) => (
+                                                    <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
 

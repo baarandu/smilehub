@@ -1,4 +1,4 @@
-import { Phone, MessageCircle, Clock, Gift, AlertTriangle, Bell, ChevronRight, CalendarClock, Calendar, HeartPulse } from 'lucide-react';
+import { MessageCircle, Clock, Gift, Bell, CalendarClock, Calendar, HeartPulse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -92,7 +92,7 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
           </h3>
           <p className="text-sm text-muted-foreground mt-1">Lembretes e notificações</p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/alerts')} className="text-primary hover:text-primary/80">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/alertas')} className="text-primary hover:text-primary/80">
           Ver todos
         </Button>
       </div>
@@ -123,24 +123,14 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => window.open(`tel:${alert.patientPhone.replace(/\D/g, '')}`)}
-                    >
-                      <Phone className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => handleWhatsApp(alert.patientPhone, alert.patientName.split(' ')[0], alert.type)}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    onClick={() => handleWhatsApp(alert.patientPhone, alert.patientName.split(' ')[0], alert.type)}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             );
