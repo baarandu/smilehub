@@ -46,6 +46,7 @@ export function SendToProsthesisDialog({
   const [dentistId, setDentistId] = useState('');
   const [labId, setLabId] = useState<string | null>(null);
   const [labCost, setLabCost] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [estimatedDelivery, setEstimatedDelivery] = useState('');
 
   useEffect(() => {
@@ -88,6 +89,7 @@ export function SendToProsthesisDialog({
       setDentistId('');
       setLabId(null);
       setLabCost('');
+      setShippingCost('');
       setEstimatedDelivery('');
     }
   }, [open]);
@@ -122,6 +124,7 @@ export function SendToProsthesisDialog({
         material: budgetItem.material?.toLowerCase() || null,
         tooth_numbers: toothNumbers,
         lab_cost: labCost ? parseFloat(labCost.replace(',', '.')) : null,
+        shipping_cost: shippingCost ? parseFloat(shippingCost.replace(',', '.')) : null,
         patient_price: budgetItem.value,
         estimated_delivery_date: estimatedDelivery || null,
         notes: null,
@@ -206,13 +209,21 @@ export function SendToProsthesisDialog({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Custo Laboratório (R$)</Label>
+                <Label>Custo Lab (R$)</Label>
                 <Input
                   placeholder="0,00"
                   value={labCost}
                   onChange={e => setLabCost(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo Envio (R$)</Label>
+                <Input
+                  placeholder="0,00"
+                  value={shippingCost}
+                  onChange={e => setShippingCost(e.target.value)}
                 />
               </div>
               <div className="space-y-2">

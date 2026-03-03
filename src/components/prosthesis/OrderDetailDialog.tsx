@@ -77,6 +77,7 @@ export function OrderDetailDialog({
   const [notes, setNotes] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [labCost, setLabCost] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [patientPrice, setPatientPrice] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -121,6 +122,7 @@ export function OrderDetailDialog({
       setNotes(order.notes || '');
       setSpecialInstructions(order.special_instructions || '');
       setLabCost(order.lab_cost != null ? String(order.lab_cost) : '');
+      setShippingCost(order.shipping_cost != null ? String(order.shipping_cost) : '');
       setPatientPrice(order.patient_price != null ? String(order.patient_price) : '');
       setHasChanges(false);
     }
@@ -197,6 +199,7 @@ export function OrderDetailDialog({
           notes: notes || null,
           special_instructions: specialInstructions || null,
           lab_cost: parseAmount(labCost),
+          shipping_cost: parseAmount(shippingCost),
           patient_price: parseAmount(patientPrice),
         },
       });
@@ -331,7 +334,7 @@ export function OrderDetailDialog({
               <Separator />
               <div>
                 <h4 className="text-sm font-semibold mb-2">Financeiro</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Custo Lab (R$)</Label>
                     <Input
@@ -339,6 +342,15 @@ export function OrderDetailDialog({
                       placeholder="0,00"
                       value={labCost}
                       onChange={e => { setLabCost(e.target.value); markChanged(); }}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Custo Envio (R$)</Label>
+                    <Input
+                      className="h-9"
+                      placeholder="0,00"
+                      value={shippingCost}
+                      onChange={e => { setShippingCost(e.target.value); markChanged(); }}
                     />
                   </div>
                   <div className="space-y-1">

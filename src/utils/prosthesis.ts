@@ -70,7 +70,8 @@ export function getUrgencyColor(order: ProsthesisOrder): { bg: string; text: str
 
 export function calculateMargin(order: ProsthesisOrder): { value: number; percentage: number } | null {
   if (order.lab_cost == null || order.patient_price == null) return null;
-  const value = order.patient_price - order.lab_cost;
+  const totalCost = order.lab_cost + (order.shipping_cost ?? 0);
+  const value = order.patient_price - totalCost;
   const percentage = order.patient_price > 0 ? (value / order.patient_price) * 100 : 0;
   return { value, percentage };
 }

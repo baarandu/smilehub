@@ -32,6 +32,7 @@ export interface ProsthesisOrder {
   notes: string | null;
   special_instructions: string | null;
   lab_cost: number | null;
+  shipping_cost: number | null;
   patient_price: number | null;
   checklist_color_defined: boolean;
   checklist_material_defined: boolean;
@@ -69,6 +70,7 @@ export interface ProsthesisOrderInsert {
   notes?: string | null;
   special_instructions?: string | null;
   lab_cost?: number | null;
+  shipping_cost?: number | null;
   patient_price?: number | null;
   estimated_delivery_date?: string | null;
   created_by?: string | null;
@@ -87,6 +89,7 @@ export interface ProsthesisOrderFormData {
   shadeDetails: string;
   cementationType: string;
   labCost: string;
+  shippingCost: string;
   patientPrice: string;
   estimatedDeliveryDate: string;
   notes: string;

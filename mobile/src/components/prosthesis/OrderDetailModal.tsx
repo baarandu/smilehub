@@ -134,15 +134,22 @@ export function OrderDetailModal({ visible, onClose, order, onEdit, onMoveStatus
           {/* Financial */}
           <View className="bg-white rounded-xl p-4 border border-gray-100 mb-4">
             <Text className="text-sm font-semibold text-gray-900 mb-3">Financeiro</Text>
-            <View className="flex-row gap-4">
+            <View className="flex-row gap-4 mb-2">
               <View className="flex-1">
                 <Text className="text-xs text-gray-500">Custo Laboratório</Text>
                 <Text className="text-sm font-medium text-gray-900">{formatCurrency(order.lab_cost)}</Text>
               </View>
               <View className="flex-1">
+                <Text className="text-xs text-gray-500">Custo Envio</Text>
+                <Text className="text-sm font-medium text-gray-900">{formatCurrency(order.shipping_cost)}</Text>
+              </View>
+            </View>
+            <View className="flex-row gap-4">
+              <View className="flex-1">
                 <Text className="text-xs text-gray-500">Valor Paciente</Text>
                 <Text className="text-sm font-medium text-gray-900">{formatCurrency(order.patient_price)}</Text>
               </View>
+              <View className="flex-1" />
             </View>
           </View>
 

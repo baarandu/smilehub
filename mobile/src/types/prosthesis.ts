@@ -15,6 +15,7 @@ export interface ProsthesisOrder {
   shade_details: string | null;
   cementation_type: string | null;
   lab_cost: number | null;
+  shipping_cost: number | null;
   patient_price: number | null;
   status: ProsthesisStatus;
   position: number;

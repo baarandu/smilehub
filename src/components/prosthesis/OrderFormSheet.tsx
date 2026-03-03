@@ -46,6 +46,7 @@ const emptyForm: ProsthesisOrderFormData = {
   shadeDetails: '',
   cementationType: '',
   labCost: '',
+  shippingCost: '',
   patientPrice: '',
   estimatedDeliveryDate: '',
   notes: '',
@@ -127,6 +128,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
         shadeDetails: order.shade_details || '',
         cementationType: order.cementation_type || '',
         labCost: order.lab_cost != null ? Number(order.lab_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+        shippingCost: order.shipping_cost != null ? Number(order.shipping_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         patientPrice: order.patient_price != null ? Number(order.patient_price).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         estimatedDeliveryDate: order.estimated_delivery_date || '',
         notes: order.notes || '',
@@ -192,6 +194,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
             shade_details: form.shadeDetails || null,
             cementation_type: form.cementationType || null,
             lab_cost: parseAmount(form.labCost),
+            shipping_cost: parseAmount(form.shippingCost),
             patient_price: parseAmount(form.patientPrice),
             estimated_delivery_date: form.estimatedDeliveryDate || null,
             notes: form.notes || null,
@@ -213,6 +216,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
           shade_details: form.shadeDetails || null,
           cementation_type: form.cementationType || null,
           lab_cost: parseAmount(form.labCost),
+          shipping_cost: parseAmount(form.shippingCost),
           patient_price: parseAmount(form.patientPrice),
           estimated_delivery_date: form.estimatedDeliveryDate || null,
           notes: form.notes || null,
@@ -239,7 +243,7 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
     });
   };
 
-  const handleCurrencyChange = (field: 'labCost' | 'patientPrice', raw: string) => {
+  const handleCurrencyChange = (field: 'labCost' | 'shippingCost' | 'patientPrice', raw: string) => {
     setForm(prev => ({ ...prev, [field]: formatCurrency(raw) }));
   };
 
@@ -469,14 +473,23 @@ export function OrderFormSheet({ open, onOpenChange, order, onLabsClick }: Order
             </div>
 
             {/* Financial */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Custo Laboratório (R$)</Label>
+                <Label>Custo Lab (R$)</Label>
                 <Input
                   inputMode="numeric"
                   placeholder="0,00"
                   value={form.labCost}
                   onChange={e => handleCurrencyChange('labCost', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo Envio (R$)</Label>
+                <Input
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={form.shippingCost}
+                  onChange={e => handleCurrencyChange('shippingCost', e.target.value)}
                 />
               </div>
               <div className="space-y-2">

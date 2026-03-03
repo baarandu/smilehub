@@ -40,6 +40,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
   const [color, setColor] = useState('');
   const [shadeDetails, setShadeDetails] = useState('');
   const [labCost, setLabCost] = useState('');
+  const [shippingCost, setShippingCost] = useState('');
   const [patientPrice, setPatientPrice] = useState('');
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -89,6 +90,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
     setColor(o.color || '');
     setShadeDetails(o.shade_details || '');
     setLabCost(o.lab_cost ? o.lab_cost.toString() : '');
+    setShippingCost(o.shipping_cost ? o.shipping_cost.toString() : '');
     setPatientPrice(o.patient_price ? o.patient_price.toString() : '');
     setEstimatedDeliveryDate(o.estimated_delivery_date || '');
     setNotes(o.notes || '');
@@ -99,7 +101,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
     setSelectedPatient(null); setPatientSearch(''); setPatientResults([]);
     setDentistId(''); setLabId(''); setType('coroa'); setMaterial('zirconia');
     setMaterialCustom(''); setToothNumbers(''); setColor(''); setShadeDetails('');
-    setLabCost(''); setPatientPrice(''); setEstimatedDeliveryDate('');
+    setLabCost(''); setShippingCost(''); setPatientPrice(''); setEstimatedDeliveryDate('');
     setNotes(''); setSpecialInstructions('');
   };
 
@@ -130,6 +132,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
       setSaving(true);
       const teeth = toothNumbers.split(',').map(t => t.trim()).filter(Boolean);
       const parsedLabCost = labCost ? parseFloat(labCost.replace(/[^\d,]/g, '').replace(',', '.')) : null;
+      const parsedShippingCost = shippingCost ? parseFloat(shippingCost.replace(/[^\d,]/g, '').replace(',', '.')) : null;
       const parsedPatientPrice = patientPrice ? parseFloat(patientPrice.replace(/[^\d,]/g, '').replace(',', '.')) : null;
       const finalMaterial = material === 'outro' ? materialCustom.trim() : material;
 
@@ -144,6 +147,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
         color: color.trim() || null,
         shade_details: shadeDetails.trim() || null,
         lab_cost: parsedLabCost,
+        shipping_cost: parsedShippingCost,
         patient_price: parsedPatientPrice,
         estimated_delivery_date: estimatedDeliveryDate || null,
         notes: notes.trim() || null,
@@ -383,6 +387,18 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
               />
             </View>
             <View className="flex-1">
+              <Text className="text-xs text-gray-500 mb-1 font-medium">Custo Envio (R$)</Text>
+              <TextInput
+                value={shippingCost}
+                onChangeText={setShippingCost}
+                placeholder="0,00"
+                keyboardType="numeric"
+                className="border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900"
+              />
+            </View>
+          </View>
+          <View className="flex-row gap-3 mb-3">
+            <View className="flex-1">
               <Text className="text-xs text-gray-500 mb-1 font-medium">Valor Paciente (R$)</Text>
               <TextInput
                 value={patientPrice}
@@ -392,6 +408,7 @@ export function OrderFormModal({ visible, onClose, order, onSaved, onLabsClick }
                 className="border border-gray-200 rounded-lg px-3 py-2.5 text-gray-900"
               />
             </View>
+            <View className="flex-1" />
           </View>
 
           {/* Delivery Date */}
