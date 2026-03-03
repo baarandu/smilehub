@@ -141,8 +141,9 @@ export const budgetsService = {
                 date,
                 value,
                 notes,
-                patients (name)
+                patients!inner (name)
             `)
+            .is('patients.deleted_at', null)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -178,7 +179,8 @@ export const budgetsService = {
     async getPendingCount(): Promise<number> {
         const { data, error } = await supabase
             .from('budgets')
-            .select('notes');
+            .select('notes, patients!inner(id)')
+            .is('patients.deleted_at', null);
 
         if (error) throw error;
 
@@ -201,7 +203,8 @@ export const budgetsService = {
     async getPendingPatientsCount(): Promise<number> {
         const { data, error } = await supabase
             .from('budgets')
-            .select('patient_id, notes');
+            .select('patient_id, notes, patients!inner(id)')
+            .is('patients.deleted_at', null);
 
         if (error) throw error;
 
