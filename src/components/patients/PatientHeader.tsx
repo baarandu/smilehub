@@ -164,42 +164,111 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     }
   };
 
+  const collectExportData = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const [
+      anamnesesResult,
+      appointmentsResult,
+      proceduresResult,
+      examsResult,
+      budgetsResult,
+      transactionsResult,
+    ] = await Promise.all([
+      supabase.from('anamneses').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+      supabase.from('appointments').select('*').eq('patient_id', patient.id).order('date', { ascending: false }),
+      supabase.from('procedures').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+      supabase.from('exams').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+      supabase.from('budgets').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+      supabase.from('financial_transactions').select('*').eq('patient_id', patient.id).order('date', { ascending: false }),
+    ]);
+
+    return {
+      export_metadata: {
+        exported_at: new Date().toISOString(),
+        exported_by: user?.id || '',
+        format_version: '1.0',
+        lgpd_article: 'Art. 18 — Direito de acesso aos dados',
+      },
+      patient: {
+        name: patient.name,
+        email: patient.email,
+        phone: patient.phone,
+        cpf: patient.cpf,
+        rg: patient.rg,
+        birth_date: patient.birth_date,
+        gender: patient.gender,
+        address: patient.address,
+        notes: patient.notes,
+        created_at: patient.created_at,
+      },
+      anamneses: anamnesesResult.data || [],
+      appointments: (appointmentsResult.data || []).map((a: any) => ({ ...a, clinic_id: undefined })),
+      procedures: proceduresResult.data || [],
+      exams: examsResult.data || [],
+      budgets: budgetsResult.data || [],
+      financial_transactions: (transactionsResult.data || []).map((t: any) => ({
+        date: t.date, description: t.description, amount: t.amount,
+        type: t.type, category: t.category, payment_method: t.payment_method,
+      })),
+    };
+  };
+
+  const csvEscape = (value: unknown): string => {
+    if (value === null || value === undefined) return '';
+    const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+  };
+
+  const generateCSV = (data: Record<string, unknown>): string => {
+    const sections: string[] = [];
+    const meta = data.export_metadata as Record<string, unknown>;
+    sections.push('=== METADADOS DA EXPORTAÇÃO ===');
+    sections.push(Object.entries(meta).map(([k, v]) => `${k},${csvEscape(v)}`).join('\n'));
+
+    const pat = data.patient as Record<string, unknown>;
+    sections.push('\n=== DADOS DO PACIENTE ===');
+    sections.push(Object.entries(pat).filter(([, v]) => v !== undefined).map(([k, v]) => `${k},${csvEscape(v)}`).join('\n'));
+
+    const arraySections: [string, string][] = [
+      ['anamneses', 'ANAMNESES'], ['appointments', 'CONSULTAS AGENDADAS'],
+      ['procedures', 'PROCEDIMENTOS'], ['exams', 'EXAMES'], ['budgets', 'ORÇAMENTOS'],
+      ['financial_transactions', 'TRANSAÇÕES FINANCEIRAS'],
+    ];
+    for (const [key, label] of arraySections) {
+      const items = data[key] as Record<string, unknown>[];
+      if (items && items.length > 0) {
+        sections.push(`\n=== ${label} ===`);
+        const headers = Object.keys(items[0]);
+        sections.push(headers.map(csvEscape).join(','));
+        for (const item of items) {
+          sections.push(headers.map(h => csvEscape(item[h])).join(','));
+        }
+      }
+    }
+    return sections.join('\n');
+  };
+
   const handleExportData = async (format: 'json' | 'csv' | 'pdf') => {
     try {
       setExporting(true);
+      const data = await collectExportData();
 
       if (format === 'pdf') {
-        // Fetch JSON first, then generate PDF client-side
-        const { data, error } = await supabase.functions.invoke('patient-data-export', {
-          body: { patientId: patient.id, clinicId: patient.clinic_id, format: 'json' },
-        });
-        if (error) throw error;
-        if (!data) throw new Error('Nenhum dado retornado');
         await generatePatientDataPDF(data, patient.name);
         toast.success('PDF gerado com sucesso');
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('patient-data-export', {
-        body: { patientId: patient.id, clinicId: patient.clinic_id, format },
-      });
-
-      if (error) {
-        console.error('Export function error:', error);
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Nenhum dado retornado');
-      }
-
       const fileName = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}`;
       if (format === 'csv') {
-        const csvStr = typeof data === 'string' ? data : String(data);
-        downloadBlob(csvStr, `${fileName}.csv`, 'text/csv;charset=utf-8');
+        const bom = '\uFEFF';
+        downloadBlob(bom + generateCSV(data), `${fileName}.csv`, 'text/csv;charset=utf-8');
       } else {
-        const jsonStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-        downloadBlob(jsonStr, `${fileName}.json`, 'application/json;charset=utf-8');
+        downloadBlob(JSON.stringify(data, null, 2), `${fileName}.json`, 'application/json;charset=utf-8');
       }
 
       toast.success('Dados exportados com sucesso');
