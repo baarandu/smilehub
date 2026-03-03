@@ -3425,7 +3425,6 @@ export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
   patients: Pick<Patient, 'name' | 'phone'>
-  clinic_professionals?: { name: string } | null
 }
 
 export type ConsultationWithPatient = Consultation & {

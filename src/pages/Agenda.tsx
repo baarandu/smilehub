@@ -609,9 +609,9 @@ export default function Agenda() {
                           {appointment.procedure_name}
                         </p>
                       )}
-                      {appointment.clinic_professionals?.name && (
+                      {appointment.dentist_id && dentists.find(d => d.id === appointment.dentist_id) && (
                         <p className="text-xs text-muted-foreground/70 truncate">
-                          Dr(a). {appointment.clinic_professionals.name}
+                          {dentists.find(d => d.id === appointment.dentist_id)?.name}
                         </p>
                       )}
                       {appointment.notes && (

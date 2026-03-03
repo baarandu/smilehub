@@ -12,8 +12,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone),
-        clinic_professionals (name)
+        patients (name, phone)
       `)
       .order('date')
       .order('time');
@@ -27,8 +26,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone),
-        clinic_professionals (name)
+        patients (name, phone)
       `)
       .eq('date', date)
       .order('time');
@@ -118,7 +116,8 @@ export const appointmentsService = {
       .from('appointments')
       .select('date')
       .gte('date', startDate)
-      .lte('date', endDate);
+      .lte('date', endDate)
+      .neq('status', 'cancelled');
 
     if (error) throw error;
     const uniqueDates = [...new Set(data?.map(a => a.date) || [])];
