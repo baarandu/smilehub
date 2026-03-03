@@ -47,6 +47,13 @@ const ONBOARDING_STEPS: Omit<OnboardingStep, 'completed'>[] = [
     icon: 'users',
   },
   {
+    id: 'schedule',
+    title: 'Horários de atendimento',
+    description: 'Configure os horários de cada dentista',
+    route: '/agenda',
+    icon: 'clock',
+  },
+  {
     id: 'financial',
     title: 'Configurações financeiras',
     description: 'Impostos e taxas de cartão',
@@ -93,6 +100,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
     if (clinicName) detected.push('clinic_data');
     if (memberCount > 1) detected.push('team');
+
+    try {
+      const { count } = await supabase
+        .from('schedule_settings')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId);
+      if ((count || 0) > 0) detected.push('schedule');
+    } catch { /* ignore */ }
 
     try {
       const { count } = await supabase

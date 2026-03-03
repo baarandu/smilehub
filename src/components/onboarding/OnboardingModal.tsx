@@ -15,6 +15,7 @@ import {
   Users,
   Wallet,
   UserPlus,
+  Clock,
   Check,
   ChevronRight,
   Sparkles,
@@ -27,6 +28,7 @@ import { cn } from '@/lib/utils';
 const STEP_ICONS: Record<string, React.ElementType> = {
   building: Building2,
   users: Users,
+  clock: Clock,
   wallet: Wallet,
   'user-plus': UserPlus,
 };
@@ -68,6 +70,9 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
     } else {
       navigate(route);
     }
+
+    // For schedule step, also mark return so onboarding reopens after
+    // (navigation to /agenda is handled by the else branch above)
   };
 
   const handleSkip = () => {

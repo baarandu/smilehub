@@ -25,6 +25,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { Location } from '@/services/locations';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
 
 const DAYS_OF_WEEK = [
@@ -71,6 +72,7 @@ interface ScheduleSettingsModalProps {
 }
 
 export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, locations, isAdmin = false, onRequestAddDentist }: ScheduleSettingsModalProps) {
+  const { markStepCompleted } = useOnboarding();
   const [selectedDentist, setSelectedDentist] = useState<string>('');
   const [days, setDays] = useState<DayConfig[]>([]);
   const [loading, setLoading] = useState(false);
@@ -205,6 +207,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
     try {
       await scheduleSettingsService.upsert(clinicId, selectedDentist, allSlots);
       toast.success('Horários salvos com sucesso!');
+      markStepCompleted('schedule');
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error saving schedule settings:', error);
