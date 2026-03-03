@@ -2,11 +2,17 @@ import { supabase } from '../lib/supabase';
 import type { Patient, PatientInsert, PatientFormData } from '../types/database';
 import { sanitizeForDisplay } from '../utils/security';
 
-export async function getPatients(): Promise<Patient[]> {
-  const { data, error } = await supabase
+export async function getPatients(clinicId?: string): Promise<Patient[]> {
+  let query = supabase
     .from('patients_secure')
     .select('*')
-    .order('name') as { data: Patient[] | null; error: any };
+    .order('name');
+
+  if (clinicId) {
+    query = query.eq('clinic_id', clinicId) as any;
+  }
+
+  const { data, error } = await query as { data: Patient[] | null; error: any };
 
   if (error) throw error;
   return data || [];
@@ -104,10 +110,16 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
   return createPatient(patient);
 }
 
-export async function getPatientsCount(): Promise<number> {
-  const { count, error } = await supabase
+export async function getPatientsCount(clinicId?: string): Promise<number> {
+  let query = supabase
     .from('patients')
     .select('*', { count: 'exact', head: true });
+
+  if (clinicId) {
+    query = query.eq('clinic_id', clinicId);
+  }
+
+  const { count, error } = await query;
 
   if (error) throw error;
   return count || 0;

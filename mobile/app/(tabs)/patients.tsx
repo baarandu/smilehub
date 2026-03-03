@@ -105,7 +105,7 @@ export default function Patients() {
     const loadPatients = async () => {
         try {
             setLoading(true);
-            const data = await getPatients();
+            const data = await getPatients(ctxClinicId);
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);
@@ -117,8 +117,8 @@ export default function Patients() {
     const loadPendingBudgets = async () => {
         try {
             const [count, budgets] = await Promise.all([
-                budgetsService.getPendingCount(),
-                budgetsService.getAllPending()
+                budgetsService.getPendingCount(ctxClinicId),
+                budgetsService.getAllPending(ctxClinicId)
             ]);
             setPendingBudgetsCount(count);
             setPendingBudgets(budgets);
@@ -130,7 +130,7 @@ export default function Patients() {
     const handleSyncBudgets = async () => {
         try {
             setSyncingBudgets(true);
-            await budgetsService.reconcileAllStatuses();
+            await budgetsService.reconcileAllStatuses(ctxClinicId);
             await loadPendingBudgets();
             Alert.alert('Sucesso', 'Lista de orçamentos sincronizada!');
         } catch (error) {

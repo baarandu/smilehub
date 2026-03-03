@@ -37,13 +37,20 @@ export const budgetsService = {
     },
 
     async create(budget: BudgetInsert, items: Omit<BudgetItemInsert, 'budget_id'>[]): Promise<BudgetWithItems> {
-        // Get current user
+        // Get current user and clinic
         const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
 
-        // Create budget first with created_by
+        const { data: clinicUser } = await supabase
+            .from('clinic_users')
+            .select('clinic_id')
+            .eq('user_id', user.id)
+            .single() as any;
+
+        // Create budget first with created_by and clinic_id
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert({ ...budget, created_by: user?.id } as any)
+            .insert({ ...budget, created_by: user.id, clinic_id: clinicUser?.clinic_id } as any)
             .select()
             .single();
 
@@ -116,8 +123,8 @@ export const budgetsService = {
         return this.update(id, { status });
     },
 
-    async getAllPending(): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
-        const { data, error } = await supabase
+    async getAllPending(clinicId?: string): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
+        let query = supabase
             .from('budgets')
             .select(`
                 id,
@@ -128,6 +135,12 @@ export const budgetsService = {
                 patients (name)
             `)
             .order('created_at', { ascending: false });
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -159,10 +172,16 @@ export const budgetsService = {
         return pendingItems;
     },
 
-    async getPendingCount(): Promise<number> {
-        const { data, error } = await supabase
+    async getPendingCount(clinicId?: string): Promise<number> {
+        let query = supabase
             .from('budgets')
             .select('patient_id, notes');
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -186,10 +205,16 @@ export const budgetsService = {
         return patientsWithPending.size;
     },
 
-    async reconcileAllStatuses(): Promise<void> {
-        const { data, error } = await supabase
+    async reconcileAllStatuses(clinicId?: string): Promise<void> {
+        let query = supabase
             .from('budgets')
             .select('id, notes, status');
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         const budgets = (data || []) as any[];

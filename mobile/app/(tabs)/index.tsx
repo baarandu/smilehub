@@ -75,7 +75,7 @@ export default function Dashboard() {
                 loadData();
                 loadProfile();
             }
-        }, [session])
+        }, [session, clinicId])
     );
 
     const loadProfile = async () => {
@@ -121,15 +121,15 @@ export default function Dashboard() {
         try {
             setLoading(true);
             const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, importantReturns, budgetsCount, remindersCount, activeRemindersList] = await Promise.all([
-                patientsService.count(),
-                appointmentsService.countToday(),
-                consultationsService.countPendingReturns(),
-                appointmentsService.getToday(),
-                consultationsService.getReturnAlerts().catch(() => [] as ReturnAlert[]),
-                alertsService.getBirthdayAlerts().catch(() => [] as PatientAlert[]),
-                alertsService.getProcedureReminders().catch(() => [] as PatientAlert[]),
-                alertsService.getImportantReturnAlerts().catch(() => [] as PatientAlert[]),
-                budgetsService.getPendingCount(),
+                patientsService.count(clinicId),
+                appointmentsService.countToday(clinicId),
+                consultationsService.countPendingReturns(clinicId),
+                appointmentsService.getToday(clinicId),
+                consultationsService.getReturnAlerts(clinicId).catch(() => [] as ReturnAlert[]),
+                alertsService.getBirthdayAlerts(clinicId).catch(() => [] as PatientAlert[]),
+                alertsService.getProcedureReminders(clinicId).catch(() => [] as PatientAlert[]),
+                alertsService.getImportantReturnAlerts(clinicId).catch(() => [] as PatientAlert[]),
+                budgetsService.getPendingCount(clinicId),
                 remindersService.getActiveCount(),
                 remindersService.getActive()
             ]);
@@ -245,12 +245,12 @@ export default function Dashboard() {
                         <StatsCard title="Retornos Pendentes" value={pendingReturns.toString()} icon={<AlertTriangle size={24} color="#F59E0B" />} onPress={async () => {
                             setShowPendingReturnsModal(true);
                             setLoadingPendingReturns(true);
-                            try { setPendingReturnsList(await getPendingReturns()); } catch (e) { console.error(e); } finally { setLoadingPendingReturns(false); }
+                            try { setPendingReturnsList(await getPendingReturns(clinicId)); } catch (e) { console.error(e); } finally { setLoadingPendingReturns(false); }
                         }} />
                         <StatsCard title="Orçamentos Pendentes" value={pendingBudgetsCount.toString()} icon={<FileText size={24} color="#b94a48" />} onPress={async () => {
                             setShowPendingBudgetsModal(true);
                             setLoadingPendingBudgets(true);
-                            try { setPendingBudgetsList(await budgetsService.getAllPending()); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
+                            try { setPendingBudgetsList(await budgetsService.getAllPending(clinicId)); } catch (e) { console.error(e); } finally { setLoadingPendingBudgets(false); }
                         }} />
                         {clinicIsDentist && (
                             <StatsCard title="Próteses Ativas" value={prosthesisCount.toString()} icon={<Layers size={24} color="#7C3AED" />} onPress={() => router.push('/prosthesis-center')} />
@@ -259,7 +259,7 @@ export default function Dashboard() {
                             setShowImportantReturnsModal(true);
                             setLoadingImportantReturns(true);
                             try {
-                                const alerts = await alertsService.getImportantReturnAlerts();
+                                const alerts = await alertsService.getImportantReturnAlerts(clinicId);
                                 setImportantReturnsList(alerts.map((a: any) => ({ id: a.patient.id, name: a.patient.name, phone: a.patient.phone, return_alert_date: a.dueDate || a.date })));
                             } catch (e) { console.error(e); }
                             finally { setLoadingImportantReturns(false); }

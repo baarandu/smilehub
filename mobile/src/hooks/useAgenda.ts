@@ -5,7 +5,7 @@ import { locationsService } from '../services/locations';
 import type { AppointmentWithPatient, Patient } from '../types/database';
 import type { Location } from '../services/locations';
 
-export function useAgenda(selectedDate: Date, calendarMonth: Date) {
+export function useAgenda(selectedDate: Date, calendarMonth: Date, clinicId?: string) {
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
   const [datesWithAppointments, setDatesWithAppointments] = useState<string[]>([]);
@@ -16,7 +16,7 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
     try {
       setLoading(true);
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const data = await appointmentsService.getByDate(dateStr);
+      const data = await appointmentsService.getByDate(dateStr, clinicId);
       setAppointments(data);
     } catch (error) {
       console.error('Error loading appointments:', error);
@@ -31,8 +31,8 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
       const month = calendarMonth.getMonth();
       const startDate = new Date(year, month, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-      
-      const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate);
+
+      const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate, clinicId);
       setDatesWithAppointments(dates);
     } catch (error) {
       console.error('Error loading month dates:', error);
@@ -41,7 +41,7 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
 
   const refetchPatients = async () => {
     try {
-      const data = await getPatients();
+      const data = await getPatients(clinicId);
       setPatients(data);
     } catch (error) {
       console.error('Error loading patients:', error);
@@ -50,11 +50,11 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
 
   useEffect(() => {
     const dateStr = selectedDate.toISOString().split('T')[0];
-    
+
     const load = async () => {
       try {
         setLoading(true);
-        const data = await appointmentsService.getByDate(dateStr);
+        const data = await appointmentsService.getByDate(dateStr, clinicId);
         setAppointments(data);
       } catch (error) {
         console.error('Error loading appointments:', error);
@@ -62,33 +62,33 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
         setLoading(false);
       }
     };
-    
+
     load();
-  }, [selectedDate.toISOString().split('T')[0]]);
+  }, [selectedDate.toISOString().split('T')[0], clinicId]);
 
   useEffect(() => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
     const startDate = new Date(year, month, 1).toISOString().split('T')[0];
     const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-    
+
     const load = async () => {
       try {
-        const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate);
+        const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate, clinicId);
         setDatesWithAppointments(dates);
       } catch (error) {
         console.error('Error loading month dates:', error);
       }
     };
-    
+
     load();
-  }, [calendarMonth.getFullYear(), calendarMonth.getMonth()]);
+  }, [calendarMonth.getFullYear(), calendarMonth.getMonth(), clinicId]);
 
   useEffect(() => {
     const load = async () => {
       try {
         const [patientsData, locationsData] = await Promise.all([
-          getPatients(),
+          getPatients(clinicId),
           locationsService.getAll(),
         ]);
         setPatients(patientsData);
@@ -97,9 +97,9 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
         console.error('Error loading data:', error);
       }
     };
-    
+
     load();
-  }, []);
+  }, [clinicId]);
 
   return {
     loading,
@@ -112,4 +112,3 @@ export function useAgenda(selectedDate: Date, calendarMonth: Date) {
     refetchPatients,
   };
 }
-

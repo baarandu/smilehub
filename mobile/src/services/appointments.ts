@@ -2,8 +2,8 @@ import { supabase } from '../lib/supabase';
 import type { AppointmentWithPatient, Appointment, AppointmentInsert } from '../types/database';
 
 export const appointmentsService = {
-  async getByDate(date: string): Promise<AppointmentWithPatient[]> {
-    const { data, error } = await supabase
+  async getByDate(date: string, clinicId?: string): Promise<AppointmentWithPatient[]> {
+    let query = supabase
       .from('appointments')
       .select(`
         *,
@@ -12,39 +12,57 @@ export const appointmentsService = {
       .eq('date', date)
       .order('time');
 
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
     return (data as unknown as AppointmentWithPatient[]) || [];
   },
 
-  async getToday(): Promise<AppointmentWithPatient[]> {
+  async getToday(clinicId?: string): Promise<AppointmentWithPatient[]> {
     const today = new Date().toISOString().split('T')[0];
-    return this.getByDate(today);
+    return this.getByDate(today, clinicId);
   },
 
-  async getTomorrow(): Promise<AppointmentWithPatient[]> {
+  async getTomorrow(clinicId?: string): Promise<AppointmentWithPatient[]> {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
-    return this.getByDate(tomorrowStr);
+    return this.getByDate(tomorrowStr, clinicId);
   },
 
-  async countToday(): Promise<number> {
+  async countToday(clinicId?: string): Promise<number> {
     const today = new Date().toISOString().split('T')[0];
-    const { count, error } = await supabase
+    let query = supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('date', today);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { count, error } = await query;
 
     if (error) throw error;
     return count || 0;
   },
 
-  async getDatesWithAppointments(startDate: string, endDate: string): Promise<string[]> {
-    const { data, error } = await supabase
+  async getDatesWithAppointments(startDate: string, endDate: string, clinicId?: string): Promise<string[]> {
+    let query = supabase
       .from('appointments')
       .select('date')
       .gte('date', startDate)
       .lte('date', endDate);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     const uniqueDates = [...new Set((data as any[])?.map(a => a.date) || [])];

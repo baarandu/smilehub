@@ -31,7 +31,7 @@ export function useRecordSignatures(recordType: RecordType, recordId: string | u
   return { signatures, loading, refetch: load };
 }
 
-export function useUnsignedRecords(clinicId: string | null, patientId?: string) {
+export function useUnsignedRecords(clinicId: string | null | undefined, patientId?: string) {
   const [records, setRecords] = useState<UnsignedRecord[]>([]);
   const [loading, setLoading] = useState(false);
 

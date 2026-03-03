@@ -8,11 +8,13 @@ import { getPatients, createPatientFromForm } from '../../src/services/patients'
 import { locationsService, type Location } from '../../src/services/locations';
 import { CalendarGrid, NewAppointmentModal } from '../../src/components/agenda';
 import { ScheduleSettingsModal } from '../../src/components/agenda/ScheduleSettingsModal';
+import { useClinic } from '../../src/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '../../src/types/database';
 
 export default function Agenda() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { clinicId } = useClinic();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -66,7 +68,7 @@ export default function Agenda() {
         try {
             setLoading(true);
             const dateStr = selectedDate.toISOString().split('T')[0];
-            const data = await appointmentsService.getByDate(dateStr);
+            const data = await appointmentsService.getByDate(dateStr, clinicId);
             setAppointments(data);
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -82,7 +84,7 @@ export default function Agenda() {
             const startDate = new Date(year, month, 1).toISOString().split('T')[0];
             const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
 
-            const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate);
+            const dates = await appointmentsService.getDatesWithAppointments(startDate, endDate, clinicId);
             setDatesWithAppointments(dates);
         } catch (error) {
             console.error('Error loading month dates:', error);
@@ -91,7 +93,7 @@ export default function Agenda() {
 
     const loadPatients = async () => {
         try {
-            const data = await getPatients();
+            const data = await getPatients(clinicId);
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);

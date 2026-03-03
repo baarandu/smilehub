@@ -2,11 +2,15 @@ import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
 import { sanitizeForDisplay } from '@/utils/security';
 
-export async function getPatients(page?: number, limit?: number): Promise<Patient[]> {
-  const query = supabase
+export async function getPatients(page?: number, limit?: number, clinicId?: string): Promise<Patient[]> {
+  let query = supabase
     .from('patients_secure')
     .select('*')
     .order('name');
+
+  if (clinicId) {
+    query = query.eq('clinic_id', clinicId) as any;
+  }
 
   if (page !== undefined && limit !== undefined) {
     const from = page * limit;
@@ -224,7 +228,7 @@ export async function deletePatient(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function searchPatients(query: string): Promise<Patient[]> {
+export async function searchPatients(query: string, clinicId?: string): Promise<Patient[]> {
   if (!query || query.trim().length < 2) return [];
 
   // Sanitize: escape PostgREST special chars and SQL wildcards
@@ -236,12 +240,18 @@ export async function searchPatients(query: string): Promise<Patient[]> {
 
   if (!sanitized) return [];
 
-  const { data, error } = await supabase
+  let q = supabase
     .from('patients_secure')
     .select('*')
     .or(`name.ilike.%${sanitized}%,phone.ilike.%${sanitized}%,cpf_last4.ilike.%${sanitized}%,email.ilike.%${sanitized}%`)
     .order('name')
-    .limit(20) as { data: Patient[] | null; error: any };
+    .limit(20);
+
+  if (clinicId) {
+    q = q.eq('clinic_id', clinicId) as any;
+  }
+
+  const { data, error } = await q as { data: Patient[] | null; error: any };
 
   if (error) throw error;
   return data || [];

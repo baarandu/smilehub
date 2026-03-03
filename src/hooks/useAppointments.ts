@@ -2,26 +2,32 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { appointmentsService } from '@/services/appointments';
 import type { AppointmentInsert, AppointmentUpdate, Appointment } from '@/types/database';
 import { toast } from 'sonner';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export function useAppointments() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments'],
-    queryFn: () => appointmentsService.getAll(),
+    queryKey: ['appointments', clinicId],
+    queryFn: () => appointmentsService.getAll(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
 export function useAppointmentsByDate(date: string) {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments', 'date', date],
-    queryFn: () => appointmentsService.getByDate(date),
-    enabled: !!date,
+    queryKey: ['appointments', 'date', date, clinicId],
+    queryFn: () => appointmentsService.getByDate(date, clinicId || undefined),
+    enabled: !!date && !!clinicId,
   });
 }
 
 export function useTodayAppointments() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments', 'today'],
-    queryFn: () => appointmentsService.getToday(),
+    queryKey: ['appointments', 'today', clinicId],
+    queryFn: () => appointmentsService.getToday(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
@@ -34,9 +40,11 @@ export function usePatientAppointments(patientId: string) {
 }
 
 export function useTodayAppointmentsCount() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments', 'today', 'count'],
-    queryFn: () => appointmentsService.countToday(),
+    queryKey: ['appointments', 'today', 'count', clinicId],
+    queryFn: () => appointmentsService.countToday(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
@@ -104,24 +112,20 @@ export function useDeleteAppointment() {
 }
 
 export function useMonthDates(startDate: string, endDate: string) {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments', 'month-dates', startDate, endDate],
-    queryFn: () => appointmentsService.getDatesWithAppointments(startDate, endDate),
-    enabled: !!startDate && !!endDate,
+    queryKey: ['appointments', 'month-dates', startDate, endDate, clinicId],
+    queryFn: () => appointmentsService.getDatesWithAppointments(startDate, endDate, clinicId || undefined),
+    enabled: !!startDate && !!endDate && !!clinicId,
   });
 }
 
 export function useAppointmentSearch(query: string) {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['appointments', 'search', query],
-    queryFn: () => appointmentsService.search(query),
-    enabled: query.length >= 2,
+    queryKey: ['appointments', 'search', query, clinicId],
+    queryFn: () => appointmentsService.search(query, clinicId || undefined),
+    enabled: query.length >= 2 && !!clinicId,
     staleTime: 30_000,
   });
 }
-
-
-
-
-
-

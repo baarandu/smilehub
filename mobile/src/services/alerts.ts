@@ -36,11 +36,17 @@ export const alertsService = {
         );
     },
 
-    async getBirthdayAlerts(): Promise<Alert[]> {
-        const { data: patients, error } = await supabase
+    async getBirthdayAlerts(clinicId?: string): Promise<Alert[]> {
+        let query = supabase
             .from('patients')
             .select('id, name, phone, birth_date')
             .not('birth_date', 'is', null);
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data: patients, error } = await query;
 
         if (error) throw error;
 
@@ -73,8 +79,8 @@ export const alertsService = {
             }));
     },
 
-    async getProcedureReminders(): Promise<Alert[]> {
-        const { data: procedures, error } = await supabase
+    async getProcedureReminders(clinicId?: string): Promise<Alert[]> {
+        let query = supabase
             .from('procedures')
             .select(`
                 patient_id,
@@ -82,6 +88,12 @@ export const alertsService = {
                 patients (name, phone)
             `)
             .order('date', { ascending: false });
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data: procedures, error } = await query;
 
         if (error) throw error;
 
@@ -132,13 +144,19 @@ export const alertsService = {
         return alerts.sort((a, b) => (b.daysSince || 0) - (a.daysSince || 0));
     },
 
-    async getImportantReturnAlerts(): Promise<Alert[]> {
-        const { data: patients, error } = await supabase
+    async getImportantReturnAlerts(clinicId?: string): Promise<Alert[]> {
+        let query = supabase
             .from('patients')
             .select('id, name, phone, return_alert_flag, return_alert_date')
             .eq('return_alert_flag', true)
             .not('return_alert_date', 'is', null)
             .order('return_alert_date', { ascending: true });
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data: patients, error } = await query;
 
         if (error) throw error;
 
@@ -192,11 +210,17 @@ export const alertsService = {
         if (error) throw error;
     },
 
-    async getProsthesisSchedulingAlerts(): Promise<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]> {
-        const { data, error } = await supabase
+    async getProsthesisSchedulingAlerts(clinicId?: string): Promise<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]> {
+        let query = supabase
             .from('prosthesis_orders')
             .select('id, patient_id, tooth_numbers, type, created_at, patients!inner(name, phone)')
             .eq('status', 'in_clinic');
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('Error fetching prosthesis scheduling alerts:', error);
@@ -214,17 +238,17 @@ export const alertsService = {
         }));
     },
 
-    async getTotalAlertsCount(): Promise<number> {
+    async getTotalAlertsCount(clinicId?: string): Promise<number> {
         // Import services inline to avoid circular dependencies
         const { appointmentsService } = await import('./appointments');
         const { consultationsService } = await import('./consultations');
 
         const [birthdays, procedureReturns, tomorrowAppointments, scheduledReturns, prosthesisAlerts] = await Promise.all([
-            this.getBirthdayAlerts(),
-            this.getProcedureReminders(),
-            appointmentsService.getTomorrow().catch(() => []),
-            consultationsService.getReturnAlerts().catch(() => []),
-            this.getProsthesisSchedulingAlerts().catch(() => [])
+            this.getBirthdayAlerts(clinicId),
+            this.getProcedureReminders(clinicId),
+            appointmentsService.getTomorrow(clinicId).catch(() => []),
+            consultationsService.getReturnAlerts(clinicId).catch(() => []),
+            this.getProsthesisSchedulingAlerts(clinicId).catch(() => [])
         ]);
 
         return birthdays.length + procedureReturns.length + tomorrowAppointments.length + scheduledReturns.length + prosthesisAlerts.length;

@@ -20,7 +20,7 @@ const DEFAULT_CONFIRMATION_MSG = `Olá {name}! 👋\n\nPassando para confirmar s
 
 export default function Alerts() {
     const router = useRouter();
-    const { isDentist: clinicIsDentist } = useClinic();
+    const { isDentist: clinicIsDentist, clinicId } = useClinic();
     const [loading, setLoading] = useState(true);
     const [scheduledAlerts, setScheduledAlerts] = useState<ReturnAlert[]>([]);
     const [birthdayAlerts, setBirthdayAlerts] = useState<Alert[]>([]);
@@ -97,12 +97,12 @@ export default function Alerts() {
         try {
             setLoading(true);
             const [scheduled, birthdays, procedures, tomorrow, reminderList, prosthesis] = await Promise.all([
-                consultationsService.getReturnAlerts(),
-                alertsService.getBirthdayAlerts(),
-                alertsService.getProcedureReminders(),
-                appointmentsService.getTomorrow(),
+                consultationsService.getReturnAlerts(clinicId),
+                alertsService.getBirthdayAlerts(clinicId),
+                alertsService.getProcedureReminders(clinicId),
+                appointmentsService.getTomorrow(clinicId),
                 remindersService.getAll(),
-                alertsService.getProsthesisSchedulingAlerts().catch(() => [])
+                alertsService.getProsthesisSchedulingAlerts(clinicId).catch(() => [])
             ]);
 
             setScheduledAlerts(scheduled.sort((a, b) => a.days_until_return - b.days_until_return));

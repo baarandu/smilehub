@@ -9,11 +9,14 @@ import {
 } from '@/services/patients';
 import type { PatientFormData, Patient } from '@/types/database';
 import { toast } from 'sonner';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export function usePatients() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['patients'],
-    queryFn: () => getPatients(),
+    queryKey: ['patients', clinicId],
+    queryFn: () => getPatients(undefined, undefined, clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
@@ -26,21 +29,24 @@ export function usePatient(id: string) {
 }
 
 export function usePatientSearch(query: string) {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['patients', 'search', query],
-    queryFn: () => searchPatients(query),
-    enabled: query.length >= 2,
+    queryKey: ['patients', 'search', query, clinicId],
+    queryFn: () => searchPatients(query, clinicId || undefined),
+    enabled: query.length >= 2 && !!clinicId,
   });
 }
 
 export function useInfinitePatients() {
+  const { clinicId } = useClinic();
   return useInfiniteQuery({
-    queryKey: ['patients', 'infinite'],
-    queryFn: ({ pageParam }) => getPatients(pageParam as number, 20),
+    queryKey: ['patients', 'infinite', clinicId],
+    queryFn: ({ pageParam }) => getPatients(pageParam as number, 20, clinicId || undefined),
     initialPageParam: 0,
     getNextPageParam: (lastPage: Patient[], allPages) => {
       return lastPage.length === 20 ? allPages.length : undefined;
     },
+    enabled: !!clinicId,
   });
 }
 
@@ -92,14 +98,17 @@ export function useDeletePatient() {
 }
 
 export function usePatientsCount() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['patients', 'count'],
+    queryKey: ['patients', 'count', clinicId],
     queryFn: async () => {
       const { supabase } = await import('@/lib/supabase');
       const { count } = await supabase
         .from('patients_secure')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', clinicId!);
       return count || 0;
     },
+    enabled: !!clinicId,
   });
 }

@@ -8,7 +8,7 @@ import { useClinic } from '../../src/contexts/ClinicContext';
 
 export default function TabLayout() {
     const [activeReminders, setActiveReminders] = useState(0);
-    const { roles } = useClinic();
+    const { roles, clinicId } = useClinic();
 
     // Secretaries (who are not also dentists/admins) cannot access Financeiro
     const isSecretary = roles.length > 0 && roles.every(r => r === 'assistant' || r === 'viewer');
@@ -30,7 +30,7 @@ export default function TabLayout() {
         try {
             const [remindersCount, alertsCount] = await Promise.all([
                 remindersService.getActiveCount(),
-                alertsService.getTotalAlertsCount()
+                alertsService.getTotalAlertsCount(clinicId)
             ]);
             setActiveReminders(remindersCount + alertsCount);
         } catch (error) {

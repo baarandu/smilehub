@@ -13,7 +13,9 @@ export interface PendingReturn {
  * - Status = 'pending' OR 'in_progress' AND procedure date > 30 days ago
  * - Excludes procedures where the patient already has a newer completed procedure
  */
-export async function getPendingReturns(): Promise<PendingReturn[]> {
+export async function getPendingReturns(clinicId?: string): Promise<PendingReturn[]> {
+    if (!clinicId) return [];
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]; // Just the date part (YYYY-MM-DD)
@@ -25,6 +27,7 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
       *,
       patients:patient_id (id, name, phone)
     `)
+        .eq('clinic_id', clinicId)
         .in('status', ['pending', 'in_progress'])
         .lt('date', thirtyDaysAgoStr)
         .order('date', { ascending: true });
@@ -42,6 +45,7 @@ export async function getPendingReturns(): Promise<PendingReturn[]> {
     const { data: completedData } = await supabase
         .from('procedures')
         .select('patient_id, date')
+        .eq('clinic_id', clinicId)
         .eq('status', 'completed')
         .in('patient_id', patientIds)
         .order('date', { ascending: false });
@@ -113,9 +117,9 @@ export async function markProcedureCompleted(procedureId: string): Promise<void>
 /**
  * Get count of pending returns (uses same filtering logic as getPendingReturns)
  */
-export async function getPendingReturnsCount(): Promise<number> {
+export async function getPendingReturnsCount(clinicId?: string): Promise<number> {
     try {
-        const returns = await getPendingReturns();
+        const returns = await getPendingReturns(clinicId);
         return returns.length;
     } catch {
         return 0;

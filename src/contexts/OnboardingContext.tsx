@@ -98,7 +98,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (!clinicId) return [];
     const detected: string[] = [];
 
-    if (clinicName) detected.push('clinic_data');
+    // clinic_data: only complete if clinic has phone or address filled (not just name from signup)
+    try {
+      const { data: clinic } = await supabase
+        .from('clinics')
+        .select('phone, address')
+        .eq('id', clinicId)
+        .single();
+      if (clinic && (clinic.phone || clinic.address)) {
+        detected.push('clinic_data');
+      }
+    } catch { /* ignore */ }
+
     if (memberCount > 1) detected.push('team');
 
     try {
@@ -151,22 +162,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       setIsFirstAccess(true);
     }
 
-    // Auto-detect from real data and merge with stored
+    // Auto-detect from real data — detection is source of truth
     detectCompletedSteps().then(detected => {
-      const merged = [...new Set([...storedSteps, ...detected])];
-      setCompletedSteps(merged);
+      setCompletedSteps(detected);
       setIsDismissed(dismissed);
       setShowTooltips(tooltips);
 
-      // Persist merged state if new steps were detected
-      if (merged.length > storedSteps.length) {
-        const state: StoredOnboardingState = {
-          completedSteps: merged,
-          dismissed,
-          tooltipsEnabled: tooltips,
-        };
-        localStorage.setItem(getStorageKey(), JSON.stringify(state));
-      }
+      // Persist detected state
+      const state: StoredOnboardingState = {
+        completedSteps: detected,
+        dismissed,
+        tooltipsEnabled: tooltips,
+      };
+      localStorage.setItem(getStorageKey(), JSON.stringify(state));
     });
   }, [clinicId, getStorageKey, detectCompletedSteps]);
 

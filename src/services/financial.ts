@@ -42,16 +42,19 @@ export const financialService = {
         // Get user context to determine filtering
         const context = await this.getUserContext();
 
+        if (!context) return [];
+
         let query = supabase
             .from('financial_transactions')
             .select('*, patients(name)')
+            .eq('clinic_id', context.clinicId)
             .gte('date', start.toISOString())
             .lte('date', end.toISOString())
             .order('date', { ascending: false })
             .order('created_at', { ascending: false });
 
         // If user is a dentist (not owner/admin), filter by their user_id
-        if (context && !context.canSeeAllFinancials) {
+        if (!context.canSeeAllFinancials) {
             query = query.eq('user_id', context.userId);
         }
 
@@ -465,10 +468,18 @@ export const financialService = {
             }>
         };
 
+        // Get clinic context for filtering
+        const context = await this.getUserContext();
+        if (!context) {
+            report.errors.push('Usuário não autenticado');
+            return report;
+        }
+
         // 1. Busca todas as transações de income vinculadas a orçamentos
         const { data: transactions, error: txError } = await supabase
             .from('financial_transactions')
             .select('*')
+            .eq('clinic_id', context.clinicId)
             .eq('type', 'income')
             .not('related_entity_id', 'is', null);
 

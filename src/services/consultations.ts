@@ -8,16 +8,22 @@ import type {
 } from '@/types/database';
 
 export const consultationsService = {
-  async getAll(): Promise<ConsultationWithPatient[]> {
-    const { data, error } = await supabase
+  async getAll(clinicId?: string): Promise<ConsultationWithPatient[]> {
+    let query = supabase
       .from('consultations')
       .select(`
         *,
-        patients (name)
+        patients!inner (name, clinic_id)
       `)
       .is('deleted_at', null)
       .order('date', { ascending: false });
-    
+
+    if (clinicId) {
+      query = query.eq('patients.clinic_id', clinicId);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
     return data || [];
   },
@@ -81,21 +87,27 @@ export const consultationsService = {
     if (error) throw error;
   },
 
-  async getReturnAlerts(): Promise<ReturnAlert[]> {
+  async getReturnAlerts(clinicId?: string): Promise<ReturnAlert[]> {
     const today = new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
+
+    let query = supabase
       .from('consultations')
       .select(`
         patient_id,
         suggested_return_date,
-        patients (name, phone)
+        patients!inner (name, phone, clinic_id)
       `)
       .is('deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today)
       .order('suggested_return_date');
-    
+
+    if (clinicId) {
+      query = query.eq('patients.clinic_id', clinicId);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
     
     // Transform and calculate days until return
@@ -117,15 +129,22 @@ export const consultationsService = {
     return alerts;
   },
 
-  async countPendingReturns(): Promise<number> {
+  async countPendingReturns(clinicId?: string): Promise<number> {
     const today = new Date().toISOString().split('T')[0];
-    const { count, error } = await supabase
+
+    let query = supabase
       .from('consultations')
-      .select('*', { count: 'exact', head: true })
+      .select('*, patients!inner(clinic_id)', { count: 'exact', head: true })
       .is('deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today);
-    
+
+    if (clinicId) {
+      query = query.eq('patients.clinic_id', clinicId);
+    }
+
+    const { count, error } = await query;
+
     if (error) throw error;
     return count || 0;
   }

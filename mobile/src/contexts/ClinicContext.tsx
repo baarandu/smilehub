@@ -13,7 +13,7 @@ interface ClinicMember {
 }
 
 interface ClinicContextType {
-    clinicId: string | null;
+    clinicId: string | undefined;
     clinicName: string | null;
     userName: string | null;
     displayName: string | null;
@@ -38,7 +38,7 @@ interface ClinicUserRow {
 const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 
 export function ClinicProvider({ children }: { children: React.ReactNode }) {
-    const [clinicId, setClinicId] = useState<string | null>(null);
+    const [clinicId, setClinicId] = useState<string | undefined>(undefined);
     const [clinicName, setClinicName] = useState<string | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState<string | null>(null);

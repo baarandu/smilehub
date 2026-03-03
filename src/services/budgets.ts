@@ -132,8 +132,8 @@ export const budgetsService = {
         return this.update(id, { status });
     },
 
-    async getAllPending(): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
-        const { data, error } = await supabase
+    async getAllPending(clinicId?: string): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
+        let query = supabase
             .from('budgets')
             .select(`
                 id,
@@ -145,6 +145,12 @@ export const budgetsService = {
             `)
             .is('patients.deleted_at', null)
             .order('created_at', { ascending: false });
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -176,11 +182,17 @@ export const budgetsService = {
         return pendingItems;
     },
 
-    async getPendingCount(): Promise<number> {
-        const { data, error } = await supabase
+    async getPendingCount(clinicId?: string): Promise<number> {
+        let query = supabase
             .from('budgets')
             .select('notes, patients!inner(id)')
             .is('patients.deleted_at', null);
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -200,11 +212,17 @@ export const budgetsService = {
         return count;
     },
 
-    async getPendingPatientsCount(): Promise<number> {
-        const { data, error } = await supabase
+    async getPendingPatientsCount(clinicId?: string): Promise<number> {
+        let query = supabase
             .from('budgets')
             .select('patient_id, notes, patients!inner(id)')
             .is('patients.deleted_at', null);
+
+        if (clinicId) {
+            query = query.eq('clinic_id', clinicId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 

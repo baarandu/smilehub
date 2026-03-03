@@ -41,10 +41,18 @@ export const proceduresService = {
 
   async create(procedure: ProcedureInsert & { budget_links?: BudgetLink[] | null }): Promise<Procedure> {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    // Get clinic_id for the current user
+    const { data: clinicUser } = await supabase
+      .from('clinic_users')
+      .select('clinic_id')
+      .eq('user_id', user.id)
+      .single();
 
     const { data, error } = await supabase
       .from('procedures')
-      .insert({ ...procedure, created_by: user?.id } as any)
+      .insert({ ...procedure, created_by: user.id, clinic_id: (clinicUser as any)?.clinic_id } as any)
       .select()
       .single();
 

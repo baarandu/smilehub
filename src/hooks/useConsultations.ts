@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { consultationsService } from '@/services/consultations';
 import type { ConsultationInsert, ConsultationUpdate } from '@/types/database';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export function useConsultations() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['consultations'],
-    queryFn: () => consultationsService.getAll(),
+    queryKey: ['consultations', clinicId],
+    queryFn: () => consultationsService.getAll(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
@@ -26,16 +29,20 @@ export function usePatientConsultations(patientId: string) {
 }
 
 export function useReturnAlerts() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['consultations', 'return-alerts'],
-    queryFn: () => consultationsService.getReturnAlerts(),
+    queryKey: ['consultations', 'return-alerts', clinicId],
+    queryFn: () => consultationsService.getReturnAlerts(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 
 export function usePendingReturnsCount() {
+  const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['consultations', 'pending-returns', 'count'],
-    queryFn: () => consultationsService.countPendingReturns(),
+    queryKey: ['consultations', 'pending-returns', 'count', clinicId],
+    queryFn: () => consultationsService.countPendingReturns(clinicId || undefined),
+    enabled: !!clinicId,
   });
 }
 

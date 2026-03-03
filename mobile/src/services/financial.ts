@@ -43,16 +43,18 @@ export const financialService = {
 
         // Get user context to determine filtering
         const context = await this.getUserContext();
+        if (!context) return [];
 
         let query = supabase
             .from('financial_transactions')
             .select('*, patients(name)')
+            .eq('clinic_id', context.clinicId)
             .gte('date', startDate)
             .lte('date', endDate)
             .order('date', { ascending: false });
 
         // If user is a dentist (not owner/admin), filter by their user_id
-        if (context && !context.canSeeAllFinancials) {
+        if (!context.canSeeAllFinancials) {
             query = query.eq('user_id', context.userId);
         }
 
