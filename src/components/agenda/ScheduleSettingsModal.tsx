@@ -23,6 +23,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { Location } from '@/services/locations';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -77,8 +78,11 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   const [days, setDays] = useState<DayConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [locationMode, setLocationMode] = useState<'single' | 'per-slot'>('single');
+  const [globalLocationId, setGlobalLocationId] = useState<string>('');
 
-  const showLocationField = locations.length > 1;
+  const showLocationSection = locations.length > 0;
+  const showPerSlotLocation = showLocationSection && locationMode === 'per-slot';
 
   // Auto-select first dentist
   useEffect(() => {
@@ -124,6 +128,30 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
       });
 
       setDays(allDays);
+
+      // Auto-detect location mode
+      if (locations.length > 0) {
+        const activeSlots = allDays.flatMap(d => d.is_active ? d.slots : []);
+        const slotsWithLocations = activeSlots.filter(s => s.location_ids.length > 0);
+
+        if (slotsWithLocations.length > 0) {
+          const firstIds = slotsWithLocations[0].location_ids.slice().sort().join(',');
+          const allSame = slotsWithLocations.every(s => s.location_ids.slice().sort().join(',') === firstIds);
+          if (allSame && slotsWithLocations[0].location_ids.length === 1) {
+            setLocationMode('single');
+            setGlobalLocationId(slotsWithLocations[0].location_ids[0]);
+          } else {
+            setLocationMode('per-slot');
+            setGlobalLocationId('');
+          }
+        } else if (locations.length === 1) {
+          setLocationMode('single');
+          setGlobalLocationId(locations[0].id);
+        } else {
+          setLocationMode('single');
+          setGlobalLocationId('');
+        }
+      }
     } catch (error) {
       console.error('Error loading schedule settings:', error);
       toast.error('Erro ao carregar configurações');
@@ -186,18 +214,41 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
     }));
   };
 
+  const handleLocationModeChange = (mode: 'single' | 'per-slot') => {
+    if (mode === 'single' && locationMode === 'per-slot') {
+      // Find the most common location across all active slots
+      const allLocationIds = days.flatMap(d => d.is_active ? d.slots.flatMap(s => s.location_ids) : []);
+      if (allLocationIds.length > 0) {
+        const counts = new Map<string, number>();
+        for (const id of allLocationIds) {
+          counts.set(id, (counts.get(id) || 0) + 1);
+        }
+        let mostCommon = '';
+        let maxCount = 0;
+        for (const [id, count] of counts) {
+          if (count > maxCount) { mostCommon = id; maxCount = count; }
+        }
+        setGlobalLocationId(mostCommon);
+      }
+    }
+    setLocationMode(mode);
+  };
+
   const handleSave = async () => {
     const allSlots: Omit<ScheduleSetting, 'id' | 'clinic_id' | 'professional_id'>[] = [];
     for (const day of days) {
       if (!day.is_active) continue;
       for (const slot of day.slots) {
+        const effectiveLocationIds = locationMode === 'single' && globalLocationId
+          ? [globalLocationId]
+          : slot.location_ids;
         allSlots.push({
           day_of_week: day.day_of_week,
           start_time: slot.start_time,
           end_time: slot.end_time,
           interval_minutes: slot.interval_minutes,
-          location_id: slot.location_ids[0] || null,
-          location_ids: slot.location_ids.length > 0 ? slot.location_ids.join(',') : null,
+          location_id: effectiveLocationIds[0] || null,
+          location_ids: effectiveLocationIds.length > 0 ? effectiveLocationIds.join(',') : null,
           is_active: true,
         });
       }
@@ -294,6 +345,52 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
             </div>
           )}
 
+          {/* Location mode */}
+          {showLocationSection && dentists.length > 0 && !loading && (
+            <div className="rounded-lg border border-border p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                <Label className="text-sm font-medium">Local de atendimento</Label>
+              </div>
+              <RadioGroup
+                value={locationMode}
+                onValueChange={(v) => handleLocationModeChange(v as 'single' | 'per-slot')}
+                className="space-y-2"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="single" id="loc-single" />
+                    <Label htmlFor="loc-single" className="text-sm font-normal cursor-pointer">
+                      Mesmo local para todos os horários
+                    </Label>
+                  </div>
+                  {locationMode === 'single' && (
+                    <div className="ml-6">
+                      <Select value={globalLocationId} onValueChange={setGlobalLocationId}>
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Selecione o local" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map(loc => (
+                            <SelectItem key={loc.id} value={loc.id}>
+                              {loc.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="per-slot" id="loc-per-slot" />
+                  <Label htmlFor="loc-per-slot" className="text-sm font-normal cursor-pointer">
+                    Configurar por horário
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
           {/* Days grid */}
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-4">Carregando...</p>
@@ -355,7 +452,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </div>
-                            {showLocationField && (
+                            {showPerSlotLocation && (
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full justify-start font-normal">
