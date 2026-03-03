@@ -44,9 +44,11 @@ export interface NewAppointmentDialogProps {
   onUpdate?: (id: string, data: AppointmentFormData) => void;
   appointmentToEdit?: AppointmentWithPatient | null;
   onRequestCreatePatient?: (prefillName: string) => void;
+  onRequestAddDentist?: () => void;
   preSelectedPatient?: Patient | null;
   dentists?: { id: string; name: string }[];
   showDentistField?: boolean;
+  isAdmin?: boolean;
   clinicId?: string;
   existingAppointments?: AppointmentWithPatient[];
 }

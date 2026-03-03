@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, X, ExternalLink } from 'lucide-react';
+import { Plus, Search, X, ExternalLink, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,9 +72,11 @@ export function NewAppointmentDialog({
   onUpdate,
   appointmentToEdit,
   onRequestCreatePatient,
+  onRequestAddDentist,
   preSelectedPatient,
   dentists = [],
   showDentistField = false,
+  isAdmin = false,
   clinicId,
   existingAppointments = [],
 }: NewAppointmentDialogProps) {
@@ -297,9 +299,23 @@ export function NewAppointmentDialog({
               </div>
             )}
           </div>
-          {showDentistField && dentists.length > 1 && (
-            <div className="space-y-2">
+          {/* Dentist selector */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label>Dentista *</Label>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-xs gap-1 px-2"
+                  onClick={() => onRequestAddDentist?.()}
+                >
+                  <UserPlus className="w-3 h-3" />
+                  Novo
+                </Button>
+              )}
+            </div>
+            {dentists.length > 0 ? (
               <Select
                 value={form.dentistId}
                 onValueChange={(v) => setForm({ ...form, dentistId: v, time: '' })}
@@ -315,8 +331,14 @@ export function NewAppointmentDialog({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs text-muted-foreground py-1">
+                {isAdmin
+                  ? 'Nenhum dentista na equipe. Clique em "Novo" para adicionar.'
+                  : 'Nenhum dentista na equipe. Solicite ao administrador para adicionar.'}
+              </p>
+            )}
+          </div>
           {appointmentToEdit && (
             <div className="space-y-2">
               <Label>Data *</Label>
@@ -333,14 +355,19 @@ export function NewAppointmentDialog({
             <Label>Horário *</Label>
             {loadingSlots ? (
               <p className="text-xs text-muted-foreground py-2">Carregando horários...</p>
+            ) : !activeDentistId ? (
+              <p className="text-xs text-muted-foreground py-2">Selecione um dentista para ver os horários disponíveis.</p>
             ) : hasScheduleForDay && availableSlots.length > 0 ? (
               <Select
                 value={form.time}
                 onValueChange={(v) => {
                   const slot = availableSlots.find(s => s.time === v);
-                  // Auto-fill location if slot has exactly 1 configured location
-                  const locationName = slot?.locationIds.length === 1
-                    ? locations.find(l => l.id === slot.locationIds[0])?.name || form.location
+                  // Auto-fill location from slot's configured locations
+                  const slotLocationNames = slot?.locationIds
+                    .map(id => locations.find(l => l.id === id)?.name)
+                    .filter(Boolean) || [];
+                  const locationName = slotLocationNames.length === 1
+                    ? slotLocationNames[0]!
                     : form.location;
                   setForm({ ...form, time: v, location: locationName });
                 }}
@@ -349,22 +376,37 @@ export function NewAppointmentDialog({
                   <SelectValue placeholder="Selecione o horário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableSlots.map((slot) => (
-                    <SelectItem key={slot.time} value={slot.time}>
-                      {slot.time}
-                    </SelectItem>
-                  ))}
+                  {availableSlots.map((slot) => {
+                    const slotLocationNames = slot.locationIds
+                      .map(id => locations.find(l => l.id === id)?.name)
+                      .filter(Boolean);
+                    return (
+                      <SelectItem key={slot.time} value={slot.time}>
+                        <span>{slot.time}</span>
+                        {slotLocationNames.length > 0 && (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            — {slotLocationNames.join(' / ')}
+                          </span>
+                        )}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             ) : hasScheduleForDay && availableSlots.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">Todos os horários estão ocupados neste dia.</p>
-            ) : (
-              <Input
-                type="time"
-                value={form.time}
-                onChange={(e) => setForm({ ...form, time: e.target.value })}
-              />
-            )}
+            ) : activeDentistId && scheduleSettings.length > 0 ? (
+              <p className="text-xs text-muted-foreground py-2">Este dentista não atende neste dia da semana.</p>
+            ) : activeDentistId ? (
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Nenhum horário configurado para este dentista.</p>
+                <Input
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm({ ...form, time: e.target.value })}
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -377,21 +419,27 @@ export function NewAppointmentDialog({
           </div>
           <div className="space-y-2">
             <Label>Local de Atendimento</Label>
-            <Select
-              value={form.location}
-              onValueChange={(v) => setForm({ ...form, location: v })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredLocations.map((loc) => (
-                  <SelectItem key={loc.id} value={loc.name}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {selectedSlot && selectedSlot.locationIds.length > 0 && filteredLocations.length === 1 ? (
+              <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg">
+                <span className="text-sm">{filteredLocations[0].name}</span>
+              </div>
+            ) : (
+              <Select
+                value={form.location}
+                onValueChange={(v) => setForm({ ...form, location: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o local" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredLocations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.name}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Observações</Label>

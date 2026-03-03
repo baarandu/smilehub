@@ -71,15 +71,30 @@ export const scheduleSettingsService = {
     }
   },
 
-  async getDentists(clinicId: string): Promise<{ id: string; name: string; specialty: string }[]> {
-    const { data, error } = await (supabase
-      .from('clinic_professionals') as any)
-      .select('id, name, specialty')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-      .order('name');
+  async getDentists(clinicId: string): Promise<{ id: string; name: string }[]> {
+    // Fetch clinic_users with 'dentist' in roles array
+    const { data: clinicUsers, error: cuError } = await (supabase
+      .from('clinic_users') as any)
+      .select('user_id, roles')
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
-    return data || [];
+    if (cuError) throw cuError;
+
+    const dentistUserIds = (clinicUsers || [])
+      .filter((cu: any) => (cu.roles || []).includes('dentist'))
+      .map((cu: any) => cu.user_id);
+
+    if (dentistUserIds.length === 0) return [];
+
+    // Fetch profile names via RPC
+    const { data: profiles, error: pError } = await (supabase as any)
+      .rpc('get_profiles_for_users', { user_ids: dentistUserIds });
+
+    if (pError) throw pError;
+
+    return (profiles || []).map((p: any) => ({
+      id: p.id,
+      name: p.full_name || p.email || 'Sem nome',
+    }));
   },
 };

@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { NewAppointmentDialog } from '@/components/agenda';
 import { ScheduleSettingsModal } from '@/components/agenda/ScheduleSettingsModal';
+import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
 import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG = {
@@ -50,7 +51,7 @@ const STATUS_CONFIG = {
 export default function Agenda() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clinicId } = useClinic();
+  const { clinicId, isAdmin } = useClinic();
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
@@ -64,6 +65,13 @@ export default function Agenda() {
   const searchRef = useRef<HTMLDivElement>(null);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [teamModalOpen, setTeamModalOpen] = useState(false);
+
+  const handleRequestAddDentist = useCallback(() => {
+    setDialogOpen(false);
+    setSettingsModalOpen(false);
+    setTeamModalOpen(true);
+  }, []);
 
   // Derived date strings for queries
   const dateString = format(selectedDate, 'yyyy-MM-dd');
@@ -451,9 +459,11 @@ export default function Agenda() {
             onUpdate={handleUpdateAppointment}
             appointmentToEdit={editingAppointment}
             onRequestCreatePatient={handleRequestCreatePatient}
+            onRequestAddDentist={handleRequestAddDentist}
             preSelectedPatient={preSelectedPatient}
             dentists={dentists}
-            showDentistField={dentists.length > 1}
+            showDentistField
+            isAdmin={isAdmin}
             clinicId={clinicId}
             existingAppointments={appointments}
           />
@@ -691,8 +701,17 @@ export default function Agenda() {
           clinicId={clinicId}
           dentists={dentists}
           locations={locations}
+          isAdmin={isAdmin}
+          onRequestAddDentist={handleRequestAddDentist}
         />
       )}
+
+      {/* Team Settings Modal (opened when user clicks "Novo" dentist) */}
+      <ProfileSettingsModal
+        open={teamModalOpen}
+        onOpenChange={setTeamModalOpen}
+        initialTab="team"
+      />
 
       {/* Quick Patient Creation Dialog */}
       <AlertDialog open={patientDialogOpen} onOpenChange={setPatientDialogOpen}>

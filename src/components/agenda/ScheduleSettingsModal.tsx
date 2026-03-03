@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, MapPin } from 'lucide-react';
+import { Plus, Trash2, MapPin, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,11 +64,13 @@ interface ScheduleSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clinicId: string;
-  dentists: { id: string; name: string; specialty: string }[];
+  dentists: { id: string; name: string }[];
   locations: Location[];
+  isAdmin?: boolean;
+  onRequestAddDentist?: () => void;
 }
 
-export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, locations }: ScheduleSettingsModalProps) {
+export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, locations, isAdmin = false, onRequestAddDentist }: ScheduleSettingsModalProps) {
   const [selectedDentist, setSelectedDentist] = useState<string>('');
   const [days, setDays] = useState<DayConfig[]>([]);
   const [loading, setLoading] = useState(false);
@@ -223,7 +225,20 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
           {/* Dentist selector */}
           {dentists.length > 1 && (
             <div className="space-y-2">
-              <Label>Dentista</Label>
+              <div className="flex items-center justify-between">
+                <Label>Dentista</Label>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => onRequestAddDentist?.()}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    Novo
+                  </Button>
+                )}
+              </div>
               <Select value={selectedDentist} onValueChange={setSelectedDentist}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o dentista" />
@@ -240,19 +255,39 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
           )}
 
           {dentists.length === 1 && (
-            <p className="text-sm text-muted-foreground">
-              Configurando horários de <strong>{dentists[0].name}</strong>
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Configurando horários de <strong>{dentists[0].name}</strong>
+              </p>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => onRequestAddDentist?.()}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Novo
+                </Button>
+              )}
+            </div>
           )}
 
           {dentists.length === 0 && (
-            <div className="text-center py-6 space-y-2">
+            <div className="text-center py-6 space-y-3">
               <p className="text-muted-foreground text-sm">
-                Nenhum profissional cadastrado.
+                Nenhum dentista na equipe.
               </p>
-              <p className="text-muted-foreground text-xs">
-                Cadastre profissionais na <strong>Secretária IA &rarr; Profissionais</strong> para configurar horários.
-              </p>
+              {isAdmin ? (
+                <Button size="sm" variant="outline" onClick={() => onRequestAddDentist?.()}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Adicionar dentista na equipe
+                </Button>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  Solicite ao administrador para adicionar dentistas na aba Equipe das configurações.
+                </p>
+              )}
             </div>
           )}
 
