@@ -173,24 +173,22 @@ export const profileService = {
 
         let clinicId = clinicUser?.clinic_id;
 
-        // If no clinic exists, create one
+        // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
-            const { data: newClinic, error: createError } = await (supabase
-                .from('clinics') as any)
-                .insert({ name: data.name || 'Minha Clínica', ...data })
-                .select('id')
-                .single();
+            const { data: newClinicId, error: rpcError } = await supabase.rpc(
+                'create_clinic_for_user' as any,
+                {
+                    p_name: data.name || 'Minha Clínica',
+                    p_address: data.address || null,
+                    p_city: data.city || null,
+                    p_state: data.state || null,
+                    p_phone: data.phone || null,
+                    p_email: data.email || null,
+                }
+            );
 
-            if (createError) throw createError;
-            if (!newClinic) throw new Error('Failed to create clinic');
-            clinicId = newClinic.id;
-
-            // Link user to clinic
-            const { error: linkError } = await (supabase
-                .from('clinic_users') as any)
-                .insert({ user_id: user.id, clinic_id: clinicId });
-
-            if (linkError) throw linkError;
+            if (rpcError) throw rpcError;
+            if (!newClinicId) throw new Error('Failed to create clinic');
             return;
         }
 
@@ -375,24 +373,14 @@ export const profileService = {
 
         let clinicId = clinicUser?.clinic_id;
 
-        // If no clinic exists, create one
+        // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
-            const { data: newClinic, error: createError } = await (supabase
-                .from('clinics') as any)
-                .insert({ name })
-                .select('id')
-                .single();
+            const { error: rpcError } = await supabase.rpc(
+                'create_clinic_for_user' as any,
+                { p_name: name }
+            );
 
-            if (createError) throw createError;
-            if (!newClinic) throw new Error('Failed to create clinic');
-            clinicId = newClinic.id;
-
-            // Link user to clinic
-            const { error: linkError } = await (supabase
-                .from('clinic_users') as any)
-                .insert({ user_id: user.id, clinic_id: clinicId });
-
-            if (linkError) throw linkError;
+            if (rpcError) throw rpcError;
             return; // Name already set during creation
         }
 
