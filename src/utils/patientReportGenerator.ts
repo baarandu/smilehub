@@ -574,11 +574,7 @@ export function buildReportHtml({
             <div class="footer-clinic-info">
                 ${[clinicPhone, clinicEmail, clinicAddress].filter(Boolean).map(item => `<span>${item}</span>`).join(' • ')}
             </div>
-            ` : `
-            <div class="footer-clinic-info">
-                <span>${clinicName}</span>
-            </div>
-            `}
+            ` : ''}
         </div>
     </body>
     </html>
