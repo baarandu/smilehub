@@ -21,13 +21,16 @@ export async function getPendingReturns(clinicId?: string): Promise<PendingRetur
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]; // Just the date part (YYYY-MM-DD)
 
     // Fetch pending or in_progress procedures with date older than 30 days
+    // Use !inner join to exclude procedures of soft-deleted patients
     const { data, error } = await supabase
         .from('procedures')
         .select(`
       *,
-      patients:patient_id (id, name, phone)
+      patients:patient_id!inner (id, name, phone)
     `)
         .eq('clinic_id', clinicId)
+        .is('patients.deleted_at' as any, null)
+        .is('deleted_at', null)
         .in('status', ['pending', 'in_progress'])
         .lt('date', thirtyDaysAgoStr)
         .order('date', { ascending: true });

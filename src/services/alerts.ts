@@ -39,6 +39,7 @@ export const alertsService = {
         let query = supabase
             .from('patients')
             .select('id, name, phone, birth_date')
+            .is('deleted_at', null)
             .not('birth_date', 'is', null);
 
         if (clinicId) {
@@ -84,8 +85,10 @@ export const alertsService = {
             .select(`
                 patient_id,
                 date,
-                patients (name, phone)
+                patients!inner (name, phone)
             `)
+            .is('deleted_at', null)
+            .is('patients.deleted_at' as any, null)
             .order('date', { ascending: false });
 
         if (clinicId) {
@@ -147,6 +150,7 @@ export const alertsService = {
         let query = supabase
             .from('patients')
             .select('id, name, phone, return_alert_flag, return_alert_date')
+            .is('deleted_at', null)
             .eq('return_alert_flag', true)
             .not('return_alert_date', 'is', null)
             .order('return_alert_date', { ascending: true });
@@ -213,7 +217,8 @@ export const alertsService = {
         let query = supabase
             .from('prosthesis_orders')
             .select('id, patient_id, tooth_numbers, type, created_at, patients!inner(name, phone)')
-            .eq('status', 'in_clinic');
+            .eq('status', 'in_clinic')
+            .is('patients.deleted_at' as any, null);
 
         if (clinicId) {
             query = query.eq('clinic_id', clinicId);

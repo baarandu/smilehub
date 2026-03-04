@@ -98,6 +98,7 @@ export const consultationsService = {
         patients!inner (name, phone, clinic_id)
       `)
       .is('deleted_at', null)
+      .is('patients.deleted_at' as any, null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today)
       .order('suggested_return_date');
@@ -136,6 +137,7 @@ export const consultationsService = {
       .from('consultations')
       .select('*, patients!inner(clinic_id)', { count: 'exact', head: true })
       .is('deleted_at', null)
+      .is('patients.deleted_at' as any, null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today);
 

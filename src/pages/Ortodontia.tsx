@@ -87,7 +87,7 @@ export default function Ortodontia() {
         dentists={dentists}
       />
 
-      {/* Tabs: Lista / Kanban */}
+      {/* Tabs: Lista / Tabela */}
       <Tabs defaultValue="list">
         <TabsList className="grid w-full max-w-[240px] grid-cols-2">
           <TabsTrigger value="list" className="text-xs">
@@ -96,7 +96,7 @@ export default function Ortodontia() {
           </TabsTrigger>
           <TabsTrigger value="kanban" className="text-xs">
             <Columns3 className="w-4 h-4 mr-1" />
-            Kanban
+            Tabela
           </TabsTrigger>
         </TabsList>
 
