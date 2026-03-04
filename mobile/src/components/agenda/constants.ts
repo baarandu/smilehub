@@ -9,7 +9,9 @@ export const STATUS_CONFIG: Record<string, { label: string; bgColor: string; tex
   scheduled: { label: 'Agendado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
   confirmed: { label: 'Confirmado', bgColor: 'bg-green-100', textColor: 'text-green-700' },
   completed: { label: 'Compareceu', bgColor: 'bg-blue-100', textColor: 'text-blue-700' },
+  no_show: { label: 'Não Compareceu', bgColor: 'bg-orange-100', textColor: 'text-orange-700' },
   cancelled: { label: 'Cancelado', bgColor: 'bg-[#fee2e2]', textColor: 'text-[#8b3634]' },
+  rescheduled: { label: 'Remarcado', bgColor: 'bg-purple-100', textColor: 'text-purple-700' },
 };
 
 

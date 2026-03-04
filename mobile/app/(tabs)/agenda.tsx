@@ -263,7 +263,9 @@ export default function Agenda() {
         { value: 'scheduled', label: 'Agendado' },
         { value: 'confirmed', label: 'Confirmado' },
         { value: 'completed', label: 'Compareceu' },
+        { value: 'no_show', label: 'Não Compareceu' },
         { value: 'cancelled', label: 'Cancelado' },
+        { value: 'rescheduled', label: 'Remarcado' },
     ];
 
     const handleStatusPress = (appointment: AppointmentWithPatient) => {
