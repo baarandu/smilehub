@@ -192,6 +192,7 @@ export default function Agenda() {
         notes: data.notes || null,
         procedure_name: data.procedure || null,
         dentist_id: data.dentistId || null,
+        clinic_id: clinicId,
       });
 
       setDialogOpen(false);

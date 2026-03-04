@@ -169,6 +169,7 @@ export default function Agenda() {
                 location: appointment.location || null,
                 notes: appointment.notes || null,
                 procedure_name: appointment.procedure || null,
+                clinic_id: clinicId,
             });
 
             console.log('=== AGENDAMENTO CRIADO COM SUCESSO ===');

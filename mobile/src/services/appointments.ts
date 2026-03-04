@@ -70,43 +70,15 @@ export const appointmentsService = {
   },
 
   async create(appointment: AppointmentInsert): Promise<Appointment> {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('Error getting user:', userError);
-      throw new Error(`Erro de autenticação: ${userError.message}`);
-    }
-    if (!userData.user) throw new Error('Usuário não autenticado');
-
-    // Get user's clinic
-    const { data: clinicUser, error: clinicError } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', userData.user.id)
-      .single() as { data: { clinic_id: string } | null, error: any };
-
-    if (clinicError) {
-      console.error('Error fetching clinic_user:', clinicError);
-      throw new Error(`Erro ao buscar clínica: ${clinicError.message}`);
-    }
-    if (!clinicUser) throw new Error('Usuário não está associado a uma clínica');
-
-    const appointmentWithContext = {
-      ...appointment,
-      clinic_id: clinicUser.clinic_id,
-      user_id: userData.user.id
-    };
-
     const { data, error } = await supabase
       .from('appointments')
-      .insert(appointmentWithContext as any)
+      .insert(appointment as any)
       .select()
       .single();
 
     if (error) {
       console.error('Error creating appointment:', error);
-      const errorMsg = error.message || error.details || JSON.stringify(error);
-      const errorCode = error.code || error.hint || 'unknown';
-      throw new Error(`Erro ao criar agendamento: ${errorMsg} (Código: ${errorCode})`);
+      throw error;
     }
     return data as Appointment;
   },

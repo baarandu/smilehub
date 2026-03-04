@@ -209,9 +209,12 @@ export function NewAppointmentModal({
           <View className="mb-4">
             <Text className="text-sm font-medium text-gray-700 mb-2">Paciente *</Text>
             {newAppointment.patientId ? (
-              <View className="bg-[#fef2f2] border border-[#fca5a5] rounded-xl p-4">
+              <View className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-[#6b2a28] font-medium">{newAppointment.patientName}</Text>
+                  <View className="flex-row items-center gap-2">
+                    <User size={16} color="#374151" />
+                    <Text className="text-gray-900 font-medium">{newAppointment.patientName}</Text>
+                  </View>
                   <View className="flex-row items-center gap-2">
                     {appointmentToEdit && (
                       <TouchableOpacity
@@ -219,16 +222,16 @@ export function NewAppointmentModal({
                           onClose();
                           router.push(`/patient/${appointmentToEdit.patient_id}`);
                         }}
-                        className="bg-white p-2 rounded-full border border-[#fecaca]"
+                        className="bg-white p-2 rounded-full border border-gray-200"
                       >
-                        <ExternalLink size={16} color="#b94a48" />
+                        <ExternalLink size={16} color="#6B7280" />
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity onPress={() => {
                       setNewAppointment({ ...newAppointment, patientId: '', patientName: '' });
                       setPatientSearch('');
                     }}>
-                      <X size={20} color="#b94a48" />
+                      <X size={20} color="#6B7280" />
                     </TouchableOpacity>
                   </View>
                 </View>
