@@ -58,8 +58,9 @@ export function useCreatePatient() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
-    onError: (error) => {
-      toast.error('Erro ao salvar. Tente novamente.');
+    onError: (error: any) => {
+      const message = error?.message || 'Erro ao salvar. Tente novamente.';
+      toast.error(message);
       console.error(error);
     },
   });

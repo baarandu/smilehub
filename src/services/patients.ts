@@ -49,6 +49,34 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
 
   if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
 
+  // Check for duplicate: same name + phone in the same clinic
+  const normalizedName = patient.name?.trim().toLowerCase();
+  const normalizedPhone = patient.phone?.replace(/\D/g, '');
+
+  if (normalizedName && normalizedPhone) {
+    const { data: existing } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('clinic_id', clinicUser.clinic_id)
+      .ilike('name', normalizedName)
+      .is('deleted_at', null)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      // Verify phone matches too
+      const { data: phoneMatch } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('id', existing[0].id)
+        .ilike('phone', `%${normalizedPhone.slice(-8)}%`)
+        .limit(1);
+
+      if (phoneMatch && phoneMatch.length > 0) {
+        throw new Error('Já existe um paciente com este nome e telefone cadastrado.');
+      }
+    }
+  }
+
   const patientWithClinic = {
     ...patient,
     clinic_id: clinicUser.clinic_id as string,
