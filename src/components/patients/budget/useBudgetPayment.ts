@@ -271,6 +271,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 status: newBudgetStatus
             });
 
+            // Invalidate budgets cache so paid items appear in procedures
+            queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+
             // Auto-create prosthesis order if item is prosthetic with lab
             const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
 
@@ -410,6 +413,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 notes: updatedNotes,
                 status: newBudgetStatus
             });
+
+            // Invalidate budgets cache so paid items appear in procedures
+            queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
 
             // Auto-create prosthesis orders for prosthetic items with lab
             let prosthesisCount = 0;
