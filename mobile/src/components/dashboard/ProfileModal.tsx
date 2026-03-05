@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert, ScrollView } from 'react-native';
-import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers, Activity, BarChart3 } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers, Activity, BarChart3, Kanban } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface ProfileModalProps {
@@ -181,6 +181,17 @@ export function ProfileModal({
                             )}
 
                             <Text className="text-gray-400 text-xs font-bold uppercase ml-2 mt-4 mb-2">Gerenciamento</Text>
+
+                            <TouchableOpacity
+                                className="flex-row items-center gap-4 p-4 bg-white rounded-xl mb-1"
+                                onPress={() => {
+                                    onClose();
+                                    router.push('/crm');
+                                }}
+                            >
+                                <Kanban size={20} color="#6366F1" />
+                                <Text className="text-gray-700 font-medium">CRM</Text>
+                            </TouchableOpacity>
 
                             {isAdmin && canAccessFinancials && (
                                 <TouchableOpacity

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse, Heart } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse, Heart, Kanban } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -258,6 +258,7 @@ export default function Dashboard() {
                         {clinicIsDentist && (
                             <StatsCard title="Próteses Ativas" value={prosthesisCount.toString()} icon={<Layers size={24} color="#7C3AED" />} onPress={() => router.push('/prosthesis-center')} />
                         )}
+                        <StatsCard title="CRM" value="" icon={<Kanban size={24} color="#6366F1" />} onPress={() => router.push('/crm')} />
                         <StatsCard title="Retornos Importantes" value={importantReturnsCount.toString()} icon={<HeartPulse size={24} color="#EA580C" />} onPress={async () => {
                             setShowImportantReturnsModal(true);
                             setLoadingImportantReturns(true);
