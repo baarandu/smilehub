@@ -20,6 +20,15 @@ export function useProcedureReminders() {
     });
 }
 
+export function useFollowUpAlerts() {
+    const { clinicId } = useClinic();
+    return useQuery({
+        queryKey: ['alerts', 'follow-ups', clinicId],
+        queryFn: () => alertsService.getFollowUpAlerts(clinicId || undefined),
+        enabled: !!clinicId,
+    });
+}
+
 export function useProsthesisSchedulingAlerts() {
     const { clinicId } = useClinic();
     return useQuery({
@@ -65,7 +74,7 @@ export function useDismissAlert() {
             alertDate,
             action
         }: {
-            alertType: 'birthday' | 'procedure_return';
+            alertType: 'birthday' | 'procedure_return' | 'important_return' | 'follow_up';
             patientId: string;
             alertDate: string;
             action: AlertActionType;

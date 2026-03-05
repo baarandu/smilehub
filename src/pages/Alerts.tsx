@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock, PenLine } from 'lucide-react';
+import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, MessageSquare, CalendarClock, PenLine, Heart } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMe
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
-import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts, useFollowUpAlerts } from '@/hooks/useAlerts';
 import { useUnsignedRecords } from '@/hooks/useClinicalSignatures';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ export default function Alerts() {
   const { data: birthdayAlerts, isLoading: loadingBirthdays } = useBirthdayAlerts();
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const { data: prosthesisAlerts, isLoading: loadingProsthesis } = useProsthesisSchedulingAlerts();
+  const { data: followUpAlerts, isLoading: loadingFollowUps } = useFollowUpAlerts();
   const { data: unsignedRecords, isLoading: loadingUnsigned } = useUnsignedRecords();
   const dismissAlert = useDismissAlert();
 
@@ -64,10 +65,10 @@ export default function Alerts() {
       try {
         return JSON.parse(saved);
       } catch {
-        return { birthdays: true, procedures: true, confirmations: true };
+        return { birthdays: true, procedures: true, confirmations: true, followups: true };
       }
     }
-    return { birthdays: true, procedures: true, confirmations: true };
+    return { birthdays: true, procedures: true, confirmations: true, followups: true };
   });
 
   // AI Secretary Access Control
@@ -108,7 +109,7 @@ export default function Alerts() {
   };
 
   const handleDismissAlert = (
-    type: 'birthday' | 'procedure_return',
+    type: 'birthday' | 'procedure_return' | 'follow_up',
     patientId: string,
     alertDate: string
   ) => {
@@ -126,8 +127,9 @@ export default function Alerts() {
     const birthdayCount = birthdayAlerts?.length || 0;
     const procedureCount = procedureAlerts?.length || 0;
     const tomorrowCount = tomorrowAppointments?.filter(a => a.status !== 'confirmed').length || 0;
-    return birthdayCount + procedureCount + tomorrowCount;
-  }, [birthdayAlerts, procedureAlerts, tomorrowAppointments]);
+    const followUpCount = (followUpAlerts?.attended?.length || 0) + (followUpAlerts?.noShow?.length || 0);
+    return birthdayCount + procedureCount + tomorrowCount + followUpCount;
+  }, [birthdayAlerts, procedureAlerts, tomorrowAppointments, followUpAlerts]);
 
   const completedTodayCount = useMemo(() => {
     return tomorrowAppointments?.filter(a => a.status === 'confirmed').length || 0;
@@ -267,6 +269,36 @@ export default function Alerts() {
                       placeholder="Use {name} para o nome do paciente"
                     />
                     <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>Mensagem de Follow-up (Compareceu)</Label>
+                      <Button size="sm" variant="ghost" className="h-6 text-[#a03f3d]" onClick={() => whatsapp.initiateSendMessage(templates.followUpTemplate, () => templates.setShowSettings(false))}>
+                        <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={templates.followUpTemplate}
+                      onChange={(e) => templates.setFollowUpTemplate(e.target.value)}
+                      rows={3}
+                      placeholder="Use {name} para o nome do paciente"
+                    />
+                    <p className="text-xs text-muted-foreground">Enviada ao paciente que compareceu à consulta de ontem. Use {'{name}'} para o nome.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>Mensagem de Falta (Não Compareceu)</Label>
+                      <Button size="sm" variant="ghost" className="h-6 text-[#a03f3d]" onClick={() => whatsapp.initiateSendMessage(templates.noShowTemplate, () => templates.setShowSettings(false))}>
+                        <MessageCircle className="w-4 h-4 mr-1" /> Enviar
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={templates.noShowTemplate}
+                      onChange={(e) => templates.setNoShowTemplate(e.target.value)}
+                      rows={3}
+                      placeholder="Use {name} para o nome do paciente"
+                    />
+                    <p className="text-xs text-muted-foreground">Enviada ao paciente que faltou à consulta de ontem. Use {'{name}'} para o nome.</p>
                   </div>
                 </div>
               </div>
@@ -706,6 +738,103 @@ export default function Alerts() {
               </div>
             ))}
           </AlertAccordion>
+
+          {/* Follow-up Pós-Consulta */}
+          {((followUpAlerts?.attended?.length || 0) + (followUpAlerts?.noShow?.length || 0)) > 0 && (
+            <AlertAccordion
+              open={openAccordions.followups}
+              onToggle={() => toggleAccordion('followups')}
+              icon={<Heart className="w-5 h-5 text-green-600" />}
+              title="Follow-up pós-consulta"
+              description="Pacientes atendidos ou que faltaram ontem"
+              count={(followUpAlerts?.attended?.length || 0) + (followUpAlerts?.noShow?.length || 0)}
+              loading={loadingFollowUps}
+              colorScheme="green"
+            >
+              {followUpAlerts?.attended?.map((alert) => (
+                <div key={alert.id} className="p-4 hover:bg-green-50/30 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold text-sm">
+                        {alert.time.slice(0, 5)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{alert.patient.name}</p>
+                        <div className="flex items-center gap-2">
+                          {alert.procedure && <p className="text-sm text-muted-foreground">{alert.procedure}</p>}
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">Compareceu</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700 gap-2 text-white"
+                        onClick={() => whatsapp.handleWhatsApp(
+                          alert.patient.phone,
+                          alert.patient.name.split(' ')[0],
+                          'follow_up',
+                          { patientId: alert.patient.id, alertDate: alert.date }
+                        )}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Mensagem
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDismissAlert('follow_up', alert.patient.id, alert.date)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {followUpAlerts?.noShow?.map((alert) => (
+                <div key={alert.id} className="p-4 hover:bg-red-50/30 transition-colors">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-red-500 text-white px-3 py-1.5 rounded-lg font-bold text-sm">
+                        {alert.time.slice(0, 5)}
+                      </div>
+                      <div>
+                        <p className="font-medium">{alert.patient.name}</p>
+                        <div className="flex items-center gap-2">
+                          {alert.procedure && <p className="text-sm text-muted-foreground">{alert.procedure}</p>}
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">Não compareceu</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-red-500 hover:bg-red-600 gap-2 text-white"
+                        onClick={() => whatsapp.handleWhatsApp(
+                          alert.patient.phone,
+                          alert.patient.name.split(' ')[0],
+                          'no_show',
+                          { patientId: alert.patient.id, alertDate: alert.date }
+                        )}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Reagendar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDismissAlert('follow_up', alert.patient.id, alert.date)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </AlertAccordion>
+          )}
 
           {/* Scheduled Returns */}
           {returnAlerts && returnAlerts.length > 0 && (

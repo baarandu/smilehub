@@ -13,6 +13,15 @@ export interface Alert {
     dueDate?: string; // For important return alerts
 }
 
+export interface FollowUpAlert {
+    id: string;
+    patient: { id: string; name: string; phone: string };
+    procedure: string | null;
+    time: string;
+    date: string;
+    status: string;
+}
+
 export type AlertActionType = 'messaged' | 'scheduled' | 'dismissed';
 
 export const alertsService = {
@@ -186,8 +195,52 @@ export const alertsService = {
         return alerts;
     },
 
+    async getFollowUpAlerts(clinicId?: string): Promise<{
+        attended: FollowUpAlert[];
+        noShow: FollowUpAlert[];
+    }> {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        let query = supabase
+            .from('appointments')
+            .select('*, patients (name, phone)')
+            .eq('date', yesterdayStr)
+            .not('status', 'in', '("cancelled","rescheduled")')
+            .order('time');
+
+        if (clinicId) query = query.eq('clinic_id', clinicId);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const dismissed = await this.getDismissedAlerts();
+        const attended: FollowUpAlert[] = [];
+        const noShow: FollowUpAlert[] = [];
+
+        for (const apt of (data || []) as any[]) {
+            const key = `follow_up:${apt.patient_id}:${yesterdayStr}`;
+            if (dismissed.has(key)) continue;
+
+            const alert: FollowUpAlert = {
+                id: apt.id,
+                patient: { id: apt.patient_id, name: apt.patients?.name || '', phone: apt.patients?.phone || '' },
+                procedure: apt.procedure_name || null,
+                time: apt.time,
+                date: yesterdayStr,
+                status: apt.status,
+            };
+
+            if (apt.status === 'no_show') noShow.push(alert);
+            else attended.push(alert);
+        }
+
+        return { attended, noShow };
+    },
+
     async dismissAlert(
-        alertType: 'birthday' | 'procedure_return' | 'important_return',
+        alertType: 'birthday' | 'procedure_return' | 'important_return' | 'follow_up',
         patientId: string,
         alertDate: string,
         action: AlertActionType

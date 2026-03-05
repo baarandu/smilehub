@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse, Heart } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -120,7 +120,7 @@ export default function Dashboard() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, importantReturns, budgetsCount, remindersCount, activeRemindersList] = await Promise.all([
+            const [patients, today, returnsCount, appointments, scheduled, birthdays, procedures, importantReturns, budgetsCount, remindersCount, activeRemindersList, followUps] = await Promise.all([
                 patientsService.count(clinicId),
                 appointmentsService.countToday(clinicId),
                 consultationsService.countPendingReturns(clinicId),
@@ -131,7 +131,8 @@ export default function Dashboard() {
                 alertsService.getImportantReturnAlerts(clinicId).catch(() => [] as PatientAlert[]),
                 budgetsService.getPendingCount(clinicId),
                 remindersService.getActiveCount(),
-                remindersService.getActive()
+                remindersService.getActive(),
+                alertsService.getFollowUpAlerts(clinicId).catch(() => ({ attended: [] as any[], noShow: [] as any[] }))
             ]);
             setPatientsCount(patients);
             setActiveReminders(remindersCount);
@@ -159,7 +160,9 @@ export default function Dashboard() {
                 ...birthdays,
                 ...procedures,
                 ...scheduled.map(s => ({ ...s, type: 'scheduled' })),
-                ...((activeRemindersList || []) as Reminder[]).map(r => ({ ...r, type: 'reminder' }))
+                ...((activeRemindersList || []) as Reminder[]).map(r => ({ ...r, type: 'reminder' })),
+                ...(followUps.attended || []).map((a: any) => ({ ...a, type: 'follow_up' })),
+                ...(followUps.noShow || []).map((a: any) => ({ ...a, type: 'no_show_follow_up' }))
             ];
             setRecentAlerts(combined.slice(0, 6));
         } catch (error: any) {
@@ -333,6 +336,8 @@ export default function Dashboard() {
                                     else if (alert.type === 'procedure_return') { icon = <Clock size={20} color="#F59E0B" />; color = "bg-amber-50"; title = `Retorno: ${alert.patient.name}`; subtitle = `${alert.daysSince} dias sem vir`; }
                                     else if (alert.type === 'scheduled') { icon = <AlertTriangle size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = `Retorno Agendado: ${alert.patient_name}`; subtitle = `Sugerido: ${new Date(alert.suggested_return_date).toLocaleDateString()}`; }
                                     else if (alert.type === 'reminder') { icon = <Bell size={20} color="#b94a48" />; color = "bg-[#fef2f2]"; title = alert.title; subtitle = alert.description || 'Lembrete'; }
+                                    else if (alert.type === 'follow_up') { icon = <Heart size={20} color="#16A34A" />; color = "bg-green-50"; title = alert.patient.name; subtitle = `Follow-up pós-consulta${alert.procedure ? ` — ${alert.procedure}` : ''}`; }
+                                    else if (alert.type === 'no_show_follow_up') { icon = <Heart size={20} color="#DC2626" />; color = "bg-red-50"; title = alert.patient.name; subtitle = 'Não compareceu ontem'; }
 
                                     return (
                                         <TouchableOpacity key={index} className="flex-row items-center p-3 rounded-xl border border-gray-100 bg-white" onPress={() => router.push('/alerts')}>

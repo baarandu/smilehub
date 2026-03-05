@@ -5,7 +5,7 @@ import { Patient } from '@/types/database';
 import { toast } from 'sonner';
 
 interface UseWhatsAppMessagingProps {
-    getTemplateByType: (type: 'birthday' | 'return' | 'reminder') => string;
+    getTemplateByType: (type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show') => string;
     dismissAlert: any;
 }
 
@@ -44,13 +44,19 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
     const handleWhatsApp = async (
         phone: string,
         name: string,
-        type: 'birthday' | 'return' | 'reminder',
+        type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show',
         alertInfo?: { patientId: string; alertDate: string }
     ) => {
         const cleanPhone = phone.replace(/\D/g, '');
         const firstName = name.split(' ')[0];
         const template = getTemplateByType(type);
         const message = template.replace('{name}', firstName);
+
+        const getAlertType = () => {
+            if (type === 'birthday') return 'birthday';
+            if (type === 'follow_up' || type === 'no_show') return 'follow_up';
+            return 'procedure_return';
+        };
 
         if (whatsappConnected) {
             const messageId = `${cleanPhone}-${Date.now()}`;
@@ -60,9 +66,8 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
                 toast.success('Mensagem enviada via WhatsApp!');
 
                 if (alertInfo) {
-                    const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
                     dismissAlert.mutate({
-                        alertType: alertType as 'birthday' | 'procedure_return',
+                        alertType: getAlertType(),
                         patientId: alertInfo.patientId,
                         alertDate: alertInfo.alertDate,
                         action: 'messaged'
@@ -81,9 +86,8 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
             window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
 
             if (alertInfo) {
-                const alertType = type === 'birthday' ? 'birthday' : 'procedure_return';
                 dismissAlert.mutate({
-                    alertType: alertType as 'birthday' | 'procedure_return',
+                    alertType: getAlertType(),
                     patientId: alertInfo.patientId,
                     alertDate: alertInfo.alertDate,
                     action: 'messaged'

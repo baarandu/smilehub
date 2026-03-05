@@ -1,4 +1,4 @@
-import { MessageCircle, Clock, Gift, Bell, CalendarClock, Calendar, HeartPulse } from 'lucide-react';
+import { MessageCircle, Clock, Gift, Bell, CalendarClock, Calendar, HeartPulse, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export interface RecentAlert {
   id: string;
-  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder' | 'prosthesis_scheduling' | 'confirmation' | 'important_return';
+  type: 'birthday' | 'procedure_return' | 'scheduled' | 'reminder' | 'prosthesis_scheduling' | 'confirmation' | 'important_return' | 'follow_up' | 'no_show_follow_up';
   patientName: string;
   patientPhone: string;
   date: string;
@@ -35,6 +35,10 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
       message = `Olá ${name}! Passando para confirmar sua consulta de amanhã. Podemos contar com a sua presença?`;
     } else if (type === 'important_return') {
       message = `Olá ${name}, tudo bem? Estamos entrando em contato sobre seu retorno importante. Podemos agendar um horário?`;
+    } else if (type === 'follow_up') {
+      message = `Olá ${name}! 😊\n\nPassando para saber como você está se sentindo após o atendimento de ontem.\n\nEstá tudo bem? Caso tenha algum desconforto ou dúvida, estamos à disposição!`;
+    } else if (type === 'no_show_follow_up') {
+      message = `Olá ${name}! 👋\n\nSentimos sua falta na consulta de ontem. Esperamos que esteja tudo bem!\n\nGostaríamos de reagendar seu atendimento. Quando seria um bom horário para você?`;
     } else if (type === 'reminder') {
       message = `Olá ${name}!`;
     } else {
@@ -57,6 +61,10 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
         return { icon: Calendar, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
       case 'important_return':
         return { icon: HeartPulse, color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100' };
+      case 'follow_up':
+        return { icon: Heart, color: 'text-green-600', bg: 'bg-green-50 border-green-100' };
+      case 'no_show_follow_up':
+        return { icon: Heart, color: 'text-red-600', bg: 'bg-red-50 border-red-100' };
       case 'reminder':
         return { icon: Bell, color: 'text-[#a03f3d]', bg: 'bg-red-50 border-red-100' };
       default:

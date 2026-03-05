@@ -7,7 +7,7 @@ import { TodayAppointments } from '@/components/dashboard/TodayAppointments';
 import { ProfileMenu } from '@/components/profile';
 import { useTodayAppointments, useTodayAppointmentsCount, useAppointmentsByDate } from '@/hooks/useAppointments';
 import { useReturnAlerts, usePendingReturnsCount } from '@/hooks/useConsultations';
-import { useBirthdayAlerts, useProcedureReminders, useProsthesisSchedulingAlerts, useImportantReturnAlerts } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useProsthesisSchedulingAlerts, useImportantReturnAlerts, useFollowUpAlerts } from '@/hooks/useAlerts';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePendingReturns';
 import { useRemindersCount, useActiveReminders } from '@/hooks/useReminders';
@@ -40,6 +40,7 @@ export default function Dashboard() {
   const { data: prosthesisAlerts } = useProsthesisSchedulingAlerts();
   const { data: pendingReturns, isLoading: loadingPending } = usePendingReturnsCount();
   const { data: importantReturns, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
+  const { data: followUpAlerts } = useFollowUpAlerts();
 
   // Tomorrow's appointments for confirmation alerts
   const tomorrowStr = useMemo(() => {
@@ -143,8 +144,26 @@ export default function Dashboard() {
             : `Retorno importante — em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`,
         urgency: (isOverdue || diffDays <= 7 ? 'urgent' : 'normal') as 'urgent' | 'normal'
       };
-    })
-  ], [birthdayAlerts, procedureAlerts, returnAlerts, activeRemindersList, prosthesisAlerts, tomorrowAppointments, tomorrowStr, importantReturns]);
+    }),
+    ...(followUpAlerts?.attended || []).map(a => ({
+      id: `fu-${a.id}`,
+      type: 'follow_up' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: `Follow-up pós-consulta${a.procedure ? ` — ${a.procedure}` : ''}`,
+      urgency: 'normal' as const
+    })),
+    ...(followUpAlerts?.noShow || []).map(a => ({
+      id: `funs-${a.id}`,
+      type: 'no_show_follow_up' as const,
+      patientName: a.patient.name,
+      patientPhone: a.patient.phone,
+      date: a.date,
+      subtitle: 'Não compareceu ontem',
+      urgency: 'urgent' as const
+    }))
+  ], [birthdayAlerts, procedureAlerts, returnAlerts, activeRemindersList, prosthesisAlerts, tomorrowAppointments, tomorrowStr, importantReturns, followUpAlerts]);
 
   return (
     <div className="space-y-6">
