@@ -8,6 +8,7 @@ import { Search, Phone, MessageCircle, Calendar, X } from 'lucide-react';
 import { useCrmLeads, useCrmStages, useCrmSources } from '@/hooks/useCRM';
 import { LeadDetailSheet } from './components/LeadDetailSheet';
 import type { CrmLead, CrmLeadFilters } from '@/types/crm';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -137,7 +138,7 @@ export function LeadsListTab() {
                     <TableCell>
                       {lead.phone && (
                         <a
-                          href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
+                          href={`https://wa.me/${getWhatsAppNumber(lead.phone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}

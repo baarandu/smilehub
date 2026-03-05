@@ -5,6 +5,7 @@ import { X, Calendar, HeartPulse } from 'lucide-react-native';
 import Svg, { Path } from 'react-native-svg';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
+import { getWhatsAppNumber } from '../../utils/formatters';
 
 interface ImportantReturn {
     id: string;
@@ -117,9 +118,8 @@ export function ImportantReturnsModal({
                                                     <TouchableOpacity
                                                         onPress={(e) => {
                                                             e.stopPropagation?.();
-                                                            const phone = patient.phone.replace(/\D/g, '');
                                                             const message = encodeURIComponent(`Olá ${patient.name}, tudo bem? Estamos entrando em contato sobre seu retorno.`);
-                                                            Linking.openURL(`https://wa.me/55${phone}?text=${message}`);
+                                                            Linking.openURL(`https://wa.me/${getWhatsAppNumber(patient.phone)}?text=${message}`);
                                                         }}
                                                         className="bg-green-50 px-3 py-2 rounded-lg flex-row items-center gap-1"
                                                     >

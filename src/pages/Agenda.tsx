@@ -289,6 +289,10 @@ export default function Agenda() {
   };
 
   const formatPhone = (value: string) => {
+    // International format: starts with +
+    if (value.startsWith('+')) {
+      return '+' + value.slice(1).replace(/[^\d]/g, '').slice(0, 15);
+    }
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 11) {
       return numbers
@@ -736,7 +740,7 @@ export default function Agenda() {
             <div className="space-y-2">
               <Label>Telefone *</Label>
               <Input
-                placeholder="(11) 99999-9999"
+                placeholder="(11) 99999-9999 ou +1 555..."
                 value={patientForm.phone}
                 onChange={(e) => setPatientForm({ ...patientForm, phone: formatPhone(e.target.value) })}
               />

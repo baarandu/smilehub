@@ -8,6 +8,7 @@ import { alertsService, Alert } from '../../src/services/alerts';
 import { appointmentsService } from '../../src/services/appointments';
 import { remindersService, Reminder } from '../../src/services/reminders';
 import { patientsService } from '../../src/services/patients';
+import { getWhatsAppNumber } from '../../src/utils/formatters';
 import type { ReturnAlert, AppointmentWithPatient, Patient } from '../../src/types/database';
 import { PROSTHESIS_TYPE_LABELS } from '../../src/types/prosthesis';
 import { ReminderModal, TemplatesModal, PatientSelectModal } from '../../src/components/alerts';
@@ -146,11 +147,10 @@ export default function Alerts() {
 
     const handlePatientSelect = (patient: Patient) => {
         if (!sendingTemplate) return;
-        const cleanPhone = patient.phone.replace(/\D/g, '');
         const firstName = patient.name.split(' ')[0];
         let message = sendingTemplate.split('{name}').join(firstName);
         const encoded = encodeURIComponent(message);
-        Linking.openURL(`https://wa.me/55${cleanPhone}?text=${encoded}`);
+        Linking.openURL(`https://wa.me/${getWhatsAppNumber(patient.phone)}?text=${encoded}`);
         setShowPatientSelectModal(false);
         setSendingTemplate(null);
         setSearchQuery('');
@@ -233,7 +233,7 @@ export default function Alerts() {
         else if (type === 'reminder') message = confirmationTemplate.replace('{name}', name);
         else message = `Olá ${name}! Estamos entrando em contato para lembrar sobre sua consulta de retorno.`;
 
-        Linking.openURL(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`);
+        Linking.openURL(`https://wa.me/${getWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`);
 
         if (alertInfo) {
             try {

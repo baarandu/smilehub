@@ -13,6 +13,7 @@ import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePen
 import { useRemindersCount, useActiveReminders } from '@/hooks/useReminders';
 import { usePendingBudgetsCount } from '@/hooks/useBudgets';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
@@ -337,9 +338,8 @@ export default function Dashboard() {
                           variant="outline"
                           className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                           onClick={() => {
-                            const phone = item.patient.phone.replace(/\D/g, '');
                             const message = encodeURIComponent(`Olá ${item.patient.name}, tudo bem? Estamos entrando em contato sobre seu tratamento.`);
-                            window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                            window.open(`https://wa.me/${getWhatsAppNumber(item.patient.phone)}?text=${message}`, '_blank');
                           }}
                         >
                           <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
@@ -447,9 +447,8 @@ export default function Dashboard() {
                           className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const phone = patient.phone.replace(/\D/g, '');
                             const message = encodeURIComponent(`Olá ${patient.name}, tudo bem? Estamos entrando em contato sobre seu retorno.`);
-                            window.open(`https://wa.me/55${phone}?text=${message}`, '_blank');
+                            window.open(`https://wa.me/${getWhatsAppNumber(patient.phone)}?text=${message}`, '_blank');
                           }}
                         >
                           <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">

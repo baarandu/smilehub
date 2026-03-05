@@ -35,6 +35,7 @@ import { OrderFormSheet } from './OrderFormSheet';
 import { OrderDetailDialog } from './OrderDetailDialog';
 import { LabManagementSheet } from './LabManagementSheet';
 import { CompletionDialog } from './CompletionDialog';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -381,7 +382,7 @@ export function KanbanBoard() {
                                 )}
                                 {order.patient_phone && (
                                   <a
-                                    href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}
+                                    href={`https://wa.me/${getWhatsAppNumber(order.patient_phone)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"

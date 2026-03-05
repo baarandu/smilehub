@@ -13,6 +13,7 @@ import { ReportGenerationModal } from './ReportGenerationModal';
 import { PatientAiConsent } from './PatientAiConsent';
 import { MinorConsentBadge } from './MinorConsentBadge';
 import { useClinic } from '@/contexts/ClinicContext';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,8 +129,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
 
   const badges = getBadges();
 
-  const sanitizedPhone = patient.phone?.replace(/\D/g, '');
-  const whatsappUrl = sanitizedPhone ? `https://wa.me/55${sanitizedPhone}` : '#';
+  const whatsappUrl = patient.phone ? `https://wa.me/${getWhatsAppNumber(patient.phone)}` : '#';
 
   const handleDelete = () => {
     if (onDelete) {

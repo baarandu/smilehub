@@ -24,6 +24,7 @@ import { OrthoKanbanColumn } from './OrthoKanbanColumn';
 import { OrthoKanbanCardOverlay } from './OrthoKanbanCard';
 import { MaintenanceScheduleDialog } from './MaintenanceScheduleDialog';
 import { SessionFormDialog } from './SessionFormDialog';
+import { getWhatsAppNumber } from '@/utils/formatters';
 
 interface OrthoKanbanBoardProps {
   cases: OrthodonticCase[];
@@ -251,7 +252,7 @@ export function OrthoKanbanBoard({ cases, isLoading, onCardClick }: OrthoKanbanB
                             )}
                             {orthoCase.patient_phone && (
                               <a
-                                href={`https://wa.me/55${orthoCase.patient_phone.replace(/\D/g, '')}`}
+                                href={`https://wa.me/${getWhatsAppNumber(orthoCase.patient_phone)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"

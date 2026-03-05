@@ -3,6 +3,7 @@ import { evolutionApi } from '@/services/evolutionApi';
 import { getPatients } from '@/services/patients';
 import { Patient } from '@/types/database';
 import { toast } from 'sonner';
+import { getWhatsAppNumber } from '@/utils/formatters';
 
 interface UseWhatsAppMessagingProps {
     getTemplateByType: (type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show') => string;
@@ -47,7 +48,6 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
         type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show',
         alertInfo?: { patientId: string; alertDate: string }
     ) => {
-        const cleanPhone = phone.replace(/\D/g, '');
         const firstName = name.split(' ')[0];
         const template = getTemplateByType(type);
         const message = template.replace('{name}', firstName);
@@ -59,10 +59,10 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
         };
 
         if (whatsappConnected) {
-            const messageId = `${cleanPhone}-${Date.now()}`;
+            const messageId = `${phone.replace(/\D/g, '')}-${Date.now()}`;
             setIsSendingWhatsapp(messageId);
             try {
-                await evolutionApi.sendTest(cleanPhone, message);
+                await evolutionApi.sendTest(phone, message);
                 toast.success('Mensagem enviada via WhatsApp!');
 
                 if (alertInfo) {
@@ -77,13 +77,13 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
                 console.error('Error sending WhatsApp:', error);
                 toast.error('Falha ao enviar. Abrindo WhatsApp Web...');
                 const encoded = encodeURIComponent(message);
-                window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+                window.open(`https://wa.me/${getWhatsAppNumber(phone)}?text=${encoded}`, '_blank');
             } finally {
                 setIsSendingWhatsapp(null);
             }
         } else {
             const encoded = encodeURIComponent(message);
-            window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+            window.open(`https://wa.me/${getWhatsAppNumber(phone)}?text=${encoded}`, '_blank');
 
             if (alertInfo) {
                 dismissAlert.mutate({
@@ -105,27 +105,26 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
 
     const handleSelectPatient = async (patient: Patient) => {
         if (!sendingTemplate) return;
-        const cleanPhone = patient.phone.replace(/\D/g, '');
         const firstName = patient.name.split(' ')[0];
         const message = sendingTemplate.replace('{name}', firstName);
 
         if (whatsappConnected) {
-            const messageId = `${cleanPhone}-${Date.now()}`;
+            const messageId = `${patient.phone.replace(/\D/g, '')}-${Date.now()}`;
             setIsSendingWhatsapp(messageId);
             try {
-                await evolutionApi.sendTest(cleanPhone, message);
+                await evolutionApi.sendTest(patient.phone, message);
                 toast.success(`Mensagem enviada para ${firstName}!`);
             } catch (error) {
                 console.error('Error sending WhatsApp:', error);
                 toast.error('Falha ao enviar. Abrindo WhatsApp Web...');
                 const encoded = encodeURIComponent(message);
-                window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+                window.open(`https://wa.me/${getWhatsAppNumber(patient.phone)}?text=${encoded}`, '_blank');
             } finally {
                 setIsSendingWhatsapp(null);
             }
         } else {
             const encoded = encodeURIComponent(message);
-            window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+            window.open(`https://wa.me/${getWhatsAppNumber(patient.phone)}?text=${encoded}`, '_blank');
         }
 
         setShowPatientSelect(false);

@@ -317,9 +317,11 @@ async function handleSendTest(
 ): Promise<Record<string, unknown>> {
   const instanceName = await getInstanceName(supabase, clinicId);
 
-  // Format phone number
+  // Format phone number: international numbers (with +) keep their country code,
+  // Brazilian numbers (without +) get 55 prepended
+  const isInternational = phone.trim().startsWith("+");
   let formattedPhone = phone.replace(/\D/g, "");
-  if (!formattedPhone.startsWith("55")) {
+  if (!isInternational && !formattedPhone.startsWith("55")) {
     formattedPhone = "55" + formattedPhone;
   }
 

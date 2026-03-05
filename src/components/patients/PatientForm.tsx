@@ -124,6 +124,10 @@ export function PatientForm({
   };
 
   const formatPhone = (value: string) => {
+    // International format: starts with +
+    if (value.startsWith('+')) {
+      return '+' + value.slice(1).replace(/[^\d]/g, '').slice(0, 15);
+    }
     const numbers = value.replace(/\D/g, '');
     if (numbers.length <= 11) {
       return numbers
@@ -312,7 +316,7 @@ export function PatientForm({
                   id="phone"
                   value={form.phone}
                   onChange={(e) => updateField('phone', formatPhone(e.target.value))}
-                  placeholder="(11) 99999-9999"
+                  placeholder="(11) 99999-9999 ou +1 555..."
                   required
                 />
               </div>
@@ -383,7 +387,7 @@ export function PatientForm({
                     id="emergencyPhone"
                     value={form.emergencyPhone}
                     onChange={(e) => updateField('emergencyPhone', formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999"
+                    placeholder="(11) 99999-9999 ou +1 555..."
                   />
                 </div>
               </div>
@@ -550,7 +554,7 @@ export function PatientForm({
                     id="motherPhone"
                     value={form.motherPhone}
                     onChange={(e) => updateField('motherPhone', formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999"
+                    placeholder="(11) 99999-9999 ou +1 555..."
                   />
                 </div>
               </div>
@@ -584,7 +588,7 @@ export function PatientForm({
                     id="fatherPhone"
                     value={form.fatherPhone}
                     onChange={(e) => updateField('fatherPhone', formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999"
+                    placeholder="(11) 99999-9999 ou +1 555..."
                   />
                 </div>
               </div>

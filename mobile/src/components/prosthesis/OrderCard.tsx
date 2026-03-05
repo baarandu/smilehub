@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import type { ProsthesisOrder } from '../../types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS, STATUS_COLORS } from '../../types/prosthesis';
 import { getUrgencyInfo } from '../../utils/prosthesis';
+import { getWhatsAppNumber } from '../../utils/formatters';
 
 interface OrderCardProps {
   order: ProsthesisOrder;
@@ -21,12 +22,11 @@ export function OrderCard({ order, onPress, onMoveLeft, onMoveRight, isFirst, is
   const statusColor = STATUS_COLORS[order.status];
 
   const handleWhatsApp = () => {
-    const phone = order.patient_phone?.replace(/\D/g, '');
-    if (!phone) return;
+    if (!order.patient_phone) return;
     const type = PROSTHESIS_TYPE_LABELS[order.type] || order.type;
     const teeth = order.tooth_numbers?.join(', ') || '';
     const msg = `Olá ${order.patient_name}, sua prótese (${type}${teeth ? ` - ${teeth}` : ''}) chegou na clínica! Gostaria de agendar a instalação?`;
-    Linking.openURL(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`);
+    Linking.openURL(`https://wa.me/${getWhatsAppNumber(order.patient_phone)}?text=${encodeURIComponent(msg)}`);
   };
 
   const handleSchedule = () => {

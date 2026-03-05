@@ -6,6 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import type { PendingReturn } from '../../services/pendingReturns';
+import { getWhatsAppNumber } from '../../utils/formatters';
 
 interface PendingReturnsModalProps {
     visible: boolean;
@@ -86,9 +87,8 @@ export function PendingReturnsModal({
                                                 {item.patient?.phone && (
                                                     <TouchableOpacity
                                                         onPress={() => {
-                                                            const phone = item.patient.phone.replace(/\D/g, '');
                                                             const message = encodeURIComponent(`Olá ${item.patient.name}, tudo bem? Estamos entrando em contato sobre seu tratamento.`);
-                                                            Linking.openURL(`https://wa.me/55${phone}?text=${message}`);
+                                                            Linking.openURL(`https://wa.me/${getWhatsAppNumber(item.patient.phone)}?text=${message}`);
                                                         }}
                                                         className="bg-green-50 px-3 py-2 rounded-lg flex-row items-center gap-1"
                                                     >

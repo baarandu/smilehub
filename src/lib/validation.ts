@@ -51,13 +51,14 @@ export const cpfSchema = z.string()
     .nullable();
 
 // =====================================================
-// Phone Validation (Brazilian format)
+// Phone Validation (Brazilian + International)
 // =====================================================
 const phoneRegex = /^\(\d{2}\)\s?\d{4,5}-?\d{4}$|^\d{10,11}$/;
+const internationalPhoneRegex = /^\+\d{7,15}$/;
 
 export const phoneSchema = z.string()
-    .refine(val => !val || phoneRegex.test(val.replace(/\s/g, '')), {
-        message: 'Telefone deve ter formato (11) 99999-9999'
+    .refine(val => !val || phoneRegex.test(val.replace(/\s/g, '')) || internationalPhoneRegex.test(val.replace(/\s/g, '')), {
+        message: 'Telefone deve ter formato (11) 99999-9999 ou +XX XXXXXXXXX'
     });
 
 // =====================================================

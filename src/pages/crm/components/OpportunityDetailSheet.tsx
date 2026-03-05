@@ -5,8 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Phone, MessageCircle, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useClinic } from '@/contexts/ClinicContext';
-import { crmMetricsService, type OpportunityCard, type OpportunityDetailRow } from '@/services/crmMetrics';
-import { formatCurrency } from '@/utils/formatters';
+import { crmMetricsService, type OpportunityCard, type OpportunityDetailRow, type CrmMetricsPeriod } from '@/services/crmMetrics';
+import { formatCurrency, getWhatsAppNumber } from '@/utils/formatters';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -14,15 +14,16 @@ interface OpportunityDetailSheetProps {
   card: OpportunityCard | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  period?: CrmMetricsPeriod;
 }
 
-export function OpportunityDetailSheet({ card, open, onOpenChange }: OpportunityDetailSheetProps) {
+export function OpportunityDetailSheet({ card, open, onOpenChange, period }: OpportunityDetailSheetProps) {
   const { clinicId } = useClinic();
   const navigate = useNavigate();
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['crm-opportunity-detail', clinicId, card?.key],
-    queryFn: () => crmMetricsService.getCardDetail(clinicId!, card!.key),
+    queryKey: ['crm-opportunity-detail', clinicId, card?.key, period?.start, period?.end],
+    queryFn: () => crmMetricsService.getCardDetail(clinicId!, card!.key, period),
     enabled: !!clinicId && !!card && open,
   });
 
@@ -98,7 +99,7 @@ export function OpportunityDetailSheet({ card, open, onOpenChange }: Opportunity
                     {row.phone && (
                       <>
                         <a
-                          href={`https://wa.me/55${row.phone.replace(/\D/g, '')}`}
+                          href={`https://wa.me/${getWhatsAppNumber(row.phone)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

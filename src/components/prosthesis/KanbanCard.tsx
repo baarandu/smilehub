@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ProsthesisOrder } from '@/types/prosthesis';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { getUrgencyColor } from '@/utils/prosthesis';
+import { getWhatsAppNumber } from '@/utils/formatters';
 
 interface KanbanCardProps {
   order: ProsthesisOrder;
@@ -113,7 +114,7 @@ export function KanbanCard({ order, onClick, isDragging, scheduledDate, onMoveLe
           )}
           {order.patient_phone && (
             <a
-              href={`https://wa.me/55${order.patient_phone.replace(/\D/g, '')}`}
+              href={`https://wa.me/${getWhatsAppNumber(order.patient_phone)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"

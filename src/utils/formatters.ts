@@ -15,12 +15,24 @@ export function formatDecimal(value: number | null | undefined): string {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-/** Format a phone string as (XX) XXXXX-XXXX */
+/** Format a phone string as (XX) XXXXX-XXXX or international +XX XXXXXXXXX */
 export function formatPhone(value: string): string {
+  // International format: starts with +
+  if (value.startsWith('+')) {
+    const cleaned = '+' + value.slice(1).replace(/[^\d]/g, '').slice(0, 15);
+    return cleaned;
+  }
   const digits = value.replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 2) return digits;
   if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+/** Get WhatsApp-ready phone number: international numbers keep their code, Brazilian numbers get +55 */
+export function getWhatsAppNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (phone.startsWith('+')) return digits;
+  return `55${digits}`;
 }
 
 /** Format a CPF string as XXX.XXX.XXX-XX */

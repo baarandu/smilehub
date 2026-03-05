@@ -5,6 +5,7 @@ import { Phone, Calendar, ChevronLeft, ChevronRight, MessageCircle } from 'lucid
 import type { CrmLead } from '@/types/crm';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getWhatsAppNumber } from '@/utils/formatters';
 
 interface PipelineCardProps {
   lead: CrmLead;
@@ -106,7 +107,7 @@ export function PipelineCard({ lead, onClick, onMoveLeft, onMoveRight }: Pipelin
       {lead.phone && (
         <div className="mt-2 flex gap-1.5">
           <a
-            href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
+            href={`https://wa.me/${getWhatsAppNumber(lead.phone)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-1 bg-green-50 border border-green-200 rounded-md px-1.5 py-1 cursor-pointer hover:bg-green-100 transition-colors"

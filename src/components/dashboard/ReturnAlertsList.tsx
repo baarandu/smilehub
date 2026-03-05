@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import { getWhatsAppNumber } from '@/utils/formatters';
 
 export interface RecentAlert {
   id: string;
@@ -46,7 +47,7 @@ export function RecentAlertsList({ alerts, isLoading }: RecentAlertsListProps) {
     }
 
     const encoded = encodeURIComponent(message);
-    window.open(`https://wa.me/55${cleanPhone}?text=${encoded}`, '_blank');
+    window.open(`https://wa.me/${getWhatsAppNumber(phone)}?text=${encoded}`, '_blank');
   };
 
   const getTypeConfig = (type: RecentAlert['type']) => {

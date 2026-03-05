@@ -13,6 +13,7 @@ import { usePatientData } from '../../src/hooks/usePatientData';
 import { usePatientPayments } from '../../src/hooks/usePatientPayments';
 import { usePatientHandlers } from '../../src/hooks/usePatientHandlers';
 import { childAnamnesesService } from '../../src/services/childAnamneses';
+import { getWhatsAppNumber } from '../../src/utils/formatters';
 import { ProceduresTab, ExamsTab, PaymentsTab, AnamneseTab, BudgetsTab, ChildAnamneseTab } from '../../src/components/patients/tabs';
 import { useClinic } from '../../src/contexts/ClinicContext';
 import { incomeTaxService } from '../../src/services/incomeTax';
@@ -171,8 +172,7 @@ export default function PatientDetail() {
 
     const handleWhatsApp = () => {
         if (!patient?.phone) return;
-        const sanitizedPhone = patient.phone.replace(/\D/g, '');
-        Linking.openURL(`https://wa.me/55${sanitizedPhone}`);
+        Linking.openURL(`https://wa.me/${getWhatsAppNumber(patient.phone)}`);
     };
 
     const handleDelete = () => {

@@ -69,6 +69,10 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
     };
 
     const formatPhone = (value: string) => {
+        // International format: starts with +
+        if (value.startsWith('+')) {
+            return '+' + value.slice(1).replace(/[^\d]/g, '').slice(0, 15);
+        }
         const numbers = value.replace(/\D/g, '');
         if (numbers.length <= 11) {
             return numbers

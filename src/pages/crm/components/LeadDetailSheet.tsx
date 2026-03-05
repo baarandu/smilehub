@@ -11,6 +11,7 @@ import {
   PhoneCall, Users, MapPin, Clock, Send, Pencil, Check, X, Trash2,
 } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import {
   useUpdateLead, useDeleteLead, useCreateActivity, useCrmActivities,
   useCrmStages, useCrmSources, useCrmTags, useToggleLeadTag,
@@ -244,7 +245,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetPro
             {lead.phone && (
               <div className="flex gap-2">
                 <a
-                  href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
+                  href={`https://wa.me/${getWhatsAppNumber(lead.phone)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1"

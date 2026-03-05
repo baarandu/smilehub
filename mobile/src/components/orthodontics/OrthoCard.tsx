@@ -12,6 +12,7 @@ import {
   getNextStatus,
   getStatusLabel,
 } from '../../utils/orthodontics';
+import { getWhatsAppNumber } from '../../utils/formatters';
 
 interface OrthoCardProps {
   orthoCase: OrthodonticCase;
@@ -37,10 +38,9 @@ export function OrthoCard({
   const nextStatus = getNextStatus(orthoCase.status);
 
   const handleWhatsApp = () => {
-    const phone = orthoCase.patient_phone?.replace(/\D/g, '');
-    if (!phone) return;
+    if (!orthoCase.patient_phone) return;
     const msg = `Ola ${orthoCase.patient_name}, entramos em contato sobre seu tratamento ortodontico. Por favor, entre em contato conosco.`;
-    Linking.openURL(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`);
+    Linking.openURL(`https://wa.me/${getWhatsAppNumber(orthoCase.patient_phone)}?text=${encodeURIComponent(msg)}`);
   };
 
   const showScheduleRow =
