@@ -71,8 +71,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { role, clinicId, isAdmin, isDentist } = useClinic();
 
   // Filter nav items based on role AND subscription plan features
+  // Super admin bypasses plan restrictions
   const filteredNavItems = useMemo(() => {
     return navItems.filter(item => {
+      if (isSuperAdmin) return true;
       if (item.to === '/financeiro' || item.to === '/imposto-de-renda' || item.to === '/analytics') {
         return isAdmin && planHasFeature(planFeatureKeys, 'financeiro');
       }
@@ -87,7 +89,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       }
       return true;
     });
-  }, [isAdmin, isDentist, planFeatureKeys]);
+  }, [isAdmin, isDentist, isSuperAdmin, planFeatureKeys]);
 
   // AI Secretary: only visible for super admin while feature is under development
   const hasAISecretaryAccess = isSuperAdmin;
@@ -95,6 +97,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Filter AI nav items based on role and plan features
   const filteredAiNavItems = useMemo(() => {
     return aiNavItems.filter(item => {
+      if (isSuperAdmin) return true;
       if (item.to === '/contabilidade-ia') {
         return isAdmin && planHasFeature(planFeatureKeys, 'contabilidade_ia');
       }
@@ -106,7 +109,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       }
       return true;
     });
-  }, [isAdmin, isDentist, planFeatureKeys, hasAISecretaryAccess]);
+  }, [isAdmin, isDentist, isSuperAdmin, planFeatureKeys, hasAISecretaryAccess]);
 
   // Fetch subscription plan features from DB, fallback to hardcoded hierarchy
   useEffect(() => {
