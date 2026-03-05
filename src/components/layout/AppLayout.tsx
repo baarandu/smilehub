@@ -21,7 +21,9 @@ import {
   Settings,
   Calculator,
   Layers,
-  SmilePlus
+  SmilePlus,
+  BarChart3,
+  Kanban
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
@@ -45,6 +47,8 @@ const navItems = [
   { to: '/ortodontia', icon: SmilePlus, label: 'Central de Ortodontia' },
   { to: '/financeiro', icon: DollarSign, label: 'Financeiro' },
   { to: '/imposto-de-renda', icon: FileText, label: 'Imposto de Renda' },
+  { to: '/crm', icon: Kanban, label: 'CRM' },
+  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/alertas', icon: Bell, label: 'Alertas' },
   { to: '/planos', icon: CreditCard, label: 'Planos e Assinatura' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
@@ -69,7 +73,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   // Filter nav items based on role AND subscription plan features
   const filteredNavItems = useMemo(() => {
     return navItems.filter(item => {
-      if (item.to === '/financeiro' || item.to === '/imposto-de-renda') {
+      if (item.to === '/financeiro' || item.to === '/imposto-de-renda' || item.to === '/analytics') {
         return isAdmin && planHasFeature(planFeatureKeys, 'financeiro');
       }
       if (item.to === '/materiais') {

@@ -49,6 +49,8 @@ const ComplianceChecklist = lazy(() => import("./pages/ComplianceChecklist"));
 const RIPD = lazy(() => import("./pages/RIPD"));
 const SessionManagement = lazy(() => import("./pages/SessionManagement"));
 const BatchSignature = lazy(() => import("./pages/BatchSignature"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const CRM = lazy(() => import("./pages/CRM"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -139,6 +141,8 @@ const AppContent = () => (
         <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
         <Route path="/configuracoes/ripd" element={<AppLayout><RIPD /></AppLayout>} />
         <Route path="/assinaturas" element={<AppLayout><BatchSignature /></AppLayout>} />
+        <Route path="/analytics" element={<AppLayout><Analytics /></AppLayout>} />
+        <Route path="/crm" element={<AppLayout><CRM /></AppLayout>} />
         <Route path="/trial-expirado" element={<TrialExpired />} />
       </Route>
 
