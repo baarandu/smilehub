@@ -11,10 +11,12 @@ import {
   Shield,
   Clock,
   ChevronDown,
-  Star,
-  Play,
   Loader2,
   MessageCircle,
+  Bot,
+  FileCheck,
+  Mic,
+  Calculator,
 } from 'lucide-react';
 import { plansService } from '@/services/admin/plans';
 import { appSettingsService } from '@/services/admin/appSettings';
@@ -187,25 +189,24 @@ export default function Landing() {
                   size="lg"
                   variant="outline"
                   className="rounded-full text-base lg:text-lg px-10 h-14 lg:h-16 border-gray-300"
-                  onClick={() => scrollToSection('demo')}
+                  onClick={() => scrollToSection('funcionalidades')}
                 >
-                  Ver demonstração
+                  Ver funcionalidades
                 </Button>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-200 border-2 border-white flex items-center justify-center text-sm">👩</div>
-                  <div className="w-12 h-12 rounded-full bg-rose-200 border-2 border-white flex items-center justify-center text-sm">👨</div>
-                  <div className="w-12 h-12 rounded-full bg-blue-200 border-2 border-white flex items-center justify-center text-sm">👩</div>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-[#b94a48]" />
+                  <span>30 dias grátis</span>
                 </div>
-                <div>
-                  <div className="flex text-amber-400">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-sm lg:text-base text-gray-600">Mais de 500 dentistas organizados</p>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-[#b94a48]" />
+                  <span>Sem cartão de crédito</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-[#b94a48]" />
+                  <span>Cancele quando quiser</span>
                 </div>
               </div>
             </div>
@@ -244,65 +245,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Video Demo */}
-      <section id="demo" className="min-h-screen flex items-center px-4 bg-white">
-        <div className="max-w-5xl mx-auto w-full py-12">
-          <div className="text-center mb-12">
-            <span className="text-[#b94a48] font-semibold text-sm uppercase tracking-wide">
-              Veja na prática
-            </span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
-              Como o <span className="text-[#b94a48]">Organiza</span> Odonto funciona
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Assista a uma demonstração completa e descubra como simplificar a gestão da sua clínica em poucos minutos.
-            </p>
-          </div>
-
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl bg-gray-900 aspect-video group cursor-pointer">
-            <img
-              src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=1200&h=675&fit=crop"
-              alt="Demonstração do sistema"
-              className="w-full h-full object-cover opacity-80"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
-
-            <div className="absolute inset-0 flex items-center justify-center">
-              <button className="w-20 h-20 bg-[#b94a48] rounded-full flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                <Play className="w-8 h-8 text-white ml-1" fill="white" />
-              </button>
-            </div>
-
-            <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between text-white">
-              <div>
-                <p className="font-semibold text-lg">Tour completo pelo sistema</p>
-                <p className="text-gray-300 text-sm">3 minutos de demonstração</p>
-              </div>
-              <div className="hidden sm:flex items-center gap-4 text-sm text-gray-300">
-                <span>HD</span>
-                <span>•</span>
-                <span>Português</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <div className="p-4">
-              <p className="text-2xl font-bold text-gray-900">3 min</p>
-              <p className="text-sm text-gray-500">Para entender tudo</p>
-            </div>
-            <div className="p-4">
-              <p className="text-2xl font-bold text-gray-900">100%</p>
-              <p className="text-sm text-gray-500">Sem enrolação</p>
-            </div>
-            <div className="p-4">
-              <p className="text-2xl font-bold text-gray-900">Grátis</p>
-              <p className="text-sm text-gray-500">Sem cadastro</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Features */}
       <section id="funcionalidades" className="min-h-screen flex items-center px-4 py-12">
         <div className="max-w-7xl mx-auto w-full">
@@ -320,18 +262,32 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard
+              icon={Bot}
+              iconBg="bg-violet-100"
+              iconColor="text-violet-600"
+              title="Dentista IA"
+              description="Assistente clínico com inteligência artificial. Tire dúvidas sobre protocolos, peça sugestões de tratamento e consulte a ficha do paciente por conversa — como ter um colega disponível 24h."
+            />
+            <FeatureCard
+              icon={Calculator}
+              iconBg="bg-emerald-100"
+              iconColor="text-emerald-600"
+              title="Contabilidade IA"
+              description="Agente de IA que analisa seu financeiro, calcula impostos, identifica despesas dedutíveis e gera relatórios para o contador. Controle fiscal sem planilha."
+            />
+            <FeatureCard
+              icon={Mic}
+              iconBg="bg-amber-100"
+              iconColor="text-amber-600"
+              title="Consulta por Voz"
+              description="Grave a consulta e a IA transcreve, organiza e preenche o prontuário automaticamente. Menos digitação, mais atenção ao paciente."
+            />
+            <FeatureCard
               icon={Users}
               iconBg="bg-red-100"
               iconColor="text-[#b94a48]"
               title="Gestão de Pacientes"
-              description="Cadastro completo com anamnese digital, histórico de tratamentos, fotos e documentos. Tudo organizado por paciente."
-            />
-            <FeatureCard
-              icon={DollarSign}
-              iconBg="bg-violet-100"
-              iconColor="text-violet-600"
-              title="Controle Financeiro"
-              description="Controle receitas, despesas, comissões de dentistas e fluxo de caixa. Emita boletos e notas fiscais facilmente."
+              description="Anamnese digital, planos de tratamento, procedimentos, exames, pagamentos e documentações — tudo em um só lugar. Com assinatura digital do dentista e do paciente nos documentos clínicos."
             />
             <FeatureCard
               icon={Calendar}
@@ -341,6 +297,13 @@ export default function Landing() {
               description="Visualize sua agenda por dia, semana ou mês. Envie lembretes automáticos via WhatsApp e reduza as faltas."
             />
             <FeatureCard
+              icon={DollarSign}
+              iconBg="bg-blue-100"
+              iconColor="text-blue-600"
+              title="Controle Financeiro"
+              description="Controle receitas, despesas, comissões de dentistas e fluxo de caixa. Emita boletos e notas fiscais facilmente."
+            />
+            <FeatureCard
               icon={Smartphone}
               iconBg="bg-orange-100"
               iconColor="text-orange-500"
@@ -348,18 +311,11 @@ export default function Landing() {
               description="Acesse sua clínica de qualquer lugar pelo celular. Disponível para iOS e Android."
             />
             <FeatureCard
-              icon={Shield}
+              icon={FileCheck}
               iconBg="bg-red-100"
               iconColor="text-[#a03f3d]"
-              title="Seguro e Confiável"
-              description="Seus dados protegidos com criptografia de ponta. Backup automático na nuvem todos os dias."
-            />
-            <FeatureCard
-              icon={Clock}
-              iconBg="bg-rose-100"
-              iconColor="text-rose-500"
-              title="Economize Tempo"
-              description="Orçamentos em minutos, relatórios automáticos e menos burocracia no dia a dia."
+              title="Segurança e LGPD"
+              description="Dados de saúde criptografados, em conformidade com a LGPD. Backup automático na nuvem e assinatura digital de prontuários."
             />
           </div>
         </div>
@@ -371,10 +327,10 @@ export default function Landing() {
         <div className="bg-gray-900 -mx-4 px-4 py-12">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <StatItem value="500+" label="Clínicas Ativas" />
-              <StatItem value="120k+" label="Pacientes Cadastrados" />
-              <StatItem value="1M+" label="Consultas Agendadas" />
-              <StatItem value="24/7" label="Suporte" />
+              <StatItem value="30 dias" label="Teste Grátis" />
+              <StatItem value="100%" label="Na Nuvem" />
+              <StatItem value="LGPD" label="Em Conformidade" />
+              <StatItem value="24/7" label="Suporte via WhatsApp" />
             </div>
           </div>
         </div>
@@ -446,7 +402,7 @@ export default function Landing() {
               <Loader2 className="w-8 h-8 animate-spin text-[#b94a48]" />
             </div>
           ) : plans.length > 0 ? (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className={`grid gap-6 max-w-4xl mx-auto ${plans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
               {plans.map((plan, index) => (
                 <PricingCard
                   key={plan.id}
@@ -465,57 +421,44 @@ export default function Landing() {
               ))}
             </div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               <PricingCard
-                name="Básico"
-                description="Para dentistas autônomos que estão começando."
-                price={billingPeriod === 'yearly' ? formatPrice(9700, true) : "97"}
+                name="Essencial"
+                description="Para dentistas autônomos e consultórios pequenos."
+                price={billingPeriod === 'yearly' ? formatPrice(9900, true) : "99"}
                 period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
                 buttonText="Começar grátis"
                 buttonVariant="outline"
                 features={[
-                  '1 Dentista',
-                  'Até 300 pacientes',
+                  'Até 2 usuários',
+                  'Pacientes ilimitados',
                   'Agenda inteligente',
                   'Prontuário e anamnese',
                   'Orçamentos',
+                  'Financeiro básico',
+                  'App mobile',
                   'Suporte por e-mail',
                 ]}
-                savings={billingPeriod === 'yearly' ? calculateSavings(9700) : undefined}
+                savings={billingPeriod === 'yearly' ? calculateSavings(9900) : undefined}
               />
               <PricingCard
-                name="Profissional"
-                description="Para clínicas pequenas com equipe."
-                price={billingPeriod === 'yearly' ? formatPrice(19700, true) : "197"}
+                name="Completo"
+                description="Para clínicas com equipe e recursos avançados de IA."
+                price={billingPeriod === 'yearly' ? formatPrice(14900, true) : "149"}
                 period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
                 buttonText="Começar grátis"
                 highlighted
                 features={[
-                  'Tudo do Básico',
-                  'Até 3 usuários',
-                  'Financeiro completo',
-                  'Estoque e materiais',
-                  'Imposto de Renda',
-                  'Suporte por chat',
+                  'Tudo do Essencial',
+                  'Usuários ilimitados',
+                  'Dentista IA (assistente clínico)',
+                  'Contabilidade IA (fiscal e impostos)',
+                  'Consulta por voz com IA',
+                  'Financeiro completo + IR',
+                  'Confirmação via WhatsApp',
+                  'Suporte prioritário via WhatsApp',
                 ]}
-                savings={billingPeriod === 'yearly' ? calculateSavings(19700) : undefined}
-              />
-              <PricingCard
-                name="Premium"
-                description="Para clínicas com múltiplos profissionais e IA."
-                price={billingPeriod === 'yearly' ? formatPrice(29700, true) : "297"}
-                period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-                buttonText="Começar grátis"
-                buttonVariant="outline"
-                features={[
-                  'Tudo do Profissional',
-                  'Consulta por Voz (IA)',
-                  'Dentista IA',
-                  'Contabilidade IA',
-                  'Confirmação WhatsApp',
-                  'Até 3 unidades',
-                ]}
-                savings={billingPeriod === 'yearly' ? calculateSavings(29700) : undefined}
+                savings={billingPeriod === 'yearly' ? calculateSavings(14900) : undefined}
               />
             </div>
           )}
@@ -523,35 +466,41 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials placeholder */}
+      {/* Why choose us */}
       <section id="depoimentos" className="py-20 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto text-center">
           <span className="text-[#b94a48] font-semibold text-sm uppercase tracking-wide">
-            Depoimentos
+            Por que escolher o Organiza Odonto
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
-            O que nossos clientes dizem
+            Feito por quem entende a rotina do dentista
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto mb-12">
-            Dentistas de todo o Brasil já transformaram suas clínicas com o Organiza Odonto.
+            Desenvolvido em parceria com profissionais da odontologia para resolver problemas reais do dia a dia.
           </p>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <TestimonialCard
-              quote="Finalmente consigo ter controle total da minha clínica. O financeiro ficou muito mais organizado!"
-              author="Dra. Ana Paula"
-              role="Ortodontista - São Paulo"
-            />
-            <TestimonialCard
-              quote="Os lembretes automáticos via WhatsApp reduziram as faltas em mais de 40%. Recomendo muito!"
-              author="Dr. Carlos Silva"
-              role="Implantodontista - Rio de Janeiro"
-            />
-            <TestimonialCard
-              quote="O suporte é excelente e o sistema é muito intuitivo. Minha secretária aprendeu em um dia."
-              author="Dra. Mariana Costa"
-              role="Clínica Geral - Belo Horizonte"
-            />
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-left">
+              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-[#b94a48]" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Menos burocracia</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">Orçamentos, prontuários e financeiro em um lugar só. Pare de perder tempo com planilhas e papel.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-left">
+              <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center mb-4">
+                <Bot className="w-6 h-6 text-violet-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">IA que trabalha por você</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">Dentista IA tira dúvidas clínicas, Contabilidade IA organiza seu fiscal e a consulta por voz preenche o prontuário sozinha.</p>
+            </div>
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 text-left">
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4">
+                <Shield className="w-6 h-6 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Dados de saúde protegidos</h3>
+              <p className="text-gray-600 text-sm leading-relaxed">Criptografia, backup automático, assinatura digital e conformidade com a LGPD. Seus pacientes em segurança.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -584,30 +533,18 @@ export default function Landing() {
             Comece a organizar sua clínica hoje
           </h2>
           <p className="text-red-100 mb-10 text-lg">
-            Experimente todas as funcionalidades gratuitamente por 14 dias. Sem compromisso, sem necessidade de cartão de crédito.
+            Experimente todas as funcionalidades gratuitamente por 30 dias. Sem compromisso, sem necessidade de cartão de crédito.
           </p>
 
-          <div className="bg-[#6b2a28]/50 backdrop-blur rounded-2xl p-8 max-w-2xl mx-auto">
-            <p className="text-white font-medium mb-6">Receba um contato de nossos especialistas</p>
-            <form className="flex flex-col sm:flex-row gap-4">
-              <input
-                type="text"
-                placeholder="Seu nome"
-                className="flex-1 px-4 py-3 rounded-lg bg-[#5a2322]/50 border border-[#b94a48] text-white placeholder-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-              <input
-                type="email"
-                placeholder="Seu melhor email"
-                className="flex-1 px-4 py-3 rounded-lg bg-[#5a2322]/50 border border-[#b94a48] text-white placeholder-red-200 focus:outline-none focus:ring-2 focus:ring-red-400"
-              />
-              <Button className="bg-[#b94a48] hover:bg-[#c75a58] text-white px-8 py-3 rounded-lg">
-                Quero testar
-              </Button>
-            </form>
-            <p className="text-red-200 text-sm mt-4">
-              Ao clicar em "Quero testar", você concorda com nossos Termos de Uso.
-            </p>
-          </div>
+          <Link to="/signup">
+            <Button size="lg" className="bg-[#b94a48] hover:bg-[#c75a58] text-white rounded-full text-lg px-12 h-16">
+              Criar conta grátis
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+          <p className="text-red-200 text-sm mt-4">
+            30 dias grátis, sem cartão de crédito. Cancele quando quiser.
+          </p>
         </div>
       </section>
 
@@ -707,10 +644,14 @@ const faqItems = [
   },
   {
     question: 'O sistema emite Nota Fiscal?',
-    answer: 'Sim, no plano Premium você pode emitir NF-e diretamente pelo sistema, integrado com a prefeitura da sua cidade.',
+    answer: 'Sim, no plano Completo você pode emitir NF-e diretamente pelo sistema, integrado com a prefeitura da sua cidade.',
   },
   {
-    question: 'Tem fidelidade no contrato?',
+    question: 'O sistema está em conformidade com a LGPD?',
+    answer: 'Sim. Dados de saúde são criptografados, prontuários possuem assinatura digital e oferecemos exportação de dados do paciente conforme exigido pela LGPD. Seus pacientes e sua clínica ficam protegidos.',
+  },
+  {
+    question: 'Tem fidelidade ou multa no contrato?',
     answer: 'Não! Você pode cancelar quando quiser, sem multas ou taxas. Acreditamos que você vai ficar porque gosta, não por obrigação.',
   },
 ];
@@ -825,23 +766,6 @@ function PricingCard({
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-function TestimonialCard({ quote, author, role }: { quote: string; author: string; role: string }) {
-  return (
-    <div className="bg-white p-6 rounded-2xl border border-gray-100 text-left">
-      <div className="flex text-amber-400 mb-4">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className="w-4 h-4 fill-current" />
-        ))}
-      </div>
-      <p className="text-gray-700 mb-4">"{quote}"</p>
-      <div>
-        <p className="font-semibold text-gray-900">{author}</p>
-        <p className="text-sm text-gray-500">{role}</p>
-      </div>
     </div>
   );
 }

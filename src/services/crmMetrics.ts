@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase';
 
+export interface CrmMetricsPeriod {
+  start: string; // yyyy-MM-dd
+  end: string;
+}
+
 export interface OpportunityDetailRow {
   id: string;
   patient_id?: string;
@@ -29,22 +34,25 @@ export interface FunnelStep {
 }
 
 export const crmMetricsService = {
-  async getOpportunityCards(clinicId: string): Promise<OpportunityCard[]> {
+  async getOpportunityCards(clinicId: string, period?: CrmMetricsPeriod): Promise<OpportunityCard[]> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const periodStart = period?.start ?? new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const periodEnd = period?.end ?? today;
     const sixMonthsAgo = new Date(now.getTime() - 180 * 86400000).toISOString().split('T')[0];
     const seventyTwoHoursLater = new Date(now.getTime() + 72 * 3600000).toISOString().split('T')[0];
+    const periodLabel = period ? `${periodStart.split('-').reverse().join('/')} - ${periodEnd.split('-').reverse().join('/')}` : 'Últimos 30 dias';
 
     const cards: OpportunityCard[] = [];
 
-    // 1. Orcamentos nao aprovados (ultimos 30 dias)
+    // 1. Orcamentos nao aprovados
     const { data: pendingBudgets } = await supabase
       .from('budgets')
       .select('id, value')
       .eq('clinic_id', clinicId)
       .eq('status', 'pending')
-      .gte('created_at', thirtyDaysAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
     const pendingValue = (pendingBudgets || []).reduce((sum, b) => sum + (b.value || 0), 0);
     cards.push({
@@ -53,18 +61,19 @@ export const crmMetricsService = {
       count: (pendingBudgets || []).length,
       value: pendingValue,
       description: 'Em orçamentos aguardando aprovação',
-      period: 'Últimos 30 dias',
+      period: periodLabel,
       icon: 'file-text',
       color: '#f59e0b',
     });
 
-    // 2. Pacientes que faltaram/desmarcaram (ultimos 30 dias)
+    // 2. Pacientes que faltaram/desmarcaram
     const { data: noShows } = await supabase
       .from('appointments')
       .select('id, patient_id')
       .eq('clinic_id', clinicId)
       .in('status', ['no_show', 'cancelled'])
-      .gte('date', thirtyDaysAgo);
+      .gte('date', periodStart)
+      .lte('date', periodEnd);
 
     // Get unique patients who missed
     const noShowPatientIds = [...new Set((noShows || []).map(a => a.patient_id))];
@@ -90,7 +99,7 @@ export const crmMetricsService = {
       count: notRescheduledCount,
       value: 0,
       description: 'Faltaram ou desmarcaram e não reagendaram',
-      period: 'Últimos 30 dias',
+      period: periodLabel,
       icon: 'user-x',
       color: '#ef4444',
     });
@@ -110,7 +119,7 @@ export const crmMetricsService = {
       count: (unconfirmed || []).length,
       value: 0,
       description: 'Seu custo hora. Reduza as faltas.',
-      period: 'Próximas 72 horas',
+      period: 'Próx. 72h',
       icon: 'calendar-clock',
       color: '#8b5cf6',
     });
@@ -157,13 +166,13 @@ export const crmMetricsService = {
       color: '#06b6d4',
     });
 
-    // 5. Orcamentos perdidos (pending ha mais de 30 dias)
+    // 5. Orcamentos perdidos (pending antes do periodo)
     const { data: staleBudgets } = await supabase
       .from('budgets')
       .select('id, value')
       .eq('clinic_id', clinicId)
       .eq('status', 'pending')
-      .lt('created_at', thirtyDaysAgo);
+      .lt('created_at', periodStart);
 
     const staleValue = (staleBudgets || []).reduce((sum, b) => sum + (b.value || 0), 0);
     cards.push({
@@ -214,14 +223,14 @@ export const crmMetricsService = {
       color: '#ec4899',
     });
 
-    // 6. Pacientes com maiores tickets (ultimos 12 meses)
-    const twelveMonthsAgo = new Date(now.getTime() - 365 * 86400000).toISOString().split('T')[0];
+    // 6. Pacientes com maiores tickets
     const { data: topPatients } = await supabase
       .from('budgets')
       .select('patient_id, value')
       .eq('clinic_id', clinicId)
       .eq('status', 'approved')
-      .gte('created_at', twelveMonthsAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
     const patientRevenue: Record<string, number> = {};
     (topPatients || []).forEach(b => {
@@ -237,7 +246,7 @@ export const crmMetricsService = {
       count: topCount,
       value: topValue,
       description: 'Receita gerada por estes pacientes',
-      period: 'Últimos 12 meses',
+      period: periodLabel,
       icon: 'trophy',
       color: '#10b981',
     });
@@ -245,22 +254,26 @@ export const crmMetricsService = {
     return cards;
   },
 
-  async getFunnelData(clinicId: string): Promise<FunnelStep[]> {
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+  async getFunnelData(clinicId: string, period?: CrmMetricsPeriod): Promise<FunnelStep[]> {
+    const now = new Date();
+    const periodStart = period?.start ?? new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const periodEnd = period?.end ?? now.toISOString().split('T')[0];
 
     // Count leads
     const { count: leadsCount } = await supabase
       .from('crm_leads')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
-      .gte('created_at', thirtyDaysAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
     // Count scheduled appointments (from leads or all)
     const { count: scheduledCount } = await supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
-      .gte('date', thirtyDaysAgo)
+      .gte('date', periodStart)
+      .lte('date', periodEnd)
       .in('status', ['scheduled', 'confirmed', 'completed', 'no_show']);
 
     // Count no shows + cancelled
@@ -268,7 +281,8 @@ export const crmMetricsService = {
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
-      .gte('date', thirtyDaysAgo)
+      .gte('date', periodStart)
+      .lte('date', periodEnd)
       .in('status', ['no_show', 'cancelled']);
 
     // Count completed appointments
@@ -276,7 +290,8 @@ export const crmMetricsService = {
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
-      .gte('date', thirtyDaysAgo)
+      .gte('date', periodStart)
+      .lte('date', periodEnd)
       .eq('status', 'completed');
 
     // Count budgets created
@@ -284,7 +299,8 @@ export const crmMetricsService = {
       .from('budgets')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
-      .gte('created_at', thirtyDaysAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
     // Count approved budgets
     const { count: budgetsApproved } = await supabase
@@ -292,15 +308,17 @@ export const crmMetricsService = {
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
       .eq('status', 'approved')
-      .gte('created_at', thirtyDaysAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
-    // Count lost budgets (pending > 30 days)
+    // Count pending budgets in period
     const { count: budgetsLost } = await supabase
       .from('budgets')
       .select('*', { count: 'exact', head: true })
       .eq('clinic_id', clinicId)
       .eq('status', 'pending')
-      .gte('created_at', thirtyDaysAgo);
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd);
 
     const leads = leadsCount || 0;
     const scheduled = scheduledCount || 0;
@@ -325,10 +343,11 @@ export const crmMetricsService = {
 
   // ==================== Detail queries ====================
 
-  async getCardDetail(clinicId: string, cardKey: string): Promise<OpportunityDetailRow[]> {
+  async getCardDetail(clinicId: string, cardKey: string, period?: CrmMetricsPeriod): Promise<OpportunityDetailRow[]> {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const periodStart = period?.start ?? new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const periodEnd = period?.end ?? today;
     const sixMonthsAgo = new Date(now.getTime() - 180 * 86400000).toISOString().split('T')[0];
     const seventyTwoHoursLater = new Date(now.getTime() + 72 * 3600000).toISOString().split('T')[0];
 
@@ -339,7 +358,8 @@ export const crmMetricsService = {
           .select('id, patient_id, value, date, treatment, patients!inner(name, phone)')
           .eq('clinic_id', clinicId)
           .eq('status', 'pending')
-          .gte('created_at', thirtyDaysAgo)
+          .gte('created_at', periodStart)
+          .lte('created_at', periodEnd)
           .order('created_at', { ascending: false });
 
         return (data || []).map((b: any) => ({
@@ -359,7 +379,8 @@ export const crmMetricsService = {
           .select('id, patient_id, date, patients!inner(name, phone)')
           .eq('clinic_id', clinicId)
           .in('status', ['no_show', 'cancelled'])
-          .gte('date', thirtyDaysAgo)
+          .gte('date', periodStart)
+          .lte('date', periodEnd)
           .order('date', { ascending: false });
 
         // Dedupe by patient, keep most recent
@@ -460,7 +481,7 @@ export const crmMetricsService = {
           .select('id, patient_id, value, date, treatment, patients!inner(name, phone)')
           .eq('clinic_id', clinicId)
           .eq('status', 'pending')
-          .lt('created_at', thirtyDaysAgo)
+          .lt('created_at', periodStart)
           .order('created_at', { ascending: false });
 
         return (data || []).map((b: any) => ({
@@ -508,13 +529,13 @@ export const crmMetricsService = {
       }
 
       case 'top_patients': {
-        const twelveMonthsAgo = new Date(now.getTime() - 365 * 86400000).toISOString().split('T')[0];
         const { data } = await supabase
           .from('budgets')
           .select('patient_id, value, patients!inner(name, phone)')
           .eq('clinic_id', clinicId)
           .eq('status', 'approved')
-          .gte('created_at', twelveMonthsAgo);
+          .gte('created_at', periodStart)
+          .lte('created_at', periodEnd);
 
         // Aggregate by patient
         const byPatient: Record<string, { name: string; phone: string | null; total: number }> = {};

@@ -46,7 +46,12 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
     let y = 20;
 
     // Parse teeth from notes
-    const parsedNotes = JSON.parse(budget.notes || '{}');
+    let parsedNotes: any = {};
+    try {
+      parsedNotes = JSON.parse(budget.notes || '{}');
+    } catch {
+      // malformed JSON — treat as empty
+    }
     const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
     // Calculate dates

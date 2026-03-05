@@ -26,6 +26,7 @@ export interface AnalyticsData {
   topProcedures: { name: string; count: number; value: number }[];
   patientsByAge: { range: string; count: number }[];
   revenueByDentist: { name: string; value: number; count: number }[];
+  appointmentsByDayOfWeek: { day: string; total: number; completed: number; cancelled: number }[];
   paymentMethods: { method: string; value: number; count: number }[];
 }
 
@@ -289,6 +290,19 @@ export const analyticsService = {
     const returningPatients = Array.from(patientApptCount.values()).filter(c => c > 1).length;
     const returnRate = patientsWithAppts > 0 ? (returningPatients / patientsWithAppts) * 100 : 0;
 
+    // Appointments by day of week
+    const DAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    const dayData = DAY_LABELS.map(day => ({ day, total: 0, completed: 0, cancelled: 0 }));
+    for (const a of appointments) {
+      if (!a.date) continue;
+      const apptDate = new Date(a.date + 'T00:00:00');
+      let dayIndex = apptDate.getDay() - 1;
+      if (dayIndex < 0) dayIndex = 6;
+      dayData[dayIndex].total++;
+      if (a.status === 'completed') dayData[dayIndex].completed++;
+      if (a.status === 'cancelled') dayData[dayIndex].cancelled++;
+    }
+
     // Top procedures
     const procMap = new Map<string, { count: number; value: number }>();
     for (const p of procedures) {
@@ -364,6 +378,7 @@ export const analyticsService = {
       topProcedures,
       patientsByAge,
       revenueByDentist,
+      appointmentsByDayOfWeek: dayData,
       paymentMethods,
     };
   },

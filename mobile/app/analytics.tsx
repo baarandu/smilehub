@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Dimensions, Modal, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import {
@@ -15,19 +15,25 @@ import {
   Receipt,
   BarChart3,
   Users,
+  CalendarRange,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
-import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
+import Svg, { Rect, Text as SvgText, Line, Circle, Polyline } from 'react-native-svg';
 import { useClinic } from '../src/contexts/ClinicContext';
 import { analyticsService, type AnalyticsData, type AnalyticsPeriod } from '../src/services/analytics';
 
 // --- Period presets ---
-type PresetKey = '1m' | '3m' | '6m' | '12m';
+type PresetKey = '1m' | '3m' | '6m' | '12m' | 'ytd' | 'custom';
 
 const PRESETS: { key: PresetKey; label: string }[] = [
-  { key: '1m', label: 'Este mês' },
-  { key: '3m', label: '3 meses' },
-  { key: '6m', label: '6 meses' },
-  { key: '12m', label: '12 meses' },
+  { key: '1m', label: 'Mês' },
+  { key: '3m', label: '3m' },
+  { key: '6m', label: '6m' },
+  { key: '12m', label: '12m' },
+  { key: 'ytd', label: 'Ano' },
+  { key: 'custom', label: 'Custom' },
 ];
 
 function getPresetPeriod(key: PresetKey): AnalyticsPeriod {
@@ -42,6 +48,10 @@ function getPresetPeriod(key: PresetKey): AnalyticsPeriod {
       return { start: new Date(now.getFullYear(), now.getMonth() - 5, 1), end: endOfCurrentMonth };
     case '12m':
       return { start: new Date(now.getFullYear(), now.getMonth() - 11, 1), end: endOfCurrentMonth };
+    case 'ytd':
+      return { start: new Date(now.getFullYear(), 0, 1), end: endOfCurrentMonth };
+    default:
+      return { start: new Date(now.getFullYear(), now.getMonth() - 5, 1), end: endOfCurrentMonth };
   }
 }
 
@@ -55,17 +65,129 @@ function formatCurrencyShort(value: number): string {
   return `R$ ${value.toFixed(0)}`;
 }
 
+function fmtDate(d: Date): string {
+  return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2);
+}
+
 function formatPeriodLabel(period: AnalyticsPeriod): string {
-  const fmt = (d: Date) =>
-    String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(2);
-  return `${fmt(period.start)} - ${fmt(period.end)}`;
+  return `${fmtDate(period.start)} - ${fmtDate(period.end)}`;
 }
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CHART_PADDING = 32;
-const CHART_WIDTH = SCREEN_WIDTH - CHART_PADDING * 2 - 32; // account for card padding
+const CHART_WIDTH = SCREEN_WIDTH - 64 - 32;
 
-// --- Simple Bar Chart component using react-native-svg ---
+// --- DateRangePicker Modal ---
+function DateRangePickerModal({
+  visible,
+  onClose,
+  onSelect,
+  initial,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSelect: (period: AnalyticsPeriod) => void;
+  initial: AnalyticsPeriod;
+}) {
+  const [step, setStep] = useState<'start' | 'end'>('start');
+  const [startDate, setStartDate] = useState<Date>(initial.start);
+  const [viewMonth, setViewMonth] = useState(initial.start);
+
+  const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  const getCalendarDays = () => {
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+    for (let day = 1; day <= lastDay.getDate(); day++) days.push(new Date(year, month, day));
+    return days;
+  };
+
+  const handleSelect = (date: Date) => {
+    if (step === 'start') {
+      setStartDate(date);
+      setStep('end');
+      setViewMonth(date);
+    } else {
+      const finalStart = startDate <= date ? startDate : date;
+      const finalEnd = startDate <= date ? date : startDate;
+      onSelect({
+        start: new Date(finalStart.getFullYear(), finalStart.getMonth(), 1),
+        end: new Date(finalEnd.getFullYear(), finalEnd.getMonth() + 1, 0),
+      });
+      setStep('start');
+      onClose();
+    }
+  };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={onClose}>
+        <View className="bg-white rounded-2xl p-4 w-[90%] max-w-md" onStartShouldSetResponder={() => true}>
+          <View className="flex-row items-center justify-between mb-3 pb-3 border-b border-gray-100">
+            <Text className="text-base font-bold text-gray-900">
+              {step === 'start' ? 'Selecione a data inicial' : 'Selecione a data final'}
+            </Text>
+            <TouchableOpacity onPress={onClose} className="p-1">
+              <X size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Month navigation */}
+          <View className="flex-row items-center justify-between mb-3">
+            <TouchableOpacity onPress={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))} className="p-2">
+              <ChevronLeft size={20} color="#374151" />
+            </TouchableOpacity>
+            <Text className="text-sm font-medium text-gray-900">
+              {MONTHS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+            </Text>
+            <TouchableOpacity onPress={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))} className="p-2">
+              <ChevronRight size={20} color="#374151" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Weekday headers */}
+          <View className="flex-row mb-1">
+            {WEEKDAYS.map(w => (
+              <View key={w} className="flex-1 items-center">
+                <Text className="text-xs text-gray-400 font-medium">{w}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Days grid */}
+          <View className="flex-row flex-wrap">
+            {getCalendarDays().map((day, i) => {
+              if (!day) return <View key={`e${i}`} className="w-[14.28%] h-10" />;
+              const isDisabled = day > today;
+              const isSelected = step === 'end' && startDate.toDateString() === day.toDateString();
+              return (
+                <TouchableOpacity
+                  key={i}
+                  className={`w-[14.28%] h-10 items-center justify-center rounded-lg ${isSelected ? 'bg-[#b94a48]' : ''}`}
+                  disabled={isDisabled}
+                  onPress={() => handleSelect(day)}
+                >
+                  <Text className={`text-sm ${isDisabled ? 'text-gray-300' : isSelected ? 'text-white font-bold' : 'text-gray-800'}`}>
+                    {day.getDate()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// --- Simple Bar Chart ---
 function SimpleBarChart({
   data,
   labelKey,
@@ -91,17 +213,8 @@ function SimpleBarChart({
 
   return (
     <Svg width={CHART_WIDTH} height={height}>
-      {/* Grid lines */}
       {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
-        <Line
-          key={i}
-          x1={0}
-          y1={chartAreaHeight * (1 - pct)}
-          x2={CHART_WIDTH}
-          y2={chartAreaHeight * (1 - pct)}
-          stroke="#e5e7eb"
-          strokeWidth={0.5}
-        />
+        <Line key={i} x1={0} y1={chartAreaHeight * (1 - pct)} x2={CHART_WIDTH} y2={chartAreaHeight * (1 - pct)} stroke="#e5e7eb" strokeWidth={0.5} />
       ))}
       {data.map((d, i) => {
         const val = d[valueKey] || 0;
@@ -110,31 +223,10 @@ function SimpleBarChart({
         const y = chartAreaHeight - barHeight;
         return (
           <React.Fragment key={i}>
-            <Rect
-              x={x}
-              y={y}
-              width={barWidth}
-              height={Math.max(barHeight, 1)}
-              rx={3}
-              fill={color}
-            />
-            <SvgText
-              x={x + barWidth / 2}
-              y={height - 4}
-              fontSize={9}
-              fill="#6b7280"
-              textAnchor="middle"
-            >
-              {d[labelKey]}
-            </SvgText>
+            <Rect x={x} y={y} width={barWidth} height={Math.max(barHeight, 1)} rx={3} fill={color} />
+            <SvgText x={x + barWidth / 2} y={height - 4} fontSize={9} fill="#6b7280" textAnchor="middle">{d[labelKey]}</SvgText>
             {val > 0 && (
-              <SvgText
-                x={x + barWidth / 2}
-                y={y - 4}
-                fontSize={8}
-                fill="#374151"
-                textAnchor="middle"
-              >
+              <SvgText x={x + barWidth / 2} y={y - 4} fontSize={8} fill="#374151" textAnchor="middle">
                 {formatValue ? formatValue(val) : val}
               </SvgText>
             )}
@@ -145,9 +237,7 @@ function SimpleBarChart({
   );
 }
 
-import React from 'react';
-
-// Grouped bar chart for revenue vs expenses
+// --- Grouped bar chart (revenue vs expenses) ---
 function GroupedBarChart({
   data,
   height = 200,
@@ -168,15 +258,7 @@ function GroupedBarChart({
     <View>
       <Svg width={CHART_WIDTH} height={height}>
         {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
-          <Line
-            key={i}
-            x1={0}
-            y1={chartAreaHeight * (1 - pct)}
-            x2={CHART_WIDTH}
-            y2={chartAreaHeight * (1 - pct)}
-            stroke="#e5e7eb"
-            strokeWidth={0.5}
-          />
+          <Line key={i} x1={0} y1={chartAreaHeight * (1 - pct)} x2={CHART_WIDTH} y2={chartAreaHeight * (1 - pct)} stroke="#e5e7eb" strokeWidth={0.5} />
         ))}
         {data.map((d, i) => {
           const x = offsetX + i * groupWidth;
@@ -184,31 +266,9 @@ function GroupedBarChart({
           const despHeight = (d.despesas / maxVal) * chartAreaHeight;
           return (
             <React.Fragment key={i}>
-              <Rect
-                x={x + 2}
-                y={chartAreaHeight - recHeight}
-                width={barWidth}
-                height={Math.max(recHeight, 1)}
-                rx={2}
-                fill="#10b981"
-              />
-              <Rect
-                x={x + barWidth + 4}
-                y={chartAreaHeight - despHeight}
-                width={barWidth}
-                height={Math.max(despHeight, 1)}
-                rx={2}
-                fill="#ef4444"
-              />
-              <SvgText
-                x={x + groupWidth / 2}
-                y={height - 4}
-                fontSize={9}
-                fill="#6b7280"
-                textAnchor="middle"
-              >
-                {d.month}
-              </SvgText>
+              <Rect x={x + 2} y={chartAreaHeight - recHeight} width={barWidth} height={Math.max(recHeight, 1)} rx={2} fill="#10b981" />
+              <Rect x={x + barWidth + 4} y={chartAreaHeight - despHeight} width={barWidth} height={Math.max(despHeight, 1)} rx={2} fill="#ef4444" />
+              <SvgText x={x + groupWidth / 2} y={height - 4} fontSize={9} fill="#6b7280" textAnchor="middle">{d.month}</SvgText>
             </React.Fragment>
           );
         })}
@@ -227,24 +287,144 @@ function GroupedBarChart({
   );
 }
 
-// Horizontal bar chart for procedures / dentists
-function HorizontalBarChart({
+// --- Stacked bar chart (appointments by day of week) ---
+function DayOfWeekChart({
   data,
-  nameKey,
-  valueKey,
-  color = '#8b5cf6',
-  formatValue,
+  height = 200,
 }: {
-  data: any[];
-  nameKey: string;
-  valueKey: string;
-  color?: string;
-  formatValue?: (v: number) => string;
+  data: { day: string; total: number; completed: number; cancelled: number }[];
+  height?: number;
+}) {
+  const filteredData = data.filter(d => d.total > 0 || true); // show all days
+  if (filteredData.length === 0) return <Text className="text-gray-400 text-center py-8">Sem dados</Text>;
+
+  const maxVal = Math.max(...filteredData.map(d => d.total), 1);
+  const barWidth = Math.max(Math.min(CHART_WIDTH / filteredData.length - 6, 36), 14);
+  const chartAreaHeight = height - 40;
+  const totalBarsWidth = filteredData.length * (barWidth + 6);
+  const offsetX = Math.max((CHART_WIDTH - totalBarsWidth) / 2, 0);
+
+  return (
+    <View>
+      <Svg width={CHART_WIDTH} height={height}>
+        {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
+          <Line key={i} x1={0} y1={chartAreaHeight * (1 - pct)} x2={CHART_WIDTH} y2={chartAreaHeight * (1 - pct)} stroke="#e5e7eb" strokeWidth={0.5} />
+        ))}
+        {filteredData.map((d, i) => {
+          const x = offsetX + i * (barWidth + 6);
+          const totalH = (d.total / maxVal) * chartAreaHeight;
+          const compH = (d.completed / maxVal) * chartAreaHeight;
+          const cancH = (d.cancelled / maxVal) * chartAreaHeight;
+          return (
+            <React.Fragment key={i}>
+              <Rect x={x} y={chartAreaHeight - totalH} width={barWidth} height={Math.max(totalH, 1)} rx={3} fill="#3b82f6" opacity={0.3} />
+              <Rect x={x} y={chartAreaHeight - compH} width={barWidth} height={Math.max(compH, 1)} rx={3} fill="#10b981" />
+              {cancH > 0 && (
+                <Rect x={x} y={chartAreaHeight - totalH} width={barWidth} height={Math.max(cancH, 1)} rx={3} fill="#ef4444" />
+              )}
+              <SvgText x={x + barWidth / 2} y={height - 4} fontSize={10} fill="#6b7280" textAnchor="middle">{d.day}</SvgText>
+              {d.total > 0 && (
+                <SvgText x={x + barWidth / 2} y={chartAreaHeight - totalH - 4} fontSize={8} fill="#374151" textAnchor="middle">{d.total}</SvgText>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </Svg>
+      <View className="flex-row items-center justify-center gap-4 mt-2">
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm bg-emerald-500" />
+          <Text className="text-xs text-gray-500">Concluídas</Text>
+        </View>
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm bg-red-500" />
+          <Text className="text-xs text-gray-500">Canceladas</Text>
+        </View>
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm" style={{ backgroundColor: 'rgba(59,130,246,0.3)' }} />
+          <Text className="text-xs text-gray-500">Total</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// --- Line chart (profit evolution) ---
+function ProfitLineChart({
+  data,
+  height = 200,
+}: {
+  data: { month: string; receita: number; despesas: number; lucro: number }[];
+  height?: number;
+}) {
+  if (data.length < 2) return <Text className="text-gray-400 text-center py-8">Dados insuficientes</Text>;
+
+  const allVals = data.flatMap(d => [d.receita, d.despesas, d.lucro]);
+  const maxVal = Math.max(...allVals, 1);
+  const minVal = Math.min(...allVals, 0);
+  const range = maxVal - minVal || 1;
+  const chartAreaHeight = height - 44;
+  const chartAreaWidth = CHART_WIDTH - 10;
+  const stepX = chartAreaWidth / (data.length - 1);
+
+  const getY = (val: number) => chartAreaHeight - ((val - minVal) / range) * chartAreaHeight;
+
+  const makePath = (key: 'receita' | 'despesas' | 'lucro') =>
+    data.map((d, i) => `${i === 0 ? 'M' : 'L'}${5 + i * stepX},${getY(d[key])}`).join(' ');
+
+  const colors = { receita: '#10b981', despesas: '#ef4444', lucro: '#3b82f6' };
+
+  return (
+    <View>
+      <Svg width={CHART_WIDTH} height={height}>
+        {/* Zero line if we have negative lucro */}
+        {minVal < 0 && (
+          <Line x1={0} y1={getY(0)} x2={CHART_WIDTH} y2={getY(0)} stroke="#9ca3af" strokeWidth={0.5} strokeDasharray="4,4" />
+        )}
+        {[0, 0.5, 1].map((pct, i) => (
+          <Line key={i} x1={0} y1={chartAreaHeight * (1 - pct)} x2={CHART_WIDTH} y2={chartAreaHeight * (1 - pct)} stroke="#e5e7eb" strokeWidth={0.5} />
+        ))}
+
+        {/* Lines */}
+        {(['receita', 'despesas', 'lucro'] as const).map(key => (
+          <Polyline key={key} points={makePath(key).replace(/[ML]/g, (m) => m === 'M' ? '' : ' ').trim().replace(/^\s/, '')} fill="none" stroke={colors[key]} strokeWidth={key === 'lucro' ? 2.5 : 1.5} />
+        ))}
+
+        {/* Dots for lucro */}
+        {data.map((d, i) => (
+          <Circle key={i} cx={5 + i * stepX} cy={getY(d.lucro)} r={3.5} fill={colors.lucro} />
+        ))}
+
+        {/* Month labels */}
+        {data.map((d, i) => (
+          <SvgText key={i} x={5 + i * stepX} y={height - 4} fontSize={9} fill="#6b7280" textAnchor="middle">{d.month}</SvgText>
+        ))}
+      </Svg>
+      <View className="flex-row items-center justify-center gap-4 mt-2">
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm bg-emerald-500" />
+          <Text className="text-xs text-gray-500">Receita</Text>
+        </View>
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm bg-red-500" />
+          <Text className="text-xs text-gray-500">Despesas</Text>
+        </View>
+        <View className="flex-row items-center gap-1">
+          <View className="w-3 h-3 rounded-sm bg-blue-500" />
+          <Text className="text-xs text-gray-500">Lucro</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// --- Horizontal bar chart ---
+function HorizontalBarChart({
+  data, nameKey, valueKey, color = '#8b5cf6', formatValue,
+}: {
+  data: any[]; nameKey: string; valueKey: string; color?: string; formatValue?: (v: number) => string;
 }) {
   if (data.length === 0) return <Text className="text-gray-400 text-center py-8">Sem dados</Text>;
-
   const maxVal = Math.max(...data.map(d => d[valueKey] || 0), 1);
-
   return (
     <View className="gap-2">
       {data.map((d, i) => {
@@ -256,15 +436,10 @@ function HorizontalBarChart({
           <View key={i}>
             <View className="flex-row justify-between mb-1">
               <Text className="text-xs text-gray-700 flex-1" numberOfLines={1}>{displayName}</Text>
-              <Text className="text-xs text-gray-500 ml-2">
-                {formatValue ? formatValue(val) : val}
-              </Text>
+              <Text className="text-xs text-gray-500 ml-2">{formatValue ? formatValue(val) : val}</Text>
             </View>
             <View className="h-5 bg-gray-100 rounded-full overflow-hidden">
-              <View
-                className="h-full rounded-full"
-                style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }}
-              />
+              <View className="h-full rounded-full" style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: color }} />
             </View>
           </View>
         );
@@ -275,19 +450,9 @@ function HorizontalBarChart({
 
 // --- KPI Card ---
 function KpiCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  iconColor = '#b94a48',
-  trend,
+  title, value, subtitle, icon: Icon, iconColor = '#b94a48', trend,
 }: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon: React.ElementType;
-  iconColor?: string;
-  trend?: number;
+  title: string; value: string; subtitle?: string; icon: React.ElementType; iconColor?: string; trend?: number;
 }) {
   const isPositive = trend != null && trend >= 0;
   return (
@@ -302,11 +467,7 @@ function KpiCard({
       {subtitle && <Text className="text-[10px] text-gray-400">{subtitle}</Text>}
       {trend != null && (
         <View className="flex-row items-center gap-1 mt-1">
-          {isPositive ? (
-            <TrendingUp size={12} color="#059669" />
-          ) : (
-            <TrendingDown size={12} color="#dc2626" />
-          )}
+          {isPositive ? <TrendingUp size={12} color="#059669" /> : <TrendingDown size={12} color="#dc2626" />}
           <Text className={`text-[10px] font-medium ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
             {isPositive ? '+' : ''}{trend}% vs anterior
           </Text>
@@ -337,9 +498,14 @@ export default function AnalyticsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [preset, setPreset] = useState<PresetKey>('6m');
+  const [customPeriod, setCustomPeriod] = useState<AnalyticsPeriod | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [data, setData] = useState<AnalyticsData | null>(null);
 
-  const period = useMemo(() => getPresetPeriod(preset), [preset]);
+  const period = useMemo(() => {
+    if (preset === 'custom' && customPeriod) return customPeriod;
+    return getPresetPeriod(preset);
+  }, [preset, customPeriod]);
 
   const loadData = useCallback(async () => {
     if (!clinicId) return;
@@ -404,111 +570,74 @@ export default function AnalyticsScreen() {
           </View>
 
           {/* Period filter pills */}
-          <View className="flex-row gap-2 mt-1">
+          <View className="flex-row gap-1.5 mt-1 flex-wrap">
             {PRESETS.map((p) => (
               <TouchableOpacity
                 key={p.key}
-                onPress={() => setPreset(p.key)}
-                className={`px-3 py-1.5 rounded-full ${
-                  preset === p.key
-                    ? 'bg-white'
-                    : 'bg-white/20'
-                }`}
+                onPress={() => {
+                  if (p.key === 'custom') {
+                    setPreset('custom');
+                    setShowDatePicker(true);
+                  } else {
+                    setPreset(p.key);
+                    setCustomPeriod(null);
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-full ${preset === p.key ? 'bg-white' : 'bg-white/20'}`}
               >
-                <Text
-                  className={`text-xs font-medium ${
-                    preset === p.key ? 'text-[#a03f3d]' : 'text-white'
-                  }`}
-                >
+                <Text className={`text-xs font-medium ${preset === p.key ? 'text-[#a03f3d]' : 'text-white'}`}>
                   {p.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text className="text-white/70 text-[10px] mt-2">{formatPeriodLabel(period)}</Text>
+
+          {/* Period label + custom edit button */}
+          <View className="flex-row items-center gap-2 mt-2">
+            <Text className="text-white/70 text-[10px]">{formatPeriodLabel(period)}</Text>
+            {preset === 'custom' && (
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} className="bg-white/20 px-2 py-0.5 rounded-full">
+                <Text className="text-white text-[10px]">Alterar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {data && (
           <View className="px-4 pb-8">
             {/* KPI Grid */}
             <View className="flex-row flex-wrap justify-between">
-              <KpiCard
-                title="Faturamento"
-                value={formatCurrency(data.periodRevenue)}
-                icon={DollarSign}
-                trend={data.revenueGrowth}
-              />
-              <KpiCard
-                title="Média Mensal"
-                value={formatCurrency(data.avgMonthlyRevenue)}
-                icon={Receipt}
-                subtitle={PRESETS.find(p => p.key === preset)?.label}
-              />
-              <KpiCard
-                title="Ticket Médio"
-                value={formatCurrency(data.avgTicket)}
-                icon={DollarSign}
-                subtitle="Por receita"
-              />
-              <KpiCard
-                title="Novos Pacientes"
-                value={String(data.newPatientsInPeriod)}
-                icon={UserPlus}
-                trend={newPatientsGrowth}
-                subtitle={`${data.totalPatients} total`}
-              />
-              <KpiCard
-                title="Taxa de Retorno"
-                value={`${data.returnRate}%`}
-                icon={RefreshCw}
-                subtitle=">1 consulta no período"
-              />
-              <KpiCard
-                title="Cancelamentos"
-                value={`${data.cancellationRate}%`}
-                icon={CalendarX}
-                iconColor="#ef4444"
-              />
-              <KpiCard
-                title="Faltas"
-                value={`${data.noShowRate}%`}
-                icon={CalendarCheck}
-                iconColor="#f59e0b"
-              />
-              <KpiCard
-                title="Aprov. Orçamentos"
-                value={`${data.budgetApprovalRate}%`}
-                icon={FileCheck}
-                subtitle="Aprovados / total"
-              />
+              <KpiCard title="Faturamento" value={formatCurrency(data.periodRevenue)} icon={DollarSign} trend={data.revenueGrowth} />
+              <KpiCard title="Média Mensal" value={formatCurrency(data.avgMonthlyRevenue)} icon={Receipt} subtitle={PRESETS.find(p => p.key === preset)?.label} />
+              <KpiCard title="Ticket Médio" value={formatCurrency(data.avgTicket)} icon={DollarSign} subtitle="Por receita" />
+              <KpiCard title="Novos Pacientes" value={String(data.newPatientsInPeriod)} icon={UserPlus} trend={newPatientsGrowth} subtitle={`${data.totalPatients} total`} />
+              <KpiCard title="Taxa de Retorno" value={`${data.returnRate}%`} icon={RefreshCw} subtitle=">1 consulta no período" />
+              <KpiCard title="Cancelamentos" value={`${data.cancellationRate}%`} icon={CalendarX} iconColor="#ef4444" />
+              <KpiCard title="Faltas" value={`${data.noShowRate}%`} icon={CalendarCheck} iconColor="#f59e0b" />
+              <KpiCard title="Aprov. Orçamentos" value={`${data.budgetApprovalRate}%`} icon={FileCheck} subtitle="Aprovados / total" />
             </View>
 
-            {/* Revenue vs Expenses chart */}
+            {/* Revenue vs Expenses */}
             <SectionCard title="Receita vs Despesas" icon={DollarSign}>
               <GroupedBarChart data={data.revenueByMonth} />
             </SectionCard>
 
-            {/* New patients chart */}
+            {/* New patients */}
             <SectionCard title="Novos Pacientes por Mês" icon={UserPlus}>
-              <SimpleBarChart
-                data={data.newPatientsByMonth}
-                labelKey="month"
-                valueKey="count"
-                color="#3b82f6"
-              />
+              <SimpleBarChart data={data.newPatientsByMonth} labelKey="month" valueKey="count" color="#3b82f6" />
+            </SectionCard>
+
+            {/* Appointments by day of week */}
+            <SectionCard title="Consultas por Dia da Semana" icon={CalendarCheck}>
+              <DayOfWeekChart data={data.appointmentsByDayOfWeek} />
             </SectionCard>
 
             {/* Top procedures */}
             <SectionCard title="Procedimentos Mais Realizados" icon={BarChart3}>
-              <HorizontalBarChart
-                data={data.topProcedures}
-                nameKey="name"
-                valueKey="count"
-                color="#8b5cf6"
-              />
+              <HorizontalBarChart data={data.topProcedures} nameKey="name" valueKey="count" color="#8b5cf6" />
             </SectionCard>
 
-            {/* Appointment status breakdown */}
+            {/* Status breakdown */}
             <SectionCard title="Status das Consultas" icon={CalendarCheck}>
               {data.appointmentsByStatus.length === 0 ? (
                 <Text className="text-gray-400 text-center py-4">Sem consultas no período</Text>
@@ -533,42 +662,38 @@ export default function AnalyticsScreen() {
 
             {/* Age distribution */}
             <SectionCard title="Faixa Etária" icon={Users}>
-              <SimpleBarChart
-                data={data.patientsByAge}
-                labelKey="range"
-                valueKey="count"
-                color="#06b6d4"
-              />
+              <SimpleBarChart data={data.patientsByAge} labelKey="range" valueKey="count" color="#06b6d4" />
             </SectionCard>
 
             {/* Payment methods */}
             <SectionCard title="Formas de Pagamento" icon={Receipt}>
-              <HorizontalBarChart
-                data={data.paymentMethods}
-                nameKey="method"
-                valueKey="value"
-                color="#f59e0b"
-                formatValue={formatCurrencyShort}
-              />
+              <HorizontalBarChart data={data.paymentMethods} nameKey="method" valueKey="value" color="#f59e0b" formatValue={formatCurrencyShort} />
             </SectionCard>
 
             {/* Revenue by dentist (admin only) */}
             {isAdmin && data.revenueByDentist.length > 0 && (
               <SectionCard title="Faturamento por Profissional" icon={DollarSign}>
-                <HorizontalBarChart
-                  data={data.revenueByDentist}
-                  nameKey="name"
-                  valueKey="value"
-                  color="#10b981"
-                  formatValue={formatCurrencyShort}
-                />
+                <HorizontalBarChart data={data.revenueByDentist} nameKey="name" valueKey="value" color="#10b981" formatValue={formatCurrencyShort} />
               </SectionCard>
             )}
+
+            {/* Profit evolution line chart */}
+            <SectionCard title="Evolução do Lucro" icon={TrendingUp}>
+              <ProfitLineChart data={data.revenueByMonth} />
+            </SectionCard>
 
             <View className="h-6" />
           </View>
         )}
       </ScrollView>
+
+      {/* Date Range Picker Modal */}
+      <DateRangePickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(p) => setCustomPeriod(p)}
+        initial={period}
+      />
     </View>
   );
 }

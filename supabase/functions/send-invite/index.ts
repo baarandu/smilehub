@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { createErrorResponse, logError } from "../_shared/errorHandler.ts"
 import { validateRequired } from "../_shared/validation.ts"
 import { createLogger } from "../_shared/logger.ts"
+import { checkRateLimit } from "../_shared/rateLimit.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
@@ -64,6 +65,18 @@ const handler = async (request: Request): Promise<Response> => {
         validateRequired(record.email, "email");
         validateRequired(record.role, "role");
 
+        // Rate limit: max 10 invites per hour per target email
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+        });
+        await checkRateLimit(supabase, `invite:${record.email}`, {
+            endpoint: "send-invite",
+            maxRequests: 10,
+            windowMinutes: 60,
+        });
+
         // Validate role is a known value and escape HTML to prevent injection
         const allowedRoles = ['admin', 'dentist', 'assistant', 'manager', 'editor', 'viewer'];
         const safeRole = allowedRoles.includes(record.role)
@@ -106,11 +119,6 @@ const handler = async (request: Request): Promise<Response> => {
 
         // Audit: invite sent (fire-and-forget)
         const log = createLogger("send-invite", request);
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-            auth: { persistSession: false, autoRefreshToken: false },
-        });
         log.audit(supabase, {
             action: "INVITE_SENT", table_name: "Invite",
             details: { role: record.role },

@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCrmOpportunities, useCrmFunnel } from '@/hooks/useCRM';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import {
-  FileText, UserX, CalendarClock, Clock, CalendarX, Trophy, FileX, ChevronRight,
+  FileText, UserX, CalendarClock, Clock, CalendarX, Trophy, FileX, ChevronRight, CalendarRange,
 } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 import { OpportunityDetailSheet } from './components/OpportunityDetailSheet';
-import type { OpportunityCard, FunnelStep } from '@/services/crmMetrics';
+import type { OpportunityCard, FunnelStep, CrmMetricsPeriod } from '@/services/crmMetrics';
+import { startOfMonth, endOfMonth, subMonths, startOfYear, subYears, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, typeof FileText> = {
   'file-text': FileText,
@@ -84,9 +90,48 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
   );
 }
 
+type PresetKey = '1m' | '3m' | '6m' | '12m' | 'ytd' | 'custom';
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: '1m', label: 'Mês' },
+  { key: '3m', label: '3m' },
+  { key: '6m', label: '6m' },
+  { key: '12m', label: '12m' },
+  { key: 'ytd', label: 'Ano' },
+  { key: 'custom', label: 'Personalizado' },
+];
+
+function getPresetDates(key: PresetKey): { start: Date; end: Date } {
+  const now = new Date();
+  switch (key) {
+    case '1m': return { start: startOfMonth(now), end: endOfMonth(now) };
+    case '3m': return { start: startOfMonth(subMonths(now, 2)), end: endOfMonth(now) };
+    case '6m': return { start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) };
+    case '12m': return { start: startOfMonth(subMonths(now, 11)), end: endOfMonth(now) };
+    case 'ytd': return { start: startOfYear(now), end: endOfMonth(now) };
+    default: return { start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) };
+  }
+}
+
+function fmtDate(d: Date): string {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 export function OpportunitiesTab() {
-  const { data: cards, isLoading: cardsLoading } = useCrmOpportunities();
-  const { data: funnel, isLoading: funnelLoading } = useCrmFunnel();
+  const [preset, setPreset] = useState<PresetKey>('1m');
+  const [customRange, setCustomRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [selecting, setSelecting] = useState<'start' | 'end'>('start');
+  const [tempStart, setTempStart] = useState<Date>(new Date());
+
+  const dates = preset === 'custom' && customRange ? customRange : getPresetDates(preset);
+  const period: CrmMetricsPeriod = useMemo(() => ({
+    start: fmtDate(dates.start),
+    end: fmtDate(dates.end),
+  }), [dates.start.getTime(), dates.end.getTime()]);
+
+  const { data: cards, isLoading: cardsLoading } = useCrmOpportunities(period);
+  const { data: funnel, isLoading: funnelLoading } = useCrmFunnel(period);
   const [selectedCard, setSelectedCard] = useState<OpportunityCard | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -98,6 +143,72 @@ export function OpportunitiesTab() {
 
   return (
     <div className="space-y-6">
+      {/* Period Filter */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 flex-wrap">
+          {PRESETS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => {
+                if (p.key === 'custom') {
+                  setPreset('custom');
+                  setCalendarOpen(true);
+                } else {
+                  setPreset(p.key);
+                }
+              }}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap',
+                preset === p.key
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {preset === 'custom' && (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 text-xs">
+                <CalendarRange className="h-3.5 w-3.5" />
+                {format(dates.start, "dd/MM/yy")} - {format(dates.end, "dd/MM/yy")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <div className="p-3 border-b">
+                <p className="text-sm font-medium">
+                  {selecting === 'start' ? 'Selecione a data inicial' : 'Selecione a data final'}
+                </p>
+              </div>
+              <Calendar
+                mode="single"
+                locale={ptBR}
+                selected={selecting === 'start' ? dates.start : dates.end}
+                onSelect={(date) => {
+                  if (!date) return;
+                  if (selecting === 'start') {
+                    setTempStart(date);
+                    setSelecting('end');
+                  } else {
+                    const finalStart = tempStart <= date ? tempStart : date;
+                    const finalEnd = tempStart <= date ? date : tempStart;
+                    setCustomRange({ start: startOfMonth(finalStart), end: endOfMonth(finalEnd) });
+                    setSelecting('start');
+                    setCalendarOpen(false);
+                  }
+                }}
+                disabled={(date) => date > new Date()}
+                defaultMonth={selecting === 'start' ? dates.start : dates.end}
+                fromDate={subYears(new Date(), 3)}
+                toDate={new Date()}
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Funnel */}
         <div className="lg:col-span-1">
@@ -115,7 +226,7 @@ export function OpportunitiesTab() {
               ) : (
                 <FunnelChart steps={funnel || []} />
               )}
-              <p className="text-[10px] text-muted-foreground text-center mt-3">Últimos 30 dias</p>
+              <p className="text-[10px] text-muted-foreground text-center mt-3">{format(dates.start, "dd/MM/yy")} - {format(dates.end, "dd/MM/yy")}</p>
             </CardContent>
           </Card>
         </div>
@@ -149,6 +260,7 @@ export function OpportunitiesTab() {
         card={selectedCard}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        period={period}
       />
     </div>
   );

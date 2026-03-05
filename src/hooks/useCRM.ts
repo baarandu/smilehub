@@ -160,21 +160,21 @@ export function useCreateTag() {
   });
 }
 
-export function useCrmOpportunities() {
+export function useCrmOpportunities(period?: import('@/services/crmMetrics').CrmMetricsPeriod) {
   const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['crm-opportunities', clinicId],
-    queryFn: () => crmMetricsService.getOpportunityCards(clinicId!),
+    queryKey: ['crm-opportunities', clinicId, period?.start, period?.end],
+    queryFn: () => crmMetricsService.getOpportunityCards(clinicId!, period),
     enabled: !!clinicId,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useCrmFunnel() {
+export function useCrmFunnel(period?: import('@/services/crmMetrics').CrmMetricsPeriod) {
   const { clinicId } = useClinic();
   return useQuery({
-    queryKey: ['crm-funnel', clinicId],
-    queryFn: () => crmMetricsService.getFunnelData(clinicId!),
+    queryKey: ['crm-funnel', clinicId, period?.start, period?.end],
+    queryFn: () => crmMetricsService.getFunnelData(clinicId!, period),
     enabled: !!clinicId,
     staleTime: 5 * 60 * 1000,
   });

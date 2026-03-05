@@ -354,15 +354,12 @@ export default function AISecretary() {
 
   // Schedule handlers
   const handleAddScheduleEntry = async () => {
-    console.log('handleAddScheduleEntry called', { clinicId, newScheduleDay, newScheduleStart, newScheduleEnd });
     if (!clinicId) {
-      console.log('No clinicId, returning');
       toast({ variant: 'destructive', title: 'Erro', description: 'Clínica não identificada.' });
       return;
     }
 
     const result = await addScheduleEntry(clinicId, newScheduleDay, newScheduleStart, newScheduleEnd);
-    console.log('addScheduleEntry result:', result);
     if (result) {
       setScheduleEntries(prev => [...prev, result]);
       setShowScheduleModal(false);

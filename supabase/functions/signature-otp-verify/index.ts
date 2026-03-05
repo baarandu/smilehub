@@ -4,6 +4,7 @@ import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import { createErrorResponse } from "../_shared/errorHandler.ts";
 import { extractBearerToken, validateUUID, validateRequired, ValidationError } from "../_shared/validation.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const FUNCTION_NAME = "signature-otp-verify";
 const JWT_SECRET = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("JWT_SECRET");
@@ -67,6 +68,13 @@ serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Rate limit: max 5 OTP verification attempts per 15 minutes per user
+    await checkRateLimit(supabase, `otp-verify:${user.id}`, {
+      endpoint: "signature-otp-verify",
+      maxRequests: 5,
+      windowMinutes: 15,
     });
 
     const body = await req.json();
