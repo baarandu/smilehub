@@ -176,7 +176,10 @@ export function PaymentModal({
                 appliedCoupon?.code
             );
 
-            if (result && result.clientSecret) {
+            if (result && result.activated) {
+                // 100% discount — subscription activated directly, no payment needed
+                onSuccess();
+            } else if (result && result.clientSecret) {
                 setClientSecret(result.clientSecret);
                 setPaymentType(result.type === 'setup' ? 'setup' : 'payment');
                 setStep('payment');

@@ -103,6 +103,66 @@ serve(async (req) => {
             }
         }
 
+        const finalAmount = validatedCoupon ? discountedAmount : amount;
+
+        // --- 100% discount: activate subscription directly, skip Stripe ---
+        if (validatedCoupon && finalAmount <= 0) {
+            // Find user's clinic
+            const { data: clinicUser } = await supabase
+                .from('clinic_users')
+                .select('clinic_id')
+                .eq('user_id', userId)
+                .single();
+
+            if (!clinicUser) throw new Error("Clínica não encontrada para este usuário.");
+
+            const clinicId = clinicUser.clinic_id;
+            const now = new Date();
+            const periodEnd = new Date(now);
+            periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+            // Check for existing subscription
+            const { data: existingSub } = await supabase
+                .from('subscriptions')
+                .select('id')
+                .eq('clinic_id', clinicId)
+                .limit(1);
+
+            const subscriptionData: any = {
+                clinic_id: clinicId,
+                plan_id: priceId,
+                status: 'active',
+                current_period_start: now.toISOString(),
+                current_period_end: periodEnd.toISOString(),
+                cancel_at_period_end: false,
+                stripe_subscription_id: `coupon_${validatedCoupon.code}_${Date.now()}`,
+                updated_at: now.toISOString(),
+            };
+
+            if (existingSub && existingSub.length > 0) {
+                await supabase.from('subscriptions').update(subscriptionData).eq('id', existingSub[0].id);
+            } else {
+                await supabase.from('subscriptions').insert({ ...subscriptionData, created_at: now.toISOString() });
+            }
+
+            // Increment coupon used_count
+            await supabase
+                .from('discount_coupons')
+                .update({ used_count: (validatedCoupon.used_count || 0) + 1 })
+                .eq('id', validatedCoupon.id);
+
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_CREATE", table_name: "Subscription", record_id: clinicId,
+                user_id: user.id, details: { plan_name: planName, coupon: validatedCoupon.code, free: true },
+            });
+
+            return new Response(
+                JSON.stringify({ subscriptionId: null, clientSecret: null, customerId: null, type: 'free', activated: true }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
+            );
+        }
+
+        // --- Normal paid flow via Stripe ---
         // 1. Get or Create Customer
         let stripeCustomerId = customerId;
         if (!stripeCustomerId) {
@@ -114,7 +174,6 @@ serve(async (req) => {
         }
 
         // 2. Prepare Subscription Item
-        const finalAmount = validatedCoupon ? discountedAmount : amount;
         let subscriptionItem: any = {};
         if (priceId && (priceId.startsWith('price_') || priceId.startsWith('plan_'))) {
             subscriptionItem = { price: priceId };
