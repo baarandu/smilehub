@@ -136,7 +136,7 @@ export function PaymentModal({
     const [step, setStep] = useState<'coupon' | 'payment'>('coupon');
 
     const finalPrice = appliedCoupon
-        ? appliedCoupon.discount_type === 'percent'
+        ? appliedCoupon.discount_type === 'percentage'
             ? Math.round(price * (1 - appliedCoupon.discount_value / 100))
             : Math.max(0, price - appliedCoupon.discount_value)
         : price;
@@ -273,7 +273,7 @@ export function PaymentModal({
                             {appliedCoupon && (
                                 <p className="text-sm text-green-600 flex items-center gap-1">
                                     <CheckCircle className="w-3.5 h-3.5" />
-                                    Cupom aplicado: {appliedCoupon.discount_type === 'percent'
+                                    Cupom aplicado: {appliedCoupon.discount_type === 'percentage'
                                         ? `${appliedCoupon.discount_value}% de desconto`
                                         : `R$ ${(appliedCoupon.discount_value / 100).toFixed(2)} de desconto`
                                     }

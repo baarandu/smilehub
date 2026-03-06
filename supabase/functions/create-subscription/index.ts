@@ -95,7 +95,7 @@ serve(async (req) => {
 
             // Apply discount to amount
             if (amount) {
-                if (coupon.discount_type === 'percent') {
+                if (coupon.discount_type === 'percentage') {
                     discountedAmount = Math.round(amount * (1 - coupon.discount_value / 100));
                 } else {
                     discountedAmount = Math.max(0, amount - coupon.discount_value);
