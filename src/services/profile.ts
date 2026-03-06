@@ -171,7 +171,7 @@ export const profileService = {
             .eq('user_id', user.id)
             .maybeSingle() as any;
 
-        let clinicId = clinicUser?.clinic_id;
+        const clinicId = clinicUser?.clinic_id;
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
@@ -371,7 +371,7 @@ export const profileService = {
             .eq('user_id', user.id)
             .maybeSingle() as any;
 
-        let clinicId = clinicUser?.clinic_id;
+        const clinicId = clinicUser?.clinic_id;
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
