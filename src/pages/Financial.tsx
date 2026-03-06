@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X, MessageCircle, User, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Transaction } from '@/components/financial';
@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
+import { getWhatsAppNumber } from '@/utils/formatters';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,6 +63,22 @@ export default function Financial() {
   const confirmReceivable = useConfirmReceivable();
   const cancelReceivable = useCancelReceivable();
   const [confirmingReceivable, setConfirmingReceivable] = useState<PaymentReceivable | null>(null);
+  const [expandedReceivable, setExpandedReceivable] = useState<string | null>(null);
+
+  // Computed receivable totals
+  const receivableTotals = useMemo(() => {
+    const pending = clinicReceivables.filter(r => r.status === 'pending');
+    const overdue = clinicReceivables.filter(r => r.status === 'overdue');
+    const confirmed = clinicReceivables.filter(r => r.status === 'confirmed');
+    return {
+      pendingCount: pending.length,
+      pendingAmount: pending.reduce((s, r) => s + r.amount, 0),
+      overdueCount: overdue.length,
+      overdueAmount: overdue.reduce((s, r) => s + r.amount, 0),
+      confirmedCount: confirmed.length,
+      confirmedAmount: confirmed.reduce((s, r) => s + r.amount, 0),
+    };
+  }, [clinicReceivables]);
 
   // Calculate date range based on view mode
   const getDateRange = useCallback(() => {
@@ -266,65 +283,65 @@ export default function Financial() {
 
         <TabsContent value="receivables">
           <div className="space-y-6">
-            {/* Summary cards */}
+            {/* Summary cards with amounts */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-amber-50 border-amber-100">
+              <Card className={`border-amber-100 cursor-pointer transition-colors ${receivablesFilter === 'pending' ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-amber-50/60 hover:bg-amber-50'}`}
+                onClick={() => setReceivablesFilter(receivablesFilter === 'pending' ? 'active' : 'pending')}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-amber-600">Pendentes</p>
-                    <h3 className="text-2xl font-bold text-amber-700">
-                      {clinicReceivables.filter(r => r.status === 'pending').length}
-                    </h3>
+                    <h3 className="text-2xl font-bold text-amber-700">{receivableTotals.pendingCount}</h3>
+                    <p className="text-sm text-amber-600/80">R$ {formatMoney(receivableTotals.pendingAmount)}</p>
                   </div>
                   <Clock className="w-8 h-8 text-amber-300" />
                 </CardContent>
               </Card>
-              <Card className="bg-red-50 border-red-100">
+              <Card className={`border-red-100 cursor-pointer transition-colors ${receivablesFilter === 'overdue' ? 'ring-2 ring-red-400 bg-red-50' : 'bg-red-50/60 hover:bg-red-50'}`}
+                onClick={() => setReceivablesFilter(receivablesFilter === 'overdue' ? 'active' : 'overdue')}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-red-600">Em Atraso</p>
-                    <h3 className="text-2xl font-bold text-red-700">
-                      {overdueSummary?.total_count || 0}
-                      {(overdueSummary?.total_amount ?? 0) > 0 && (
-                        <span className="text-sm font-normal ml-2">
-                          (R$ {formatMoney(overdueSummary!.total_amount)})
-                        </span>
-                      )}
-                    </h3>
+                    <h3 className="text-2xl font-bold text-red-700">{receivableTotals.overdueCount}</h3>
+                    <p className="text-sm text-red-600/80">R$ {formatMoney(receivableTotals.overdueAmount)}</p>
                   </div>
                   <AlertCircle className="w-8 h-8 text-red-300" />
                 </CardContent>
               </Card>
-              <Card className="bg-emerald-50 border-emerald-100">
+              <Card className={`border-emerald-100 cursor-pointer transition-colors ${receivablesFilter === 'confirmed' ? 'ring-2 ring-emerald-400 bg-emerald-50' : 'bg-emerald-50/60 hover:bg-emerald-50'}`}
+                onClick={() => setReceivablesFilter(receivablesFilter === 'confirmed' ? 'active' : 'confirmed')}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-emerald-600">Confirmados</p>
-                    <h3 className="text-2xl font-bold text-emerald-700">
-                      {clinicReceivables.filter(r => r.status === 'confirmed').length}
-                    </h3>
+                    <h3 className="text-2xl font-bold text-emerald-700">{receivableTotals.confirmedCount}</h3>
+                    <p className="text-sm text-emerald-600/80">R$ {formatMoney(receivableTotals.confirmedAmount)}</p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-emerald-300" />
                 </CardContent>
               </Card>
             </div>
 
-            {/* Filter */}
-            <div className="flex items-center gap-3">
-              <Select value={receivablesFilter} onValueChange={setReceivablesFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filtrar por status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Todos ativos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                  <SelectItem value="overdue">Em atraso</SelectItem>
-                  <SelectItem value="confirmed">Confirmados</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" onClick={() => refetchReceivables()}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar
-              </Button>
+            {/* Filter bar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Select value={receivablesFilter} onValueChange={setReceivablesFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filtrar por status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Todos ativos</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="overdue">Em atraso</SelectItem>
+                    <SelectItem value="confirmed">Confirmados</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={() => refetchReceivables()}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Atualizar
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {clinicReceivables.length} parcela{clinicReceivables.length !== 1 ? 's' : ''}
+              </p>
             </div>
 
             {/* Receivables list */}
@@ -340,6 +357,8 @@ export default function Financial() {
                       const isOverdue = r.status === 'overdue';
                       const isConfirmed = r.status === 'confirmed';
                       const patientName = (r as any).patients?.name || '';
+                      const patientPhone = (r as any).patients?.phone || '';
+                      const isExpanded = expandedReceivable === r.id;
 
                       const methodLabels: Record<string, string> = {
                         credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
@@ -348,70 +367,198 @@ export default function Financial() {
                         : r.payment_method === 'cash' ? Banknote
                         : CreditCard;
 
+                      // Calculate days until due / overdue
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const dueDate = new Date(r.due_date + 'T00:00:00');
+                      const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
                       return (
-                        <div key={r.id} className={`p-4 flex items-center justify-between hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}>
-                          <div className="flex-1 min-w-0">
-                            {patientName && (
-                              <p className="text-xs font-medium text-slate-400 mb-0.5">{patientName}</p>
-                            )}
-                            <p className="font-medium text-slate-800 truncate">{r.tooth_description}</p>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <MethodIcon className="w-3.5 h-3.5 text-slate-400" />
-                              <span className="text-xs text-slate-500">{methodLabels[r.payment_method] || r.payment_method}</span>
-                              <span className="text-xs text-slate-400">|</span>
-                              <span className="text-xs text-slate-500">{formatDisplayDate(r.due_date)}</span>
-                              {isOverdue && (
-                                <Badge variant="destructive" className="text-[10px] h-5">Em atraso</Badge>
-                              )}
-                              {isConfirmed && (
-                                <Badge className="text-[10px] h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Confirmado</Badge>
-                              )}
-                              {r.status === 'pending' && (
-                                <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100">Pendente</Badge>
+                        <div key={r.id} className={isOverdue ? 'bg-red-50/30' : ''}>
+                          {/* Main row */}
+                          <div
+                            className="p-4 flex items-center gap-3 hover:bg-slate-50/80 transition-colors cursor-pointer"
+                            onClick={() => setExpandedReceivable(isExpanded ? null : r.id)}
+                          >
+                            {/* Expand icon */}
+                            <div className="flex-shrink-0 text-slate-400">
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </div>
+
+                            {/* Patient + treatment */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                                <span className="font-semibold text-slate-900 truncate">{patientName || 'Paciente'}</span>
+                                {isOverdue && (
+                                  <Badge variant="destructive" className="text-[10px] h-5 flex-shrink-0">
+                                    {Math.abs(diffDays)} dia{Math.abs(diffDays) !== 1 ? 's' : ''} em atraso
+                                  </Badge>
+                                )}
+                                {r.status === 'pending' && (
+                                  <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 flex-shrink-0">
+                                    {diffDays === 0 ? 'Vence hoje' : diffDays === 1 ? 'Amanhã' : `em ${diffDays} dias`}
+                                  </Badge>
+                                )}
+                                {isConfirmed && (
+                                  <Badge className="text-[10px] h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-100 flex-shrink-0">Confirmado</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-slate-600 truncate">{r.tooth_description}</p>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-slate-400">
+                                <MethodIcon className="w-3 h-3" />
+                                <span>{methodLabels[r.payment_method] || r.payment_method}</span>
+                                {r.brand && <span className="uppercase">({r.brand})</span>}
+                                <span>|</span>
+                                <span>Venc. {formatDisplayDate(r.due_date)}</span>
+                                <span>|</span>
+                                <span>Parcela {r.split_index + 1}</span>
+                              </div>
+                            </div>
+
+                            {/* Values + actions */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="text-right">
+                                <p className={`text-lg font-bold ${isOverdue ? 'text-red-600' : isConfirmed ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                  R$ {formatMoney(r.amount)}
+                                </p>
+                                {r.net_amount > 0 && r.net_amount !== r.amount && (
+                                  <p className="text-xs text-slate-400">Líq. R$ {formatMoney(r.net_amount)}</p>
+                                )}
+                              </div>
+                              {!isConfirmed && r.status !== 'cancelled' && (
+                                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                                  <Button
+                                    size="sm"
+                                    className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                                    onClick={() => setConfirmingReceivable(r)}
+                                  >
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Confirmar
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        className="text-red-600"
+                                        onClick={async () => {
+                                          try {
+                                            await cancelReceivable.mutateAsync(r.id);
+                                            toast.success('Parcela cancelada');
+                                            refetchReceivables();
+                                          } catch {
+                                            toast.error('Falha ao cancelar parcela');
+                                          }
+                                        }}
+                                      >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Cancelar parcela
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            <span className={`font-bold ${isOverdue ? 'text-red-600' : isConfirmed ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              R$ {formatMoney(r.amount)}
-                            </span>
-                            {!isConfirmed && r.status !== 'cancelled' && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                                  onClick={() => setConfirmingReceivable(r)}
-                                >
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Confirmar
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      className="text-red-600"
-                                      onClick={async () => {
-                                        try {
-                                          await cancelReceivable.mutateAsync(r.id);
-                                          toast.success('Parcela cancelada');
-                                          refetchReceivables();
-                                        } catch {
-                                          toast.error('Falha ao cancelar parcela');
-                                        }
+
+                          {/* Expanded details */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 pt-0 ml-7 animate-in fade-in slide-in-from-top-1 duration-200">
+                              <div className="bg-slate-50 rounded-lg p-4 space-y-3 border">
+                                {/* Financial breakdown */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-slate-500 text-xs">Valor Bruto</p>
+                                    <p className="font-semibold">R$ {formatMoney(r.amount)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500 text-xs">Valor Líquido</p>
+                                    <p className="font-semibold text-emerald-600">R$ {formatMoney(r.net_amount)}</p>
+                                  </div>
+                                  {r.tax_amount > 0 && (
+                                    <div>
+                                      <p className="text-slate-500 text-xs">Imposto ({r.tax_rate}%)</p>
+                                      <p className="font-semibold text-red-500">- R$ {formatMoney(r.tax_amount)}</p>
+                                    </div>
+                                  )}
+                                  {r.card_fee_amount > 0 && (
+                                    <div>
+                                      <p className="text-slate-500 text-xs">Taxa Cartão ({r.card_fee_rate}%)</p>
+                                      <p className="font-semibold text-red-500">- R$ {formatMoney(r.card_fee_amount)}</p>
+                                    </div>
+                                  )}
+                                  {r.location_amount > 0 && (
+                                    <div>
+                                      <p className="text-slate-500 text-xs">Taxa Local ({r.location_rate}%)</p>
+                                      <p className="font-semibold text-red-500">- R$ {formatMoney(r.location_amount)}</p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-slate-500 text-xs">Forma de Pagamento</p>
+                                    <p className="font-semibold flex items-center gap-1">
+                                      <MethodIcon className="w-3.5 h-3.5" />
+                                      {methodLabels[r.payment_method] || r.payment_method}
+                                      {r.brand && <span className="text-slate-400 uppercase text-xs">({r.brand})</span>}
+                                      {r.installments > 1 && <span className="text-slate-400 text-xs">({r.installments}x)</span>}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-slate-500 text-xs">Vencimento</p>
+                                    <p className="font-semibold">{formatDisplayDate(r.due_date)}</p>
+                                  </div>
+                                  {isConfirmed && r.confirmed_at && (
+                                    <div>
+                                      <p className="text-slate-500 text-xs">Confirmado em</p>
+                                      <p className="font-semibold text-emerald-600">{formatDisplayDate(r.confirmed_at.split('T')[0])}</p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-slate-500 text-xs">Criado em</p>
+                                    <p className="font-semibold">{formatDisplayDate(r.created_at.split('T')[0])}</p>
+                                  </div>
+                                </div>
+
+                                {/* Payer info */}
+                                {!r.payer_is_patient && r.payer_name && (
+                                  <div className="pt-2 border-t text-sm">
+                                    <p className="text-slate-500 text-xs mb-1">Pagador</p>
+                                    <p className="font-medium">{r.payer_name} ({r.payer_type})</p>
+                                  </div>
+                                )}
+
+                                {/* Actions row */}
+                                <div className="pt-2 border-t flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => navigate(`/pacientes/${r.patient_id}`)}
+                                  >
+                                    <ExternalLink className="w-3 h-3 mr-1" />
+                                    Ver Paciente
+                                  </Button>
+                                  {patientPhone && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                                      onClick={() => {
+                                        const message = encodeURIComponent(`Olá ${patientName}, tudo bem? Gostaríamos de confirmar o recebimento de uma parcela no valor de R$ ${formatMoney(r.amount)} com vencimento em ${formatDisplayDate(r.due_date)}.`);
+                                        window.open(`https://wa.me/${getWhatsAppNumber(patientPhone)}?text=${message}`, '_blank');
                                       }}
                                     >
-                                      <X className="w-4 h-4 mr-2" />
-                                      Cancelar parcela
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </>
-                            )}
-                          </div>
+                                      <MessageCircle className="w-3 h-3 mr-1" />
+                                      WhatsApp
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

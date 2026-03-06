@@ -228,7 +228,7 @@ export const receivablesService = {
 
     let query = supabase
       .from('payment_receivables')
-      .select('*, patients(name)')
+      .select('*, patients(name, phone)')
       .eq('clinic_id', clinicId)
       .order('due_date', { ascending: true });
 
