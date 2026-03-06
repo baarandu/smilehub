@@ -367,6 +367,59 @@ async function executeSearchPatients(
   };
 }
 
+// Helper: extract storage path from a Supabase storage URL
+function extractStoragePath(url: string, bucket: string): string | null {
+  // Format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+  const patterns = [
+    `/storage/v1/object/public/${bucket}/`,
+    `/storage/v1/object/sign/${bucket}/`,
+    `/storage/v1/object/${bucket}/`,
+  ];
+  for (const marker of patterns) {
+    const idx = url.indexOf(marker);
+    if (idx !== -1) {
+      const pathWithParams = url.substring(idx + marker.length);
+      return decodeURIComponent(pathWithParams.split("?")[0]);
+    }
+  }
+  return null;
+}
+
+// Helper: download image from Supabase Storage and return as base64 data URI
+async function downloadImageAsBase64(
+  supabase: any,
+  bucket: string,
+  storagePath: string
+): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .download(storagePath);
+
+    if (error || !data) {
+      console.warn(`[vision] Storage download failed for ${storagePath}:`, error?.message);
+      return null;
+    }
+
+    const buffer = await data.arrayBuffer();
+    if (buffer.byteLength > 15 * 1024 * 1024) {
+      console.warn(`[vision] Image too large: ${buffer.byteLength} bytes`);
+      return null;
+    }
+
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const contentType = data.type || "image/jpeg";
+    return `data:${contentType};base64,${btoa(binary)}`;
+  } catch (err) {
+    console.warn(`[vision] Download error for ${storagePath}:`, err);
+    return null;
+  }
+}
+
 // Tool 8: Analyze Exam Image
 async function executeAnalyzeExamImage(
   args: ToolArgs,
@@ -402,13 +455,13 @@ async function executeAnalyzeExamImage(
   }
 
   // Collect all available image URLs
-  const imageUrls: string[] = [];
-  if (data.file_url) imageUrls.push(data.file_url);
+  const rawUrls: string[] = [];
+  if (data.file_url) rawUrls.push(data.file_url);
   if (data.file_urls && Array.isArray(data.file_urls)) {
-    imageUrls.push(...data.file_urls);
+    rawUrls.push(...data.file_urls);
   }
 
-  if (imageUrls.length === 0) {
+  if (rawUrls.length === 0) {
     return {
       error: "Exame não possui imagem anexada.",
       exam_info: {
@@ -419,8 +472,43 @@ async function executeAnalyzeExamImage(
     };
   }
 
+  // Download images directly from storage and convert to base64
+  const base64Images: string[] = [];
+  const fallbackUrls: string[] = [];
+
+  for (const url of rawUrls) {
+    const storagePath = extractStoragePath(url, "exams");
+    if (storagePath) {
+      const base64 = await downloadImageAsBase64(supabase, "exams", storagePath);
+      if (base64) {
+        base64Images.push(base64);
+      } else {
+        // Fallback: try signed URL
+        const { data: signedData } = await supabase.storage
+          .from("exams")
+          .createSignedUrl(storagePath, 300);
+        fallbackUrls.push(signedData?.signedUrl || url);
+      }
+    } else {
+      fallbackUrls.push(url); // non-storage URL, use as-is
+    }
+  }
+
+  const allImageUrls = [...base64Images, ...fallbackUrls];
+
+  if (allImageUrls.length === 0) {
+    return {
+      error: "Não foi possível acessar as imagens do exame.",
+      exam_info: {
+        type: data.type || data.name || "Não especificado",
+        title: data.title || null,
+        date: data.exam_date || data.date || data.created_at,
+      },
+    };
+  }
+
   return {
-    image_urls: imageUrls,
+    image_urls: allImageUrls,
     exam_info: {
       type: data.type || data.name || "Não especificado",
       title: data.title || null,

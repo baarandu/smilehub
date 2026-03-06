@@ -95,10 +95,13 @@ async function fetchWithTimeout(
 // Convert image URL to base64 data URI so OpenAI receives the actual image data
 // (avoids issues with OpenAI servers being unable to fetch Supabase Storage URLs)
 async function imageUrlToDataUri(url: string): Promise<string> {
+  // Already a data URI — skip fetch
+  if (url.startsWith("data:")) return url;
+
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.warn(`[vision] Failed to fetch image (${response.status}): ${url}`);
+      console.warn(`[vision] Failed to fetch image (${response.status}): ${url.substring(0, 100)}`);
       return url; // fallback to URL
     }
     const contentType = response.headers.get("content-type") || "image/jpeg";

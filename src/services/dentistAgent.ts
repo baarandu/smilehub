@@ -33,8 +33,17 @@ export const dentistAgentService = {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to send message");
+      const errorData = await response.json().catch(() => ({}));
+      // Consent error from fail-closed path (403)
+      if (response.status === 403) {
+        const err = new Error(
+          errorData.error || "Este paciente ainda não consentiu com a análise de dados por IA. " +
+            "Registre o consentimento na ficha do paciente em 'Consentimento IA'."
+        ) as Error & { consent_required: boolean };
+        err.consent_required = true;
+        throw err;
+      }
+      throw new Error(errorData.error || "Erro ao enviar mensagem");
     }
 
     const data = await response.json();
@@ -42,7 +51,8 @@ export const dentistAgentService = {
     // Handle consent-required response (no conversation was created)
     if (data.consent_required) {
       const error = new Error(
-        data.response || "Paciente sem consentimento para IA."
+        data.response || "Este paciente ainda não consentiu com a análise de dados por IA. " +
+          "Registre o consentimento na ficha do paciente em 'Consentimento IA'."
       ) as Error & { consent_required: boolean };
       error.consent_required = true;
       throw error;

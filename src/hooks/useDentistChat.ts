@@ -85,7 +85,7 @@ export function useDentistChat(
     onError: (error: Error & { consent_required?: boolean }) => {
       setOptimisticMessages([]);
       if (error.consent_required) {
-        toast.warning(error.message);
+        toast.warning(error.message, { duration: 8000 });
       } else {
         toast.error(error.message);
       }
