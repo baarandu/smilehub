@@ -71,7 +71,7 @@ export function ChatInterface({
                 <Stethoscope className="w-6 h-6 text-[#a03f3d]" />
               </div>
               <h3 className="text-xl font-semibold mb-2">
-                Olá! Sou seu consultor odontológico senior
+                Olá! Sou seu assistente clínico odontológico
               </h3>
               <p className="text-muted-foreground mb-2">
                 Segunda opinião clínica para auxiliar no seu raciocínio.
