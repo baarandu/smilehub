@@ -27,6 +27,9 @@ export default function CRM() {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold text-foreground">CRM</h1>
             <p className="text-muted-foreground mt-0.5 text-sm">Gestão de leads e pipeline de conversão</p>
+            <p className="text-muted-foreground mt-1 text-xs max-w-lg">
+              CRM (Customer Relationship Management) é a ferramenta que organiza e acompanha seus potenciais pacientes desde o primeiro contato até o fechamento do tratamento, ajudando a não perder nenhuma oportunidade.
+            </p>
           </div>
         </div>
         <Button size="sm" onClick={() => handleCreateLead()}>
