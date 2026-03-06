@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, Kanban, List, TrendingUp } from 'lucide-react';
+import { Plus, Kanban, List, TrendingUp, HelpCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PipelineBoard } from './crm/PipelineBoard';
 import { LeadsListTab } from './crm/LeadsListTab';
 import { OpportunitiesTab } from './crm/OpportunitiesTab';
@@ -25,11 +26,20 @@ export default function CRM() {
             <Kanban className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">CRM</h1>
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">CRM</h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-sm">
+                    CRM (Customer Relationship Management) organiza e acompanha seus potenciais pacientes desde o primeiro contato até o fechamento do tratamento, ajudando a não perder nenhuma oportunidade.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <p className="text-muted-foreground mt-0.5 text-sm">Gestão de leads e pipeline de conversão</p>
-            <p className="text-muted-foreground mt-1 text-xs max-w-lg">
-              CRM (Customer Relationship Management) é a ferramenta que organiza e acompanha seus potenciais pacientes desde o primeiro contato até o fechamento do tratamento, ajudando a não perder nenhuma oportunidade.
-            </p>
           </div>
         </div>
         <Button size="sm" onClick={() => handleCreateLead()}>
