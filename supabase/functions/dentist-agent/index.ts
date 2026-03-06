@@ -626,7 +626,7 @@ serve(async (req) => {
           content: [
             {
               type: "text",
-              text: `${examContext}\nAnalise esta imagem odontológica seguindo o protocolo IMAGEM do system prompt. Identifique estruturas anatômicas, achados normais e anormais, possíveis patologias e qualidade técnica. Use notação FDI para dentes. Seja específico e objetivo nos achados.`,
+              text: `${examContext}\nDescreva observações GERAIS desta imagem odontológica seguindo o protocolo de imagem do system prompt. LEMBRE-SE: sua visão tem precisão LIMITADA. NÃO identifique dentes por número — pergunte ao dentista qual dente/região está em questão. Use linguagem de incerteza ("parece haver", "sugere", "na região que aparenta ser"). Descreva áreas de radiolucidez/radiopacidade sem diagnóstico definitivo. Pergunte ao dentista o que ELE está vendo para poder ajudar melhor.`,
             },
             ...base64VisionUrls.map((url: string) => ({
               type: "image_url",
