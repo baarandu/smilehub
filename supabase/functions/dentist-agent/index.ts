@@ -566,14 +566,23 @@ serve(async (req) => {
             supabase
           );
 
-          const resultStr = JSON.stringify(result);
-          log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
-
-          // Collect vision image URLs and exam context
+          // Collect vision image URLs/base64 BEFORE stripping them from result
           if (result.requires_vision && result.image_urls) {
             visionImageUrls = [...visionImageUrls, ...result.image_urls];
             if (result.exam_info) visionExamInfo = result.exam_info;
           }
+
+          // For storage and OpenAI tool message: strip base64 data (too large)
+          // Keep only metadata — the actual images go through the vision pipeline
+          const resultForStorage = { ...result };
+          if (resultForStorage.image_urls) {
+            resultForStorage.image_urls = resultForStorage.image_urls.map((url: string) =>
+              url.startsWith("data:") ? "[imagem carregada para análise]" : url
+            );
+          }
+
+          const resultStr = JSON.stringify(resultForStorage);
+          log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
 
           toolMessages.push({
             role: "tool",
@@ -581,7 +590,7 @@ serve(async (req) => {
             content: resultStr,
           });
 
-          // Save tool result
+          // Save tool result (without base64 — only metadata)
           await supabase.from("dentist_agent_messages").insert({
             conversation_id: conversationId,
             role: "tool",
