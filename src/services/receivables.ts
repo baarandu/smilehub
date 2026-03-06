@@ -205,7 +205,7 @@ export const receivablesService = {
     if (updateError) throw updateError;
 
     // Sync budget tooth JSON with updated receivable statuses
-    await this._syncBudgetToothStatus(r.split_group_id, r.budget_id, r.tooth_index);
+    await receivablesService._syncBudgetToothStatus(r.split_group_id, r.budget_id, r.tooth_index);
 
     return updated as PaymentReceivable;
   },
@@ -227,7 +227,7 @@ export const receivablesService = {
 
     // Sync budget tooth
     if (receivable) {
-      await this._syncBudgetToothStatus(
+      await receivablesService._syncBudgetToothStatus(
         (receivable as any).split_group_id,
         (receivable as any).budget_id,
         (receivable as any).tooth_index,
@@ -321,54 +321,78 @@ export const receivablesService = {
     budgetId: string,
     toothIndex: number,
   ): Promise<void> {
-    try {
-      // 1. Get all receivables in the group
-      const groupReceivables = await this.getReceivablesByGroup(splitGroupId);
+    // 1. Get all receivables in the group (direct query, not via this)
+    const { data: groupData, error: groupError } = await supabase
+      .from('payment_receivables')
+      .select('*')
+      .eq('split_group_id', splitGroupId)
+      .order('split_index', { ascending: true });
 
-      // 2. Fetch current budget
-      const { data: budget, error: budgetError } = await supabase
-        .from('budgets')
-        .select('notes, status')
-        .eq('id', budgetId)
-        .single();
+    if (groupError) {
+      console.error('Error fetching receivables group:', groupError);
+      return;
+    }
 
-      if (budgetError || !budget) return;
+    const groupReceivables = (groupData || []) as PaymentReceivable[];
+    console.log('[_syncBudgetToothStatus] group receivables:', groupReceivables.map(r => ({ id: r.id, status: r.status, amount: r.amount })));
 
-      const parsed = JSON.parse((budget as any).notes || '{}');
-      const teeth = parsed.teeth as ToothEntry[];
-      if (!teeth || !teeth[toothIndex]) return;
+    // 2. Fetch current budget
+    const { data: budget, error: budgetError } = await supabase
+      .from('budgets')
+      .select('id, notes, status')
+      .eq('id', budgetId)
+      .single();
 
-      // 3. Update splitPayments array on the tooth
-      teeth[toothIndex].splitPayments = groupReceivables.map(r => ({
-        receivableId: r.id,
-        amount: r.amount,
-        method: r.payment_method,
-        dueDate: r.due_date,
-        status: r.status,
-      }));
+    if (budgetError || !budget) {
+      console.error('Error fetching budget for sync:', budgetError);
+      return;
+    }
 
-      // 4. Determine new tooth status
-      const activeReceivables = groupReceivables.filter(r => r.status !== 'cancelled');
-      const allConfirmed = activeReceivables.length > 0 && activeReceivables.every(r => r.status === 'confirmed');
-      const anyPending = activeReceivables.some(r => r.status === 'pending' || r.status === 'overdue');
+    const parsed = JSON.parse((budget as any).notes || '{}');
+    const teeth = parsed.teeth as ToothEntry[];
+    if (!teeth || !teeth[toothIndex]) {
+      console.error('Tooth not found at index', toothIndex, 'in budget', budgetId);
+      return;
+    }
 
-      if (allConfirmed) {
-        teeth[toothIndex].status = 'paid';
-        teeth[toothIndex].paymentDate = new Date().toISOString().split('T')[0];
-      } else if (anyPending) {
-        teeth[toothIndex].status = 'partially_paid';
-      }
+    // 3. Update splitPayments array on the tooth
+    teeth[toothIndex].splitPayments = groupReceivables.map(r => ({
+      receivableId: r.id,
+      amount: r.amount,
+      method: r.payment_method,
+      dueDate: r.due_date,
+      status: r.status,
+    }));
 
-      // 5. Recalculate budget status and save
-      const newBudgetStatus = calculateBudgetStatus(teeth);
-      const updatedNotes = JSON.stringify({ ...parsed, teeth });
+    // 4. Determine new tooth status
+    const activeReceivables = groupReceivables.filter(r => r.status !== 'cancelled');
+    const allConfirmed = activeReceivables.length > 0 && activeReceivables.every(r => r.status === 'confirmed');
+    const anyPending = activeReceivables.some(r => r.status === 'pending' || r.status === 'overdue');
 
-      await supabase
-        .from('budgets')
-        .update({ notes: updatedNotes, status: newBudgetStatus })
-        .eq('id', budgetId);
-    } catch (err) {
-      console.error('Error syncing budget tooth status:', err);
+    const prevStatus = teeth[toothIndex].status;
+
+    if (allConfirmed) {
+      teeth[toothIndex].status = 'paid';
+      teeth[toothIndex].paymentDate = new Date().toISOString().split('T')[0];
+    } else if (anyPending) {
+      teeth[toothIndex].status = 'partially_paid';
+    }
+
+    console.log('[_syncBudgetToothStatus] tooth status:', prevStatus, '->', teeth[toothIndex].status);
+
+    // 5. Recalculate budget status and save
+    const newBudgetStatus = calculateBudgetStatus(teeth);
+    const updatedNotes = JSON.stringify({ ...parsed, teeth });
+
+    const { error: saveError } = await supabase
+      .from('budgets')
+      .update({ notes: updatedNotes, status: newBudgetStatus })
+      .eq('id', budgetId);
+
+    if (saveError) {
+      console.error('Error saving budget after sync:', saveError);
+    } else {
+      console.log('[_syncBudgetToothStatus] budget saved. status:', newBudgetStatus);
     }
   },
 };
