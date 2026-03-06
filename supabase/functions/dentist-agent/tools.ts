@@ -47,7 +47,7 @@ export const TOOLS = [
   {
     name: "get_patient_exams",
     description:
-      "Retorna lista de exames do paciente (radiografias, tomografias, fotos) com tipo, dente/região, data e URLs dos arquivos. Use para localizar exames antes de análise de imagem.",
+      "Retorna lista de exames do paciente (radiografias, tomografias, fotos) com tipo, dente/região e data. Use para verificar quais exames o paciente possui. NÃO é possível visualizar as imagens dos exames — apenas listar os metadados.",
     parameters: {
       type: "object",
       properties: {
@@ -103,21 +103,6 @@ export const TOOLS = [
         },
       },
       required: ["search_term"],
-    },
-  },
-  {
-    name: "analyze_exam_image",
-    description:
-      "Busca dados de um exame específico para análise de imagem (radiografia, tomografia, foto). Retorna URL da imagem, tipo de exame, dente/região e data. O sistema usará GPT-4o Vision para analisar a imagem automaticamente.",
-    parameters: {
-      type: "object",
-      properties: {
-        exam_id: {
-          type: "string",
-          description: "ID do exame (UUID).",
-        },
-      },
-      required: ["exam_id"],
     },
   },
   {

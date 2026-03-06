@@ -553,8 +553,6 @@ serve(async (req) => {
 
       // Execute each tool call and collect results
       const toolMessages: any[] = [];
-      let visionImageUrls: string[] = [];
-      let visionExamInfo: any = null;
 
       for (const toolCall of toolCalls) {
         try {
@@ -566,22 +564,7 @@ serve(async (req) => {
             supabase
           );
 
-          // Collect vision image URLs/base64 BEFORE stripping them from result
-          if (result.requires_vision && result.image_urls) {
-            visionImageUrls = [...visionImageUrls, ...result.image_urls];
-            if (result.exam_info) visionExamInfo = result.exam_info;
-          }
-
-          // For storage and OpenAI tool message: strip base64 data (too large)
-          // Keep only metadata — the actual images go through the vision pipeline
-          const resultForStorage = { ...result };
-          if (resultForStorage.image_urls) {
-            resultForStorage.image_urls = resultForStorage.image_urls.map((url: string) =>
-              url.startsWith("data:") ? "[imagem carregada para análise]" : url
-            );
-          }
-
-          const resultStr = JSON.stringify(resultForStorage);
+          const resultStr = JSON.stringify(result);
           log.debug(`Tool ${toolCall.name} done: ${Date.now() - t0}ms (${resultStr.length} chars)`);
 
           toolMessages.push({
@@ -619,32 +602,6 @@ serve(async (req) => {
         ...toolMessages,
       ];
 
-      // If vision required, convert images to base64 and add to follow-up message
-      if (visionImageUrls.length > 0) {
-        const base64VisionUrls = await Promise.all(
-          visionImageUrls.map(imageUrlToDataUri)
-        );
-
-        // Build contextual prompt with exam metadata
-        const examContext = visionExamInfo
-          ? `Exame: ${visionExamInfo.type || "Não especificado"}${visionExamInfo.date ? ` (${visionExamInfo.date})` : ""}${visionExamInfo.description ? `. Descrição: ${visionExamInfo.description}` : ""}.`
-          : "";
-
-        secondMessages.push({
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `${examContext}\nDescreva observações GERAIS desta imagem odontológica seguindo o protocolo de imagem do system prompt. LEMBRE-SE: sua visão tem precisão LIMITADA. NÃO identifique dentes por número — pergunte ao dentista qual dente/região está em questão. Use linguagem de incerteza ("parece haver", "sugere", "na região que aparenta ser"). Descreva áreas de radiolucidez/radiopacidade sem diagnóstico definitivo. Pergunte ao dentista o que ELE está vendo para poder ajudar melhor.`,
-            },
-            ...base64VisionUrls.map((url: string) => ({
-              type: "image_url",
-              image_url: { url, detail: "high" },
-            })),
-          ],
-        });
-      }
-
       log.debug(`Pre-second OpenAI: ${Date.now() - t0}ms`);
 
       const secondResponse = await fetchWithTimeout(
@@ -659,10 +616,10 @@ serve(async (req) => {
             model: "gpt-4o",
             messages: secondMessages,
             temperature: 0.3,
-            max_tokens: visionImageUrls.length > 0 ? 4000 : 2500,
+            max_tokens: 2500,
           }),
         },
-        60000 // longer timeout when processing images
+        45000
       );
 
       log.debug(`Second OpenAI call: ${Date.now() - t0}ms`);
