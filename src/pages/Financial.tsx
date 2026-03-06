@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Transaction } from '@/components/financial';
@@ -9,6 +9,19 @@ import { ExpensesTab } from '@/components/financial/tabs/ExpensesTab';
 import { ClosureTab } from '@/components/financial/tabs/ClosureTab';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
+import { useClinicReceivables, useOverdueSummary, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
+import { ConfirmReceivableDialog } from '@/components/patients/ConfirmReceivableDialog';
+import type { PaymentReceivable } from '@/types/receivables';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Month names in Portuguese
 const MONTH_NAMES = [
@@ -35,6 +48,20 @@ export default function Financial() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Receivables tab state
+  const [receivablesFilter, setReceivablesFilter] = useState<string>('active');
+  const receivablesFilterMap: Record<string, any> = {
+    active: undefined, // defaults to pending+overdue+confirmed
+    pending: { status: 'pending' },
+    overdue: { status: 'overdue' },
+    confirmed: { status: 'confirmed' },
+  };
+  const { data: clinicReceivables = [], refetch: refetchReceivables } = useClinicReceivables(receivablesFilterMap[receivablesFilter]);
+  const { data: overdueSummary } = useOverdueSummary();
+  const confirmReceivable = useConfirmReceivable();
+  const cancelReceivable = useCancelReceivable();
+  const [confirmingReceivable, setConfirmingReceivable] = useState<PaymentReceivable | null>(null);
 
   // Calculate date range based on view mode
   const getDateRange = useCallback(() => {
@@ -205,7 +232,7 @@ export default function Financial() {
 
       {/* Abas com Ícones */}
       <Tabs defaultValue="income" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
           <TabsTrigger value="income" className="gap-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200">
             <TrendingUp className="w-4 h-4" />
             <span>Receitas</span>
@@ -213,6 +240,15 @@ export default function Financial() {
           <TabsTrigger value="expenses" className="gap-2 data-[state=active]:bg-red-50 data-[state=active]:text-red-700 data-[state=active]:border-red-200">
             <TrendingDown className="w-4 h-4" />
             <span>Despesas</span>
+          </TabsTrigger>
+          <TabsTrigger value="receivables" className="gap-2 data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700 data-[state=active]:border-amber-200">
+            <CalendarClock className="w-4 h-4" />
+            <span>A Receber</span>
+            {(overdueSummary?.total_count ?? 0) > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 text-[10px] px-1.5">
+                {overdueSummary!.total_count}
+              </Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="closure" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200">
             <ClipboardList className="w-4 h-4" />
@@ -226,6 +262,184 @@ export default function Financial() {
 
         <TabsContent value="expenses">
           <ExpensesTab transactions={transactions} loading={loading} onRefresh={loadData} />
+        </TabsContent>
+
+        <TabsContent value="receivables">
+          <div className="space-y-6">
+            {/* Summary cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-amber-50 border-amber-100">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-amber-600">Pendentes</p>
+                    <h3 className="text-2xl font-bold text-amber-700">
+                      {clinicReceivables.filter(r => r.status === 'pending').length}
+                    </h3>
+                  </div>
+                  <Clock className="w-8 h-8 text-amber-300" />
+                </CardContent>
+              </Card>
+              <Card className="bg-red-50 border-red-100">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-600">Em Atraso</p>
+                    <h3 className="text-2xl font-bold text-red-700">
+                      {overdueSummary?.total_count || 0}
+                      {(overdueSummary?.total_amount ?? 0) > 0 && (
+                        <span className="text-sm font-normal ml-2">
+                          (R$ {formatMoney(overdueSummary!.total_amount)})
+                        </span>
+                      )}
+                    </h3>
+                  </div>
+                  <AlertCircle className="w-8 h-8 text-red-300" />
+                </CardContent>
+              </Card>
+              <Card className="bg-emerald-50 border-emerald-100">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-emerald-600">Confirmados</p>
+                    <h3 className="text-2xl font-bold text-emerald-700">
+                      {clinicReceivables.filter(r => r.status === 'confirmed').length}
+                    </h3>
+                  </div>
+                  <CheckCircle className="w-8 h-8 text-emerald-300" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filter */}
+            <div className="flex items-center gap-3">
+              <Select value={receivablesFilter} onValueChange={setReceivablesFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Todos ativos</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="overdue">Em atraso</SelectItem>
+                  <SelectItem value="confirmed">Confirmados</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={() => refetchReceivables()}>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
+            </div>
+
+            {/* Receivables list */}
+            <Card>
+              <CardContent className="p-0">
+                {clinicReceivables.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    Nenhuma parcela encontrada
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {clinicReceivables.map(r => {
+                      const isOverdue = r.status === 'overdue';
+                      const isConfirmed = r.status === 'confirmed';
+                      const patientName = (r as any).patients?.name || '';
+
+                      const methodLabels: Record<string, string> = {
+                        credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
+                      };
+                      const MethodIcon = r.payment_method === 'pix' ? Smartphone
+                        : r.payment_method === 'cash' ? Banknote
+                        : CreditCard;
+
+                      return (
+                        <div key={r.id} className={`p-4 flex items-center justify-between hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                          <div className="flex-1 min-w-0">
+                            {patientName && (
+                              <p className="text-xs font-medium text-slate-400 mb-0.5">{patientName}</p>
+                            )}
+                            <p className="font-medium text-slate-800 truncate">{r.tooth_description}</p>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <MethodIcon className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-xs text-slate-500">{methodLabels[r.payment_method] || r.payment_method}</span>
+                              <span className="text-xs text-slate-400">|</span>
+                              <span className="text-xs text-slate-500">{formatDisplayDate(r.due_date)}</span>
+                              {isOverdue && (
+                                <Badge variant="destructive" className="text-[10px] h-5">Em atraso</Badge>
+                              )}
+                              {isConfirmed && (
+                                <Badge className="text-[10px] h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Confirmado</Badge>
+                              )}
+                              {r.status === 'pending' && (
+                                <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100">Pendente</Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className={`font-bold ${isOverdue ? 'text-red-600' : isConfirmed ? 'text-emerald-600' : 'text-amber-600'}`}>
+                              R$ {formatMoney(r.amount)}
+                            </span>
+                            {!isConfirmed && r.status !== 'cancelled' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                                  onClick={() => setConfirmingReceivable(r)}
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Confirmar
+                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      className="text-red-600"
+                                      onClick={async () => {
+                                        try {
+                                          await cancelReceivable.mutateAsync(r.id);
+                                          toast.success('Parcela cancelada');
+                                          refetchReceivables();
+                                        } catch {
+                                          toast.error('Falha ao cancelar parcela');
+                                        }
+                                      }}
+                                    >
+                                      <X className="w-4 h-4 mr-2" />
+                                      Cancelar parcela
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {confirmingReceivable && (
+            <ConfirmReceivableDialog
+              open={!!confirmingReceivable}
+              onClose={() => setConfirmingReceivable(null)}
+              receivable={confirmingReceivable}
+              loading={confirmReceivable.isPending}
+              onConfirm={async (id, date) => {
+                try {
+                  await confirmReceivable.mutateAsync({ receivableId: id, confirmationDate: date });
+                  toast.success('Recebimento confirmado e lançado no financeiro');
+                  setConfirmingReceivable(null);
+                  refetchReceivables();
+                  loadData();
+                } catch {
+                  toast.error('Falha ao confirmar recebimento');
+                }
+              }}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="closure">

@@ -27,6 +27,7 @@ interface ClinicContextType {
     gender: 'male' | 'female' | null;
     role: Role | null;
     roles: Role[];
+    isSuperAdmin: boolean;
     isAdmin: boolean;
     isDentist: boolean;
     canEdit: boolean;
@@ -46,6 +47,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     const [role, setRole] = useState<Role | null>(null);
     const [roles, setRoles] = useState<Role[]>([]);
     const [members, setMembers] = useState<ClinicMember[]>([]);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
 
     const fetchClinicData = async () => {
@@ -60,7 +62,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             const [profileResult, clinicUsersResult] = await Promise.all([
                 supabase
                     .from('profiles')
-                    .select('full_name, gender')
+                    .select('full_name, gender, is_super_admin')
                     .eq('id', user.id)
                     .single(),
                 supabase
@@ -80,6 +82,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
             const fullName = (profile as any)?.full_name || user.user_metadata?.full_name || null;
             const userGender = (profile as any)?.gender || user.user_metadata?.gender || null;
+            setIsSuperAdmin(!!(profile as any)?.is_super_admin);
 
             setUserName(fullName);
             setGender(userGender);
@@ -108,8 +111,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 setRole(typedClinicUser.role as Role);
                 setRoles(userRoles);
 
-                // If admin, also fetch all members
-                if (userRoles.includes('admin')) {
+                // If admin or super admin, also fetch all members
+                if (userRoles.includes('admin') || !!(profile as any)?.is_super_admin) {
                     const { data: membersData } = await supabase
                         .from('clinic_users')
                         .select('id, user_id, role, roles, created_at')
@@ -154,13 +157,14 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         gender,
         role,
         roles,
-        isAdmin: roles.includes('admin'),
-        isDentist: roles.some(r => ['admin', 'dentist'].includes(r)),
-        canEdit: roles.some(r => ['admin', 'editor', 'dentist'].includes(r)),
+        isSuperAdmin,
+        isAdmin: isSuperAdmin || roles.includes('admin'),
+        isDentist: isSuperAdmin || roles.some(r => ['admin', 'dentist'].includes(r)),
+        canEdit: isSuperAdmin || roles.some(r => ['admin', 'editor', 'dentist'].includes(r)),
         loading,
         members,
         refetch: fetchClinicData,
-    }), [clinicId, clinicName, userName, displayName, gender, role, roles, loading, members]);
+    }), [clinicId, clinicName, userName, displayName, gender, role, roles, isSuperAdmin, loading, members]);
 
     return (
         <ClinicContext.Provider value={value}>

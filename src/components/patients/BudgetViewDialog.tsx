@@ -105,9 +105,9 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     // Early return after all hooks are called
     if (!budget) return null;
 
-    // Group items by status
-    const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid');
-    const approvedItems = teeth.filter(t => t.status === 'approved');
+    // Group items by status (partially_paid shows in approved section)
+    const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid' && t.status !== 'partially_paid');
+    const approvedItems = teeth.filter(t => t.status === 'approved' || t.status === 'partially_paid');
     const paidItems = teeth.filter(t => t.status === 'paid' || t.status === 'completed');
 
     const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
@@ -155,7 +155,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     // Toggle item status (approve/unapprove)
     const toggleItemStatus = async (index: number) => {
         const item = teeth[index];
-        if (item.status === 'paid' || item.status === 'completed') return;
+        if (item.status === 'paid' || item.status === 'completed' || item.status === 'partially_paid') return;
 
         const newStatus = item.status === 'pending' ? 'approved' : 'pending';
         const action = newStatus === 'approved' ? 'aprovar' : 'marcar como pendente';
@@ -328,27 +328,47 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                                     </div>
                                 </div>
                                 {teeth.map((item, index) => {
-                                    if (item.status !== 'approved') return null;
+                                    if (item.status !== 'approved' && item.status !== 'partially_paid') return null;
                                     const total = payment.getItemValue(item);
                                     const isSelected = selectedApprovedItems.has(index);
+                                    const isPartial = item.status === 'partially_paid';
+                                    const paidCount = isPartial ? (item.splitPayments?.filter(s => s.status === 'confirmed').length || 0) : 0;
+                                    const totalCount = isPartial ? (item.splitPayments?.length || 0) : 0;
                                     return (
-                                        <div key={index} className="px-3 py-2 border-b border-gray-100 bg-green-50/30 flex items-center gap-2">
-                                            <button onClick={() => toggleApprovedSelection(index)} className="text-gray-400 hover:text-green-600 transition-colors">
-                                                {isSelected ? <CheckSquare className="w-5 h-5 text-green-600" /> : <Square className="w-5 h-5" />}
-                                            </button>
-                                            <button onClick={() => toggleItemStatus(index)} disabled={updating} className="bg-yellow-100 p-1.5 rounded-lg hover:bg-yellow-200 transition-colors" title="Retornar para pendente">
-                                                <Undo2 className="w-3.5 h-3.5 text-yellow-600" />
-                                            </button>
-                                            <button onClick={() => payment.handlePayItem(index, item)} disabled={updating} className="flex-1 flex items-center gap-2 text-left hover:bg-green-100/50 rounded-lg px-2 py-1 -mx-1 transition-colors">
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
-                                                    <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
+                                        <div key={index} className={`px-3 py-2 border-b border-gray-100 flex items-center gap-2 ${isPartial ? 'bg-amber-50/30' : 'bg-green-50/30'}`}>
+                                            {!isPartial && (
+                                                <button onClick={() => toggleApprovedSelection(index)} className="text-gray-400 hover:text-green-600 transition-colors">
+                                                    {isSelected ? <CheckSquare className="w-5 h-5 text-green-600" /> : <Square className="w-5 h-5" />}
+                                                </button>
+                                            )}
+                                            {!isPartial && (
+                                                <button onClick={() => toggleItemStatus(index)} disabled={updating} className="bg-yellow-100 p-1.5 rounded-lg hover:bg-yellow-200 transition-colors" title="Retornar para pendente">
+                                                    <Undo2 className="w-3.5 h-3.5 text-yellow-600" />
+                                                </button>
+                                            )}
+                                            {isPartial ? (
+                                                <div className="flex-1 flex items-center gap-2 px-2 py-1">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
+                                                        <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
+                                                        <p className="text-amber-600 text-xs mt-0.5">Parcialmente pago ({paidCount}/{totalCount} parcelas)</p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="font-semibold text-amber-700 text-sm">R$ {formatMoney(total)}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="text-right flex-shrink-0">
-                                                    <p className="font-semibold text-green-700 text-sm">R$ {formatMoney(total)}</p>
-                                                    <p className="text-[#a03f3d] text-xs">Pagar</p>
-                                                </div>
-                                            </button>
+                                            ) : (
+                                                <button onClick={() => payment.handlePayItem(index, item)} disabled={updating} className="flex-1 flex items-center gap-2 text-left hover:bg-green-100/50 rounded-lg px-2 py-1 -mx-1 transition-colors">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-gray-900 text-sm">{getToothDisplayName(item.tooth)}</p>
+                                                        <p className="text-gray-500 text-xs truncate">{item.treatments.join(', ')}</p>
+                                                    </div>
+                                                    <div className="text-right flex-shrink-0">
+                                                        <p className="font-semibold text-green-700 text-sm">R$ {formatMoney(total)}</p>
+                                                        <p className="text-[#a03f3d] text-xs">Pagar</p>
+                                                    </div>
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -486,6 +506,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                     open={!!payment.paymentItem}
                     onClose={() => payment.setPaymentItem(null)}
                     onConfirm={payment.handleConfirmPayment}
+                    onConfirmSplit={payment.handleConfirmSplitPayment}
                     itemName={getToothDisplayName(payment.paymentItem.tooth.tooth)}
                     value={payment.getItemValue(payment.paymentItem.tooth)}
                     locationRate={(payment.paymentItem.tooth as any).locationRate || (parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0)}
@@ -502,6 +523,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
                     open={!!payment.paymentBatch}
                     onClose={() => payment.setPaymentBatch(null)}
                     onConfirm={payment.handleConfirmBatchPayment}
+                    onConfirmSplit={payment.handleConfirmSplitBatchPayment}
                     itemName={`${payment.paymentBatch.indices.length} itens selecionados`}
                     value={payment.paymentBatch.totalValue}
                     locationRate={parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0}

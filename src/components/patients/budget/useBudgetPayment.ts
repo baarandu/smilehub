@@ -6,11 +6,13 @@ import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from '@/u
 import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment } from '@/utils/prosthesis';
 import { isOrthodonticTreatment, getOrthoTypeFromTreatments } from '@/utils/orthodontics';
 import { orthodonticsService } from '@/services/orthodontics';
+import { receivablesService } from '@/services/receivables';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import type { BudgetWithItems } from '@/types/database';
 import type { PayerData } from '../PaymentMethodDialog';
+import type { SplitPaymentPortion } from '@/types/receivables';
 
 interface UseBudgetPaymentProps {
     budget: BudgetWithItems;
@@ -451,6 +453,177 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
+    const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[]) => {
+        if (!paymentItem || isSubmitting || !patientId) return;
+
+        try {
+            setIsSubmitting(true);
+
+            const refreshedBudget = await budgetsService.getById(budget.id);
+            if (!refreshedBudget) return;
+
+            const parsed = JSON.parse(refreshedBudget.notes || '{}');
+            const currentTeeth = parsed.teeth as ToothEntry[];
+            if (!currentTeeth) return;
+
+            const selectedTooth = currentTeeth[paymentItem.index];
+            const toothDescription = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)}`;
+            const budgetLocation = parsed.location || null;
+            const splitGroupId = crypto.randomUUID();
+
+            // Create receivables (immediate ones also create financial_transactions)
+            const receivables = await receivablesService.createSplitPayment(
+                budget.id,
+                patientId,
+                paymentItem.index,
+                toothDescription,
+                portions,
+                splitGroupId,
+                budgetLocation,
+            );
+
+            // Determine tooth status: all immediate = paid, otherwise partially_paid
+            const allImmediate = portions.every(p => p.isImmediate);
+            const newStatus = allImmediate ? 'paid' : 'partially_paid';
+
+            currentTeeth[paymentItem.index] = {
+                ...currentTeeth[paymentItem.index],
+                status: newStatus,
+                paymentDate: new Date().toISOString().split('T')[0],
+                splitGroupId,
+                splitPayments: receivables.map(r => ({
+                    receivableId: r.id,
+                    amount: r.amount,
+                    method: r.payment_method,
+                    dueDate: r.due_date,
+                    status: r.status,
+                })),
+            };
+
+            const newBudgetStatus = calculateBudgetStatus(currentTeeth);
+            const updatedNotes = JSON.stringify({ ...parsed, teeth: currentTeeth });
+
+            await budgetsService.update(budget.id, {
+                notes: updatedNotes,
+                status: newBudgetStatus,
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['receivables'] });
+
+            // Auto-create prosthesis/ortho orders
+            const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
+            const orthoCreated = await autoCreateOrthoCase(selectedTooth, budget.id);
+
+            const immediateCount = portions.filter(p => p.isImmediate).length;
+            const scheduledCount = portions.length - immediateCount;
+
+            toast({
+                title: "Pagamento Dividido Registrado",
+                description: prosthesisCreated
+                    ? "Ordem de prótese criada! Acesse a Central de Prótese para configurar o envio ao laboratório."
+                    : orthoCreated
+                    ? "Caso ortodôntico criado! Acesse a Central de Ortodontia para acompanhar."
+                    : `${immediateCount} parcela(s) paga(s) agora${scheduledCount > 0 ? `, ${scheduledCount} agendada(s)` : ''}.`,
+            });
+            onSuccess();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento dividido." });
+        } finally {
+            setIsSubmitting(false);
+            setPaymentItem(null);
+        }
+    };
+
+    const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[]) => {
+        if (!paymentBatch || isSubmitting || !patientId) return;
+
+        try {
+            setIsSubmitting(true);
+
+            const refreshedBudget = await budgetsService.getById(budget.id);
+            if (!refreshedBudget) return;
+
+            const parsed = JSON.parse(refreshedBudget.notes || '{}');
+            const currentTeeth = parsed.teeth as ToothEntry[];
+            if (!currentTeeth) return;
+
+            const { indices } = paymentBatch;
+            const budgetLocation = parsed.location || null;
+            const totalAmount = paymentBatch.totalValue;
+
+            // For batch split, create receivables per tooth proportionally
+            for (const idx of indices) {
+                const tooth = currentTeeth[idx];
+                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const ratio = itemValue / totalAmount;
+                const splitGroupId = crypto.randomUUID();
+                const toothDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
+
+                // Scale portions proportionally for this tooth
+                const scaledPortions: SplitPaymentPortion[] = portions.map(p => ({
+                    ...p,
+                    amount: Math.round(p.amount * ratio * 100) / 100,
+                    breakdown: {
+                        ...p.breakdown,
+                        grossAmount: p.breakdown.grossAmount * ratio,
+                        taxAmount: p.breakdown.taxAmount * ratio,
+                        cardFeeAmount: p.breakdown.cardFeeAmount * ratio,
+                        anticipationAmount: p.breakdown.anticipationAmount * ratio,
+                        locationAmount: p.breakdown.locationAmount * ratio,
+                        netAmount: p.breakdown.netAmount * ratio,
+                    },
+                }));
+
+                const receivables = await receivablesService.createSplitPayment(
+                    budget.id, patientId, idx, toothDescription, scaledPortions, splitGroupId, budgetLocation,
+                );
+
+                const allImmediate = portions.every(p => p.isImmediate);
+                currentTeeth[idx] = {
+                    ...tooth,
+                    status: allImmediate ? 'paid' : 'partially_paid',
+                    paymentDate: new Date().toISOString().split('T')[0],
+                    splitGroupId,
+                    splitPayments: receivables.map(r => ({
+                        receivableId: r.id,
+                        amount: r.amount,
+                        method: r.payment_method,
+                        dueDate: r.due_date,
+                        status: r.status,
+                    })),
+                };
+            }
+
+            const newBudgetStatus = calculateBudgetStatus(currentTeeth);
+            const updatedNotes = JSON.stringify({ ...parsed, teeth: currentTeeth });
+
+            await budgetsService.update(budget.id, {
+                notes: updatedNotes,
+                status: newBudgetStatus,
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['receivables'] });
+
+            const immediateCount = portions.filter(p => p.isImmediate).length;
+            const scheduledCount = portions.length - immediateCount;
+
+            toast({
+                title: "Pagamento Dividido Registrado",
+                description: `${indices.length} item(ns) com ${immediateCount} parcela(s) paga(s)${scheduledCount > 0 ? `, ${scheduledCount} agendada(s)` : ''}.`,
+            });
+            onSuccess();
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento dividido." });
+        } finally {
+            setIsSubmitting(false);
+            setPaymentBatch(null);
+        }
+    };
+
     return {
         paymentItem,
         paymentBatch,
@@ -462,6 +635,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         handlePayAll,
         handleConfirmPayment,
         handleConfirmBatchPayment,
+        handleConfirmSplitPayment,
+        handleConfirmSplitBatchPayment,
         getItemValue,
     };
 }

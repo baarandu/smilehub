@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Patient } from '@/types/database';
 import { useAnamneses } from '@/hooks/useAnamneses';
+import { usePatientReceivables } from '@/hooks/useReceivables';
 import { toggleReturnAlert } from '@/services/patients';
 import { toast } from 'sonner';
 import { ReportGenerationModal } from './ReportGenerationModal';
@@ -97,6 +98,9 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
 
   const { data: anamneses } = useAnamneses(patient.id);
   const latestAnamnese = anamneses?.[0];
+
+  const { data: receivables = [] } = usePatientReceivables(patient.id);
+  const overdueReceivables = receivables.filter(r => r.status === 'overdue');
 
   const getBadges = () => {
     if (!latestAnamnese) return [];
@@ -313,6 +317,12 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                  )}
+                  {overdueReceivables.length > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                      <AlertTriangle className="w-3 h-3" />
+                      {overdueReceivables.length} pagamento{overdueReceivables.length !== 1 ? 's' : ''} em atraso
+                    </span>
                   )}
                 </h1>
                 {patient.occupation && (

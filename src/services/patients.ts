@@ -2,6 +2,16 @@ import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
 import { sanitizeForDisplay } from '@/utils/security';
 
+/** Remove accents, collapse whitespace, lowercase — for duplicate comparison */
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export async function getPatients(page?: number, limit?: number, clinicId?: string): Promise<Patient[]> {
   let query = supabase
     .from('patients_secure')
@@ -50,28 +60,28 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
   if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
 
   // Check for duplicate: same name + phone in the same clinic
-  const normalizedName = patient.name?.trim().toLowerCase();
+  const normalized = patient.name ? normalizeName(patient.name) : '';
   const normalizedPhone = patient.phone?.replace(/\D/g, '');
 
-  if (normalizedName && normalizedPhone) {
+  if (normalized && normalizedPhone) {
+    // Use first word of the name to cast a wider net, then compare normalized names in JS
+    const firstName = normalized.split(' ')[0];
     const { data: existing } = await supabase
       .from('patients')
-      .select('id')
+      .select('id, name, phone')
       .eq('clinic_id', clinicUser.clinic_id)
-      .ilike('name', normalizedName)
-      .is('deleted_at', null)
-      .limit(1);
+      .ilike('name', `%${firstName}%`)
+      .is('deleted_at', null);
 
     if (existing && existing.length > 0) {
-      // Verify phone matches too
-      const { data: phoneMatch } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('id', existing[0].id)
-        .ilike('phone', `%${normalizedPhone.slice(-8)}%`)
-        .limit(1);
+      const hasDuplicate = existing.some((p) => {
+        if (normalizeName(p.name) !== normalized) return false;
+        const existingDigits = p.phone?.replace(/\D/g, '') || '';
+        return existingDigits.length >= 8 && normalizedPhone.length >= 8 &&
+          existingDigits.slice(-8) === normalizedPhone.slice(-8);
+      });
 
-      if (phoneMatch && phoneMatch.length > 0) {
+      if (hasDuplicate) {
         throw new Error('Já existe um paciente com este nome e telefone cadastrado.');
       }
     }

@@ -5,11 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Banknote, CreditCard, Smartphone, ArrowRight, Loader2, Info, User, Building2, AlertCircle } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone, ArrowRight, Loader2, Info, User, Building2, AlertCircle, SplitSquareHorizontal } from 'lucide-react';
 import { formatMoney } from '@/utils/budgetUtils';
 import { settingsService } from '@/services/settings';
 import { CardFeeConfig } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
+import { SplitPaymentBuilder } from './SplitPaymentBuilder';
+import type { SplitPaymentPortion } from '@/types/receivables';
 
 export interface FinancialBreakdown {
     grossAmount: number;
@@ -37,6 +39,7 @@ interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
     onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData) => void;
+    onConfirmSplit?: (portions: SplitPaymentPortion[]) => void;
     itemName: string;
     value: number;
     locationRate?: number;
@@ -72,11 +75,16 @@ const CARD_BRANDS = [
     { id: 'hipercard', label: 'Hipercard' },
 ];
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [] }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [] }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
     const [anticipate, setAnticipate] = useState(false);
+
+    // Split Payment Mode
+    const [isSplitMode, setIsSplitMode] = useState(false);
+    const [splitPortions, setSplitPortions] = useState<SplitPaymentPortion[]>([]);
+    const [splitValid, setSplitValid] = useState(false);
 
     // Payer Data
     const [payerIsPatient, setPayerIsPatient] = useState(true);
@@ -118,6 +126,10 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
             setPayerName('');
             setPayerCpf('');
             setSelectedPJSource('');
+            // Reset split mode
+            setIsSplitMode(false);
+            setSplitPortions([]);
+            setSplitValid(false);
         }
     }, [open]);
 
@@ -237,6 +249,12 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
 
 
     const handleConfirm = () => {
+        if (isSplitMode) {
+            if (!splitValid || !onConfirmSplit) return;
+            onConfirmSplit(splitPortions);
+            return;
+        }
+
         if (!selectedMethod) return;
         const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
 
@@ -279,6 +297,40 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                     </div>
                 ) : (
                     <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                        {/* Split Payment Toggle */}
+                        {onConfirmSplit && (
+                            <div className="flex items-center justify-between p-3 bg-violet-50 rounded-lg border border-violet-100">
+                                <div className="flex items-center gap-2">
+                                    <SplitSquareHorizontal className="w-4 h-4 text-violet-600" />
+                                    <div>
+                                        <Label className="text-sm text-violet-900 cursor-pointer" htmlFor="split-toggle">Dividir Pagamento</Label>
+                                        <p className="text-xs text-violet-600">Pagar com mais de uma forma ou agendar parcelas</p>
+                                    </div>
+                                </div>
+                                <Switch
+                                    id="split-toggle"
+                                    checked={isSplitMode}
+                                    onCheckedChange={setIsSplitMode}
+                                />
+                            </div>
+                        )}
+
+                        {isSplitMode ? (
+                            <SplitPaymentBuilder
+                                totalValue={value}
+                                locationRate={locationRate}
+                                taxRate={taxRate}
+                                cardFees={cardFees}
+                                availableBrands={availableBrands}
+                                patientName={patientName}
+                                patientCpf={patientCpf}
+                                pjSources={pjSources}
+                                onPortionsChange={(portions, valid) => {
+                                    setSplitPortions(portions);
+                                    setSplitValid(valid);
+                                }}
+                            />
+                        ) : (<>
                         {/* Payment Method Selection */}
                         <div className="space-y-2">
                             <Label className="text-sm font-medium">Forma de Pagamento</Label>
@@ -466,6 +518,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                                 <span className="text-emerald-600">R$ {formatMoney(breakdown.netAmount)}</span>
                             </div>
                         </div>
+                        </>)}
                     </div>
                 )}
 
@@ -473,7 +526,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, itemName, value,
                 <div className="p-4 border-t bg-white">
                     <Button
                         className="w-full h-11 bg-[#a03f3d] hover:bg-[#8b3634] text-base"
-                        disabled={!selectedMethod || loading || isLoadingSettings}
+                        disabled={isSplitMode ? (!splitValid || loading) : (!selectedMethod || loading || isLoadingSettings)}
                         onClick={handleConfirm}
                     >
                         {loading ? (

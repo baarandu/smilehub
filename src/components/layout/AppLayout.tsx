@@ -65,10 +65,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const [activeRemindersCount, setActiveRemindersCount] = useState(0);
   const [preLabCount, setPreLabCount] = useState(0);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
-  const { role, clinicId, isAdmin, isDentist } = useClinic();
+  const { role, clinicId, isAdmin, isDentist, isSuperAdmin } = useClinic();
 
   // Filter nav items based on role AND subscription plan features
   // Super admin bypasses plan restrictions
@@ -130,14 +129,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUserEmail(user.email || '');
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('id', user.id)
-          .single() as { data: { is_super_admin: boolean } | null };
-        setIsSuperAdmin(!!profile?.is_super_admin);
       } else {
-        setIsSuperAdmin(false);
         setUserEmail('');
       }
     };

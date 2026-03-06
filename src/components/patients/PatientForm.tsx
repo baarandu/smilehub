@@ -10,6 +10,16 @@ import { PatientFormData, Patient } from '@/types/database';
 import { usePatientSearch } from '@/hooks/usePatients';
 import { useDebounce } from '@/hooks/useDebounce';
 
+/** Remove accents, collapse whitespace, lowercase — for duplicate comparison */
+function normalizeName(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 interface PatientFormProps {
   initialData?: Partial<PatientFormData>;
   onSubmit: (data: PatientFormData) => Promise<void>;
@@ -58,9 +68,28 @@ const emptyForm: PatientFormData = {
 
 interface DuplicateWarningProps {
   existingPatients: Patient[];
+  isExactDuplicate: boolean;
 }
 
-function DuplicateWarning({ existingPatients }: DuplicateWarningProps) {
+function DuplicateWarning({ existingPatients, isExactDuplicate }: DuplicateWarningProps) {
+  if (isExactDuplicate) {
+    return (
+      <div className="bg-red-50 border border-red-300 rounded-md p-3 mt-2" role="alert">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-red-800">
+              Paciente já cadastrado com este nome e telefone.
+            </p>
+            <p className="text-red-600 mt-1 text-xs">
+              Não é possível cadastrar o mesmo paciente duas vezes.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-2" role="alert">
       <div className="flex items-start gap-2">
@@ -106,10 +135,24 @@ export function PatientForm({
   const { data: existingPatients } = usePatientSearch(isEditing ? '' : debouncedName);
   const showDuplicateWarning = !isEditing && existingPatients && existingPatients.length > 0;
 
+  // Check for exact duplicate (same name + same phone, ignoring accents/case)
+  const currentPhone = form.patientType === 'child'
+    ? (form.motherPhone || form.fatherPhone)
+    : form.phone;
+  const currentPhoneDigits = currentPhone?.replace(/\D/g, '') || '';
+  const normalizedFormName = form.name ? normalizeName(form.name) : '';
+  const exactDuplicate = !isEditing && normalizedFormName.length >= 3 && existingPatients?.some((p) => {
+    if (normalizeName(p.name) !== normalizedFormName) return false;
+    const existingDigits = p.phone?.replace(/\D/g, '') || '';
+    return existingDigits.length >= 8 && currentPhoneDigits.length >= 8 &&
+      existingDigits.slice(-8) === currentPhoneDigits.slice(-8);
+  }) || false;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cpfError) return;
     if (birthDateError) return;
+    if (exactDuplicate) return;
     // For child patients, auto-fill phone from parent phone
     if (form.patientType === 'child') {
       const parentPhone = form.motherPhone || form.fatherPhone;
@@ -262,7 +305,7 @@ export function PatientForm({
                   placeholder="Maria da Silva"
                   required
                 />
-                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} />}
+                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} isExactDuplicate={exactDuplicate} />}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthDate">Data de Nascimento</Label>
@@ -441,7 +484,7 @@ export function PatientForm({
                   placeholder="Nome da criança"
                   required
                 />
-                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} />}
+                {showDuplicateWarning && <DuplicateWarning existingPatients={existingPatients!} isExactDuplicate={exactDuplicate} />}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="child-birthDate">Data de Nascimento</Label>
@@ -696,7 +739,7 @@ export function PatientForm({
         <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" className="flex-1" disabled={isLoading}>
+        <Button type="submit" className="flex-1" disabled={isLoading || exactDuplicate}>
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

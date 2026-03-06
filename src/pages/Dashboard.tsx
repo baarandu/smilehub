@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, HeartPulse } from 'lucide-react';
+import { Calendar, Bell, FileText, AlertTriangle, CheckCircle, HeartPulse, DollarSign, Clock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { RecentAlertsList, type RecentAlert } from '@/components/dashboard/ReturnAlertsList';
@@ -26,6 +26,7 @@ import { ProsthesisStatusChart } from '@/components/dashboard-preview/Prosthesis
 import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpensesChart';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
+import { useOverdueSummary, useReceivablesDueToday } from '@/hooks/useReceivables';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -67,6 +68,10 @@ export default function Dashboard() {
 
   // Pending Budgets via React Query
   const { data: pendingBudgetsCount = 0, isLoading: loadingBudgets } = usePendingBudgetsCount();
+
+  // Receivables (overdue + due today)
+  const { data: overdueSummary } = useOverdueSummary();
+  const { data: receivablesDueToday } = useReceivablesDueToday();
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const isLoadingAlerts = loadingReturns || loadingBirthdays || loadingProcedures;
 
@@ -250,6 +255,32 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Overdue / Due Today Cards */}
+      {((overdueSummary?.total_count ?? 0) > 0 || (receivablesDueToday?.length ?? 0) > 0) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {(overdueSummary?.total_count ?? 0) > 0 && (
+            <div onClick={() => navigate('/financeiro')} className="cursor-pointer">
+              <StatsCard
+                title="Pagamentos em Atraso"
+                value={`${overdueSummary!.total_count} (R$ ${(overdueSummary!.total_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`}
+                icon={<DollarSign className="w-6 h-6" />}
+                variant="warning"
+              />
+            </div>
+          )}
+          {(receivablesDueToday?.length ?? 0) > 0 && (
+            <div onClick={() => navigate('/financeiro')} className="cursor-pointer">
+              <StatsCard
+                title="Parcelas do Dia"
+                value={receivablesDueToday!.length}
+                icon={<Clock className="w-6 h-6" />}
+                variant="default"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-2 gap-6">

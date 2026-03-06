@@ -83,7 +83,7 @@ export type ToothEntry = {
     tooth: string;
     treatments: string[];
     values: Record<string, string>;
-    status: 'pending' | 'approved' | 'paid' | 'completed';
+    status: 'pending' | 'approved' | 'paid' | 'completed' | 'partially_paid';
     paymentMethod?: string;
     paymentInstallments?: number;
     paymentDate?: string;
@@ -103,6 +103,15 @@ export type ToothEntry = {
     prosthesisDeliveryDate?: string;
     prosthesisNotes?: string;
     prosthesisInstructions?: string;
+    // Split payment fields
+    splitGroupId?: string;
+    splitPayments?: Array<{
+        receivableId: string;
+        amount: number;
+        method: string;
+        dueDate: string;
+        status: string;
+    }>;
 };
 
 // Helper to get short tooth ID for database (max 10 chars)
@@ -187,7 +196,7 @@ export const calculateBudgetStatus = (teeth: ToothEntry[]): 'pending' | 'approve
     const allPaid = teeth.every(t => t.status === 'paid' || t.status === 'completed');
     if (allPaid) return 'completed';
 
-    const hasApprovedOrPaid = teeth.some(t => t.status === 'approved' || t.status === 'paid' || t.status === 'completed');
+    const hasApprovedOrPaid = teeth.some(t => t.status === 'approved' || t.status === 'paid' || t.status === 'completed' || t.status === 'partially_paid');
     if (hasApprovedOrPaid) return 'approved';
 
     return 'pending';

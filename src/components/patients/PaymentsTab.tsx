@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle, Calculator, Clock, Calendar } from 'lucide-react';
+import { CreditCard, CheckCircle, Calculator, Clock, Calendar, AlertCircle, Banknote, Smartphone, MoreHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,15 @@ import { financialService } from '@/services/financial';
 import { getPatientById } from '@/services/patients';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { PJSource } from '@/types/incomeTax';
+import { usePatientReceivables, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
+import { ConfirmReceivableDialog } from './ConfirmReceivableDialog';
+import type { PaymentReceivable } from '@/types/receivables';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface PaymentsTabProps {
   patientId: string;
@@ -38,6 +47,12 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   // Patient and PJ data for payer selection
   const [patientData, setPatientData] = useState<{ name: string; cpf: string | null } | null>(null);
   const [pjSources, setPjSources] = useState<PJSource[]>([]);
+
+  // Receivables (scheduled installments)
+  const { data: receivables = [], refetch: refetchReceivables } = usePatientReceivables(patientId);
+  const confirmReceivable = useConfirmReceivable();
+  const cancelReceivable = useCancelReceivable();
+  const [confirmingReceivable, setConfirmingReceivable] = useState<PaymentReceivable | null>(null);
 
   useEffect(() => {
     loadData();
@@ -97,6 +112,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
             if (tooth.status === 'approved') {
               toPay.push(item);
               approvedTotal += itemVal;
+            } else if (tooth.status === 'partially_paid') {
+              // partially_paid items don't go in "to pay" (their receivables are tracked separately)
+              // but count toward paid for already-confirmed portions
             } else if (tooth.status === 'paid' || tooth.status === 'completed') {
               history.push(item);
               paidTotal += itemVal;
@@ -297,11 +315,11 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card className="bg-emerald-50 border-emerald-100">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-emerald-600">A Receber (Aprovados)</p>
+              <p className="text-sm font-medium text-emerald-600">A Receber</p>
               <h3 className="text-2xl font-bold text-emerald-700">R$ {formatMoney(stats.approved)}</h3>
             </div>
             <CheckCircle className="w-8 h-8 text-emerald-300" />
@@ -310,7 +328,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         <Card className="bg-blue-50 border-blue-100">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-blue-600">Recebido (Pagos)</p>
+              <p className="text-sm font-medium text-blue-600">Recebido</p>
               <h3 className="text-2xl font-bold text-blue-700">R$ {formatMoney(stats.paid)}</h3>
             </div>
             <CreditCard className="w-8 h-8 text-blue-300" />
@@ -319,13 +337,131 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-500">Total Movimentado</p>
+              <p className="text-sm font-medium text-slate-500">Total</p>
               <h3 className="text-2xl font-bold text-slate-700">R$ {formatMoney(stats.total)}</h3>
             </div>
             <Calculator className="w-8 h-8 text-slate-200" />
           </CardContent>
         </Card>
+        {receivables.filter(r => r.status === 'pending').length > 0 && (
+          <Card className="bg-amber-50 border-amber-100">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-600">Agendado</p>
+                <h3 className="text-2xl font-bold text-amber-700">
+                  R$ {formatMoney(receivables.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0))}
+                </h3>
+              </div>
+              <Clock className="w-8 h-8 text-amber-300" />
+            </CardContent>
+          </Card>
+        )}
+        {receivables.filter(r => r.status === 'overdue').length > 0 && (
+          <Card className="bg-red-50 border-red-100">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600">Em Atraso</p>
+                <h3 className="text-2xl font-bold text-red-700">
+                  R$ {formatMoney(receivables.filter(r => r.status === 'overdue').reduce((s, r) => s + r.amount, 0))}
+                </h3>
+              </div>
+              <AlertCircle className="w-8 h-8 text-red-300" />
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Scheduled Receivables Section */}
+      {receivables.length > 0 && (
+        <Card>
+          <CardHeader className="bg-amber-50/50 border-b pb-3">
+            <CardTitle className="text-lg flex items-center gap-2 text-amber-800">
+              <Calendar className="w-5 h-5" />
+              Parcelas Agendadas ({receivables.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {receivables.map(r => {
+                const isOverdue = r.status === 'overdue';
+                const daysOverdue = isOverdue
+                  ? Math.ceil((new Date().getTime() - new Date(r.due_date + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
+                  : 0;
+
+                const methodLabels: Record<string, string> = {
+                  credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
+                };
+                const MethodIcon = r.payment_method === 'pix' ? Smartphone
+                  : r.payment_method === 'cash' ? Banknote
+                  : CreditCard;
+
+                return (
+                  <div key={r.id} className={`p-4 flex items-center justify-between hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-800 truncate">{r.tooth_description}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <MethodIcon className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="text-xs text-slate-500">{methodLabels[r.payment_method] || r.payment_method}</span>
+                        <span className="text-xs text-slate-400">|</span>
+                        <Calendar className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs text-slate-500">{formatDisplayDate(r.due_date)}</span>
+                      </div>
+                      <div className="mt-1">
+                        {isOverdue ? (
+                          <Badge variant="destructive" className="text-[10px] h-5">
+                            Em atraso ({daysOverdue} dia{daysOverdue !== 1 ? 's' : ''})
+                          </Badge>
+                        ) : (
+                          <Badge className="text-[10px] h-5 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                            A vencer
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className={`font-bold text-lg ${isOverdue ? 'text-red-600' : 'text-amber-600'}`}>
+                        R$ {formatMoney(r.amount)}
+                      </span>
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                        onClick={() => setConfirmingReceivable(r)}
+                      >
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Confirmar
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={async () => {
+                              try {
+                                await cancelReceivable.mutateAsync(r.id);
+                                toast({ title: "Parcela cancelada", description: "A parcela foi cancelada." });
+                                refetchReceivables();
+                              } catch {
+                                toast({ variant: "destructive", title: "Erro", description: "Falha ao cancelar parcela." });
+                              }
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Cancelar parcela
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* To Pay List */}
@@ -438,6 +574,26 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           patientName={patientData?.name}
           patientCpf={patientData?.cpf || undefined}
           pjSources={pjSources}
+        />
+      )}
+
+      {confirmingReceivable && (
+        <ConfirmReceivableDialog
+          open={!!confirmingReceivable}
+          onClose={() => setConfirmingReceivable(null)}
+          receivable={confirmingReceivable}
+          loading={confirmReceivable.isPending}
+          onConfirm={async (id, date) => {
+            try {
+              await confirmReceivable.mutateAsync({ receivableId: id, confirmationDate: date });
+              toast({ title: "Recebimento Confirmado", description: "Parcela confirmada e lançada no financeiro." });
+              setConfirmingReceivable(null);
+              refetchReceivables();
+              loadData();
+            } catch {
+              toast({ variant: "destructive", title: "Erro", description: "Falha ao confirmar recebimento." });
+            }
+          }}
         />
       )}
     </div>
