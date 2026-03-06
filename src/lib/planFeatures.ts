@@ -1,9 +1,12 @@
 /** Human-readable labels for feature keys (pt-BR) */
 export const FEATURE_LABELS: Record<string, string> = {
+  cadastro_pacientes: 'Cadastro de Pacientes',
   agenda: 'Agenda inteligente',
   prontuario: 'Prontuário digital',
   anamnese: 'Anamnese completa',
+  exames: 'Exames e Documentações',
   orcamentos: 'Orçamentos',
+  plano_tratamento: 'Plano de Tratamento',
   alertas: 'Alertas e lembretes',
   suporte_email: 'Suporte por e-mail',
   financeiro: 'Financeiro completo',
@@ -20,13 +23,8 @@ export const FEATURE_LABELS: Record<string, string> = {
   whatsapp_confirmacao: 'Confirmação WhatsApp',
   multi_unidades: 'Múltiplas unidades',
   secretaria_ia: 'Secretária IA',
-  whitelabel: 'White Label',
-  api: 'API personalizada',
-  relatorios_avancados: 'Relatórios avançados',
-  suporte_telefone: 'Suporte por telefone',
-  gerente_dedicado: 'Gestor dedicado',
-  estoque_importacao: 'Importação de estoque',
-  protese: 'Próteses',
+  crm: 'CRM',
+  analytics: 'Analytics',
 };
 
 /** Translate a feature key to its label, falling back to the key itself */
@@ -48,14 +46,14 @@ const PLAN_HIERARCHY = ['essencial', 'profissional_v2'] as const;
 
 const PLAN_FEATURES: Record<string, string[]> = {
   essencial: [
-    'agenda', 'prontuario', 'anamnese', 'orcamentos', 'alertas',
-    'financeiro', 'estoque', 'suporte_email',
+    'cadastro_pacientes', 'agenda', 'prontuario', 'anamnese', 'exames', 'orcamentos', 'plano_tratamento',
+    'alertas', 'financeiro', 'estoque', 'suporte_email',
   ],
   profissional_v2: [
-    'estoque_importacao', 'assinatura_digital',
+    'crm', 'analytics', 'assinatura_digital',
     'dentista_ia', 'contabilidade_ia',
     'comissoes', 'central_protese', 'central_ortodontia', 'imposto_renda',
-    'whatsapp_confirmacao', 'multi_unidades', 'relatorios_avancados',
+    'whatsapp_confirmacao', 'multi_unidades',
     'suporte_chat',
   ],
 };

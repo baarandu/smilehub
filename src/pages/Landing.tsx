@@ -17,20 +17,20 @@ import {
   FileCheck,
   Mic,
   Calculator,
+  Kanban,
 } from 'lucide-react';
 import { plansService } from '@/services/admin/plans';
 import { appSettingsService } from '@/services/admin/appSettings';
+import { featureDefinitionsService } from '@/services/admin/featureDefinitions';
 import { SubscriptionPlan } from '@/types/database';
-import { featureLabel } from '@/lib/planFeatures';
+import type { FeatureDefinition } from '@/types/featureDefinition';
 
-// Parse features from database and translate keys to labels
-const getFeaturesList = (plan: SubscriptionPlan): string[] => {
+const parseFeatureKeys = (plan: SubscriptionPlan): string[] => {
   const featuresJson = plan.features;
   try {
-    let keys: string[] = [];
-    if (Array.isArray(featuresJson)) keys = featuresJson as string[];
-    else if (typeof featuresJson === 'string') keys = JSON.parse(featuresJson);
-    return keys.map(featureLabel);
+    if (Array.isArray(featuresJson)) return featuresJson as string[];
+    if (typeof featuresJson === 'string') return JSON.parse(featuresJson);
+    return [];
   } catch {
     return [];
   }
@@ -50,6 +50,7 @@ export default function Landing() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [annualDiscount, setAnnualDiscount] = useState<number>(17);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [featureDefs, setFeatureDefs] = useState<Map<string, FeatureDefinition>>(new Map());
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Auto-rotate hero images every 5 seconds
@@ -63,10 +64,14 @@ export default function Landing() {
   useEffect(() => {
     const loadPlansAndSettings = async () => {
       try {
-        const [activePlans, discount] = await Promise.all([
+        const [activePlans, discount, defs] = await Promise.all([
           plansService.getActive(),
-          appSettingsService.getAnnualDiscount()
+          appSettingsService.getAnnualDiscount(),
+          featureDefinitionsService.getActive(),
         ]);
+        const map = new Map<string, FeatureDefinition>();
+        defs.forEach(d => map.set(d.key, d));
+        setFeatureDefs(map);
         // Filter out enterprise plan (custom pricing) and take first 3
         const displayPlans = activePlans
           .filter(p => p.slug !== 'enterprise')
@@ -266,56 +271,63 @@ export default function Landing() {
               iconBg="bg-violet-100"
               iconColor="text-violet-600"
               title="Dentista IA"
-              description="Assistente clínico com inteligência artificial. Tire dúvidas sobre protocolos, peça sugestões de tratamento e consulte a ficha do paciente por conversa — como ter um colega disponível 24h."
+              description="Seu assistente clínico 24h. Tire dúvidas sobre protocolos, peça sugestões de tratamento e consulte fichas de pacientes por conversa."
             />
             <FeatureCard
               icon={Calculator}
               iconBg="bg-emerald-100"
               iconColor="text-emerald-600"
               title="Contabilidade IA"
-              description="Agente de IA que analisa seu financeiro, calcula impostos, identifica despesas dedutíveis e gera relatórios para o contador. Controle fiscal sem planilha."
+              description="IA que analisa seu financeiro, calcula impostos, identifica despesas dedutíveis e gera relatórios prontos para o contador."
             />
             <FeatureCard
               icon={Mic}
               iconBg="bg-amber-100"
               iconColor="text-amber-600"
               title="Consulta por Voz"
-              description="Grave a consulta e a IA transcreve, organiza e preenche o prontuário automaticamente. Menos digitação, mais atenção ao paciente."
+              description="Grave a consulta e a IA transcreve e preenche o prontuário automaticamente. Menos digitação, mais atenção ao paciente."
             />
             <FeatureCard
               icon={Users}
               iconBg="bg-red-100"
               iconColor="text-[#b94a48]"
               title="Gestão de Pacientes"
-              description="Anamnese digital, planos de tratamento, procedimentos, exames, pagamentos e documentações — tudo em um só lugar. Com assinatura digital do dentista e do paciente nos documentos clínicos."
+              description="Anamnese, planos de tratamento, procedimentos, exames e documentações em um só lugar. Com assinatura digital nos documentos clínicos."
             />
             <FeatureCard
               icon={Calendar}
               iconBg="bg-fuchsia-100"
               iconColor="text-fuchsia-600"
               title="Agenda Inteligente"
-              description="Visualize sua agenda por dia, semana ou mês. Envie lembretes automáticos via WhatsApp e reduza as faltas."
+              description="Agenda por dia, semana ou mês com lembretes via WhatsApp em um clique. Reduza faltas e organize sua rotina sem esforço."
             />
             <FeatureCard
               icon={DollarSign}
               iconBg="bg-blue-100"
               iconColor="text-blue-600"
               title="Controle Financeiro"
-              description="Controle receitas, despesas, comissões de dentistas e fluxo de caixa. Emita boletos e notas fiscais facilmente."
+              description="Receitas, despesas, comissões e fluxo de caixa completo. Controle de contas a receber e a pagar com visão clara do seu faturamento."
+            />
+            <FeatureCard
+              icon={Kanban}
+              iconBg="bg-cyan-100"
+              iconColor="text-cyan-600"
+              title="CRM"
+              description="Acompanhe leads e oportunidades em um pipeline visual. Converta orçamentos em tratamentos e nunca perca um paciente."
             />
             <FeatureCard
               icon={Smartphone}
               iconBg="bg-orange-100"
               iconColor="text-orange-500"
               title="App Mobile"
-              description="Acesse sua clínica de qualquer lugar pelo celular. Disponível para iOS e Android."
+              description="Sua clínica no bolso. Acesse agenda, pacientes e financeiro de qualquer lugar, no iOS ou Android."
             />
             <FeatureCard
               icon={FileCheck}
               iconBg="bg-red-100"
               iconColor="text-[#a03f3d]"
               title="Segurança e LGPD"
-              description="Dados de saúde criptografados, em conformidade com a LGPD. Backup automático na nuvem e assinatura digital de prontuários."
+              description="Dados criptografados em conformidade com a LGPD. Backup automático na nuvem e controle total de acessos."
             />
           </div>
         </div>
@@ -403,22 +415,31 @@ export default function Landing() {
             </div>
           ) : plans.length > 0 ? (
             <div className={`grid gap-6 max-w-4xl mx-auto ${plans.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-              {plans.map((plan, index) => (
-                <PricingCard
-                  key={plan.id}
-                  name={plan.name}
-                  description={plan.description || ''}
-                  price={billingPeriod === 'monthly'
-                    ? formatPrice(plan.price_monthly)
-                    : formatPrice(plan.price_monthly, true)}
-                  period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
-                  buttonText="Começar grátis"
-                  buttonVariant={index === 1 ? 'default' : 'outline'}
-                  highlighted={index === 1}
-                  features={getFeaturesList(plan)}
-                  savings={billingPeriod === 'yearly' ? calculateSavings(plan.price_monthly) : undefined}
-                />
-              ))}
+              {plans.map((plan, index) => {
+                const allKeys = parseFeatureKeys(plan);
+                const previousPlan = index > 0 ? plans[index - 1] : null;
+                const previousKeys = previousPlan ? new Set(parseFeatureKeys(previousPlan)) : new Set<string>();
+                const displayKeys = index > 0 ? allKeys.filter(k => !previousKeys.has(k)) : allKeys;
+                const features = displayKeys.map(k => featureDefs.get(k)?.label || k);
+
+                return (
+                  <PricingCard
+                    key={plan.id}
+                    name={plan.name}
+                    description={plan.description || ''}
+                    price={billingPeriod === 'monthly'
+                      ? formatPrice(plan.price_monthly)
+                      : formatPrice(plan.price_monthly, true)}
+                    period={billingPeriod === 'yearly' ? '/mês (cobrado anualmente)' : '/mês'}
+                    buttonText="Começar grátis"
+                    buttonVariant={index === 1 ? 'default' : 'outline'}
+                    highlighted={index === 1}
+                    features={features}
+                    previousPlanName={previousPlan?.name}
+                    savings={billingPeriod === 'yearly' ? calculateSavings(plan.price_monthly) : undefined}
+                  />
+                );
+              })}
             </div>
           ) : (
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -699,6 +720,7 @@ function PricingCard({
   features,
   highlighted = false,
   savings,
+  previousPlanName,
 }: {
   name: string;
   description: string;
@@ -709,6 +731,7 @@ function PricingCard({
   features: string[];
   highlighted?: boolean;
   savings?: string;
+  previousPlanName?: string;
 }) {
   return (
     <div className={`rounded-2xl p-8 relative ${
@@ -756,6 +779,11 @@ function PricingCard({
       </Link>
       <p className="text-xs text-gray-400 text-center mt-2 mb-6">Sem cartão • Cancele quando quiser</p>
 
+      {previousPlanName && (
+        <p className="text-xs font-semibold text-gray-900 uppercase tracking-wider mb-3">
+          Tudo do {previousPlanName}, mais:
+        </p>
+      )}
       <ul className="space-y-3">
         {features.map((feature, i) => (
           <li key={i} className="flex items-center gap-3">

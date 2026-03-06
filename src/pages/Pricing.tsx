@@ -424,7 +424,7 @@ export default function Pricing() {
                             ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-0'
                             : isHighlighted
                                 ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white shadow-md hover:shadow-lg'
-                                : 'bg-gray-900 hover:bg-gray-800 text-white'
+                                : 'bg-[#a03f3d] hover:bg-[#8b3634] text-white'
                         }
                     `}
                     onClick={() => handleButtonClick(plan)}
