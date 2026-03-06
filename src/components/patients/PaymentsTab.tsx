@@ -87,8 +87,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const processItems = (data: BudgetWithItems[]) => {
     const toPay: ItemToPay[] = [];
     const history: ItemToPay[] = [];
-    let approvedTotal = 0;
     let paidTotal = 0;
+    let grandTotal = 0;
 
     data.forEach(budget => {
       try {
@@ -102,27 +102,23 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               toothIndex: index,
               tooth,
               budgetDate: budget.date,
-              // Mobile-aligned logic for locationRate
-              // 1. Item specific override
-              // 2. Budget column (cast to any if type missing)
-              // 3. Notes global fallback
               locationRate: (tooth as any).locationRate ?? (budget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0)
             };
 
             if (tooth.status === 'approved') {
               toPay.push(item);
-              approvedTotal += itemVal;
+              grandTotal += itemVal;
             } else if (tooth.status === 'partially_paid') {
-              // Show in history with progress indicator
               history.push(item);
-              // Count only confirmed portions toward paidTotal
               const confirmedAmount = (tooth.splitPayments || [])
                 .filter(sp => sp.status === 'confirmed')
                 .reduce((sum, sp) => sum + sp.amount, 0);
               paidTotal += confirmedAmount;
+              grandTotal += itemVal;
             } else if (tooth.status === 'paid' || tooth.status === 'completed') {
               history.push(item);
               paidTotal += itemVal;
+              grandTotal += itemVal;
             }
           });
         }
@@ -141,9 +137,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     setPaymentItems(toPay);
     setPaidHistory(history);
     setStats({
-      approved: approvedTotal,
+      approved: 0,
       paid: paidTotal,
-      total: approvedTotal + paidTotal
+      total: grandTotal
     });
   };
 
@@ -320,14 +316,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="bg-emerald-50 border-emerald-100">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-emerald-600">A Receber</p>
-              <h3 className="text-2xl font-bold text-emerald-700">R$ {formatMoney(stats.approved)}</h3>
+              <p className="text-sm font-medium text-slate-500">Total</p>
+              <h3 className="text-2xl font-bold text-slate-700">R$ {formatMoney(stats.total)}</h3>
             </div>
-            <CheckCircle className="w-8 h-8 text-emerald-300" />
+            <Calculator className="w-8 h-8 text-slate-200" />
           </CardContent>
         </Card>
         <Card className="bg-blue-50 border-blue-100">
@@ -337,15 +333,6 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               <h3 className="text-2xl font-bold text-blue-700">R$ {formatMoney(stats.paid)}</h3>
             </div>
             <CreditCard className="w-8 h-8 text-blue-300" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Total</p>
-              <h3 className="text-2xl font-bold text-slate-700">R$ {formatMoney(stats.total)}</h3>
-            </div>
-            <Calculator className="w-8 h-8 text-slate-200" />
           </CardContent>
         </Card>
         {receivables.filter(r => r.status === 'pending').length > 0 && (
