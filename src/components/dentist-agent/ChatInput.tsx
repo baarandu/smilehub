@@ -44,7 +44,7 @@ export function ChatInput({ onSend, disabled, clinicId }: ChatInputProps) {
       setUploading(false);
     }
 
-    onSend(message.trim() || "Analise esta imagem.", imageUrls);
+    onSend(message.trim() || "Enviei uma imagem para referência. O que você observa?", imageUrls);
     setMessage("");
     setPendingImages([]);
   };
@@ -133,7 +133,7 @@ export function ChatInput({ onSend, disabled, clinicId }: ChatInputProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Descreva o caso, sintomas ou envie uma imagem..."
+          placeholder="Descreva o caso, sintomas ou dúvida clínica..."
           disabled={disabled || uploading}
           className="flex-1 min-h-[60px] resize-none"
           rows={2}

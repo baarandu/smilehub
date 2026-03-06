@@ -4,7 +4,6 @@ import {
   ClipboardList,
   AlertCircle,
   Pill,
-  ImageIcon,
   FileText,
   MessageCircle,
 } from "lucide-react";
@@ -57,12 +56,13 @@ const QUICK_ACTIONS: DentistQuickAction[] = [
     requiresPatient: true,
   },
   {
-    icon: ImageIcon,
-    label: "Analisar imagem",
-    description: "Análise assistiva de radiografia ou foto clínica",
+    icon: FileText,
+    label: "Revisar anamnese",
+    description: "Red flags, contraindicações e alertas clínicos",
     prompt:
-      "Vou enviar uma imagem clínica/radiográfica para análise. Descreva os achados objetivamente e liste hipóteses diagnósticas.",
+      "Revise a anamnese deste paciente. Identifique red flags, contraindicações para procedimentos comuns e alertas relevantes para o atendimento.",
     color: "text-[#8b3634] bg-[#fef2f2] hover:bg-red-100 border-red-200",
+    requiresPatient: true,
   },
   {
     icon: FileText,

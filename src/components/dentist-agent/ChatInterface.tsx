@@ -78,7 +78,7 @@ export function ChatInterface({
               </p>
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>Diagnóstico diferencial e hipóteses clínicas</li>
-                <li>Análise de radiografias e imagens clínicas</li>
+                <li>Revisão de anamnese e histórico clínico</li>
                 <li>Verificação de contraindicações e interações</li>
                 <li>Planos de tratamento estruturados</li>
               </ul>
