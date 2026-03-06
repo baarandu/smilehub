@@ -113,8 +113,13 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               toPay.push(item);
               approvedTotal += itemVal;
             } else if (tooth.status === 'partially_paid') {
-              // partially_paid items don't go in "to pay" (their receivables are tracked separately)
-              // but count toward paid for already-confirmed portions
+              // Show in history with progress indicator
+              history.push(item);
+              // Count only confirmed portions toward paidTotal
+              const confirmedAmount = (tooth.splitPayments || [])
+                .filter(sp => sp.status === 'confirmed')
+                .reduce((sum, sp) => sum + sp.amount, 0);
+              paidTotal += confirmedAmount;
             } else if (tooth.status === 'paid' || tooth.status === 'completed') {
               history.push(item);
               paidTotal += itemVal;
@@ -528,34 +533,103 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               </div>
             ) : (
               <div className="divide-y">
-                {paidHistory.map((item, idx) => (
-                  <div key={idx} className="p-4 flex items-center justify-between bg-slate-50/50">
-                    <div>
-                      <div className="font-medium text-slate-700">
-                        {getToothDisplayName(item.tooth.tooth)}
+                {paidHistory.map((item, idx) => {
+                  const isPartial = item.tooth.status === 'partially_paid';
+                  const splits = item.tooth.splitPayments || [];
+                  const confirmedSplits = splits.filter(sp => sp.status === 'confirmed');
+                  const activeSplits = splits.filter(sp => sp.status !== 'cancelled');
+                  const confirmedAmount = confirmedSplits.reduce((s, sp) => s + sp.amount, 0);
+                  const totalAmount = activeSplits.reduce((s, sp) => s + sp.amount, 0);
+
+                  return (
+                    <div key={idx} className={`p-4 flex items-center justify-between ${isPartial ? 'bg-amber-50/30' : 'bg-slate-50/50'}`}>
+                      <div>
+                        <div className="font-medium text-slate-700">
+                          {getToothDisplayName(item.tooth.tooth)}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {item.tooth.treatments.join(', ')}
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {isPartial ? (
+                            <>
+                              <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100">
+                                {confirmedSplits.length}/{activeSplits.length} parcelas recebidas
+                              </Badge>
+                              {confirmedSplits.map((sp, spIdx) => {
+                                const methodLabels: Record<string, string> = {
+                                  credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
+                                };
+                                return (
+                                  <Badge key={spIdx} variant="secondary" className="text-[10px] h-5">
+                                    R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
+                                  </Badge>
+                                );
+                              })}
+                            </>
+                          ) : (
+                            <>
+                              {splits.length > 0 ? (
+                                splits.filter(sp => sp.status !== 'cancelled').map((sp, spIdx) => {
+                                  const methodLabels: Record<string, string> = {
+                                    credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
+                                  };
+                                  return (
+                                    <Badge key={spIdx} variant="secondary" className="text-[10px] h-5">
+                                      R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
+                                    </Badge>
+                                  );
+                                })
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] h-5">
+                                  {item.tooth.paymentMethod === 'credit' ? 'Crédito' :
+                                    item.tooth.paymentMethod === 'debit' ? 'Débito' :
+                                      item.tooth.paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}
+                                </Badge>
+                              )}
+                              {item.tooth.paymentDate && (
+                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {formatDisplayDate(item.tooth.paymentDate)}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+                        {isPartial && totalAmount > 0 && (
+                          <div className="mt-2 w-48">
+                            <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
+                              <span>R$ {formatMoney(confirmedAmount)} recebido</span>
+                              <span>R$ {formatMoney(totalAmount)}</span>
+                            </div>
+                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all"
+                                style={{ width: `${Math.round((confirmedAmount / totalAmount) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-slate-500">
-                        {item.tooth.treatments.join(', ')}
-                      </div>
-                      <div className="flex gap-2 mt-1">
-                        <Badge variant="secondary" className="text-[10px] h-5">
-                          {item.tooth.paymentMethod === 'credit' ? 'Crédito' :
-                            item.tooth.paymentMethod === 'debit' ? 'Débito' :
-                              item.tooth.paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}
-                        </Badge>
-                        {item.tooth.paymentDate && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" />
-                            {formatDisplayDate(item.tooth.paymentDate)}
-                          </span>
+                      <div className="text-right">
+                        {isPartial ? (
+                          <div>
+                            <div className="font-semibold text-emerald-600">
+                              R$ {formatMoney(confirmedAmount)}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              de R$ {formatMoney(totalAmount)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="font-semibold text-slate-600">
+                            R$ {formatMoney(getItemValue(item))}
+                          </div>
                         )}
                       </div>
                     </div>
-                    <div className="font-semibold text-slate-600">
-                      R$ {formatMoney(getItemValue(item))}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
