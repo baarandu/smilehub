@@ -25,24 +25,18 @@ import {
     Award,
     Headphones,
     FileSignature,
-    Tag,
     FileUp,
     type LucideIcon,
     Crown,
-    ArrowRight,
-    X,
     Zap,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PaymentModal } from '@/components/subscription/PaymentModal';
 import { subscriptionService } from '@/services/subscription';
 import { appSettingsService } from '@/services/admin/appSettings';
 import { featureDefinitionsService } from '@/services/admin/featureDefinitions';
-import { couponsService } from '@/services/admin/coupons';
 import type { FeatureDefinition } from '@/types/featureDefinition';
-import type { DiscountCoupon } from '@/types/database';
 import { useToast } from '@/components/ui/use-toast';
 import {
     AlertDialog,
@@ -79,9 +73,7 @@ export default function Pricing() {
     const [loading, setLoading] = useState(true);
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-    const [clientSecret, setClientSecret] = useState<string | null>(null);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-    const [paymentType, setPaymentType] = useState<'payment' | 'setup'>('payment');
     const [processing, setProcessing] = useState(false);
     const { toast } = useToast();
 
@@ -108,12 +100,6 @@ export default function Pricing() {
     // Feature definitions from DB
     const [featureDefs, setFeatureDefs] = useState<Map<string, FeatureDefinition>>(new Map());
 
-    // Coupon state
-    const [couponCode, setCouponCode] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState<DiscountCoupon | null>(null);
-    const [couponError, setCouponError] = useState('');
-    const [validatingCoupon, setValidatingCoupon] = useState(false);
-
     useEffect(() => {
         fetchPlans();
         getCurrentUser();
@@ -130,29 +116,6 @@ export default function Pricing() {
         } catch (error) {
             console.error('Error fetching feature definitions:', error);
         }
-    };
-
-    const handleApplyCoupon = async () => {
-        if (!couponCode.trim()) return;
-        setValidatingCoupon(true);
-        setCouponError('');
-        try {
-            const coupon = await couponsService.validateCode(couponCode.trim().toUpperCase());
-            setAppliedCoupon(coupon);
-            setCouponError('');
-            toast({ title: 'Cupom aplicado!', description: `Desconto de ${coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `R$ ${(coupon.discount_value / 100).toFixed(2)}`} aplicado.` });
-        } catch (error: any) {
-            setCouponError(error.message || 'Cupom inválido');
-            setAppliedCoupon(null);
-        } finally {
-            setValidatingCoupon(false);
-        }
-    };
-
-    const removeCoupon = () => {
-        setAppliedCoupon(null);
-        setCouponCode('');
-        setCouponError('');
     };
 
     const fetchAnnualDiscount = async () => {
@@ -287,42 +250,14 @@ export default function Pricing() {
         }
     };
 
-    const handleSubscribe = async (plan: Plan) => {
+    const handleSubscribe = (plan: Plan) => {
         if (!userId || !userEmail) {
             toast({ title: 'Erro', description: 'Você precisa estar logado para assinar.', variant: 'destructive' });
             return;
         }
 
-        setProcessing(true);
         setSelectedPlan(plan);
-
-        try {
-            const result = await subscriptionService.createSubscription(
-                plan.id,
-                userEmail,
-                userId,
-                plan.name,
-                plan.price_monthly,
-                undefined,
-                appliedCoupon?.code
-            );
-
-            if (result && result.clientSecret) {
-                setClientSecret(result.clientSecret);
-                setPaymentType(result.type === 'setup' ? 'setup' : 'payment');
-                setPaymentModalOpen(true);
-            } else {
-                throw new Error('Falha ao iniciar pagamento');
-            }
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao iniciar assinatura',
-                description: error.message || 'Tente novamente.',
-            });
-        } finally {
-            setProcessing(false);
-        }
+        setPaymentModalOpen(true);
     };
 
     const formatPrice = (priceInCents: number) => {
@@ -337,31 +272,13 @@ export default function Pricing() {
         return yearlyTotal - discount;
     };
 
-    const applyCouponDiscount = (priceInCents: number, plan: Plan): number => {
-        if (!appliedCoupon) return priceInCents;
-        if (appliedCoupon.applicable_plan_ids && appliedCoupon.applicable_plan_ids.length > 0 && !appliedCoupon.applicable_plan_ids.includes(plan.id)) {
-            return priceInCents;
-        }
-        if (appliedCoupon.discount_type === 'percent') {
-            return priceInCents * (1 - appliedCoupon.discount_value / 100);
-        }
-        return Math.max(0, priceInCents - appliedCoupon.discount_value);
-    };
-
     const getDisplayPrice = (plan: Plan) => {
         let price = plan.price_monthly;
         if (billingCycle === 'annual') {
             const annualTotal = getAnnualPrice(plan.price_monthly);
             price = annualTotal / 12;
         }
-        price = applyCouponDiscount(price, plan);
         return formatPrice(price);
-    };
-
-    const hasCouponDiscountForPlan = (plan: Plan): boolean => {
-        if (!appliedCoupon) return false;
-        if (appliedCoupon.applicable_plan_ids && appliedCoupon.applicable_plan_ids.length > 0 && !appliedCoupon.applicable_plan_ids.includes(plan.id)) return false;
-        return true;
     };
 
     const getAnnualSavings = (plan: Plan) => {
@@ -372,7 +289,13 @@ export default function Pricing() {
 
     const handleButtonClick = (plan: Plan) => {
         const isCurrent = currentPlanId === plan.id;
-        if (isCurrent) return;
+        if (isCurrent && !isTrialing) return;
+
+        if (isCurrent && isTrialing) {
+            // Trial user wants to subscribe to the same plan — go straight to payment
+            handleSubscribe(plan);
+            return;
+        }
 
         if (currentPlanId) {
             handlePlanChange(plan);
@@ -408,7 +331,6 @@ export default function Pricing() {
     const renderPlanCard = (plan: Plan, planIndex: number) => {
         const isCurrent = currentPlanId === plan.id;
         const price = getDisplayPrice(plan);
-        const showCouponStrike = hasCouponDiscountForPlan(plan);
         const savings = billingCycle === 'annual' ? getAnnualSavings(plan) : null;
         const originalPriceMonthly = plan.original_price_monthly;
         // Highlight the most expensive plan (last in sort_order)
@@ -474,20 +396,15 @@ export default function Pricing() {
                 <div className="mb-6">
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-sm text-gray-500">R$</span>
-                        {originalPriceMonthly && !showCouponStrike && billingCycle === 'monthly' && (
+                        {originalPriceMonthly && billingCycle === 'monthly' && (
                             <span className="text-xl text-gray-400 line-through mr-1">
                                 {formatPrice(originalPriceMonthly).int}
                             </span>
                         )}
-                        {showCouponStrike && (
-                            <span className="text-xl text-gray-400 line-through mr-1">
-                                {formatPrice(plan.price_monthly).int},{formatPrice(plan.price_monthly).dec}
-                            </span>
-                        )}
-                        <span className={`text-5xl font-bold tracking-tight ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>
+                        <span className="text-5xl font-bold tracking-tight text-gray-900">
                             {price.int}
                         </span>
-                        <span className={`text-xl font-bold ${showCouponStrike ? 'text-green-600' : 'text-gray-900'}`}>
+                        <span className="text-xl font-bold text-gray-900">
                             ,{price.dec}
                         </span>
                         <span className="text-sm text-gray-500">/mês</span>
@@ -503,7 +420,7 @@ export default function Pricing() {
                 <Button
                     className={`
                         w-full rounded-xl py-6 font-semibold text-base transition-all mb-6
-                        ${isCurrent
+                        ${isCurrent && !isTrialing
                             ? 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-0'
                             : isHighlighted
                                 ? 'bg-[#a03f3d] hover:bg-[#8b3634] text-white shadow-md hover:shadow-lg'
@@ -511,13 +428,13 @@ export default function Pricing() {
                         }
                     `}
                     onClick={() => handleButtonClick(plan)}
-                    disabled={isCurrent || (processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id))}
+                    disabled={(isCurrent && !isTrialing) || (processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id))}
                 >
                     {processing && (selectedPlan?.id === plan.id || pendingPlanChange?.id === plan.id) ? (
                         <Loader2 className="animate-spin mr-2 h-4 w-4" />
                     ) : null}
-                    {isCurrent
-                        ? (isTrialing ? 'Seu trial atual' : 'Plano atual')
+                    {isCurrent && !isTrialing
+                        ? 'Plano atual'
                         : `Assinar ${plan.name}`
                     }
                 </Button>
@@ -676,45 +593,6 @@ export default function Pricing() {
                     </div>
                 </div>
 
-                {/* Coupon Input */}
-                <div className="flex justify-center mb-8">
-                    <div className="flex items-center gap-2 bg-white rounded-xl p-2 shadow-sm border border-gray-200 max-w-md w-full">
-                        <Tag className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
-                        <Input
-                            placeholder="Código do cupom"
-                            value={couponCode}
-                            onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
-                            className="border-0 shadow-none focus-visible:ring-0 uppercase"
-                            disabled={!!appliedCoupon}
-                        />
-                        {appliedCoupon ? (
-                            <Button variant="ghost" size="sm" onClick={removeCoupon} className="text-red-500 hover:text-red-700 shrink-0">
-                                <XCircle className="w-4 h-4 mr-1" /> Remover
-                            </Button>
-                        ) : (
-                            <Button
-                                size="sm"
-                                onClick={handleApplyCoupon}
-                                disabled={!couponCode.trim() || validatingCoupon}
-                                className="bg-[#a03f3d] hover:bg-[#8b3634] shrink-0"
-                            >
-                                {validatingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
-                            </Button>
-                        )}
-                    </div>
-                </div>
-                {couponError && (
-                    <p className="text-center text-sm text-red-500 -mt-6 mb-6">{couponError}</p>
-                )}
-                {appliedCoupon && (
-                    <div className="flex justify-center -mt-6 mb-6">
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-sm font-medium px-3 py-1 rounded-full">
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Cupom {appliedCoupon.code} aplicado ({appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `R$ ${(appliedCoupon.discount_value / 100).toFixed(2)}`} de desconto)
-                        </span>
-                    </div>
-                )}
-
                 {/* Plans Grid — responsive columns based on number of plans */}
                 <div className={`grid grid-cols-1 gap-8 ${
                     sortedPlans.length === 1 ? 'max-w-lg mx-auto' :
@@ -745,10 +623,11 @@ export default function Pricing() {
             <PaymentModal
                 open={paymentModalOpen}
                 onOpenChange={setPaymentModalOpen}
-                clientSecret={clientSecret}
+                planId={selectedPlan?.id || ''}
                 planName={selectedPlan?.name || ''}
                 price={selectedPlan?.price_monthly || 0}
-                type={paymentType}
+                userId={userId || ''}
+                userEmail={userEmail || ''}
                 onSuccess={async () => {
                     setPaymentModalOpen(false);
                     setProcessing(true);
