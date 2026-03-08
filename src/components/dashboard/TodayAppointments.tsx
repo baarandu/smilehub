@@ -1,4 +1,4 @@
-import { Clock, User, ChevronRight } from 'lucide-react';
+import { Clock, User, ChevronRight, Baby } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,25 +74,42 @@ export function TodayAppointments({ appointments, isLoading }: TodayAppointments
           appointments.map((appointment, index) => {
             const status = statusConfig[appointment.status] || defaultStatus;
             const patientName = appointment.patients?.name || 'Paciente';
+            const isChild = appointment.patients?.patient_type === 'child';
+            const guardianLabel = isChild
+              ? (appointment.patients?.mother_name ? `Mãe: ${appointment.patients.mother_name}`
+                : appointment.patients?.father_name ? `Pai: ${appointment.patients.father_name}`
+                : appointment.patients?.legal_guardian ? `Resp: ${appointment.patients.legal_guardian}`
+                : null)
+              : null;
             return (
               <div
                 key={appointment.id}
-                className="p-4 hover:bg-muted/30 transition-colors cursor-pointer animate-slide-up"
+                className={cn(
+                  "p-4 hover:bg-muted/30 transition-colors cursor-pointer animate-slide-up",
+                  isChild && "border-l-[3px] border-l-sky-400"
+                )}
                 style={{ animationDelay: `${index * 50}ms` }}
                 onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-                    <User className="w-5 h-5 text-primary" />
+                  <div className={cn(
+                    "w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0",
+                    isChild ? "bg-sky-50" : "bg-accent"
+                  )}>
+                    {isChild ? <Baby className="w-5 h-5 text-sky-500" /> : <User className="w-5 h-5 text-primary" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-foreground truncate">{patientName}</p>
+                      {isChild && <Baby className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />}
                       <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", status.class)}>
                         {status.label}
                       </span>
                     </div>
-                    <p className="text-sm text-primary font-semibold mt-0.5">
+                    {isChild && guardianLabel && (
+                      <p className="text-xs text-sky-500 truncate">{guardianLabel}</p>
+                    )}
+                    <p className={cn("text-sm font-semibold mt-0.5", isChild ? "text-sky-600" : "text-primary")}>
                       {appointment.time.slice(0, 5)}
                     </p>
                     {appointment.notes && (
