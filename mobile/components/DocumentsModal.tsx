@@ -313,6 +313,10 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
     const [paperWidthMm, setPaperWidthMm] = useState(210);
     const [paperHeightMm, setPaperHeightMm] = useState(297);
 
+    // Dentist info
+    const [dentistName, setDentistName] = useState<string | null>(null);
+    const [dentistCRO, setDentistCRO] = useState<string | null>(null);
+
     useEffect(() => {
         if (visible) {
             loadData();
@@ -326,6 +330,8 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
             setLetterheadUrl(info.letterheadUrl);
             setPaperWidthMm(info.letterheadWidthMm);
             setPaperHeightMm(info.letterheadHeightMm);
+            setDentistName(info.dentistName || 'Responsável Técnico');
+            setDentistCRO(info.dentistCRO || null);
         } catch (error) {
             console.error('Error loading letterhead:', error);
         }
@@ -482,6 +488,20 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
         }
     }, [selectedPatient, documentDate, selectedTemplate]);
 
+    const getDocumentSignatureType = () => {
+        if (!selectedTemplate) return 'dual';
+        const nameLower = selectedTemplate.name.toLowerCase();
+        const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
+        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
+        const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado')
+            || nameLower.includes('encaminhamento') || nameLower.includes('declaração') || nameLower.includes('declaracao');
+
+        if (isMinorAuth) return 'guardian';
+        if (isConsentForm) return 'patient';
+        if (isDentistOnlyDoc) return 'dentist';
+        return 'dual';
+    };
+
     const getPDFHTML = () => {
         if (!selectedTemplate || !selectedPatient) return '';
 
@@ -494,6 +514,45 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }` : '';
+
+        const sigType = getDocumentSignatureType();
+        const isChild = (selectedPatient as any).patient_type === 'child';
+        const guardianName = (selectedPatient as any).legal_guardian || (selectedPatient as any).mother_name || (selectedPatient as any).father_name || 'Responsável Legal';
+        const patientSignerName = isChild ? guardianName : selectedPatient.name;
+        const dn = dentistName || 'Responsável Técnico';
+        const croHtml = dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : '';
+
+        let signatureHtml = '';
+        if (sigType === 'guardian') {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">Responsável Legal</div>
+                </div>`;
+        } else if (sigType === 'patient') {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${patientSignerName}</div>
+                    ${isChild ? '<div style="font-size:10pt;color:#666;text-align:center;">Responsável Legal</div>' : ''}
+                </div>`;
+        } else if (sigType === 'dentist') {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${dn}</div>
+                    ${croHtml}
+                </div>`;
+        } else {
+            signatureHtml = `
+                <div class="signature-dual">
+                    <div class="signature">
+                        <div class="signature-line">${patientSignerName}</div>
+                        ${isChild ? '<div style="font-size:10pt;color:#666;text-align:center;">Responsável Legal</div>' : ''}
+                    </div>
+                    <div class="signature">
+                        <div class="signature-line">${dn}</div>
+                        ${croHtml}
+                    </div>
+                </div>`;
+        }
 
         return `
             <!DOCTYPE html>
@@ -533,14 +592,23 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
                         margin: 0 auto 10px;
                         padding-top: 10px;
                     }
+                    .signature-dual {
+                        display: flex;
+                        justify-content: space-around;
+                        margin-top: 80px;
+                    }
+                    .signature-dual .signature {
+                        margin-top: 0;
+                    }
+                    .signature-dual .signature-line {
+                        width: 220px;
+                    }
                 </style>
             </head>
             <body>
                 <h1>${selectedTemplate.name}</h1>
                 <div class="content">${previewContent}</div>
-                <div class="signature">
-                    <div class="signature-line">${selectedPatient.name}</div>
-                </div>
+                ${signatureHtml}
             </body>
             </html>
         `;
@@ -952,29 +1020,40 @@ export function DocumentsModal({ visible, onClose, clinicId }: DocumentsModalPro
             </SafeAreaView>
 
             {/* Signature Modal */}
-            {showSignatureModal && savedExamId && savedExamRecord && clinicId && selectedPatient && (
-                <SignaturePadModal
-                    visible={showSignatureModal}
-                    onClose={() => {
-                        setShowSignatureModal(false);
-                        setSavedExamId(null);
-                        setSavedExamRecord(null);
-                    }}
-                    clinicId={clinicId}
-                    patientId={selectedPatient.id}
-                    recordType="exam"
-                    recordId={savedExamId}
-                    record={savedExamRecord}
-                    signerType="dentist"
-                    signerName=""
-                    patientEmail={selectedPatient.email || undefined}
-                    onSuccess={() => {
-                        setShowSignatureModal(false);
-                        setSavedExamId(null);
-                        setSavedExamRecord(null);
-                    }}
-                />
-            )}
+            {showSignatureModal && savedExamId && savedExamRecord && clinicId && selectedPatient && (() => {
+                const sigType = getDocumentSignatureType();
+                const isChild = (selectedPatient as any).patient_type === 'child';
+                const isPatientSig = sigType === 'patient' || sigType === 'guardian';
+                const resolvedSignerType = isPatientSig ? 'patient' : 'dentist';
+                const resolvedSignerName = isPatientSig
+                    ? (isChild
+                        ? ((selectedPatient as any).legal_guardian || (selectedPatient as any).mother_name || (selectedPatient as any).father_name || '')
+                        : selectedPatient.name)
+                    : '';
+                return (
+                    <SignaturePadModal
+                        visible={showSignatureModal}
+                        onClose={() => {
+                            setShowSignatureModal(false);
+                            setSavedExamId(null);
+                            setSavedExamRecord(null);
+                        }}
+                        clinicId={clinicId}
+                        patientId={selectedPatient.id}
+                        recordType="exam"
+                        recordId={savedExamId}
+                        record={savedExamRecord}
+                        signerType={resolvedSignerType}
+                        signerName={resolvedSignerName}
+                        patientEmail={selectedPatient.email || undefined}
+                        onSuccess={() => {
+                            setShowSignatureModal(false);
+                            setSavedExamId(null);
+                            setSavedExamRecord(null);
+                        }}
+                    />
+                );
+            })()}
 
             {/* Custom Patient Selector Modal */}
             <Modal visible={showPatientSelector} animationType="slide">
