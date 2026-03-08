@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MapPin } from 'lucide-react-native';
+import { MapPin, Baby } from 'lucide-react-native';
 import { STATUS_CONFIG } from './constants';
 import type { AppointmentWithPatient } from '../../types/database';
 
@@ -8,23 +8,34 @@ interface AppointmentCardProps {
   onPress: () => void;
 }
 
+function getGuardianLabel(patients: AppointmentWithPatient['patients']): string | null {
+  if (patients?.patient_type !== 'child') return null;
+  if (patients.mother_name) return `Mãe: ${patients.mother_name}`;
+  if (patients.father_name) return `Pai: ${patients.father_name}`;
+  if (patients.legal_guardian) return `Resp: ${patients.legal_guardian}`;
+  return null;
+}
+
 export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) {
   const status = STATUS_CONFIG[appointment.status] || STATUS_CONFIG.scheduled;
+  const isChild = appointment.patients?.patient_type === 'child';
+  const guardianLabel = getGuardianLabel(appointment.patients);
 
   return (
     <TouchableOpacity
-      className="bg-white rounded-xl p-4 border border-gray-100"
+      className={`bg-white rounded-xl p-4 border border-gray-100 ${isChild ? 'border-l-[3px] border-l-sky-400' : ''}`}
       activeOpacity={0.7}
       onPress={onPress}
     >
       <View className="flex-row items-center gap-4">
         <View className="items-center justify-center">
-          <Text className="text-2xl font-bold text-[#a03f3d]">
+          <Text className={`text-2xl font-bold ${isChild ? 'text-sky-600' : 'text-[#a03f3d]'}`}>
             {appointment.time?.slice(0, 5)}
           </Text>
         </View>
         <View className="flex-1">
           <View className="flex-row items-center gap-2">
+            {isChild && <Baby size={16} color="#0ea5e9" />}
             <Text className="font-semibold text-gray-900">
               {appointment.patients?.name}
             </Text>
@@ -34,6 +45,9 @@ export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) 
               </Text>
             </View>
           </View>
+          {isChild && guardianLabel && (
+            <Text className="text-sky-500 text-xs mt-0.5">{guardianLabel}</Text>
+          )}
           {appointment.procedure_name && (
             <Text className="text-gray-700 font-medium text-sm mt-1">{appointment.procedure_name}</Text>
           )}
@@ -51,4 +65,3 @@ export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) 
     </TouchableOpacity>
   );
 }
-

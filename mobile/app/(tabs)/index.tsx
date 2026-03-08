@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse, Heart } from 'lucide-react-native';
+import { Users, Calendar, Bell, FileText, ChevronRight, User, AlertTriangle, Gift, Clock, Menu, Layers, HeartPulse, Heart, Baby } from 'lucide-react-native';
 import { TeamManagementModal } from '../../src/components/TeamManagementModal';
 import { patientsService } from '../../src/services/patients';
 import { appointmentsService } from '../../src/services/appointments';
@@ -288,21 +288,36 @@ export default function Dashboard() {
                             </View>
                         ) : (
                             <View className="gap-3">
-                                {todayAppointments.map((apt) => (
-                                    <View key={apt.id} className="flex-row items-center justify-between p-3 bg-gray-50 rounded-xl">
-                                        <View className="flex-row items-center gap-3">
-                                            <View className="w-10 h-10 bg-[#fee2e2] rounded-full items-center justify-center">
-                                                <Users size={20} color="#b94a48" />
+                                {todayAppointments.map((apt) => {
+                                    const isChild = apt.patients?.patient_type === 'child';
+                                    const guardianLabel = isChild
+                                        ? (apt.patients?.mother_name ? `Mãe: ${apt.patients.mother_name}`
+                                            : apt.patients?.father_name ? `Pai: ${apt.patients.father_name}`
+                                            : apt.patients?.legal_guardian ? `Resp: ${apt.patients.legal_guardian}`
+                                            : null)
+                                        : null;
+                                    return (
+                                        <View key={apt.id} className={`flex-row items-center justify-between p-3 bg-gray-50 rounded-xl ${isChild ? 'border-l-[3px] border-l-sky-400' : ''}`}>
+                                            <View className="flex-row items-center gap-3">
+                                                <View className={`w-10 h-10 rounded-full items-center justify-center ${isChild ? 'bg-sky-50' : 'bg-[#fee2e2]'}`}>
+                                                    {isChild ? <Baby size={20} color="#0ea5e9" /> : <Users size={20} color="#b94a48" />}
+                                                </View>
+                                                <View>
+                                                    <View className="flex-row items-center gap-1">
+                                                        <Text className="font-semibold text-gray-900">{apt.patients?.name}</Text>
+                                                        {isChild && <Baby size={14} color="#0ea5e9" />}
+                                                    </View>
+                                                    {isChild && guardianLabel && (
+                                                        <Text className="text-xs text-sky-500">{guardianLabel}</Text>
+                                                    )}
+                                                    <Text className={`font-bold ${isChild ? 'text-sky-600' : 'text-[#8b3634]'}`}>{apt.time?.slice(0, 5)}</Text>
+                                                    {apt.notes && <Text className="text-xs text-gray-500">{apt.notes}</Text>}
+                                                </View>
                                             </View>
-                                            <View>
-                                                <Text className="font-semibold text-gray-900">{apt.patients?.name}</Text>
-                                                <Text className="text-[#8b3634] font-bold">{apt.time?.slice(0, 5)}</Text>
-                                                {apt.notes && <Text className="text-xs text-gray-500">{apt.notes}</Text>}
-                                            </View>
+                                            <ChevronRight size={20} color="#9CA3AF" />
                                         </View>
-                                        <ChevronRight size={20} color="#9CA3AF" />
-                                    </View>
-                                ))}
+                                    );
+                                })}
                             </View>
                         )}
                     </View>
