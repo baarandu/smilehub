@@ -143,7 +143,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!clinicId) return;
 
-    let storedSteps: string[] = [];
     let dismissed = false;
     let tooltips = true;
 
@@ -151,7 +150,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (stored) {
       try {
         const state: StoredOnboardingState = JSON.parse(stored);
-        storedSteps = state.completedSteps || [];
         dismissed = state.dismissed || false;
         tooltips = state.tooltipsEnabled !== false;
         setIsFirstAccess(false);
@@ -175,6 +173,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         tooltipsEnabled: tooltips,
       };
       localStorage.setItem(getStorageKey(), JSON.stringify(state));
+
+      // Auto-open onboarding on first access if not all steps completed
+      const isFirst = !stored;
+      if (isFirst && !dismissed && detected.length < ONBOARDING_STEPS.length) {
+        setIsOnboardingOpen(true);
+      }
     });
   }, [clinicId, getStorageKey, detectCompletedSteps]);
 

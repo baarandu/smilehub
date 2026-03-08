@@ -1,4 +1,4 @@
-import { User, MapPin, Edit3, Trash2 } from 'lucide-react';
+import { User, MapPin, Edit3, Trash2, Baby } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,6 +11,14 @@ import { cn } from '@/lib/utils';
 import type { AppointmentWithPatient } from '@/types/database';
 import { STATUS_CONFIG, type AppointmentCardProps } from './types';
 
+function getGuardianLabel(patients: AppointmentWithPatient['patients']): string | null {
+  if (patients?.patient_type !== 'child') return null;
+  if (patients.mother_name) return `Mãe: ${patients.mother_name}`;
+  if (patients.father_name) return `Pai: ${patients.father_name}`;
+  if (patients.legal_guardian) return `Resp. Legal: ${patients.legal_guardian}`;
+  return null;
+}
+
 export function AppointmentCard({
   appointment,
   index,
@@ -19,6 +27,9 @@ export function AppointmentCard({
   onEdit,
   onDelete,
 }: AppointmentCardProps) {
+  const isChild = appointment.patients?.patient_type === 'child';
+  const guardianLabel = getGuardianLabel(appointment.patients);
+
   return (
     <div
       className="bg-card rounded-xl p-4 shadow-card border border-border animate-slide-up"
@@ -33,11 +44,16 @@ export function AppointmentCard({
           onClick={() => onPatientClick(appointment.patient_id)}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", isChild ? "bg-sky-50" : "bg-accent")}>
+              {isChild ? <Baby className="w-5 h-5 text-sky-500" /> : <User className="w-5 h-5 text-primary" />}
             </div>
             <div>
               <p className="font-medium text-foreground">{appointment.patients?.name}</p>
+              {isChild && guardianLabel && (
+                <p className="text-xs text-sky-500">
+                  {guardianLabel}
+                </p>
+              )}
               {appointment.location && (
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <MapPin className="w-3 h-3" />

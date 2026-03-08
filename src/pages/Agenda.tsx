@@ -11,7 +11,7 @@ import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock, Baby } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -589,13 +589,22 @@ export default function Agenda() {
                 {filteredAppointments.map((appointment, index) => (
                   <div
                     key={appointment.id}
-                    className="flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-colors animate-slide-up"
+                    className={cn(
+                      "flex items-center gap-4 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-colors animate-slide-up",
+                      appointment.patients?.patient_type === 'child' && "border-l-[3px] border-l-sky-400"
+                    )}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     {/* Time */}
                     <div className="flex-shrink-0">
-                      <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <span className="text-lg font-bold text-primary">
+                      <div className={cn(
+                        "w-16 h-16 rounded-xl flex items-center justify-center",
+                        appointment.patients?.patient_type === 'child' ? "bg-sky-50" : "bg-primary/10"
+                      )}>
+                        <span className={cn(
+                          "text-lg font-bold",
+                          appointment.patients?.patient_type === 'child' ? "text-sky-600" : "text-primary"
+                        )}>
                           {appointment.time?.slice(0, 5)}
                         </span>
                       </div>
@@ -606,9 +615,23 @@ export default function Agenda() {
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}
                     >
-                      <p className="font-semibold text-foreground truncate">
-                        {appointment.patients?.name}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-foreground truncate">
+                          {appointment.patients?.name}
+                        </p>
+                        {appointment.patients?.patient_type === 'child' && (
+                          <Baby className="w-4 h-4 text-sky-500 flex-shrink-0" />
+                        )}
+                      </div>
+                      {appointment.patients?.patient_type === 'child' && (
+                        appointment.patients.mother_name ? (
+                          <p className="text-xs text-sky-500 truncate">Mãe: {appointment.patients.mother_name}</p>
+                        ) : appointment.patients.father_name ? (
+                          <p className="text-xs text-sky-500 truncate">Pai: {appointment.patients.father_name}</p>
+                        ) : appointment.patients.legal_guardian ? (
+                          <p className="text-xs text-sky-500 truncate">Resp. Legal: {appointment.patients.legal_guardian}</p>
+                        ) : null
+                      )}
                       {appointment.procedure_name && (
                         <p className="text-sm text-muted-foreground truncate">
                           {appointment.procedure_name}

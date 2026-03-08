@@ -414,15 +414,64 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-500" />
-                <span className="text-sm">{patient.phone}</span>
-              </a>
+              {(patient as any).patient_type === 'child' ? (
+                <>
+                  {(patient as any).mother_phone && (
+                    <a
+                      href={`https://wa.me/${getWhatsAppNumber((patient as any).mother_phone)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm">
+                        {(patient as any).mother_phone}
+                        <span className="ml-1">(Mãe: {(patient as any).mother_name || 'não informado'})</span>
+                      </span>
+                    </a>
+                  )}
+                  {(patient as any).father_phone && (
+                    <a
+                      href={`https://wa.me/${getWhatsAppNumber((patient as any).father_phone)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm">
+                        {(patient as any).father_phone}
+                        <span className="ml-1">(Pai: {(patient as any).father_name || 'não informado'})</span>
+                      </span>
+                    </a>
+                  )}
+                  {!(patient as any).mother_phone && !(patient as any).father_phone && (
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm">
+                        {patient.phone}
+                        {(patient as any).legal_guardian && (
+                          <span className="ml-1">(Resp. Legal: {(patient as any).legal_guardian})</span>
+                        )}
+                      </span>
+                    </a>
+                  )}
+                </>
+              ) : (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-muted-foreground hover:text-emerald-600 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm">{patient.phone}</span>
+                </a>
+              )}
               {patient.email && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Mail className="w-4 h-4" />

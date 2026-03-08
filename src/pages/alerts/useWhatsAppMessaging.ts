@@ -5,6 +5,39 @@ import { Patient } from '@/types/database';
 import { toast } from 'sonner';
 import { getWhatsAppNumber } from '@/utils/formatters';
 
+export interface ChildInfo {
+    patient_type?: string | null;
+    mother_name?: string | null;
+    father_name?: string | null;
+    legal_guardian?: string | null;
+}
+
+/** For child patients, resolves the guardian name and appends a reference to the child */
+function resolveMessageForChild(
+    message: string,
+    patientName: string,
+    childInfo?: ChildInfo
+): string {
+    if (!childInfo || childInfo.patient_type !== 'child') return message;
+
+    const guardianName =
+        childInfo.mother_name?.split(' ')[0] ||
+        childInfo.father_name?.split(' ')[0] ||
+        childInfo.legal_guardian?.split(' ')[0];
+
+    if (guardianName) {
+        // Replace the patient's first name with the guardian's first name
+        const patientFirst = patientName.split(' ')[0];
+        message = message.replace(patientFirst, guardianName);
+    }
+
+    // Append child reference
+    const childFirst = patientName.split(' ')[0];
+    message += `\n\nReferente à consulta de ${childFirst}.`;
+
+    return message;
+}
+
 interface UseWhatsAppMessagingProps {
     getTemplateByType: (type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show') => string;
     dismissAlert: any;
@@ -46,11 +79,16 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
         phone: string,
         name: string,
         type: 'birthday' | 'return' | 'reminder' | 'follow_up' | 'no_show',
-        alertInfo?: { patientId: string; alertDate: string }
+        alertInfo?: { patientId: string; alertDate: string },
+        childInfo?: ChildInfo
     ) => {
         const firstName = name.split(' ')[0];
         const template = getTemplateByType(type);
-        const message = template.replace('{name}', firstName);
+        const message = resolveMessageForChild(
+            template.replace('{name}', firstName),
+            name,
+            childInfo
+        );
 
         const getAlertType = () => {
             if (type === 'birthday') return 'birthday';
@@ -106,7 +144,16 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
     const handleSelectPatient = async (patient: Patient) => {
         if (!sendingTemplate) return;
         const firstName = patient.name.split(' ')[0];
-        const message = sendingTemplate.replace('{name}', firstName);
+        const message = resolveMessageForChild(
+            sendingTemplate.replace('{name}', firstName),
+            patient.name,
+            {
+                patient_type: (patient as any).patient_type,
+                mother_name: (patient as any).mother_name,
+                father_name: (patient as any).father_name,
+                legal_guardian: (patient as any).legal_guardian,
+            }
+        );
 
         if (whatsappConnected) {
             const messageId = `${patient.phone.replace(/\D/g, '')}-${Date.now()}`;

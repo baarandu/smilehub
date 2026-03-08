@@ -4,8 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { checkTermsAccepted } from '@/services/terms';
 import { TermsAcceptanceModal } from './TermsAcceptanceModal';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 
 export function PrivateRoute() {
+    const { checkAndShowOnboarding } = useOnboarding();
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -195,7 +197,11 @@ export function PrivateRoute() {
             {needsTermsAcceptance && (
                 <TermsAcceptanceModal
                     open={needsTermsAcceptance}
-                    onAccepted={() => setNeedsTermsAcceptance(false)}
+                    onAccepted={() => {
+                        setNeedsTermsAcceptance(false);
+                        // After accepting terms, open the onboarding setup guide
+                        checkAndShowOnboarding();
+                    }}
                 />
             )}
             <Outlet />

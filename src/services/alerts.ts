@@ -1,12 +1,19 @@
 import { supabase } from '@/lib/supabase';
 
+export interface PatientChildInfo {
+    patient_type?: string | null;
+    mother_name?: string | null;
+    father_name?: string | null;
+    legal_guardian?: string | null;
+}
+
 export interface Alert {
     type: 'return' | 'birthday' | 'important_return';
     patient: {
         id: string;
         name: string;
         phone: string;
-    };
+    } & PatientChildInfo;
     date: string; // Last procedure date OR birth date OR flagged date
     daysSince?: number; // For regular return alerts
     dueDate?: string; // For important return alerts
@@ -14,7 +21,7 @@ export interface Alert {
 
 export interface FollowUpAlert {
     id: string;
-    patient: { id: string; name: string; phone: string };
+    patient: { id: string; name: string; phone: string } & PatientChildInfo;
     procedure: string | null;
     time: string;
     date: string;
@@ -47,7 +54,7 @@ export const alertsService = {
     async getBirthdayAlerts(clinicId?: string): Promise<Alert[]> {
         let query = supabase
             .from('patients')
-            .select('id, name, phone, birth_date')
+            .select('id, name, phone, birth_date, patient_type, mother_name, father_name, legal_guardian')
             .is('deleted_at', null)
             .not('birth_date', 'is', null);
 
@@ -83,6 +90,10 @@ export const alertsService = {
                     id: p.id,
                     name: p.name,
                     phone: p.phone,
+                    patient_type: p.patient_type,
+                    mother_name: p.mother_name,
+                    father_name: p.father_name,
+                    legal_guardian: p.legal_guardian,
                 },
                 date: p.birth_date!
             }));
@@ -94,7 +105,7 @@ export const alertsService = {
             .select(`
                 patient_id,
                 date,
-                patients!inner (name, phone)
+                patients!inner (name, phone, patient_type, mother_name, father_name, legal_guardian)
             `)
             .is('deleted_at', null)
             .is('patients.deleted_at' as any, null)
@@ -144,7 +155,11 @@ export const alertsService = {
                     patient: {
                         id: patientId,
                         name: data.patient.name,
-                        phone: data.patient.phone
+                        phone: data.patient.phone,
+                        patient_type: data.patient.patient_type,
+                        mother_name: data.patient.mother_name,
+                        father_name: data.patient.father_name,
+                        legal_guardian: data.patient.legal_guardian,
                     },
                     date: data.date,
                     daysSince: diffDays
@@ -158,7 +173,7 @@ export const alertsService = {
     async getImportantReturnAlerts(clinicId?: string): Promise<Alert[]> {
         let query = supabase
             .from('patients')
-            .select('id, name, phone, return_alert_flag, return_alert_date')
+            .select('id, name, phone, return_alert_flag, return_alert_date, patient_type, mother_name, father_name, legal_guardian')
             .is('deleted_at', null)
             .eq('return_alert_flag', true)
             .not('return_alert_date', 'is', null)
@@ -189,6 +204,10 @@ export const alertsService = {
                     id: p.id,
                     name: p.name,
                     phone: p.phone,
+                    patient_type: p.patient_type,
+                    mother_name: p.mother_name,
+                    father_name: p.father_name,
+                    legal_guardian: p.legal_guardian,
                 },
                 date: p.return_alert_date,
                 dueDate: p.return_alert_date // Date it was scheduled for
@@ -208,7 +227,7 @@ export const alertsService = {
 
         let query = supabase
             .from('appointments')
-            .select('*, patients (name, phone)')
+            .select('*, patients (name, phone, patient_type, mother_name, father_name, legal_guardian)')
             .eq('date', yesterdayStr)
             .not('status', 'in', '("cancelled","rescheduled")')
             .order('time');
@@ -228,7 +247,15 @@ export const alertsService = {
 
             const alert: FollowUpAlert = {
                 id: apt.id,
-                patient: { id: apt.patient_id, name: apt.patients?.name || '', phone: apt.patients?.phone || '' },
+                patient: {
+                    id: apt.patient_id,
+                    name: apt.patients?.name || '',
+                    phone: apt.patients?.phone || '',
+                    patient_type: apt.patients?.patient_type,
+                    mother_name: apt.patients?.mother_name,
+                    father_name: apt.patients?.father_name,
+                    legal_guardian: apt.patients?.legal_guardian,
+                },
                 procedure: apt.procedure_name || null,
                 time: apt.time,
                 date: yesterdayStr,

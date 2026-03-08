@@ -18,9 +18,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
-import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
-import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
-import { useOnboarding } from '@/contexts/OnboardingContext';
 import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
 import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
 import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpensesChart';
@@ -31,7 +28,6 @@ import { useOverdueSummary, useReceivablesDueToday } from '@/hooks/useReceivable
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { returnToOnboardingIfNeeded } = useOnboarding();
   const { data: analytics, isLoading: loadingAnalytics } = useDashboardAnalytics();
 
   const { data: todayAppointments, isLoading: loadingAppointments } = useTodayAppointments();
@@ -57,10 +53,6 @@ export default function Dashboard() {
   const markCompleted = useMarkProcedureCompleted();
   const [showPendingReturnsModal, setShowPendingReturnsModal] = useState(false);
   const [showImportantReturnsModal, setShowImportantReturnsModal] = useState(false);
-
-  // Profile Settings Modal (for onboarding)
-  const [showProfileSettings, setShowProfileSettings] = useState(false);
-  const [profileSettingsTab, setProfileSettingsTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
   // Reminders via React Query
   const { data: activeRemindersCount = 0, isLoading: loadingReminders } = useRemindersCount();
@@ -509,27 +501,6 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Onboarding Components */}
-      <OnboardingModal
-        onOpenClinicSettings={(tab) => {
-          setProfileSettingsTab(tab || 'clinic');
-          setShowProfileSettings(true);
-        }}
-      />
-      <OnboardingFloatingButton />
-
-      {/* Profile Settings Modal (triggered from onboarding) */}
-      <ProfileSettingsModal
-        open={showProfileSettings}
-        onOpenChange={(open) => {
-          setShowProfileSettings(open);
-          // Return to onboarding if it was opened from there
-          if (!open) {
-            returnToOnboardingIfNeeded();
-          }
-        }}
-        initialTab={profileSettingsTab}
-      />
     </div>
   );
 }

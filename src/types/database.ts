@@ -3424,7 +3424,12 @@ export type TaxConfigUpdate = Database['public']['Tables']['tax_config']['Update
 
 // Extended types with relations
 export type AppointmentWithPatient = Appointment & {
-  patients: Pick<Patient, 'name' | 'phone'>
+  patients: Pick<Patient, 'name' | 'phone'> & {
+    patient_type?: string | null
+    mother_name?: string | null
+    father_name?: string | null
+    legal_guardian?: string | null
+  }
 }
 
 export type ConsultationWithPatient = Consultation & {
@@ -3438,6 +3443,10 @@ export type ReturnAlert = {
   phone: string
   suggested_return_date: string
   days_until_return: number
+  patient_type?: string | null
+  mother_name?: string | null
+  father_name?: string | null
+  legal_guardian?: string | null
 }
 
 // Form data type for patient registration

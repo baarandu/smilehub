@@ -12,7 +12,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone)
+        patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .order('date')
       .order('time');
@@ -21,7 +21,7 @@ export const appointmentsService = {
       query = query.eq('clinic_id', clinicId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query as { data: AppointmentWithPatient[] | null; error: any };
 
     if (error) throw error;
     return data || [];
@@ -32,7 +32,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone)
+        patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .eq('date', date)
       .order('time');
@@ -41,7 +41,7 @@ export const appointmentsService = {
       query = query.eq('clinic_id', clinicId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query as { data: AppointmentWithPatient[] | null; error: any };
 
     if (error) throw error;
     return data || [];
@@ -160,7 +160,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients!inner (name, phone)
+        patients!inner (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .ilike('patients.name', `%${query}%`)
       .order('date', { ascending: false })
@@ -171,7 +171,7 @@ export const appointmentsService = {
       q1 = q1.eq('clinic_id', clinicId);
     }
 
-    const { data: byPatient, error: error1 } = await q1;
+    const { data: byPatient, error: error1 } = await q1 as { data: AppointmentWithPatient[] | null; error: any };
 
     if (error1) throw error1;
 
@@ -180,7 +180,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone)
+        patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .ilike('procedure_name', `%${query}%`)
       .order('date', { ascending: false })
@@ -191,7 +191,7 @@ export const appointmentsService = {
       q2 = q2.eq('clinic_id', clinicId);
     }
 
-    const { data: byProcedure, error: error2 } = await q2;
+    const { data: byProcedure, error: error2 } = await q2 as { data: AppointmentWithPatient[] | null; error: any };
 
     if (error2) throw error2;
 

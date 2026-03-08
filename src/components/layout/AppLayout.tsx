@@ -31,8 +31,11 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useOnboarding } from '@/contexts/OnboardingContext';
 import { subscriptionService } from '@/services/subscription';
 import { planHasFeature, getFeaturesForPlan } from '@/lib/planFeatures';
+import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
+import { ProfileSettingsModal } from '@/components/profile/ProfileSettingsModal';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -68,6 +71,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [userEmail, setUserEmail] = useState('');
   const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
   const { role, clinicId, isAdmin, isDentist, isSuperAdmin } = useClinic();
+  const { returnToOnboardingIfNeeded } = useOnboarding();
+
+  // Profile Settings Modal (triggered from onboarding steps)
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [profileSettingsTab, setProfileSettingsTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
   // Filter nav items based on role AND subscription plan features
   // Super admin bypasses plan restrictions
@@ -373,6 +381,27 @@ export function AppLayout({ children }: AppLayoutProps) {
           </SectionErrorBoundary>
         </div>
       </main>
+
+      {/* Onboarding Components (app-wide) */}
+      <OnboardingModal
+        onOpenClinicSettings={(tab) => {
+          setProfileSettingsTab(tab || 'clinic');
+          setShowProfileSettings(true);
+        }}
+      />
+      <OnboardingFloatingButton />
+
+      {/* Profile Settings Modal (triggered from onboarding) */}
+      <ProfileSettingsModal
+        open={showProfileSettings}
+        onOpenChange={(open) => {
+          setShowProfileSettings(open);
+          if (!open) {
+            returnToOnboardingIfNeeded();
+          }
+        }}
+        initialTab={profileSettingsTab}
+      />
     </div>
   );
 }

@@ -95,7 +95,7 @@ export const consultationsService = {
       .select(`
         patient_id,
         suggested_return_date,
-        patients!inner (name, phone, clinic_id)
+        patients!inner (name, phone, clinic_id, patient_type, mother_name, father_name, legal_guardian)
       `)
       .is('deleted_at', null)
       .is('patients.deleted_at' as any, null)
@@ -110,20 +110,24 @@ export const consultationsService = {
     const { data, error } = await query;
 
     if (error) throw error;
-    
+
     // Transform and calculate days until return
     const alerts: ReturnAlert[] = (data || []).map((item: any) => {
       const returnDate = new Date(item.suggested_return_date);
       const todayDate = new Date(today);
       const diffTime = returnDate.getTime() - todayDate.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       return {
         patient_id: item.patient_id,
         patient_name: item.patients.name,
         phone: item.patients.phone,
         suggested_return_date: item.suggested_return_date,
-        days_until_return: diffDays
+        days_until_return: diffDays,
+        patient_type: item.patients.patient_type,
+        mother_name: item.patients.mother_name,
+        father_name: item.patients.father_name,
+        legal_guardian: item.patients.legal_guardian,
       };
     });
     
