@@ -11,7 +11,7 @@ import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
 import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Bell, Calendar as CalendarIcon, Clock, Baby } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Settings, X, Calendar as CalendarIcon, Clock, Baby, Trash2, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -682,14 +682,15 @@ export default function Agenda() {
                         className="h-8 w-8 text-muted-foreground hover:text-primary"
                         onClick={() => handleEditAppointment(appointment)}
                       >
-                        <Settings className="w-4 h-4" />
+                        <Edit3 className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleDeleteAppointment(appointment)}
                       >
-                        <Bell className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
