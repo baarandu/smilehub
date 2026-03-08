@@ -25,20 +25,35 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
-    const handleSignup = async (e: React.FormEvent) => {
+    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        if (!name || !email || !password || !confirmPassword) {
+        // Safari autofill may not trigger onChange — read DOM values as fallback
+        const form = e.currentTarget;
+        const actualName = name || (form.querySelector<HTMLInputElement>('#name')?.value ?? '');
+        const actualEmail = email || (form.querySelector<HTMLInputElement>('#email')?.value ?? '');
+        const actualPassword = password || (form.querySelector<HTMLInputElement>('#password')?.value ?? '');
+        const actualConfirmPassword = confirmPassword || (form.querySelector<HTMLInputElement>('#confirmPassword')?.value ?? '');
+        const actualClinicName = clinicName || (form.querySelector<HTMLInputElement>('#clinicName')?.value ?? '');
+
+        // Sync state so subsequent renders reflect actual values
+        if (!name && actualName) setName(actualName);
+        if (!email && actualEmail) setEmail(actualEmail);
+        if (!password && actualPassword) setPassword(actualPassword);
+        if (!confirmPassword && actualConfirmPassword) setConfirmPassword(actualConfirmPassword);
+        if (!clinicName && actualClinicName) setClinicName(actualClinicName);
+
+        if (!actualName || !actualEmail || !actualPassword || !actualConfirmPassword) {
             toast.error('Preencha todos os campos');
             return;
         }
 
-        if (password !== confirmPassword) {
+        if (actualPassword !== actualConfirmPassword) {
             toast.error('As senhas não conferem');
             return;
         }
 
-        const pwResult = passwordSchema.safeParse(password);
+        const pwResult = passwordSchema.safeParse(actualPassword);
         if (!pwResult.success) {
             toast.error(pwResult.error.issues[0].message);
             return;
@@ -52,12 +67,12 @@ export default function Signup() {
         setLoading(true);
         try {
             const { error } = await supabase.auth.signUp({
-                email,
-                password,
+                email: actualEmail,
+                password: actualPassword,
                 options: {
                     data: {
-                        full_name: name,
-                        clinic_name: clinicName || undefined,
+                        full_name: actualName,
+                        clinic_name: actualClinicName || undefined,
                         gender: gender,
                     }
                 }
@@ -202,13 +217,19 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <div className="flex items-start space-x-3">
+                        <div
+                            className="flex items-start space-x-3 cursor-pointer"
+                            onClick={(e) => {
+                                if ((e.target as HTMLElement).closest('a')) return;
+                                setTermsAccepted((prev) => !prev);
+                            }}
+                        >
                             <Checkbox
                                 id="terms-signup"
                                 checked={termsAccepted}
                                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                             />
-                            <label htmlFor="terms-signup" className="text-sm text-gray-600 leading-relaxed cursor-pointer">
+                            <span className="text-sm text-gray-600 leading-relaxed cursor-pointer select-none">
                                 Li e aceito os{' '}
                                 <Link to="/termos" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
                                     Termos de Uso
@@ -217,7 +238,7 @@ export default function Signup() {
                                 <Link to="/privacidade" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
                                     Política de Privacidade
                                 </Link>.
-                            </label>
+                            </span>
                         </div>
 
                         <Button

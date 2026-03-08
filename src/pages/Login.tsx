@@ -33,7 +33,7 @@ export default function Login() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         // Check if locked out
@@ -44,7 +44,15 @@ export default function Login() {
             return;
         }
 
-        if (!email || !password) {
+        // Safari autofill may not trigger onChange — read DOM values as fallback
+        const form = e.currentTarget;
+        const actualEmail = email || (form.querySelector<HTMLInputElement>('#email')?.value ?? '');
+        const actualPassword = password || (form.querySelector<HTMLInputElement>('#password')?.value ?? '');
+
+        if (!actualEmail && !email) setEmail(actualEmail);
+        if (!actualPassword && !password) setPassword(actualPassword);
+
+        if (!actualEmail || !actualPassword) {
             toast.error('Preencha todos os campos');
             return;
         }
@@ -52,8 +60,8 @@ export default function Login() {
         setLoading(true);
         try {
             const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+                email: actualEmail,
+                password: actualPassword,
             });
 
             if (error) throw error;
