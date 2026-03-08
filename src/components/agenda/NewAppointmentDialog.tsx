@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, X, ExternalLink, UserPlus } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, Search, X, ExternalLink, UserPlus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
+import { LocationsModal } from '@/components/profile/LocationsModal';
 import type { NewAppointmentDialogProps } from './types';
 
 interface SlotInfo {
@@ -81,6 +83,8 @@ export function NewAppointmentDialog({
   existingAppointments = [],
 }: NewAppointmentDialogProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showLocationsModal, setShowLocationsModal] = useState(false);
   const [form, setForm] = useState({
     patientId: '',
     patientName: '',
@@ -199,6 +203,7 @@ export function NewAppointmentDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       {!appointmentToEdit && (
         <DialogTrigger asChild>
@@ -419,7 +424,21 @@ export function NewAppointmentDialog({
           </div>
           <div className="space-y-2">
             <Label>Local de Atendimento</Label>
-            {selectedSlot && selectedSlot.locationIds.length > 0 && filteredLocations.length === 1 ? (
+            {locations.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <p className="text-sm text-amber-800">Nenhum local de atendimento cadastrado.</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => setShowLocationsModal(true)}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  Cadastrar Local
+                </Button>
+              </div>
+            ) : selectedSlot && selectedSlot.locationIds.length > 0 && filteredLocations.length === 1 ? (
               <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg">
                 <span className="text-sm">{filteredLocations[0].name}</span>
               </div>
@@ -460,5 +479,15 @@ export function NewAppointmentDialog({
         </div>
       </DialogContent>
     </Dialog>
+    <LocationsModal
+      open={showLocationsModal}
+      onOpenChange={(isOpen) => {
+        setShowLocationsModal(isOpen);
+        if (!isOpen) {
+          queryClient.invalidateQueries({ queryKey: ['locations'] });
+        }
+      }}
+    />
+    </>
   );
 }
