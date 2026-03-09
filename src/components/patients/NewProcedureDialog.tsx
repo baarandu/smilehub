@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -95,9 +95,11 @@ export function NewProcedureDialog({
     }
   }, [procedure?.id, open]);
 
-  const handleVoiceResult = (result: ExtractionResult) => {
+  const handleVoiceResult = useCallback((result: ExtractionResult) => {
+    console.log('[VoiceProcedure] Extraction result:', JSON.stringify(result, null, 2));
     const parts: string[] = [];
 
+    // Extract from structured procedures array
     if (result.procedures && result.procedures.length > 0) {
       for (const p of result.procedures) {
         const desc = [
@@ -117,18 +119,21 @@ export function NewProcedureDialog({
       }
     }
 
-    if (parts.length === 0 && result.consultation) {
+    // Fallback: extract from consultation fields
+    if (result.consultation) {
       const c = result.consultation;
-      if (c.procedures) parts.push(c.procedures);
-      if (c.chiefComplaint) parts.push(c.chiefComplaint);
-      if (c.treatmentPlan) parts.push(c.treatmentPlan);
-      if (c.notes) parts.push(c.notes);
+      if (c.procedures && !parts.some(p => p === c.procedures)) parts.push(c.procedures);
+      if (c.chiefComplaint && !parts.some(p => p === c.chiefComplaint)) parts.push(c.chiefComplaint);
+      if (c.treatmentPlan && !parts.some(p => p === c.treatmentPlan)) parts.push(c.treatmentPlan);
+      if (c.notes && !parts.some(p => p === c.notes)) parts.push(c.notes);
     }
+
+    console.log('[VoiceProcedure] Extracted parts:', parts);
 
     if (parts.length > 0) {
       setDescription(parts.join('\n'));
     }
-  };
+  }, [locations]);
 
   const isValidDate = (dateStr: string): boolean => {
     if (!dateStr || dateStr.length !== 10) return false;

@@ -151,7 +151,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         if (session?.user) {
           checkAdmin();
         } else {
-          setIsSuperAdmin(false);
+          setUserEmail('');
         }
       }
     });

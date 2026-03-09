@@ -419,9 +419,9 @@ export default function Agenda() {
                         <div className="flex-shrink-0">
                           <span className={cn(
                             "text-xs px-2 py-1 rounded-full border",
-                            STATUS_CONFIG[result.status]?.color
+                            result.status && STATUS_CONFIG[result.status]?.color
                           )}>
-                            {STATUS_CONFIG[result.status]?.label}
+                            {result.status ? STATUS_CONFIG[result.status]?.label : '—'}
                           </span>
                         </div>
                       </button>

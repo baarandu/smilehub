@@ -29,13 +29,11 @@ export function ProfileMenu({ className }: ProfileMenuProps) {
   const { setIsOnboardingOpen, isCompleted, progress } = useOnboarding();
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      window.location.href = '/login';
-    } catch (error) {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
       console.error('Error logging out:', error);
-      toast.error('Erro ao sair');
     }
+    window.location.href = '/login';
   };
 
   return (
