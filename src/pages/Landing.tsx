@@ -610,18 +610,15 @@ export default function Landing() {
               <ul className="space-y-3 text-sm">
                 <li><a href="#funcionalidades" className="hover:text-white transition-colors">Funcionalidades</a></li>
                 <li><a href="#precos" className="hover:text-white transition-colors">Preços</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Atualizações</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Roadmap</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="text-white font-semibold mb-4">Suporte</h4>
               <ul className="space-y-3 text-sm">
-                <li><a href="/suporte" className="hover:text-white transition-colors">Central de Ajuda</a></li>
-                <li><a href="/suporte" className="hover:text-white transition-colors">FAQ</a></li>
+                <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
                 <li><a href="https://wa.me/5571997118372" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</a></li>
-                <li><a href="mailto:contato@alqer.tech" className="hover:text-white transition-colors">Contato</a></li>
+                <li><a href="mailto:contato@alqer.tech" className="hover:text-white transition-colors">E-mail</a></li>
               </ul>
             </div>
 
@@ -630,7 +627,6 @@ export default function Landing() {
               <ul className="space-y-3 text-sm">
                 <li><a href="/termos" className="hover:text-white transition-colors">Termos de Uso</a></li>
                 <li><a href="/privacidade" className="hover:text-white transition-colors">Privacidade</a></li>
-                <li><a href="/privacidade" className="hover:text-white transition-colors">LGPD</a></li>
               </ul>
             </div>
           </div>
@@ -657,15 +653,11 @@ const faqItems = [
   },
   {
     question: 'Meus dados estarão seguros?',
-    answer: 'Sim. Utilizamos criptografia de ponta a ponta e servidores com certificação de segurança. Seus dados são backupeados automaticamente todos os dias.',
+    answer: 'Sim. Utilizamos criptografia de ponta a ponta e servidores com certificação de segurança. Backups automáticos são realizados diariamente.',
   },
   {
     question: 'Posso importar dados de outro sistema?',
     answer: 'Sim! Nossa equipe auxilia na migração de dados de outros sistemas. O processo é simples e rápido, sem perda de informações.',
-  },
-  {
-    question: 'O sistema emite Nota Fiscal?',
-    answer: 'Sim, no plano Completo você pode emitir NF-e diretamente pelo sistema, integrado com a prefeitura da sua cidade.',
   },
   {
     question: 'O sistema está em conformidade com a LGPD?',

@@ -12,7 +12,6 @@ export const FEATURE_LABELS: Record<string, string> = {
   financeiro: 'Financeiro completo',
   estoque: 'Estoque e materiais',
   imposto_renda: 'Imposto de Renda',
-  comissoes: 'Comissões de dentistas',
   central_protese: 'Central de Próteses',
   central_ortodontia: 'Central de Ortodontia',
   suporte_chat: 'Suporte por chat',
@@ -22,7 +21,6 @@ export const FEATURE_LABELS: Record<string, string> = {
   assinatura_digital: 'Assinatura Digital',
   whatsapp_confirmacao: 'Confirmação WhatsApp',
   multi_unidades: 'Múltiplas unidades',
-  secretaria_ia: 'Secretária IA',
   crm: 'CRM',
   analytics: 'Analytics',
 };
@@ -52,7 +50,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
   profissional_v2: [
     'crm', 'analytics', 'assinatura_digital',
     'dentista_ia', 'contabilidade_ia',
-    'comissoes', 'central_protese', 'central_ortodontia', 'imposto_renda',
+    'central_protese', 'central_ortodontia', 'imposto_renda',
     'whatsapp_confirmacao', 'multi_unidades',
     'suporte_chat',
   ],
