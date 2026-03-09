@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { toLocalDateString } from '@/utils/formatters';
 
 export interface PatientChildInfo {
     patient_type?: string | null;
@@ -69,7 +70,7 @@ export const alertsService = {
         const today = new Date();
         const todayMonth = today.getMonth();
         const todayDay = today.getDate();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = toLocalDateString(today);
 
         // Get dismissed alerts
         const dismissed = await this.getDismissedAlerts();
@@ -330,7 +331,7 @@ export const alertsService = {
         // Get tomorrow's date
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        const tomorrowStr = toLocalDateString(tomorrow);
 
         const [birthdays, procedureReturns, importantReturns, tomorrowAppointments, scheduledReturns, prosthesisAlerts, followUps] = await Promise.all([
             this.getBirthdayAlerts(clinicId),

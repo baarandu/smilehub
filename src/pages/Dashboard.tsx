@@ -13,6 +13,7 @@ import { usePendingReturnsList, useMarkProcedureCompleted } from '@/hooks/usePen
 import { useRemindersCount, useActiveReminders } from '@/hooks/useReminders';
 import { usePendingBudgetsCount } from '@/hooks/useBudgets';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toLocalDateString } from '@/utils/formatters';
 import { getWhatsAppNumber } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -44,7 +45,7 @@ export default function Dashboard() {
   const tomorrowStr = useMemo(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
+    return toLocalDateString(tomorrow);
   }, []);
   const { data: tomorrowAppointments } = useAppointmentsByDate(tomorrowStr);
 

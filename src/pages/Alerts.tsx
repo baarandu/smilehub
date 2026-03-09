@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { toLocalDateString } from '@/utils/formatters';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts, useFollowUpAlerts } from '@/hooks/useAlerts';
@@ -29,7 +30,7 @@ export default function Alerts() {
   // Get tomorrow's date
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = toLocalDateString(tomorrow);
 
   // Data hooks
   const { data: returnAlerts, isLoading: loadingReturns } = useReturnAlerts();
