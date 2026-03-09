@@ -224,7 +224,7 @@ export const alertsService = {
     }> {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        const yesterdayStr = toLocalDateString(yesterday);
 
         let query = supabase
             .from('appointments')

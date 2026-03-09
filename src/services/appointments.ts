@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { toLocalDateString } from '@/utils/formatters';
 import type {
   Appointment,
   AppointmentInsert,
@@ -48,7 +49,7 @@ export const appointmentsService = {
   },
 
   async getToday(clinicId?: string): Promise<AppointmentWithPatient[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
     return this.getByDate(today, clinicId);
   },
 
@@ -102,7 +103,7 @@ export const appointmentsService = {
   },
 
   async countToday(clinicId?: string): Promise<number> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
     let query = supabase
       .from('appointments')
       .select('*', { count: 'exact', head: true })

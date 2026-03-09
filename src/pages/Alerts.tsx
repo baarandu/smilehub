@@ -515,7 +515,7 @@ export default function Alerts() {
             colorScheme="pink"
           >
             {birthdayAlerts?.map((alert) => {
-              const todayStr = new Date().toISOString().split('T')[0];
+              const todayStr = toLocalDateString(new Date());
               return (
                 <div key={alert.patient.id} className="p-4 hover:bg-pink-50/30 transition-colors">
                   <div className="flex items-center justify-between gap-4">

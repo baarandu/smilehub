@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { toLocalDateString } from '@/utils/formatters';
 import type { 
   Consultation, 
   ConsultationInsert, 
@@ -88,7 +89,7 @@ export const consultationsService = {
   },
 
   async getReturnAlerts(clinicId?: string): Promise<ReturnAlert[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     let query = supabase
       .from('consultations')
@@ -135,7 +136,7 @@ export const consultationsService = {
   },
 
   async countPendingReturns(clinicId?: string): Promise<number> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     let query = supabase
       .from('consultations')
