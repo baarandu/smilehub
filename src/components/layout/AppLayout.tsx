@@ -89,10 +89,10 @@ export function AppLayout({ children }: AppLayoutProps) {
         return planHasFeature(planFeatureKeys, 'estoque');
       }
       if (item.to === '/protese') {
-        return isDentist && planHasFeature(planFeatureKeys, 'central_protese');
+        return planHasFeature(planFeatureKeys, 'central_protese');
       }
       if (item.to === '/ortodontia') {
-        return isDentist;
+        return true;
       }
       return true;
     });
