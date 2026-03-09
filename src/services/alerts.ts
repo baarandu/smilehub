@@ -53,11 +53,16 @@ export const alertsService = {
     },
 
     async getBirthdayAlerts(clinicId?: string): Promise<Alert[]> {
+        const today = new Date();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+
         let query = supabase
             .from('patients')
             .select('id, name, phone, birth_date, patient_type, mother_name, father_name, legal_guardian')
             .is('deleted_at', null)
-            .not('birth_date', 'is', null);
+            .not('birth_date', 'is', null)
+            .like('birth_date', `%-${mm}-${dd}`);
 
         if (clinicId) {
             query = query.eq('clinic_id', clinicId);
@@ -67,7 +72,6 @@ export const alertsService = {
 
         if (error) throw error;
 
-        const today = new Date();
         const todayMonth = today.getMonth();
         const todayDay = today.getDate();
         const todayStr = toLocalDateString(today);
@@ -110,7 +114,8 @@ export const alertsService = {
             `)
             .is('deleted_at', null)
             .is('patients.deleted_at' as any, null)
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .limit(5000);
 
         if (clinicId) {
             query = query.eq('clinic_id', clinicId);
