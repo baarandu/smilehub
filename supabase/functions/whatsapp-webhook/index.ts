@@ -730,7 +730,7 @@ serve(async (req) => {
 
     // Always return 200 to Evolution API to prevent retries
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: "Internal error" }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }

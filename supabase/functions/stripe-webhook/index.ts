@@ -62,7 +62,7 @@ serve(async (req) => {
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error'
         console.error(`[stripe-webhook] Signature verification failed: ${message}`)
-        return new Response(`Webhook Error: ${message}`, { status: 400 })
+        return new Response('Invalid webhook signature', { status: 400 })
     }
 
     console.log(`[stripe-webhook] Received event: ${event.type}`)

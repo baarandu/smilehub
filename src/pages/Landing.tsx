@@ -220,6 +220,7 @@ export default function Landing() {
                     key={src}
                     src={src}
                     alt="Clínica odontológica moderna"
+                    loading={index === 0 ? "eager" : "lazy"}
                     className={`w-full h-auto object-cover transition-opacity duration-1000 ${
                       index === currentImageIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
                     }`}
