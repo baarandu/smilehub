@@ -38,7 +38,6 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
-import { MUNICIPIOS } from '@/data/municipios';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 // ... (existing helper methods)
@@ -96,14 +95,21 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
     const [savingClinicInfo, setSavingClinicInfo] = useState(false);
     const [loadingInfo, setLoadingInfo] = useState(true);
 
-    // City autocomplete from static IBGE data
+    // City autocomplete from static IBGE data (lazy-loaded)
     const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
     const [citySearch, setCitySearch] = useState('');
+    const [municipios, setMunicipios] = useState<[string, string][]>([]);
+
+    useEffect(() => {
+        if (open && municipios.length === 0) {
+            import('@/data/municipios').then(m => setMunicipios(m.MUNICIPIOS));
+        }
+    }, [open]);
 
     const filteredMunicipios = citySearch.length >= 2
         ? (() => {
             const normalized = citySearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return MUNICIPIOS
+            return municipios
                 .filter(([nome]) => nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().startsWith(normalized))
                 .slice(0, 10);
         })()

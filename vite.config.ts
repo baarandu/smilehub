@@ -39,7 +39,6 @@ export default defineConfig(({ mode }) => ({
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-pdf': ['jspdf', 'html2canvas', 'pdfjs-dist'],
           'vendor-charts': ['recharts'],
-          'vendor-xlsx': ['xlsx'],
         },
       },
     },

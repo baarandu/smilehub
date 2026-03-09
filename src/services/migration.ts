@@ -1,5 +1,4 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import { auditService } from '@/services/audit';
 import {
@@ -56,6 +55,7 @@ export async function parseExcel(file: File): Promise<ParsedData> {
 
     reader.onload = (e) => {
       try {
+        const XLSX = await import('xlsx');
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
 
