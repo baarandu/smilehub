@@ -96,7 +96,6 @@ export function NewProcedureDialog({
   }, [procedure?.id, open]);
 
   const handleVoiceResult = useCallback((result: ExtractionResult) => {
-    console.log('[VoiceProcedure] Extraction result:', JSON.stringify(result, null, 2));
     const parts: string[] = [];
 
     // Extract from structured procedures array
@@ -127,8 +126,6 @@ export function NewProcedureDialog({
       if (c.treatmentPlan && !parts.some(p => p === c.treatmentPlan)) parts.push(c.treatmentPlan);
       if (c.notes && !parts.some(p => p === c.notes)) parts.push(c.notes);
     }
-
-    console.log('[VoiceProcedure] Extracted parts:', parts);
 
     if (parts.length > 0) {
       setDescription(parts.join('\n'));

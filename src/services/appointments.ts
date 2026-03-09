@@ -163,7 +163,7 @@ export const appointmentsService = {
         *,
         patients!inner (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
-      .ilike('patients.name', `%${query}%`)
+      .ilike('patients.name', `%${query.replace(/[%_\\]/g, '\\$&')}%`)
       .order('date', { ascending: false })
       .order('time', { ascending: false })
       .limit(15);
@@ -183,7 +183,7 @@ export const appointmentsService = {
         *,
         patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
-      .ilike('procedure_name', `%${query}%`)
+      .ilike('procedure_name', `%${query.replace(/[%_\\]/g, '\\$&')}%`)
       .order('date', { ascending: false })
       .order('time', { ascending: false })
       .limit(10);

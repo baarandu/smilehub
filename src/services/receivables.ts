@@ -334,8 +334,6 @@ export const receivablesService = {
     }
 
     const groupReceivables = (groupData || []) as PaymentReceivable[];
-    console.log('[_syncBudgetToothStatus] group receivables:', groupReceivables.map(r => ({ id: r.id, status: r.status, amount: r.amount })));
-
     // 2. Fetch current budget
     const { data: budget, error: budgetError } = await supabase
       .from('budgets')
@@ -378,8 +376,6 @@ export const receivablesService = {
       teeth[toothIndex].status = 'partially_paid';
     }
 
-    console.log('[_syncBudgetToothStatus] tooth status:', prevStatus, '->', teeth[toothIndex].status);
-
     // 5. Recalculate budget status and save
     const newBudgetStatus = calculateBudgetStatus(teeth);
     const updatedNotes = JSON.stringify({ ...parsed, teeth });
@@ -392,7 +388,6 @@ export const receivablesService = {
     if (saveError) {
       console.error('Error saving budget after sync:', saveError);
     } else {
-      console.log('[_syncBudgetToothStatus] budget saved. status:', newBudgetStatus);
     }
   },
 };

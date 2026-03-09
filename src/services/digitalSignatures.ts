@@ -8,8 +8,6 @@ import type {
 } from '@/types/digitalSignature';
 
 async function callEdgeFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
-  console.log('[digitalSignatures] Calling edge function:', action);
-
   const { data, error } = await supabase.functions.invoke('supersign-envelope', {
     body: { action, ...payload },
   });
