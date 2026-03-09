@@ -88,75 +88,75 @@ export function AudioRecorder({
   }, [analyserNode, isPaused]);
 
   return (
-    <div className="flex flex-col items-center space-y-8 py-8">
+    <div className="flex items-center gap-4 py-3">
       {/* Pulsing Mic Icon */}
-      <div className="relative">
+      <div className="relative flex-shrink-0">
         <div
-          className={`w-32 h-32 rounded-full flex items-center justify-center transition-all ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
             isPaused
               ? 'bg-amber-100'
               : 'bg-primary/10 animate-pulse'
           }`}
         >
-          <Mic className={`w-12 h-12 ${isPaused ? 'text-amber-600' : 'text-primary'}`} />
+          <Mic className={`w-5 h-5 ${isPaused ? 'text-amber-600' : 'text-primary'}`} />
         </div>
         {isRecording && !isPaused && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
         )}
       </div>
 
-      {/* Timer */}
-      <div className="text-center">
-        <p className="text-5xl font-mono font-bold text-foreground tracking-wider">
+      {/* Timer + Status */}
+      <div className="flex-shrink-0 text-center min-w-[70px]">
+        <p className="text-lg font-mono font-bold text-foreground tracking-wider">
           {formatDuration(duration)}
         </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          {isPaused ? 'Gravação pausada' : 'Gravando...'}
+        <p className="text-[10px] text-muted-foreground">
+          {isPaused ? 'Pausado' : 'Gravando...'}
         </p>
       </div>
 
       {/* Waveform */}
-      <div className="w-full max-w-md h-16 bg-muted/30 rounded-lg overflow-hidden">
+      <div className="flex-1 h-10 bg-muted/30 rounded-lg overflow-hidden min-w-0">
         <canvas
           ref={canvasRef}
           width={400}
-          height={64}
+          height={40}
           className="w-full h-full"
         />
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {isPaused ? (
           <Button
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={onResume}
-            className="gap-2 h-12 px-6"
+            className="gap-1.5"
           >
-            <Play className="w-5 h-5" />
+            <Play className="w-4 h-4" />
             Retomar
           </Button>
         ) : (
           <Button
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={onPause}
-            className="gap-2 h-12 px-6"
+            className="gap-1.5"
           >
-            <Pause className="w-5 h-5" />
+            <Pause className="w-4 h-4" />
             Pausar
           </Button>
         )}
 
         <Button
           variant="destructive"
-          size="lg"
+          size="sm"
           onClick={onStop}
-          className="gap-2 h-12 px-8"
+          className="gap-1.5"
         >
-          <Square className="w-5 h-5" />
-          Finalizar Consulta
+          <Square className="w-4 h-4" />
+          Finalizar
         </Button>
       </div>
     </div>

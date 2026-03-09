@@ -368,7 +368,7 @@ export function NewAnamneseDialog({
           </div>
         )}
 
-        <ScrollArea className="max-h-[70vh] pr-4">
+        <ScrollArea className="max-h-[55vh] pr-4">
           <div className="space-y-6">
             {anamnese && isSigned && (
               <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
