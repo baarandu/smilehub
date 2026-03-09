@@ -12,7 +12,7 @@ interface AlertAccordionProps {
     description: string;
     count: number;
     loading: boolean;
-    colorScheme: 'pink' | 'amber' | 'red' | 'blue' | 'teal' | 'green';
+    colorScheme: 'pink' | 'amber' | 'red' | 'blue' | 'teal' | 'green' | 'orange';
     children: ReactNode;
     emptyMessage?: string;
 }
@@ -65,6 +65,14 @@ const colorStyles = {
         divider: 'border-green-100',
         divideDivider: 'divide-green-50',
         badgeActive: 'bg-green-100 text-green-700',
+    },
+    orange: {
+        border: 'border-orange-100',
+        trigger: 'hover:bg-orange-50/50',
+        iconBg: 'bg-orange-100',
+        divider: 'border-orange-100',
+        divideDivider: 'divide-orange-50',
+        badgeActive: 'bg-orange-100 text-orange-700',
     },
 };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, CalendarClock, PenLine, Heart, PanelRightOpen } from 'lucide-react';
+import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, CalendarClock, PenLine, Heart, HeartPulse, PanelRightOpen } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { toLocalDateString } from '@/utils/formatters';
 import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
-import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts, useFollowUpAlerts } from '@/hooks/useAlerts';
+import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts, useFollowUpAlerts, useImportantReturnAlerts } from '@/hooks/useAlerts';
 import { useUnsignedRecords } from '@/hooks/useClinicalSignatures';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
@@ -38,6 +38,7 @@ export default function Alerts() {
   const { data: procedureAlerts, isLoading: loadingProcedures } = useProcedureReminders();
   const { data: prosthesisAlerts, isLoading: loadingProsthesis } = useProsthesisSchedulingAlerts();
   const { data: followUpAlerts, isLoading: loadingFollowUps } = useFollowUpAlerts();
+  const { data: importantReturnAlerts, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
   const { data: unsignedRecords, isLoading: loadingUnsigned } = useUnsignedRecords();
   const dismissAlert = useDismissAlert();
 
@@ -89,7 +90,7 @@ export default function Alerts() {
   };
 
   const handleDismissAlert = (
-    type: 'birthday' | 'procedure_return' | 'follow_up',
+    type: 'birthday' | 'procedure_return' | 'follow_up' | 'important_return',
     patientId: string,
     alertDate: string
   ) => {
@@ -811,7 +812,7 @@ export default function Alerts() {
             loading={loadingProsthesis}
             colorScheme="pink"
           >
-              {prosthesisAlerts.map((alert) => (
+              {prosthesisAlerts?.map((alert) => (
                 <div key={alert.id} className="p-4 hover:bg-purple-50/30 transition-colors">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -833,6 +834,67 @@ export default function Alerts() {
                   </div>
                 </div>
               ))}
+          </AlertAccordion>
+
+          {/* Important Returns */}
+          <AlertAccordion
+            open={openAccordions.importantReturns ?? false}
+            onToggle={() => toggleAccordion('importantReturns')}
+            icon={<HeartPulse className="w-5 h-5 text-orange-600" />}
+            title="Retornos importantes"
+            description="Pacientes com retorno marcado manualmente como importante"
+            count={importantReturnAlerts?.length || 0}
+            loading={loadingImportantReturns}
+            colorScheme="orange"
+            emptyMessage="Nenhum retorno importante pendente"
+          >
+              {importantReturnAlerts?.map((alert) => {
+                const returnDate = new Date(alert.return_alert_date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                returnDate.setHours(0, 0, 0, 0);
+                const diffDays = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue = diffDays < 0;
+                const isToday = diffDays === 0;
+                const badgeClass = isOverdue ? 'bg-red-100 text-red-700' : isToday ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700';
+                const badgeText = isOverdue ? `Atrasado ${Math.abs(diffDays)}d` : isToday ? 'Hoje' : `Em ${diffDays}d`;
+
+                return (
+                  <div key={alert.id} className="p-4 hover:bg-orange-50/30 transition-colors">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-medium">{alert.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full", badgeClass)}>
+                            {badgeText}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {returnDate.toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                          onClick={() => whatsapp.handleWhatsApp(alert.phone, alert.name, 'reminder')}
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-red-600"
+                          onClick={() => handleDismissAlert('important_return', alert.id, alert.return_alert_date)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
           </AlertAccordion>
 
           {/* Batch Signing Alert */}

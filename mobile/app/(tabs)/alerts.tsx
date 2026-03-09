@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Linking, Alert as RNAlert, Switch, DeviceEventEmitter, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings, Plus, Trash2, Edit2, X, CalendarClock, PenLine } from 'lucide-react-native';
+import { Bell, Phone, MessageCircle, Clock, AlertTriangle, CheckCircle, Gift, Calendar, Settings, Plus, Trash2, Edit2, X, CalendarClock, PenLine, HeartPulse } from 'lucide-react-native';
 import { consultationsService } from '../../src/services/consultations';
 import { alertsService, Alert } from '../../src/services/alerts';
 import { appointmentsService } from '../../src/services/appointments';
@@ -28,6 +28,7 @@ export default function Alerts() {
     const [procedureAlerts, setProcedureAlerts] = useState<Alert[]>([]);
     const [prosthesisAlerts, setProsthesisAlerts] = useState<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]>([]);
     const [tomorrowAppointments, setTomorrowAppointments] = useState<AppointmentWithPatient[]>([]);
+    const [importantReturnAlerts, setImportantReturnAlerts] = useState<Alert[]>([]);
     const [reminders, setReminders] = useState<Reminder[]>([]);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -97,13 +98,14 @@ export default function Alerts() {
     const loadData = async () => {
         try {
             setLoading(true);
-            const [scheduled, birthdays, procedures, tomorrow, reminderList, prosthesis] = await Promise.all([
+            const [scheduled, birthdays, procedures, tomorrow, reminderList, prosthesis, importantReturns] = await Promise.all([
                 consultationsService.getReturnAlerts(clinicId),
                 alertsService.getBirthdayAlerts(clinicId),
                 alertsService.getProcedureReminders(clinicId),
                 appointmentsService.getTomorrow(clinicId),
                 remindersService.getAll(),
-                alertsService.getProsthesisSchedulingAlerts(clinicId).catch(() => [])
+                alertsService.getProsthesisSchedulingAlerts(clinicId).catch(() => []),
+                alertsService.getImportantReturnAlerts(clinicId)
             ]);
 
             setScheduledAlerts(scheduled.sort((a, b) => a.days_until_return - b.days_until_return));
@@ -112,6 +114,7 @@ export default function Alerts() {
             setTomorrowAppointments(tomorrow);
             setReminders(reminderList);
             setProsthesisAlerts(prosthesis);
+            setImportantReturnAlerts(importantReturns);
         } catch (error) {
             console.error('Error loading alerts:', error);
         } finally {
@@ -247,7 +250,7 @@ export default function Alerts() {
         }
     };
 
-    const handleDismissAlert = async (type: 'birthday' | 'procedure_return', patientId: string, alertDate: string) => {
+    const handleDismissAlert = async (type: 'birthday' | 'procedure_return' | 'important_return', patientId: string, alertDate: string) => {
         try {
             await alertsService.dismissAlert(type, patientId, alertDate, 'dismissed');
             DeviceEventEmitter.emit('reminderUpdated');
@@ -274,9 +277,9 @@ export default function Alerts() {
         );
     }
 
-    const pendingCount = birthdayAlerts.length + procedureAlerts.length + tomorrowAppointments.filter(a => a.status !== 'confirmed').length;
+    const pendingCount = birthdayAlerts.length + procedureAlerts.length + importantReturnAlerts.length + tomorrowAppointments.filter(a => a.status !== 'confirmed').length;
     const completedTodayCount = tomorrowAppointments.filter(a => a.status === 'confirmed').length;
-    const hasAnyAlert = reminders.length > 0 || scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0 || tomorrowAppointments.length > 0 || prosthesisAlerts.length > 0;
+    const hasAnyAlert = reminders.length > 0 || scheduledAlerts.length > 0 || birthdayAlerts.length > 0 || procedureAlerts.length > 0 || tomorrowAppointments.length > 0 || prosthesisAlerts.length > 0 || importantReturnAlerts.length > 0;
 
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
@@ -676,6 +679,81 @@ export default function Alerts() {
                                 </View>
                             </View>
                         ))}
+
+                        {/* Important Returns */}
+                        {importantReturnAlerts.length > 0 ? (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <HeartPulse size={20} color="#EA580C" />
+                                    <Text className="text-lg font-bold text-gray-800">Retornos Importantes</Text>
+                                    <View className="bg-orange-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-orange-700">{importantReturnAlerts.length}</Text>
+                                    </View>
+                                </View>
+                                <View className="gap-3">
+                                    {importantReturnAlerts.map((alert) => {
+                                        const returnDate = new Date(alert.dueDate || alert.date);
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+                                        returnDate.setHours(0, 0, 0, 0);
+                                        const diffDays = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                                        const isOverdue = diffDays < 0;
+                                        const isToday = diffDays === 0;
+
+                                        return (
+                                            <View key={alert.patient.id} className={`bg-orange-50 rounded-xl p-4 border-l-4 ${isOverdue ? 'border-l-red-500' : isToday ? 'border-l-amber-500' : 'border-l-orange-500'}`}>
+                                                <View className="flex-row justify-between items-start">
+                                                    <View className="flex-1">
+                                                        <View className="flex-row items-center gap-2 mb-1">
+                                                            <Text className="font-bold text-gray-900">{alert.patient.name}</Text>
+                                                            <View className={`px-2 py-0.5 rounded-full ${isOverdue ? 'bg-red-100' : isToday ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                                                                <Text className={`text-xs font-medium ${isOverdue ? 'text-red-700' : isToday ? 'text-amber-700' : 'text-blue-700'}`}>
+                                                                    {isOverdue ? `Atrasado ${Math.abs(diffDays)}d` : isToday ? 'Hoje' : `Em ${diffDays}d`}
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+                                                        <Text className="text-gray-500 text-sm">{alert.patient.phone}</Text>
+                                                        <Text className="text-orange-800 text-xs mt-1">
+                                                            Retorno: {returnDate.toLocaleDateString('pt-BR')}
+                                                        </Text>
+                                                    </View>
+                                                    <TouchableOpacity onPress={() => handleDismissAlert('important_return', alert.patient.id, alert.date)} className="w-8 h-8 items-center justify-center">
+                                                        <X size={18} color="#9CA3AF" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                                <View className="flex-row gap-3 mt-3">
+                                                    <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-200" onPress={() => handleCall(alert.patient.phone)}>
+                                                        <Phone size={18} color="#6B7280" />
+                                                        <Text className="text-gray-600 font-medium">Ligar</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 py-2.5 rounded-lg bg-orange-600" onPress={() => {
+                                                        const firstName = alert.patient.name.split(' ')[0];
+                                                        const message = `Olá ${firstName}! Estamos entrando em contato para lembrar sobre seu retorno importante agendado.`;
+                                                        Linking.openURL(`https://wa.me/${getWhatsAppNumber(alert.patient.phone)}?text=${encodeURIComponent(message)}`);
+                                                    }}>
+                                                        <MessageCircle size={18} color="#FFFFFF" />
+                                                        <Text className="text-white font-medium">WhatsApp</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        ) : (
+                            <View>
+                                <View className="flex-row items-center gap-2 mb-3">
+                                    <HeartPulse size={20} color="#EA580C" />
+                                    <Text className="text-lg font-bold text-gray-800">Retornos Importantes</Text>
+                                    <View className="bg-gray-100 px-2 py-0.5 rounded-full ml-auto">
+                                        <Text className="text-xs font-bold text-gray-500">0</Text>
+                                    </View>
+                                </View>
+                                <View className="bg-white rounded-xl p-6 items-center border border-gray-100">
+                                    <Text className="text-gray-400 text-sm">Nenhum retorno importante pendente</Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
 
                 <View className="h-6" />
