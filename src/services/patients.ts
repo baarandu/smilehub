@@ -287,8 +287,9 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
   if (digitsOnly.length >= 2) {
     // Search phone by digits (matches against phone_digits column — no formatting needed)
     conditions.push(`phone_digits.ilike.%${digitsOnly}%`);
-    // Search CPF last 4 digits
-    conditions.push(`cpf_last4.ilike.%${digitsOnly}%`);
+    // Search CPF: use last 4 digits of input (cpf_last4 only stores last 4)
+    const cpfSearch = digitsOnly.length > 4 ? digitsOnly.slice(-4) : digitsOnly;
+    conditions.push(`cpf_last4.ilike.%${cpfSearch}%`);
   }
 
   let q = supabase
