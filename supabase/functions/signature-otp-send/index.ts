@@ -97,8 +97,8 @@ serve(async (req: Request) => {
 
     // Get patient email (scoped to clinic)
     const { data: patient, error: patientError } = await supabase
-      .from("patients")
-      .select("name, email, birth_date, guardian_email, mother_email")
+      .from("patients_secure")
+      .select("name, email, birth_date")
       .eq("id", patientId)
       .eq("clinic_id", clinicId)
       .single();
@@ -116,7 +116,7 @@ serve(async (req: Request) => {
       const age = Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
       if (age < 18) {
         isMinor = true;
-        recipientEmail = patient.guardian_email || patient.mother_email || patient.email;
+        recipientEmail = patient.email;
       }
     }
 
