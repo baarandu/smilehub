@@ -285,10 +285,8 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
   const conditions = [`name.ilike.%${sanitized}%`];
 
   if (digitsOnly.length >= 2) {
-    // Search phone by raw text (works if user types formatted)
-    conditions.push(`phone.ilike.%${sanitized}%`);
-    // Search phone by digits only (works for partial numbers like "99999")
-    conditions.push(`phone.ilike.%${digitsOnly}%`);
+    // Search phone by digits (matches against phone_digits column — no formatting needed)
+    conditions.push(`phone_digits.ilike.%${digitsOnly}%`);
     // Search CPF last 4 digits
     conditions.push(`cpf_last4.ilike.%${digitsOnly}%`);
   }
