@@ -102,7 +102,7 @@ export default function Agenda() {
   // Patient creation flow
   const [patientDialogOpen, setPatientDialogOpen] = useState(false);
   const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
-  const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
+  const [patientForm, setPatientForm] = useState({ name: '', phone: '', patientType: 'adult' as 'adult' | 'child', motherName: '', fatherName: '', legalGuardian: '' });
   // Show/hide search results dropdown based on query and results
   useEffect(() => {
     if (debouncedSearch.length >= 2 && searchResults.length > 0) {
@@ -307,14 +307,27 @@ export default function Agenda() {
       toast.error('Nome e telefone são obrigatórios');
       return;
     }
+    if (patientForm.patientType === 'child' && !patientForm.motherName && !patientForm.fatherName && !patientForm.legalGuardian) {
+      toast.error('Informe pelo menos um responsável (mãe, pai ou responsável legal)');
+      return;
+    }
 
     createPatientMutation.mutate(
-      { name: patientForm.name, phone: patientForm.phone } as PatientFormData,
+      {
+        name: patientForm.name,
+        phone: patientForm.phone,
+        patientType: patientForm.patientType,
+        ...(patientForm.patientType === 'child' && {
+          motherName: patientForm.motherName,
+          fatherName: patientForm.fatherName,
+          legalGuardian: patientForm.legalGuardian,
+        }),
+      } as PatientFormData,
       {
         onSuccess: (newPatient) => {
           setPreSelectedPatient(newPatient);
           setPatientDialogOpen(false);
-          setPatientForm({ name: '', phone: '' });
+          setPatientForm({ name: '', phone: '', patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' });
           setDialogOpen(true);
           toast.success(`Paciente "${newPatient.name}" cadastrado!`);
         },
@@ -753,16 +766,63 @@ export default function Agenda() {
           </AlertDialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nome completo *</Label>
+              <Label>Tipo de paciente *</Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${patientForm.patientType === 'adult' ? 'bg-[#a03f3d] text-white border-[#a03f3d]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                  onClick={() => setPatientForm({ ...patientForm, patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' })}
+                >
+                  Adulto
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${patientForm.patientType === 'child' ? 'bg-[#a03f3d] text-white border-[#a03f3d]' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+                  onClick={() => setPatientForm({ ...patientForm, patientType: 'child' })}
+                >
+                  Criança
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{patientForm.patientType === 'child' ? 'Nome da criança *' : 'Nome completo *'}</Label>
               <Input
-                placeholder="Nome do paciente"
+                placeholder={patientForm.patientType === 'child' ? 'Nome da criança' : 'Nome do paciente'}
                 value={patientForm.name}
                 onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
                 autoFocus
               />
             </div>
+            {patientForm.patientType === 'child' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Nome da mãe</Label>
+                  <Input
+                    placeholder="Nome da mãe"
+                    value={patientForm.motherName}
+                    onChange={(e) => setPatientForm({ ...patientForm, motherName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome do pai</Label>
+                  <Input
+                    placeholder="Nome do pai"
+                    value={patientForm.fatherName}
+                    onChange={(e) => setPatientForm({ ...patientForm, fatherName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Responsável legal</Label>
+                  <Input
+                    placeholder="Nome do responsável legal"
+                    value={patientForm.legalGuardian}
+                    onChange={(e) => setPatientForm({ ...patientForm, legalGuardian: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
-              <Label>Telefone *</Label>
+              <Label>{patientForm.patientType === 'child' ? 'Telefone do responsável *' : 'Telefone *'}</Label>
               <Input
                 placeholder="(11) 99999-9999 ou +1 555..."
                 value={patientForm.phone}
@@ -773,7 +833,7 @@ export default function Agenda() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
               setPatientDialogOpen(false);
-              setPatientForm({ name: '', phone: '' });
+              setPatientForm({ name: '', phone: '', patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' });
               // Reopen appointment dialog
               setDialogOpen(true);
             }}>

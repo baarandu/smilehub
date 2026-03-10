@@ -32,7 +32,7 @@ export default function Agenda() {
     // Patient creation flow
     const [showPatientModal, setShowPatientModal] = useState(false);
     const [preSelectedPatient, setPreSelectedPatient] = useState<Patient | null>(null);
-    const [patientForm, setPatientForm] = useState({ name: '', phone: '' });
+    const [patientForm, setPatientForm] = useState({ name: '', phone: '', patientType: 'adult' as 'adult' | 'child', motherName: '', fatherName: '', legalGuardian: '' });
     const [savingPatient, setSavingPatient] = useState(false);
 
     useEffect(() => {
@@ -315,11 +315,21 @@ export default function Agenda() {
             Alert.alert('Erro', 'Nome e telefone são obrigatórios');
             return;
         }
+        if (patientForm.patientType === 'child' && !patientForm.motherName && !patientForm.fatherName && !patientForm.legalGuardian) {
+            Alert.alert('Erro', 'Informe pelo menos um responsável (mãe, pai ou responsável legal)');
+            return;
+        }
         try {
             setSavingPatient(true);
             const newPatient = await createPatientFromForm({
                 name: patientForm.name,
                 phone: patientForm.phone,
+                patientType: patientForm.patientType,
+                ...(patientForm.patientType === 'child' && {
+                    motherName: patientForm.motherName,
+                    fatherName: patientForm.fatherName,
+                    legalGuardian: patientForm.legalGuardian,
+                }),
             } as PatientFormData);
 
             // Refresh patients list
@@ -328,7 +338,7 @@ export default function Agenda() {
             // Pre-select the new patient and close patient modal
             setPreSelectedPatient(newPatient);
             setShowPatientModal(false);
-            setPatientForm({ name: '', phone: '' });
+            setPatientForm({ name: '', phone: '', patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' });
 
             // Reopen appointment modal with pre-selected patient
             setTimeout(() => {
@@ -574,7 +584,7 @@ export default function Agenda() {
                         <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-100">
                             <TouchableOpacity onPress={() => {
                                 setShowPatientModal(false);
-                                setPatientForm({ name: '', phone: '' });
+                                setPatientForm({ name: '', phone: '', patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' });
                             }}>
                                 <X size={24} color="#6B7280" />
                             </TouchableOpacity>
@@ -594,10 +604,30 @@ export default function Agenda() {
                             </View>
 
                             <View className="mb-4">
-                                <Text className="text-sm font-medium text-gray-700 mb-2">Nome completo *</Text>
+                                <Text className="text-sm font-medium text-gray-700 mb-2">Tipo de paciente *</Text>
+                                <View className="flex-row gap-2">
+                                    <TouchableOpacity
+                                        className={`flex-1 py-3 rounded-xl border items-center ${patientForm.patientType === 'adult' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'bg-white border-gray-200'}`}
+                                        onPress={() => setPatientForm({ ...patientForm, patientType: 'adult', motherName: '', fatherName: '', legalGuardian: '' })}
+                                    >
+                                        <Text className={`font-medium ${patientForm.patientType === 'adult' ? 'text-white' : 'text-gray-700'}`}>Adulto</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        className={`flex-1 py-3 rounded-xl border items-center ${patientForm.patientType === 'child' ? 'bg-[#a03f3d] border-[#a03f3d]' : 'bg-white border-gray-200'}`}
+                                        onPress={() => setPatientForm({ ...patientForm, patientType: 'child' })}
+                                    >
+                                        <Text className={`font-medium ${patientForm.patientType === 'child' ? 'text-white' : 'text-gray-700'}`}>Criança</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <View className="mb-4">
+                                <Text className="text-sm font-medium text-gray-700 mb-2">
+                                    {patientForm.patientType === 'child' ? 'Nome da criança *' : 'Nome completo *'}
+                                </Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
-                                    placeholder="Nome do paciente"
+                                    placeholder={patientForm.patientType === 'child' ? 'Nome da criança' : 'Nome do paciente'}
                                     placeholderTextColor="#9CA3AF"
                                     value={patientForm.name}
                                     onChangeText={(text) => setPatientForm({ ...patientForm, name: text })}
@@ -605,8 +635,45 @@ export default function Agenda() {
                                 />
                             </View>
 
+                            {patientForm.patientType === 'child' && (
+                                <>
+                                    <View className="mb-4">
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Nome da mãe</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome da mãe"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={patientForm.motherName}
+                                            onChangeText={(text) => setPatientForm({ ...patientForm, motherName: text })}
+                                        />
+                                    </View>
+                                    <View className="mb-4">
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Nome do pai</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome do pai"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={patientForm.fatherName}
+                                            onChangeText={(text) => setPatientForm({ ...patientForm, fatherName: text })}
+                                        />
+                                    </View>
+                                    <View className="mb-4">
+                                        <Text className="text-sm font-medium text-gray-700 mb-2">Responsável legal</Text>
+                                        <TextInput
+                                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                            placeholder="Nome do responsável legal"
+                                            placeholderTextColor="#9CA3AF"
+                                            value={patientForm.legalGuardian}
+                                            onChangeText={(text) => setPatientForm({ ...patientForm, legalGuardian: text })}
+                                        />
+                                    </View>
+                                </>
+                            )}
+
                             <View className="mb-6">
-                                <Text className="text-sm font-medium text-gray-700 mb-2">Telefone *</Text>
+                                <Text className="text-sm font-medium text-gray-700 mb-2">
+                                    {patientForm.patientType === 'child' ? 'Telefone do responsável *' : 'Telefone *'}
+                                </Text>
                                 <TextInput
                                     className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
                                     placeholder="(11) 99999-9999"
