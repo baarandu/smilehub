@@ -40,7 +40,10 @@ export const orthodonticsService = {
     if (filters?.status) query = query.eq('status', filters.status);
     if (filters?.treatmentType) query = query.eq('treatment_type', filters.treatmentType);
     if (filters?.dentistId) query = query.eq('dentist_id', filters.dentistId);
-    if (filters?.search) query = query.ilike('patients.name', `%${filters.search}%`);
+    if (filters?.search) {
+      const sanitized = filters.search.replace(/[%_\\]/g, '\\$&');
+      query = query.ilike('patients.name', `%${sanitized}%`);
+    }
 
     const { data, error } = await query;
     if (error) throw error;

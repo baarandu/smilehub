@@ -114,7 +114,10 @@ export const prosthesisService = {
     if (filters?.dentistId) query = query.eq('dentist_id', filters.dentistId);
     if (filters?.labId) query = query.eq('lab_id', filters.labId);
     if (filters?.type) query = query.eq('type', filters.type);
-    if (filters?.search) query = query.ilike('patients.name', `%${filters.search}%`);
+    if (filters?.search) {
+      const sanitized = filters.search.replace(/[%_\\]/g, '\\$&');
+      query = query.ilike('patients.name', `%${sanitized}%`);
+    }
 
     const { data, error } = await query;
     if (error) throw error;

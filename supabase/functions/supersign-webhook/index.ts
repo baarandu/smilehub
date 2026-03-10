@@ -250,10 +250,11 @@ serve(async (req: Request) => {
               });
 
             if (!uploadErr) {
-              const { data: urlData } = supabase.storage
+              // Bucket is private — store the path and generate a signed URL
+              const { data: urlData } = await supabase.storage
                 .from("exams")
-                .getPublicUrl(storagePath);
-              signedPdfUrl = urlData.publicUrl;
+                .createSignedUrl(storagePath, 60 * 60 * 24 * 7); // 7-day expiry
+              signedPdfUrl = urlData?.signedUrl || storagePath;
 
               // Create exam record
               const { data: exam, error: examError } = await supabase
@@ -326,8 +327,11 @@ serve(async (req: Request) => {
             .single();
 
           if (dentist?.email) {
-            const dentistName = dentist.full_name || "Doutor(a)";
-            const patientName = patient?.name || "Paciente";
+            // Escape HTML to prevent injection in email
+            const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            const dentistName = esc(dentist.full_name || "Doutor(a)");
+            const patientName = esc(patient?.name || "Paciente");
+            const docTitle = esc(sig.title || "Documento");
             const downloadUrl = signedPdfUrl || "";
 
             await fetch("https://api.resend.com/emails", {
@@ -343,10 +347,10 @@ serve(async (req: Request) => {
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2>Olá, ${dentistName}!</h2>
-                    <p>O paciente <strong>${patientName}</strong> assinou o documento <strong>${sig.title}</strong>.</p>
+                    <p>O paciente <strong>${patientName}</strong> assinou o documento <strong>${docTitle}</strong>.</p>
                     <p>O documento foi concluído com todas as assinaturas necessárias.</p>
                     ${downloadUrl ? `
-                    <a href="${downloadUrl}" style="background-color: #0D9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">
+                    <a href="${esc(downloadUrl)}" style="background-color: #0D9488; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 16px;">
                       Baixar PDF Assinado
                     </a>
                     ` : ""}

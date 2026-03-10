@@ -102,7 +102,10 @@ export const crmService = {
     if (filters?.stageId) query = query.eq('stage_id', filters.stageId);
     if (filters?.sourceId) query = query.eq('source_id', filters.sourceId);
     if (filters?.assignedTo) query = query.eq('assigned_to', filters.assignedTo);
-    if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
+    if (filters?.search) {
+      const sanitized = filters.search.replace(/[%_\\]/g, '\\$&');
+      query = query.ilike('name', `%${sanitized}%`);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
