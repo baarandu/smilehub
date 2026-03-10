@@ -7,11 +7,11 @@ export interface CustomTemplate {
     message: string;
 }
 
-const DEFAULT_BIRTHDAY_TEMPLATE = "Parabéns {name}! 🎉\n\nNós do Organiza Odonto desejamos a você um feliz aniversário, muita saúde e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.";
-const DEFAULT_RETURN_TEMPLATE = "Olá {name}, tudo bem?\n\nNotamos que já se passaram 6 meses desde seu último procedimento conosco. Que tal agendar uma avaliação de retorno para garantir que está tudo certo com seu sorriso?";
-const DEFAULT_CONFIRMATION_TEMPLATE = "Olá {name}! 👋\n\nPassando para confirmar sua consulta agendada para amanhã.\n\nPodemos contar com sua presença? Por favor, confirme respondendo esta mensagem.";
-const DEFAULT_FOLLOW_UP_TEMPLATE = "Olá {name}! 😊\n\nPassando para saber como você está se sentindo após o atendimento de ontem.\n\nEstá tudo bem? Caso tenha algum desconforto ou dúvida, estamos à disposição!";
-const DEFAULT_NO_SHOW_TEMPLATE = "Olá {name}! 👋\n\nSentimos sua falta na consulta de ontem. Esperamos que esteja tudo bem!\n\nGostaríamos de reagendar seu atendimento. Quando seria um bom horário para você?";
+const DEFAULT_BIRTHDAY_TEMPLATE = "Parabens {name}!\n\nNos do Organiza Odonto desejamos a voce um feliz aniversario, muita saude e alegria!\n\nConte sempre conosco para cuidar do seu sorriso.";
+const DEFAULT_RETURN_TEMPLATE = "Ola {name}, tudo bem?\n\nNotamos que ja se passaram 6 meses desde seu ultimo procedimento conosco. Que tal agendar uma avaliacao de retorno para garantir que esta tudo certo com seu sorriso?";
+const DEFAULT_CONFIRMATION_TEMPLATE = "Ola {name}!\n\nPassando para confirmar sua consulta agendada para amanha.\n\nPodemos contar com sua presenca? Por favor, confirme respondendo esta mensagem.";
+const DEFAULT_FOLLOW_UP_TEMPLATE = "Ola {name}!\n\nPassando para saber como voce esta se sentindo apos o atendimento de ontem.\n\nEsta tudo bem? Caso tenha algum desconforto ou duvida, estamos a disposicao!";
+const DEFAULT_NO_SHOW_TEMPLATE = "Ola {name}!\n\nSentimos sua falta na consulta de ontem. Esperamos que esteja tudo bem!\n\nGostariamos de reagendar seu atendimento. Quando seria um bom horario para voce?";
 
 export function useTemplates() {
     const [birthdayTemplate, setBirthdayTemplate] = useState('');

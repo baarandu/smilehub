@@ -96,10 +96,9 @@ export const consultationsService = {
       .select(`
         patient_id,
         suggested_return_date,
-        patients!inner (name, phone, clinic_id, patient_type, mother_name, father_name, legal_guardian)
+        patients:patients_secure!consultations_patient_id_fkey!inner (name, phone, clinic_id, patient_type, mother_name, father_name, legal_guardian)
       `)
       .is('deleted_at', null)
-      .is('patients.deleted_at' as any, null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today)
       .order('suggested_return_date');

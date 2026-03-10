@@ -241,7 +241,7 @@ export const incomeTaxService = {
       .from('financial_transactions')
       .select(`
         *,
-        patient:patients(name, cpf),
+        patient:patients_secure(name, cpf),
         pj_source:pj_sources(*)
       `)
       .eq('clinic_id', clinicId)

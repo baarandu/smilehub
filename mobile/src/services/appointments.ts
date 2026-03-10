@@ -7,7 +7,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
+        patients:patients_secure!appointments_patient_id_fkey (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .eq('date', date)
       .order('time');
@@ -88,7 +88,7 @@ export const appointmentsService = {
       .from('appointments')
       .select(`
         *,
-        patients (name, phone, patient_type, mother_name, father_name, legal_guardian)
+        patients:patients_secure!appointments_patient_id_fkey (name, phone, patient_type, mother_name, father_name, legal_guardian)
       `)
       .eq('patient_id', patientId)
       .order('date', { ascending: false })

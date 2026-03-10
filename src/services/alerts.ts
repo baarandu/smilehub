@@ -58,9 +58,8 @@ export const alertsService = {
         const dd = String(today.getDate()).padStart(2, '0');
 
         let query = supabase
-            .from('patients')
+            .from('patients_secure')
             .select('id, name, phone, birth_date, patient_type, mother_name, father_name, legal_guardian')
-            .is('deleted_at', null)
             .not('birth_date', 'is', null)
             .like('birth_date', `%-${mm}-${dd}`);
 
@@ -110,10 +109,9 @@ export const alertsService = {
             .select(`
                 patient_id,
                 date,
-                patients!inner (name, phone, patient_type, mother_name, father_name, legal_guardian)
+                patients:patients_secure!procedures_patient_id_fkey!inner (name, phone, patient_type, mother_name, father_name, legal_guardian)
             `)
             .is('deleted_at', null)
-            .is('patients.deleted_at' as any, null)
             .order('date', { ascending: false })
             .limit(5000);
 
@@ -178,9 +176,8 @@ export const alertsService = {
 
     async getImportantReturnAlerts(clinicId?: string): Promise<Alert[]> {
         let query = supabase
-            .from('patients')
+            .from('patients_secure')
             .select('id, name, phone, return_alert_flag, return_alert_date, patient_type, mother_name, father_name, legal_guardian')
-            .is('deleted_at', null)
             .eq('return_alert_flag', true)
             .not('return_alert_date', 'is', null)
             .order('return_alert_date', { ascending: true });
@@ -233,7 +230,7 @@ export const alertsService = {
 
         let query = supabase
             .from('appointments')
-            .select('*, patients (name, phone, patient_type, mother_name, father_name, legal_guardian)')
+            .select('*, patients:patients_secure!appointments_patient_id_fkey (name, phone, patient_type, mother_name, father_name, legal_guardian)')
             .eq('date', yesterdayStr)
             .not('status', 'in', '("cancelled","rescheduled")')
             .order('time');
@@ -302,9 +299,8 @@ export const alertsService = {
     async getProsthesisSchedulingAlerts(clinicId?: string): Promise<{ id: string; patientId: string; patientName: string; patientPhone: string; toothNumbers: string[]; type: string; createdAt: string }[]> {
         let query = supabase
             .from('prosthesis_orders')
-            .select('id, patient_id, tooth_numbers, type, created_at, patients!inner(name, phone)')
-            .eq('status', 'in_clinic')
-            .is('patients.deleted_at' as any, null);
+            .select('id, patient_id, tooth_numbers, type, created_at, patients:patients_secure!prosthesis_orders_patient_id_fkey!inner(name, phone)')
+            .eq('status', 'in_clinic');
 
         if (clinicId) {
             query = query.eq('clinic_id', clinicId);
