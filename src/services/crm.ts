@@ -94,7 +94,7 @@ export const crmService = {
 
   async getLeads(clinicId: string, filters?: CrmLeadFilters): Promise<CrmLead[]> {
     let query = supabase
-      .from('crm_leads')
+      .from('crm_leads_secure')
       .select(LEAD_SELECT)
       .eq('clinic_id', clinicId)
       .order('position');
@@ -114,7 +114,7 @@ export const crmService = {
 
   async getLead(id: string): Promise<CrmLead> {
     const { data, error } = await supabase
-      .from('crm_leads')
+      .from('crm_leads_secure')
       .select(LEAD_SELECT)
       .eq('id', id)
       .single();
@@ -124,10 +124,19 @@ export const crmService = {
   },
 
   async createLead(lead: CrmLeadInsert): Promise<CrmLead> {
-    const { data, error } = await supabase
+    const { data: inserted, error: insertError } = await supabase
       .from('crm_leads')
       .insert(lead)
+      .select('id')
+      .single();
+
+    if (insertError) throw insertError;
+
+    // Read back from secure view (decrypted phone/email)
+    const { data, error } = await supabase
+      .from('crm_leads_secure')
       .select(LEAD_SELECT)
+      .eq('id', inserted.id)
       .single();
 
     if (error) throw error;
@@ -135,11 +144,18 @@ export const crmService = {
   },
 
   async updateLead(id: string, updates: Partial<CrmLead>): Promise<CrmLead> {
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from('crm_leads')
       .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .eq('id', id);
+
+    if (updateError) throw updateError;
+
+    // Read back from secure view (decrypted phone/email)
+    const { data, error } = await supabase
+      .from('crm_leads_secure')
       .select(LEAD_SELECT)
+      .eq('id', id)
       .single();
 
     if (error) throw error;

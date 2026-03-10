@@ -238,7 +238,7 @@ export const incomeTaxService = {
     const endDate = `${year}-12-31`;
 
     const { data, error } = await supabase
-      .from('financial_transactions')
+      .from('financial_transactions_secure')
       .select(`
         *,
         patient:patients_secure(name, cpf),
@@ -252,6 +252,12 @@ export const incomeTaxService = {
 
     if (error) throw error;
     const txs = (data as TransactionWithIR[]) || [];
+    // Map decrypted payer_cpf from secure view
+    for (const t of txs) {
+      if ((t as any).payer_cpf_decrypted) {
+        t.payer_cpf = (t as any).payer_cpf_decrypted;
+      }
+    }
     await resolveEncryptedPatientCpfs(txs as any[]);
     return txs;
   },
