@@ -111,9 +111,9 @@ SELECT
   id, clinic_id, name,
   decrypt_pii(phone) AS phone,
   decrypt_pii(email) AS email,
-  source_id, stage_id, assigned_to,
-  status, lost_reason, notes, next_action, next_action_date,
-  converted_patient_id, converted_at,
+  source_id, stage_id, assigned_to, patient_id,
+  lost_reason, notes, next_action, next_action_date,
+  position,
   created_at, updated_at
 FROM crm_leads;
 

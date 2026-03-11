@@ -12,9 +12,9 @@ import type {
 
 const LEAD_SELECT = `
   *,
-  crm_stages(name, color),
-  crm_lead_sources(name),
-  crm_lead_tags(crm_tags(id, name, color))
+  crm_stages!crm_leads_stage_id_fkey(name, color),
+  crm_lead_sources!crm_leads_source_id_fkey(name),
+  crm_lead_tags!crm_lead_tags_lead_id_fkey(crm_tags!crm_lead_tags_tag_id_fkey(id, name, color))
 `;
 
 function mapLead(row: any): CrmLead {
