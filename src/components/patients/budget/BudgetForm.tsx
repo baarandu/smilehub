@@ -47,7 +47,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     const { toast } = useToast();
 
     // Current Item State
-    const [selectedTooth, setSelectedTooth] = useState<string>('');
+    const [selectedTeeth, setSelectedTeeth] = useState<string[]>([]);
     const [selectedTreatments, setSelectedTreatments] = useState<string[]>([]);
     const [selectedFaces, setSelectedFaces] = useState<string[]>([]);
     const [values, setValues] = useState<Record<string, string>>({});
@@ -64,7 +64,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     // Load editing item into form
     useEffect(() => {
         if (editingItem) {
-            setSelectedTooth(editingItem.tooth);
+            setSelectedTeeth([editingItem.tooth]);
             setSelectedTreatments([...editingItem.treatments]);
             setSelectedFaces([...(editingItem.faces || [])]);
             setValues({ ...editingItem.values });
@@ -98,7 +98,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     }, [editingItem]);
 
     const resetCurrentItem = () => {
-        setSelectedTooth('');
+        setSelectedTeeth([]);
         setSelectedTreatments([]);
         setSelectedFaces([]);
         setValues({});
@@ -154,8 +154,8 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     };
 
     const handleAddItem = () => {
-        if (!selectedTooth) {
-            toast({ variant: "destructive", title: "Erro", description: "Selecione um dente." });
+        if (selectedTeeth.length === 0) {
+            toast({ variant: "destructive", title: "Erro", description: "Selecione pelo menos um dente." });
             return;
         }
         if (selectedTreatments.length === 0) {
@@ -170,8 +170,8 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             return;
         }
 
-        const showFaces = selectedTreatments.includes('Restauração');
-        if (showFaces && selectedFaces.length === 0) {
+        const hasFaces = selectedTreatments.includes('Restauração');
+        if (hasFaces && selectedFaces.length === 0) {
             toast({ variant: "destructive", title: "Erro", description: "Selecione as faces para restauração." });
             return;
         }
@@ -190,23 +190,42 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             resolvedMaterials[t] = val === 'outro' ? (customMaterials[t] || 'outro') : val;
         });
 
-        const newItem: ToothEntry = {
-            tooth: selectedTooth,
-            faces: showFaces ? selectedFaces : [],
-            treatments: [...selectedTreatments],
-            values: { ...values },
-            materials: resolvedMaterials,
-            labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
-            status: editingItem?.status || 'pending',
-            locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
-        };
-
         if (isEditing && onUpdateItem && editingIndex !== null && editingIndex !== undefined) {
+            // Editing mode: update single item (first selected tooth)
+            const newItem: ToothEntry = {
+                tooth: selectedTeeth[0],
+                faces: hasFaces ? selectedFaces : [],
+                treatments: [...selectedTreatments],
+                values: { ...values },
+                materials: resolvedMaterials,
+                labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
+                status: editingItem?.status || 'pending',
+                locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
+            };
             onUpdateItem(newItem, editingIndex);
             toast({ title: "Item atualizado", description: "Item editado com sucesso." });
         } else {
-            onAddItem(newItem);
-            toast({ title: "Item adicionado", description: "Item incluído na lista." });
+            // Add mode: create one item per selected tooth
+            for (const tooth of selectedTeeth) {
+                const newItem: ToothEntry = {
+                    tooth,
+                    faces: hasFaces ? [...selectedFaces] : [],
+                    treatments: [...selectedTreatments],
+                    values: { ...values },
+                    materials: { ...resolvedMaterials },
+                    labTreatments: Object.keys(itemLabTreatments).length > 0 ? { ...itemLabTreatments } : undefined,
+                    status: 'pending',
+                    locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
+                };
+                onAddItem(newItem);
+            }
+            const count = selectedTeeth.length;
+            toast({
+                title: count > 1 ? `${count} itens adicionados` : "Item adicionado",
+                description: count > 1
+                    ? `${count} dentes com o mesmo tratamento incluídos no plano.`
+                    : "Item incluído na lista.",
+            });
         }
 
         resetCurrentItem();
@@ -230,13 +249,17 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                 map[key] = [...new Set([...existing, ...entry.faces])];
             }
         }
-        // Faces from the item currently being edited in the form
-        if (showFaces && selectedTooth && selectedFaces.length > 0) {
-            const existing = map[selectedTooth] || [];
-            map[selectedTooth] = [...new Set([...existing, ...selectedFaces])];
+        // Faces from the items currently being edited in the form
+        if (showFaces && selectedTeeth.length > 0 && selectedFaces.length > 0) {
+            for (const tooth of selectedTeeth) {
+                if (!tooth.startsWith('Arcada')) {
+                    const existing = map[tooth] || [];
+                    map[tooth] = [...new Set([...existing, ...selectedFaces])];
+                }
+            }
         }
         return map;
-    }, [toothEntries, showFaces, selectedTooth, selectedFaces]);
+    }, [toothEntries, showFaces, selectedTeeth, selectedFaces]);
 
     return (
         <ScrollArea className="flex-1 p-6 border-r">
@@ -321,10 +344,10 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
 
                 {/* Tooth Selection */}
                 <div className="space-y-2">
-                    <Label className="text-base font-semibold">1. Selecionar Dente ou Arcada</Label>
+                    <Label className="text-base font-semibold">1. Selecionar Dente(s) ou Arcada</Label>
                     <Odontogram
-                        selectedTooth={selectedTooth}
-                        onSelectTooth={setSelectedTooth}
+                        selectedTeeth={selectedTeeth}
+                        onSelectTeeth={setSelectedTeeth}
                         toothFaces={toothFacesMap}
                         onToggleFace={showFaces ? toggleFace : undefined}
                     />
@@ -409,11 +432,13 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         <div className="flex flex-wrap gap-2">
                             {FACES
                                 .filter(face => {
-                                    const toothNum = parseInt(selectedTooth, 10);
-                                    if (isNaN(toothNum)) return face.id !== 'L' && face.id !== 'P';
-                                    const upper = isUpperTooth(toothNum);
-                                    if (face.id === 'L') return !upper;
-                                    if (face.id === 'P') return upper;
+                                    // With multiple teeth, show L/P based on which arches are selected
+                                    const toothNums = selectedTeeth.map(t => parseInt(t, 10)).filter(n => !isNaN(n));
+                                    if (toothNums.length === 0) return face.id !== 'L' && face.id !== 'P';
+                                    const hasUpper = toothNums.some(n => isUpperTooth(n));
+                                    const hasLower = toothNums.some(n => !isUpperTooth(n));
+                                    if (face.id === 'L') return hasLower;
+                                    if (face.id === 'P') return hasUpper;
                                     return true;
                                 })
                                 .map(face => (
@@ -440,7 +465,9 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                                 <div className="font-medium text-[#8b3634]">{treatment}</div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">Valor</Label>
+                                        <Label className="text-xs text-muted-foreground">
+                                            {selectedTeeth.length > 1 ? 'Valor Unitário' : 'Valor'}
+                                        </Label>
                                         <Input
                                             placeholder="R$ 0,00"
                                             value={formatValueDisplay(treatment)}
@@ -533,7 +560,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         <Button
                             className="flex-1 bg-[#a03f3d] hover:bg-[#8b3634] h-12 text-base"
                             onClick={handleAddItem}
-                            disabled={!selectedTooth || selectedTreatments.length === 0}
+                            disabled={selectedTeeth.length === 0 || selectedTreatments.length === 0}
                         >
                             <Save className="w-5 h-5 mr-2" />
                             Salvar Alterações
@@ -543,10 +570,12 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                     <Button
                         className="w-full bg-[#a03f3d] hover:bg-[#8b3634] mt-4 h-12 text-base"
                         onClick={handleAddItem}
-                        disabled={!selectedTooth || selectedTreatments.length === 0}
+                        disabled={selectedTeeth.length === 0 || selectedTreatments.length === 0}
                     >
                         <Plus className="w-5 h-5 mr-2" />
-                        Adicionar Item ao Plano
+                        {selectedTeeth.length > 1
+                            ? `Adicionar ${selectedTeeth.length} Itens ao Plano`
+                            : 'Adicionar Item ao Plano'}
                     </Button>
                 )}
             </div>

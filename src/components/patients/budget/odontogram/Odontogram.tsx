@@ -8,13 +8,13 @@ import { ToothButton } from './ToothButton';
 import { getToothDisplayName } from '@/utils/budgetUtils';
 
 interface OdontogramProps {
-    selectedTooth: string;
-    onSelectTooth: (tooth: string) => void;
+    selectedTeeth: string[];
+    onSelectTeeth: (teeth: string[]) => void;
     toothFaces?: Record<string, string[]>;
     onToggleFace?: (faceId: string) => void;
 }
 
-type ArcadaValue = '' | 'Arcada Superior' | 'Arcada Inferior' | 'Arcada Superior + Arcada Inferior';
+type ArcadaValue = 'Arcada Superior' | 'Arcada Inferior' | 'Arcada Superior + Arcada Inferior';
 
 const ARCADA_OPTIONS: { label: string; value: ArcadaValue }[] = [
     { label: 'Arcada Superior', value: 'Arcada Superior' },
@@ -26,22 +26,42 @@ function isArcadaValue(v: string): v is ArcadaValue {
     return v === 'Arcada Superior' || v === 'Arcada Inferior' || v === 'Arcada Superior + Arcada Inferior';
 }
 
-export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleFace }: OdontogramProps) {
+export function Odontogram({ selectedTeeth, onSelectTeeth, toothFaces, onToggleFace }: OdontogramProps) {
     const [tab, setTab] = useState<'permanent' | 'deciduous'>('permanent');
 
-    const arcadaSelected: ArcadaValue = isArcadaValue(selectedTooth) ? selectedTooth : '';
+    // Check if current selection is an arcada
+    const arcadaSelected: ArcadaValue | '' = selectedTeeth.length === 1 && isArcadaValue(selectedTeeth[0]) ? selectedTeeth[0] : '';
 
     const handleToothClick = (tooth: number) => {
         const value = tooth.toString();
-        onSelectTooth(selectedTooth === value ? '' : value);
+        // If an arcada was selected, switch to individual tooth mode
+        if (arcadaSelected) {
+            onSelectTeeth([value]);
+            return;
+        }
+        // Toggle tooth in/out of selection
+        if (selectedTeeth.includes(value)) {
+            onSelectTeeth(selectedTeeth.filter(t => t !== value));
+        } else {
+            onSelectTeeth([...selectedTeeth, value]);
+        }
     };
 
     const handleArcadaClick = (value: ArcadaValue) => {
-        onSelectTooth(selectedTooth === value ? '' : value);
+        // Toggle arcada: if same arcada is selected, deselect; otherwise select it (clears individual teeth)
+        if (arcadaSelected === value) {
+            onSelectTeeth([]);
+        } else {
+            onSelectTeeth([value]);
+        }
     };
 
     const handleClear = () => {
-        onSelectTooth('');
+        onSelectTeeth([]);
+    };
+
+    const handleRemoveTooth = (tooth: string) => {
+        onSelectTeeth(selectedTeeth.filter(t => t !== tooth));
     };
 
     const quadrants = tab === 'permanent' ? PERMANENT_QUADRANTS : DECIDUOUS_QUADRANTS;
@@ -51,7 +71,7 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleF
     const lowerRight = quadrants.find(q => q.position === 'lower-right')!;
     const lowerLeft = quadrants.find(q => q.position === 'lower-left')!;
 
-    const isToothSelected = !isArcadaValue(selectedTooth) && selectedTooth !== '';
+    const hasIndividualTeeth = selectedTeeth.length > 0 && !arcadaSelected;
 
     return (
         <div className="space-y-3">
@@ -87,7 +107,7 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleF
                         upperLeft={upperLeft.teeth}
                         lowerRight={lowerRight.teeth}
                         lowerLeft={lowerLeft.teeth}
-                        selectedTooth={isToothSelected ? selectedTooth : ''}
+                        selectedTeeth={hasIndividualTeeth ? selectedTeeth : []}
                         onToothClick={handleToothClick}
                         toothFaces={toothFaces}
                         onToggleFace={onToggleFace}
@@ -100,7 +120,7 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleF
                         upperLeft={upperLeft.teeth}
                         lowerRight={lowerRight.teeth}
                         lowerLeft={lowerLeft.teeth}
-                        selectedTooth={isToothSelected ? selectedTooth : ''}
+                        selectedTeeth={hasIndividualTeeth ? selectedTeeth : []}
                         onToothClick={handleToothClick}
                         toothFaces={toothFaces}
                         onToggleFace={onToggleFace}
@@ -109,19 +129,35 @@ export function Odontogram({ selectedTooth, onSelectTooth, toothFaces, onToggleF
             </Tabs>
 
             {/* Selection indicator */}
-            {selectedTooth && (
-                <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
-                    <span className="text-sm text-blue-700 font-medium">
-                        {getToothDisplayName(selectedTooth)}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={handleClear}
-                        className="text-blue-400 hover:text-blue-600 transition-colors"
-                        title="Limpar seleção"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+            {selectedTeeth.length > 0 && (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+                    <div className="flex-1 flex flex-wrap gap-1.5">
+                        {selectedTeeth.map(tooth => (
+                            <span
+                                key={tooth}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-700"
+                            >
+                                {getToothDisplayName(tooth)}
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveTooth(tooth)}
+                                    className="hover:bg-blue-200 rounded-sm p-0.5"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    {selectedTeeth.length > 1 && (
+                        <button
+                            type="button"
+                            onClick={handleClear}
+                            className="text-blue-400 hover:text-blue-600 transition-colors text-xs whitespace-nowrap"
+                            title="Limpar tudo"
+                        >
+                            Limpar tudo
+                        </button>
+                    )}
                 </div>
             )}
         </div>
@@ -133,7 +169,7 @@ function ToothGrid({
     upperLeft,
     lowerRight,
     lowerLeft,
-    selectedTooth,
+    selectedTeeth,
     onToothClick,
     toothFaces,
     onToggleFace,
@@ -142,11 +178,13 @@ function ToothGrid({
     upperLeft: number[];
     lowerRight: number[];
     lowerLeft: number[];
-    selectedTooth: string;
+    selectedTeeth: string[];
     onToothClick: (tooth: number) => void;
     toothFaces?: Record<string, string[]>;
     onToggleFace?: (faceId: string) => void;
 }) {
+    const selectedSet = new Set(selectedTeeth);
+
     return (
         <div className="border rounded-lg p-2 bg-white overflow-x-auto">
             {/* Upper row */}
@@ -156,10 +194,10 @@ function ToothGrid({
                         <ToothButton
                             key={t}
                             tooth={t}
-                            isSelected={selectedTooth === t.toString()}
+                            isSelected={selectedSet.has(t.toString())}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
-                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
+                            onToggleFace={selectedSet.has(t.toString()) ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -169,10 +207,10 @@ function ToothGrid({
                         <ToothButton
                             key={t}
                             tooth={t}
-                            isSelected={selectedTooth === t.toString()}
+                            isSelected={selectedSet.has(t.toString())}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
-                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
+                            onToggleFace={selectedSet.has(t.toString()) ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -188,10 +226,10 @@ function ToothGrid({
                         <ToothButton
                             key={t}
                             tooth={t}
-                            isSelected={selectedTooth === t.toString()}
+                            isSelected={selectedSet.has(t.toString())}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
-                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
+                            onToggleFace={selectedSet.has(t.toString()) ? onToggleFace : undefined}
                         />
                     ))}
                 </div>
@@ -201,10 +239,10 @@ function ToothGrid({
                         <ToothButton
                             key={t}
                             tooth={t}
-                            isSelected={selectedTooth === t.toString()}
+                            isSelected={selectedSet.has(t.toString())}
                             onClick={() => onToothClick(t)}
                             faces={toothFaces?.[t.toString()]}
-                            onToggleFace={selectedTooth === t.toString() ? onToggleFace : undefined}
+                            onToggleFace={selectedSet.has(t.toString()) ? onToggleFace : undefined}
                         />
                     ))}
                 </div>

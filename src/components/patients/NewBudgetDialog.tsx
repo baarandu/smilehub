@@ -98,7 +98,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const editingItem = editingItemIndex !== null ? teethList[editingItemIndex] : null;
 
     const handleAddItem = (item: ToothEntry) => {
-        setTeethList([...teethList, item]);
+        setTeethList(prev => [...prev, item]);
     };
 
     const handleUpdateItem = (item: ToothEntry, index: number) => {
