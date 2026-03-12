@@ -35,7 +35,8 @@ import type { BudgetLink } from '@/services/procedures';
 import { ProcedureForm, type ProcedureFormState } from './procedures/ProcedureForm';
 import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
 import type { ExtractionResult } from '@/types/voiceConsultation';
-import { usePaidBudgetItems, keysToBudgetLinks, budgetLinksToKeys } from '@/hooks/useBudgetProcedures';
+import { useBudgetPlanItems, keysToBudgetLinks, budgetLinksToKeys } from '@/hooks/useBudgetProcedures';
+import { NewBudgetDialog } from './NewBudgetDialog';
 
 interface NewProcedureDialogProps {
   open: boolean;
@@ -57,7 +58,7 @@ export function NewProcedureDialog({
   const deleteProcedure = useDeleteProcedure();
   const queryClient = useQueryClient();
 
-  const { paidItems } = usePaidBudgetItems(patientId);
+  const { planItems } = useBudgetPlanItems(patientId);
   const { data: existingSignatures } = useRecordSignatures('procedure', procedure?.id);
   const isSigned = (existingSignatures?.length || 0) > 0;
 
@@ -70,6 +71,7 @@ export function NewProcedureDialog({
   const [description, setDescription] = useState('');
   const [selectedBudgetKeys, setSelectedBudgetKeys] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showBudgetDialog, setShowBudgetDialog] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -155,7 +157,7 @@ export function NewProcedureDialog({
     }
 
     if (selectedBudgetKeys.size === 0) {
-      toast.error('Selecione ao menos um procedimento pago');
+      toast.error('Selecione ao menos um procedimento do plano');
       return;
     }
 
@@ -199,7 +201,11 @@ export function NewProcedureDialog({
       if (form.status === 'completed' && budgetLinks && budgetLinks.length > 0) {
         for (const link of budgetLinks) {
           try {
-            await budgetsService.updateToothStatus(link.budgetId, link.toothIndex, 'completed');
+            // Only mark as completed if the budget item was already paid or completed
+            const linkedItem = planItems.find(item => item.key === `${link.budgetId}:${link.toothIndex}`);
+            if (linkedItem && (linkedItem.status === 'paid' || linkedItem.status === 'completed')) {
+              await budgetsService.updateToothStatus(link.budgetId, link.toothIndex, 'completed');
+            }
           } catch (err) {
             console.error('Error updating budget tooth status:', err);
           }
@@ -270,9 +276,10 @@ export function NewProcedureDialog({
               onChange={(updates) => setForm(prev => ({ ...prev, ...updates }))}
               locations={locations}
               loading={isLoading}
-              paidBudgetItems={paidItems}
+              budgetPlanItems={planItems}
               selectedBudgetKeys={selectedBudgetKeys}
               onBudgetSelectionChange={setSelectedBudgetKeys}
+              onCreateBudget={() => setShowBudgetDialog(true)}
             />
 
             <div className="space-y-2">
@@ -350,6 +357,16 @@ export function NewProcedureDialog({
           </AlertDialogContent>
         </AlertDialog>
       </DialogContent>
+
+      <NewBudgetDialog
+        patientId={patientId}
+        open={showBudgetDialog}
+        onClose={() => setShowBudgetDialog(false)}
+        onSuccess={() => {
+          setShowBudgetDialog(false);
+          queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+        }}
+      />
     </Dialog>
   );
 }

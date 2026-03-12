@@ -4,12 +4,13 @@ import { budgetsService } from '@/services/budgets';
 import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetLink } from '@/services/procedures';
 
-export interface PaidBudgetItem {
+export interface BudgetPlanItem {
   budgetId: string;
   budgetDate: string;
   toothIndex: number;
   tooth: ToothEntry;
   value: number;
+  status: string;
   label: string;
   key: string; // unique key: "budgetId:toothIndex"
 }
@@ -21,17 +22,17 @@ function getItemValue(tooth: ToothEntry): number {
   );
 }
 
-export function usePaidBudgetItems(patientId: string) {
+export function useBudgetPlanItems(patientId: string) {
   const budgetsQuery = useQuery({
     queryKey: ['budgets', patientId],
     queryFn: () => budgetsService.getByPatient(patientId),
     enabled: !!patientId,
   });
 
-  const paidItems = useMemo<PaidBudgetItem[]>(() => {
+  const planItems = useMemo<BudgetPlanItem[]>(() => {
     if (!budgetsQuery.data) return [];
 
-    const result: PaidBudgetItem[] = [];
+    const result: BudgetPlanItem[] = [];
 
     for (const budget of budgetsQuery.data) {
       if (!budget.notes) continue;
@@ -41,9 +42,6 @@ export function usePaidBudgetItems(patientId: string) {
         if (!teeth) continue;
 
         teeth.forEach((tooth, index) => {
-          // Show paid and completed items (completed ones already done, but still selectable for reference)
-          if (tooth.status !== 'paid' && tooth.status !== 'completed') return;
-
           const value = getItemValue(tooth);
           const toothName = getToothDisplayName(tooth.tooth, false);
           const treatments = tooth.treatments.join(', ');
@@ -54,6 +52,7 @@ export function usePaidBudgetItems(patientId: string) {
             toothIndex: index,
             tooth,
             value,
+            status: tooth.status || 'pending',
             label: `${toothName} - ${treatments} (R$ ${formatMoney(value)}) [${formatDisplayDate(budget.date)}]`,
             key: `${budget.id}:${index}`,
           });
@@ -67,7 +66,7 @@ export function usePaidBudgetItems(patientId: string) {
   }, [budgetsQuery.data]);
 
   return {
-    paidItems,
+    planItems,
     isLoading: budgetsQuery.isLoading,
   };
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, ChevronsUpDown } from 'lucide-react';
+import { Calendar, ChevronsUpDown, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,7 +13,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Location } from '@/services/locations';
-import type { PaidBudgetItem } from '@/hooks/useBudgetProcedures';
+import { Badge } from '@/components/ui/badge';
+import type { BudgetPlanItem } from '@/hooks/useBudgetProcedures';
 
 export interface ProcedureFormState {
     date: string;
@@ -26,9 +27,27 @@ interface ProcedureFormProps {
     onChange: (updates: Partial<ProcedureFormState>) => void;
     locations: Location[];
     loading?: boolean;
-    paidBudgetItems?: PaidBudgetItem[];
+    budgetPlanItems?: BudgetPlanItem[];
     selectedBudgetKeys?: Set<string>;
     onBudgetSelectionChange?: (keys: Set<string>) => void;
+    onCreateBudget?: () => void;
+}
+
+const BUDGET_STATUS_MAP: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive'; className: string }> = {
+    pending: { label: 'Pendente', variant: 'secondary', className: 'bg-gray-100 text-gray-700 hover:bg-gray-100' },
+    approved: { label: 'Aprovado', variant: 'default', className: 'bg-blue-100 text-blue-700 hover:bg-blue-100' },
+    partially_paid: { label: 'Parcial', variant: 'default', className: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-100' },
+    paid: { label: 'Pago', variant: 'default', className: 'bg-green-100 text-green-700 hover:bg-green-100' },
+    completed: { label: 'Concluído', variant: 'default', className: 'bg-purple-100 text-purple-700 hover:bg-purple-100' },
+};
+
+function StatusBadge({ status }: { status: string }) {
+    const config = BUDGET_STATUS_MAP[status] ?? BUDGET_STATUS_MAP.pending;
+    return (
+        <Badge variant={config.variant} className={`text-xs shrink-0 ${config.className}`}>
+            {config.label}
+        </Badge>
+    );
 }
 
 const STATUS_OPTIONS = [
@@ -41,9 +60,10 @@ export function ProcedureForm({
     onChange,
     locations,
     loading = false,
-    paidBudgetItems = [],
+    budgetPlanItems = [],
     selectedBudgetKeys,
     onBudgetSelectionChange,
+    onCreateBudget,
 }: ProcedureFormProps) {
     const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -64,7 +84,7 @@ export function ProcedureForm({
         if (selectedCount === 0) return 'Selecione os procedimentos';
         if (selectedCount === 1) {
             const key = Array.from(selectedBudgetKeys!)[0];
-            const item = paidBudgetItems.find(i => i.key === key);
+            const item = budgetPlanItems.find(i => i.key === key);
             return item?.label ?? '1 selecionado';
         }
         return `${selectedCount} procedimentos selecionados`;
@@ -72,14 +92,26 @@ export function ProcedureForm({
 
     return (
         <div className="space-y-4">
-            {/* Paid budget items — dropdown with checkboxes */}
+            {/* Budget plan items — dropdown with checkboxes */}
             {onBudgetSelectionChange && (
                 <div className="space-y-2">
-                    <Label>Procedimentos Pagos *</Label>
-                    {paidBudgetItems.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-3 text-center border border-dashed border-border rounded-lg">
-                            Nenhum procedimento pago encontrado nos orçamentos
-                        </p>
+                    <Label>Procedimentos do Plano *</Label>
+                    {budgetPlanItems.length === 0 ? (
+                        <div className="text-sm text-muted-foreground py-4 text-center border border-dashed border-border rounded-lg space-y-2">
+                            <p>Nenhum procedimento encontrado nos orçamentos</p>
+                            {onCreateBudget && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5"
+                                    onClick={onCreateBudget}
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Novo Plano de Tratamento
+                                </Button>
+                            )}
+                        </div>
                     ) : (
                         <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                             <PopoverTrigger asChild>
@@ -97,7 +129,7 @@ export function ProcedureForm({
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                                 <div className="max-h-60 overflow-y-auto">
-                                    {paidBudgetItems.map((item) => (
+                                    {budgetPlanItems.map((item) => (
                                         <label
                                             key={item.key}
                                             className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/50 cursor-pointer border-b border-border last:border-0"
@@ -107,9 +139,10 @@ export function ProcedureForm({
                                                 onCheckedChange={() => toggleBudgetItem(item.key)}
                                                 disabled={loading}
                                             />
-                                            <span className="text-sm text-foreground leading-tight">
+                                            <span className="text-sm text-foreground leading-tight flex-1">
                                                 {item.label}
                                             </span>
+                                            <StatusBadge status={item.status} />
                                         </label>
                                     ))}
                                 </div>
