@@ -5,21 +5,24 @@ import type { ScheduleEntry } from './types';
 
 export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntry[]> {
     try {
+        // Try with location join first
         const { data, error } = await supabase
             .from('ai_secretary_schedule')
-            .select(`
-                *,
-                locations:location_id (name)
-            `)
+            .select('*')
             .eq('clinic_id', clinicId)
             .order('day_of_week', { ascending: true })
             .order('start_time', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                return [];
+            }
+            throw error;
+        }
 
         return (data || []).map((entry: any) => ({
             ...entry,
-            location_name: entry.locations?.name || null,
+            location_name: null,
         }));
     } catch (error) {
         console.error('Error fetching schedule:', error);
@@ -36,17 +39,21 @@ export async function addScheduleEntry(
     professionalIds?: string[] | null
 ): Promise<ScheduleEntry | null> {
     try {
+        const payload: Record<string, any> = {
+            clinic_id: clinicId,
+            day_of_week: dayOfWeek,
+            location_id: locationId || null,
+            start_time: startTime,
+            end_time: endTime,
+            is_active: true,
+        };
+        if (professionalIds && professionalIds.length > 0) {
+            payload.professional_ids = professionalIds;
+        }
+
         const { data, error } = await (supabase
             .from('ai_secretary_schedule') as any)
-            .insert({
-                clinic_id: clinicId,
-                day_of_week: dayOfWeek,
-                location_id: locationId || null,
-                professional_ids: professionalIds || null,
-                start_time: startTime,
-                end_time: endTime,
-                is_active: true,
-            })
+            .insert(payload)
             .select()
             .single();
 
@@ -101,7 +108,7 @@ export async function deleteScheduleEntry(id: string): Promise<boolean> {
 
 export async function createDefaultSchedule(clinicId: string): Promise<boolean> {
     try {
-        const entries = [];
+        const entries: Record<string, any>[] = [];
         for (let day = 1; day <= 5; day++) {
             entries.push({
                 clinic_id: clinicId,

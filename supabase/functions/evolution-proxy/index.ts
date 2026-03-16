@@ -20,6 +20,11 @@ const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL") || "";
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
 const WHATSAPP_WEBHOOK_API_KEY = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY") || "";
 
+// Meta Cloud API
+const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN") || "";
+const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") || "";
+const USE_META_API = !!WHATSAPP_ACCESS_TOKEN;
+
 // ─── Evolution API HTTP client ────────────────────────────────
 async function evolutionRequest<T>(
   endpoint: string,
@@ -153,7 +158,8 @@ async function setupWebhook(instanceName: string): Promise<void> {
     body: JSON.stringify({
       url: webhookUrl,
       headers: { "x-api-key": WHATSAPP_WEBHOOK_API_KEY },
-      webhook_by_events: true,
+      enabled: true,
+      webhookByEvents: true,
       events: ["MESSAGES_UPSERT"],
     }),
   });
@@ -165,15 +171,67 @@ async function handleStatus(
   supabase: any,
   clinicId: string
 ): Promise<Record<string, unknown>> {
-  // Check if Evolution API is configured
+  // ── Meta Cloud API ─────────────────────────────────────────────
+  if (USE_META_API) {
+    if (!WHATSAPP_PHONE_NUMBER_ID) {
+      return { status: "not_configured", provider: "meta", message: "WHATSAPP_PHONE_NUMBER_ID não configurado." };
+    }
+
+    // Verify Meta API connection by fetching phone number info
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/v22.0/${WHATSAPP_PHONE_NUMBER_ID}`,
+        {
+          headers: { Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}` },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.text();
+        return { status: "api_offline", provider: "meta", message: `Meta API error: ${response.status}`, error: err };
+      }
+
+      const phoneData = await response.json();
+      const displayPhone = phoneData.display_phone_number || phoneData.verified_name || "";
+      const instanceName = Deno.env.get("WHATSAPP_INSTANCE_NAME") || "smilecare";
+
+      // Save instance name + mark connected
+      await supabase
+        .from("ai_secretary_settings")
+        .upsert(
+          {
+            clinic_id: clinicId,
+            evolution_instance_name: instanceName,
+            whatsapp_connected: true,
+            whatsapp_phone_number: displayPhone,
+          },
+          { onConflict: "clinic_id" }
+        );
+
+      return {
+        status: "connected",
+        provider: "meta",
+        instanceName,
+        instanceExists: true,
+        phoneNumber: displayPhone,
+        verifiedName: phoneData.verified_name || "",
+        qualityRating: phoneData.quality_rating || "",
+      };
+    } catch (e: any) {
+      return { status: "api_offline", provider: "meta", message: e.message };
+    }
+  }
+
+  // ── Evolution API ──────────────────────────────────────────────
   if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
-    return { status: "not_configured", message: "Evolution API não configurada no servidor." };
+    return { status: "not_configured", provider: "evolution", message: "Nenhum provedor WhatsApp configurado. Configure WHATSAPP_ACCESS_TOKEN (Meta) ou EVOLUTION_API_URL." };
   }
 
   // Check if API is healthy
   const isHealthy = await evolutionHealthCheck();
   if (!isHealthy) {
-    return { status: "api_offline", message: "Evolution API está offline." };
+    return { status: "api_offline", provider: "evolution", message: "Evolution API está offline." };
   }
 
   // Check if instance exists
@@ -190,13 +248,14 @@ async function handleStatus(
 
     return {
       status: connected ? "connected" : state.instance?.state === "connecting" ? "connecting" : "disconnected",
+      provider: "evolution",
       instanceName,
       instanceExists: true,
     };
   } catch (e: any) {
     // Instance doesn't exist
     if (e.message?.includes("404") || e.message?.includes("not found")) {
-      return { status: "disconnected", instanceName, instanceExists: false };
+      return { status: "disconnected", provider: "evolution", instanceName, instanceExists: false };
     }
     // Try listing instances to check
     try {
@@ -205,12 +264,12 @@ async function handleStatus(
         (i: any) => i.instance?.instanceName === instanceName || i.name === instanceName
       );
       if (!exists) {
-        return { status: "disconnected", instanceName, instanceExists: false };
+        return { status: "disconnected", provider: "evolution", instanceName, instanceExists: false };
       }
     } catch {
       // Fall through
     }
-    return { status: "disconnected", instanceName, instanceExists: false };
+    return { status: "disconnected", provider: "evolution", instanceName, instanceExists: false };
   }
 }
 
@@ -228,11 +287,12 @@ async function handleCreate(
   logger.info("Creating Evolution API instance", { instanceName, clinicId });
 
   try {
-    // Create instance
+    // Create instance (Evolution API v2 requires integration field)
     const result = await evolutionRequest<any>("/instance/create", {
       method: "POST",
       body: JSON.stringify({
         instanceName,
+        integration: "WHATSAPP-BAILEYS",
         qrcode: true,
         token: `${instanceName}-token`,
       }),
@@ -315,17 +375,48 @@ async function handleSendTest(
   message: string,
   logger: any
 ): Promise<Record<string, unknown>> {
-  const instanceName = await getInstanceName(supabase, clinicId);
-
-  // Format phone number: international numbers (with +) keep their country code,
-  // Brazilian numbers (without +) get 55 prepended
+  // Format phone number
   const isInternational = phone.trim().startsWith("+");
   let formattedPhone = phone.replace(/\D/g, "");
   if (!isInternational && !formattedPhone.startsWith("55")) {
     formattedPhone = "55" + formattedPhone;
   }
 
-  logger.info("Sending test message", { instanceName, phone: formattedPhone });
+  // ── Meta Cloud API ─────────────────────────────────────────────
+  if (USE_META_API) {
+    logger.info("Sending test message via Meta API", { phone: formattedPhone });
+
+    const response = await fetch(
+      `https://graph.facebook.com/v22.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: formattedPhone,
+          type: "text",
+          text: { body: message },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Meta API Error: ${response.status} - ${errText}`);
+    }
+
+    const result = await response.json();
+    return { success: true, messageId: result.messages?.[0]?.id };
+  }
+
+  // ── Evolution API ──────────────────────────────────────────────
+  const instanceName = await getInstanceName(supabase, clinicId);
+
+  logger.info("Sending test message via Evolution", { instanceName, phone: formattedPhone });
 
   const result = await evolutionRequest<any>(
     `/message/sendText/${instanceName}`,
@@ -333,8 +424,7 @@ async function handleSendTest(
       method: "POST",
       body: JSON.stringify({
         number: formattedPhone,
-        textMessage: { text: message },
-        options: { delay: 1200 },
+        text: message,
       }),
     }
   );

@@ -4,6 +4,8 @@
  * Context (clinic_id, phone) comes from the webhook, not JWT.
  */
 
+import * as evolution from "./evolutionClient.ts";
+
 interface ToolContext {
   clinicId: string;
   phone: string; // Patient's phone from WhatsApp (remoteJid)
@@ -53,6 +55,9 @@ export async function executeToolCall(
 
     case "transferir_para_humano":
       return await executeTransferirParaHumano(args, context, supabase);
+
+    case "enviar_arquivo":
+      return await executeEnviarArquivo(args, context, supabase);
 
     default:
       throw new Error(`Ferramenta desconhecida: ${toolName}`);
@@ -239,4 +244,63 @@ async function executeTransferirParaHumano(
       ? "Conversa transferida para atendimento humano."
       : "Erro ao transferir conversa.",
   };
+}
+
+// 12. Enviar arquivo via WhatsApp
+async function executeEnviarArquivo(
+  args: ToolArgs,
+  context: ToolContext,
+  supabase: any
+): Promise<any> {
+  const filePath = args.file_path;
+  const fileName = args.file_name || "arquivo";
+  const caption = args.caption || "";
+
+  // Get public URL from Supabase Storage
+  const { data: urlData } = supabase.storage
+    .from("clinic-files")
+    .getPublicUrl(filePath);
+
+  if (!urlData?.publicUrl) {
+    return {
+      success: false,
+      message: "Arquivo não encontrado no sistema.",
+    };
+  }
+
+  // Get Evolution instance name for this clinic
+  const { data: settings } = await supabase
+    .from("ai_secretary_settings")
+    .select("evolution_instance_name")
+    .eq("clinic_id", context.clinicId)
+    .single();
+
+  if (!settings?.evolution_instance_name) {
+    return {
+      success: false,
+      message: "Configuração do WhatsApp não encontrada.",
+    };
+  }
+
+  const instance = settings.evolution_instance_name;
+  const ext = fileName.split(".").pop()?.toLowerCase() || "";
+  const isDocument = ["pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "zip"].includes(ext);
+
+  try {
+    if (isDocument) {
+      await evolution.sendDocument(instance, context.phone, urlData.publicUrl, fileName, caption);
+    } else {
+      await evolution.sendMedia(instance, context.phone, urlData.publicUrl, caption);
+    }
+
+    return {
+      success: true,
+      message: `Arquivo "${fileName}" enviado com sucesso.`,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: `Erro ao enviar arquivo: ${err.message}`,
+    };
+  }
 }

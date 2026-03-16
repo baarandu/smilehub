@@ -11,7 +11,12 @@ export async function getBlockedNumbers(clinicId: string): Promise<BlockedNumber
             .eq('clinic_id', clinicId)
             .order('blocked_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                return [];
+            }
+            throw error;
+        }
         return (data || []) as BlockedNumber[];
     } catch (error) {
         console.error('Error fetching blocked numbers:', error);

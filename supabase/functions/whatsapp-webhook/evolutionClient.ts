@@ -44,7 +44,7 @@ async function request<T>(
 
 /**
  * Send a text message to a WhatsApp number
- * Evolution API v1.x requires { number, textMessage: { text } }
+ * Evolution API v2.x uses { number, text }
  */
 export async function sendText(
   instance: string,
@@ -55,7 +55,7 @@ export async function sendText(
     method: "POST",
     body: JSON.stringify({
       number: phone,
-      textMessage: { text },
+      text,
     }),
   });
 }
@@ -102,7 +102,7 @@ export async function markAsRead(
 
 /**
  * React to a message with an emoji
- * Evolution API v1.x requires reactionMessage wrapper
+ * Evolution API v2.x uses key + reaction at top level
  */
 export async function reactToMessage(
   instance: string,
@@ -114,14 +114,12 @@ export async function reactToMessage(
   await request(`/message/sendReaction/${instance}`, {
     method: "POST",
     body: JSON.stringify({
-      reactionMessage: {
-        key: {
-          remoteJid,
-          fromMe,
-          id: messageId,
-        },
-        reaction: emoji,
+      key: {
+        remoteJid,
+        fromMe,
+        id: messageId,
       },
+      reaction: emoji,
     }),
   });
 }
@@ -141,6 +139,55 @@ export async function downloadMedia(
         key: {
           id: messageId,
         },
+      },
+    }),
+  });
+}
+
+/**
+ * Send a media file (image, video, audio) to a WhatsApp number
+ */
+export async function sendMedia(
+  instance: string,
+  phone: string,
+  mediaUrl: string,
+  caption?: string,
+  mimetype?: string
+): Promise<void> {
+  await request(`/message/sendMedia/${instance}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: phone,
+      mediaMessage: {
+        mediatype: mimetype?.startsWith("video") ? "video"
+          : mimetype?.startsWith("audio") ? "audio"
+          : "image",
+        media: mediaUrl,
+        caption: caption || "",
+      },
+    }),
+  });
+}
+
+/**
+ * Send a document file to a WhatsApp number
+ */
+export async function sendDocument(
+  instance: string,
+  phone: string,
+  mediaUrl: string,
+  fileName: string,
+  caption?: string
+): Promise<void> {
+  await request(`/message/sendMedia/${instance}`, {
+    method: "POST",
+    body: JSON.stringify({
+      number: phone,
+      mediaMessage: {
+        mediatype: "document",
+        media: mediaUrl,
+        fileName,
+        caption: caption || "",
       },
     }),
   });

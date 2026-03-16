@@ -75,3 +75,15 @@ export {
     addBlockedNumber,
     removeBlockedNumber,
 } from './blocked';
+
+// Conversations
+export type {
+    ConversationSummary,
+    ConversationMessage,
+    ConversationFilters,
+} from './conversations';
+
+export {
+    getConversations,
+    getConversationMessages,
+} from './conversations';

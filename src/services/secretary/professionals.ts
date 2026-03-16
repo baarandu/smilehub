@@ -11,7 +11,12 @@ export async function getClinicProfessionals(clinicId: string): Promise<ClinicPr
             .eq('clinic_id', clinicId)
             .order('name', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                return [];
+            }
+            throw error;
+        }
         return (data || []) as ClinicProfessional[];
     } catch (error) {
         console.error('Error fetching professionals:', error);

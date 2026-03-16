@@ -98,8 +98,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     });
   }, [isAdmin, isDentist, isSuperAdmin, planFeatureKeys]);
 
-  // AI Secretary: only visible for super admin while feature is under development
-  const hasAISecretaryAccess = isSuperAdmin;
+  // AI Secretary: visible for admins with plan feature, or super admins
+  const hasAISecretaryAccess = isSuperAdmin || (isAdmin && planHasFeature(planFeatureKeys, 'secretaria_ia'));
 
   // Filter AI nav items based on role and plan features
   const filteredAiNavItems = useMemo(() => {

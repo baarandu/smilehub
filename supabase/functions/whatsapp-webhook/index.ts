@@ -3,8 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getOpenAITools } from "./tools.ts";
 import { executeToolCall } from "./toolExecutors.ts";
 import { buildSystemPrompt } from "./systemPrompt.ts";
+import { splitAndSend } from "./messageSplitter.ts";
 import * as evolution from "./evolutionClient.ts";
+import * as meta from "./metaClient.ts";
 import { createLogger } from "../_shared/logger.ts";
+
+// ─── Detect which WhatsApp provider to use ──────────────────────────────────
+const USE_META_API = !!Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+
+// Unified client — delegates to Meta or Evolution based on env config
+const whatsapp = USE_META_API ? meta : evolution;
 
 // ─── Soft rate limit (logging only, never blocks webhook delivery) ────────────
 const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
@@ -173,6 +181,92 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Message Batching ─────────────────────────────────────────────────────────
+
+/**
+ * Enqueue a message and wait for more messages.
+ * Returns null if another execution will process, or concatenated text if this is the last.
+ */
+async function enqueueAndWait(
+  supabase: any,
+  clinicId: string,
+  phone: string,
+  content: string,
+  externalMessageId: string,
+  pushName: string,
+  waitMs: number,
+  log: any
+): Promise<string | null> {
+  // Insert into queue
+  await supabase.from("ai_secretary_message_queue").insert({
+    clinic_id: clinicId,
+    phone_number: phone,
+    content,
+    external_message_id: externalMessageId,
+    push_name: pushName,
+  });
+
+  // Wait for more messages
+  await sleep(waitMs);
+
+  // Fetch all queued messages for this phone
+  const { data: queued } = await supabase
+    .from("ai_secretary_message_queue")
+    .select("id, content, external_message_id, received_at")
+    .eq("clinic_id", clinicId)
+    .eq("phone_number", phone)
+    .order("received_at", { ascending: true });
+
+  if (!queued || queued.length === 0) return null;
+
+  // Check if THIS message is the last in queue — only the last one processes
+  const lastMsg = queued[queued.length - 1];
+  const isThisLast = lastMsg.external_message_id === externalMessageId;
+
+  if (!isThisLast) {
+    log.debug("Not the last message in queue, deferring", { phone, queueSize: queued.length });
+    return null;
+  }
+
+  // This is the last message — clear queue and concatenate
+  const ids = queued.map((q: any) => q.id);
+  await supabase.from("ai_secretary_message_queue").delete().in("id", ids);
+
+  // Concatenate all messages
+  const concatenated = queued.map((q: any) => q.content).join("\n");
+  log.info("Batched messages", { phone, count: queued.length });
+
+  return concatenated;
+}
+
+// ─── Concurrency Lock ─────────────────────────────────────────────────────────
+
+const LOCK_MAX_RETRIES = 5;
+const LOCK_RETRY_DELAY_MS = 3000;
+
+async function acquireLock(supabase: any, sessionId: string, log: any): Promise<boolean> {
+  for (let attempt = 0; attempt < LOCK_MAX_RETRIES; attempt++) {
+    const { error } = await supabase
+      .from("ai_secretary_locks")
+      .insert({ session_id: sessionId, locked_by: "webhook" });
+
+    if (!error) return true;
+
+    // Conflict = lock exists, wait and retry
+    if (attempt < LOCK_MAX_RETRIES - 1) {
+      log.debug(`Lock busy, retry ${attempt + 1}/${LOCK_MAX_RETRIES}`, { sessionId });
+      await sleep(LOCK_RETRY_DELAY_MS);
+    }
+  }
+
+  log.warn("Failed to acquire lock after retries", { sessionId });
+  return false;
+}
+
+async function releaseLock(supabase: any, sessionId: string): Promise<void> {
+  await supabase.from("ai_secretary_locks").delete().eq("session_id", sessionId);
+}
+
 // ─── Transcribe Audio via Whisper ─────────────────────────────────────────────
 
 async function transcribeAudio(
@@ -222,103 +316,166 @@ async function transcribeAudio(
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
 serve(async (req) => {
+  const log = createLogger("whatsapp-webhook");
+
+  // ── Meta Webhook Verification (GET) ─────────────────────────────
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("hub.mode");
+    const token = url.searchParams.get("hub.verify_token");
+    const challenge = url.searchParams.get("hub.challenge");
+
+    const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "";
+
+    if (mode === "subscribe" && token === verifyToken) {
+      log.info("Meta webhook verified");
+      return new Response(challenge || "", { status: 200 });
+    }
+
+    log.warn("Meta webhook verification failed", { mode, token });
+    return new Response("Forbidden", { status: 403 });
+  }
+
   // Only accept POST
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const log = createLogger("whatsapp-webhook");
   const t0 = Date.now();
 
   try {
-    // ── 1. Validate API key ──────────────────────────────────────────
-    const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey");
-    const expectedKey = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY");
+    const payload = await req.json();
 
-    if (!expectedKey || !apiKey) {
-      log.warn("Invalid API key");
-      return new Response("Unauthorized", { status: 401 });
-    }
+    // ── Detect payload format: Meta Cloud API vs Evolution API ─────
+    let instanceName: string;
+    let messageId: string;
+    let phone: string;
+    let pushName: string;
+    let textContent: string;
+    let audioMessage: any;
+    let remoteJid: string;
 
-    const encoder = new TextEncoder();
-    const a = encoder.encode(apiKey);
-    const b = encoder.encode(expectedKey);
-    if (a.byteLength !== b.byteLength || !crypto.subtle.timingSafeEqual(a, b)) {
-      log.warn("Invalid API key");
-      return new Response("Unauthorized", { status: 401 });
+    if (USE_META_API || payload.object === "whatsapp_business_account") {
+      // ── Meta Cloud API payload format ─────────────────────────────
+      const entry = payload.entry?.[0];
+      const changes = entry?.changes?.[0];
+      const value = changes?.value;
+
+      if (!value || !value.messages || value.messages.length === 0) {
+        // Status update or other non-message event
+        return new Response(JSON.stringify({ ignored: true, reason: "no_messages" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const msg = value.messages[0];
+      const contact = value.contacts?.[0];
+
+      instanceName = "smilecare";
+      messageId = msg.id || "";
+      phone = msg.from || "";
+      pushName = contact?.profile?.name || "";
+      remoteJid = phone + "@s.whatsapp.net";
+      textContent = "";
+      audioMessage = null;
+
+      // Extract content based on message type
+      if (msg.type === "text") {
+        textContent = msg.text?.body || "";
+      } else if (msg.type === "audio") {
+        audioMessage = { id: msg.audio?.id, mime_type: msg.audio?.mime_type };
+      } else if (msg.type === "interactive") {
+        // Button/list replies
+        textContent = msg.interactive?.button_reply?.title ||
+          msg.interactive?.list_reply?.title || "";
+      } else {
+        return new Response(JSON.stringify({ ignored: true, reason: "unsupported_type" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      log.info("Meta webhook received", { phone, type: msg.type, hasAudio: !!audioMessage });
+
+    } else {
+      // ── Evolution API payload format (legacy) ─────────────────────
+
+      // Validate API key for Evolution
+      const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey");
+      const expectedKey = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY");
+
+      if (!expectedKey || !apiKey) {
+        log.warn("Invalid API key");
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const encoder = new TextEncoder();
+      const a = encoder.encode(apiKey);
+      const b = encoder.encode(expectedKey);
+      if (a.byteLength !== b.byteLength || !crypto.subtle.timingSafeEqual(a, b)) {
+        log.warn("Invalid API key");
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const event = (payload.event || "").toLowerCase();
+      instanceName = payload.instance;
+      const data = payload.data;
+
+      log.info("Webhook received", { event, instance: instanceName, hasData: !!data });
+
+      if (event !== "messages.upsert" && event !== "messages_upsert") {
+        return new Response(JSON.stringify({ ignored: true, reason: "event_type", event }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (!data || !instanceName) {
+        log.warn("Missing data or instance", { data: JSON.stringify(payload).substring(0, 500) });
+        return new Response(JSON.stringify({ ignored: true, reason: "no_data" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const messageData = Array.isArray(data) ? data[0] : data;
+      if (!messageData) {
+        return new Response(JSON.stringify({ ignored: true, reason: "empty_data" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const key = messageData.key;
+      remoteJid = key?.remoteJid || "";
+      const fromMe = key?.fromMe || false;
+      messageId = key?.id || "";
+
+      if (fromMe) {
+        return new Response(JSON.stringify({ ignored: true, reason: "from_me" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") {
+        return new Response(JSON.stringify({ ignored: true, reason: "group_or_status" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const message = messageData.message || {};
+      textContent = message.conversation || message.extendedTextMessage?.text || "";
+      audioMessage = message.audioMessage || null;
+      pushName = messageData.pushName || "";
+      phone = extractPhone(remoteJid);
     }
 
     // Soft rate tracking (log only, never blocks delivery)
     const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     trackWebhookRate(webhookIp, log);
-
-    // ── 2. Parse Evolution API payload ───────────────────────────────
-    const payload = await req.json();
-
-    // Evolution API sends: { event, instance, data, ... }
-    // v1.x may use different event names or payload structure
-    const event = (payload.event || "").toLowerCase();
-    const instanceName = payload.instance;
-    const data = payload.data;
-
-    log.info("Webhook received", { event, instance: instanceName, hasData: !!data });
-
-    // Only process incoming messages (accept both formats)
-    if (event !== "messages.upsert" && event !== "messages_upsert") {
-      return new Response(JSON.stringify({ ignored: true, reason: "event_type", event }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!data || !instanceName) {
-      log.warn("Missing data or instance", { data: JSON.stringify(payload).substring(0, 500) });
-      return new Response(JSON.stringify({ ignored: true, reason: "no_data" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract message info — handle both v1.x and v2.x payload structures
-    // v1.x may send data as array: data: [{ key, message, ... }]
-    // v2.x sends data as object: data: { key, message, ... }
-    const messageData = Array.isArray(data) ? data[0] : data;
-    if (!messageData) {
-      return new Response(JSON.stringify({ ignored: true, reason: "empty_data" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const key = messageData.key;
-    const remoteJid = key?.remoteJid || "";
-    const fromMe = key?.fromMe || false;
-    const messageId = key?.id || "";
-
-    // Skip: outgoing messages, group messages, status broadcasts
-    if (fromMe) {
-      return new Response(JSON.stringify({ ignored: true, reason: "from_me" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (remoteJid.endsWith("@g.us") || remoteJid === "status@broadcast") {
-      return new Response(JSON.stringify({ ignored: true, reason: "group_or_status" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Extract text content or audio
-    const message = messageData.message || {};
-    let textContent =
-      message.conversation ||
-      message.extendedTextMessage?.text ||
-      "";
-    const audioMessage = message.audioMessage || null;
-    const pushName = messageData.pushName || "";
-    const phone = extractPhone(remoteJid);
 
     // Skip messages with no text and no audio
     if (!textContent && !audioMessage) {
@@ -377,10 +534,10 @@ serve(async (req) => {
 
       // Mark as read if enabled
       if (behavior.mark_as_read) {
-        evolution.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
+        whatsapp.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
       }
 
-      await evolution.sendText(instanceName, phone, outOfHoursMsg);
+      await whatsapp.sendText(instanceName, phone, outOfHoursMsg);
       log.info("Out of hours reply sent", { phone });
 
       return new Response(JSON.stringify({ status: "out_of_hours" }), {
@@ -406,7 +563,7 @@ serve(async (req) => {
 
     // ── 8. Mark as read ──────────────────────────────────────────────
     if (behavior.mark_as_read) {
-      evolution.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
+      whatsapp.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
     }
 
     // ── 9. Audio transcription ───────────────────────────────────────
@@ -416,7 +573,9 @@ serve(async (req) => {
       } else {
         try {
           log.debug("Downloading audio for transcription");
-          const mediaData = await evolution.downloadMedia(instanceName, messageId);
+          // For Meta API, use media ID; for Evolution, use message ID
+          const mediaRef = audioMessage?.id || messageId;
+          const mediaData = await whatsapp.downloadMedia(instanceName, mediaRef);
 
           log.debug("Transcribing audio with Whisper");
           textContent = await transcribeAudio(
@@ -434,6 +593,26 @@ serve(async (req) => {
           textContent = "[Áudio recebido mas não foi possível transcrever]";
         }
       }
+    }
+
+    // ── 9b. Message batching ──────────────────────────────────────────
+    // If wait_for_complete_message is enabled, enqueue and wait for more messages
+    if (behavior.wait_for_complete_message) {
+      const waitMs = behavior.wait_timeout_ms || 8000;
+      const batchedText = await enqueueAndWait(
+        supabase, clinicId, phone, textContent, messageId, pushName, waitMs, log
+      );
+
+      if (batchedText === null) {
+        // Another execution will handle the batch
+        return new Response(JSON.stringify({ status: "queued" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Use the concatenated text
+      textContent = batchedText;
     }
 
     // ── 10. Start/get conversation ───────────────────────────────────
@@ -475,7 +654,7 @@ serve(async (req) => {
     if (convoData && convoData.messages_count >= messageLimit) {
       const limitMsg =
         "Você atingiu o limite de mensagens para esta conversa. Para continuar o atendimento, entre em contato por telefone ou aguarde o atendimento humano.";
-      await evolution.sendText(instanceName, phone, limitMsg);
+      await whatsapp.sendText(instanceName, phone, limitMsg);
 
       log.info("Message limit reached", { conversationId, count: convoData.messages_count });
       return new Response(JSON.stringify({ status: "message_limit" }), {
@@ -506,7 +685,7 @@ serve(async (req) => {
 
       const transferMsg =
         "Entendi! Vou transferir você para um atendente humano. Aguarde um momento, por favor.";
-      await evolution.sendText(instanceName, phone, transferMsg);
+      await whatsapp.sendText(instanceName, phone, transferMsg);
 
       // Log messages
       await supabase.rpc("log_ai_message", {
@@ -531,7 +710,7 @@ serve(async (req) => {
 
     // ── 13. Send typing indicator ────────────────────────────────────
     if (behavior.send_typing_indicator) {
-      evolution.sendPresence(instanceName, phone, true).catch(() => {});
+      whatsapp.sendPresence(instanceName, phone, true).catch(() => {});
     }
 
     // ── 14. Load conversation history ────────────────────────────────
@@ -560,6 +739,14 @@ serve(async (req) => {
       { role: "user", content: textContent },
     ];
 
+    // ── 16b. Acquire concurrency lock ───────────────────────────────
+    const lockSessionId = `${clinicId}:${phone}`;
+    const lockAcquired = await acquireLock(supabase, lockSessionId, log);
+    if (!lockAcquired) {
+      log.warn("Could not acquire lock, processing anyway", { phone });
+    }
+
+    try {
     // ── 17. Call OpenAI ──────────────────────────────────────────────
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiApiKey) throw new Error("OPENAI_API_KEY not configured");
@@ -683,7 +870,11 @@ serve(async (req) => {
     if (behavior.react_to_messages) {
       const emoji = getReactionEmoji(intent, behavior);
       if (emoji) {
-        evolution.reactToMessage(instanceName, remoteJid, messageId, emoji).catch(() => {});
+        if (USE_META_API) {
+          meta.reactToMessageWithPhone(phone, messageId, emoji).catch(() => {});
+        } else {
+          evolution.reactToMessage(instanceName, remoteJid, messageId, emoji).catch(() => {});
+        }
       }
     }
 
@@ -694,11 +885,14 @@ serve(async (req) => {
 
     // Stop typing indicator
     if (behavior.send_typing_indicator) {
-      evolution.sendPresence(instanceName, phone, false).catch(() => {});
+      whatsapp.sendPresence(instanceName, phone, false).catch(() => {});
     }
 
-    // ── 20. Send response via WhatsApp ───────────────────────────────
-    await evolution.sendText(instanceName, phone, responseText);
+    // ── 20. Send response via WhatsApp (with splitting) ─────────────
+    await splitAndSend(instanceName, phone, responseText, behavior);
+
+    // Mark conversation as awaiting followup (fire-and-forget)
+    supabase.rpc("ai_mark_awaiting_followup", { p_conversation_id: conversationId }).catch(() => {});
 
     // Audit log
     log.audit(supabase, {
@@ -725,6 +919,13 @@ serve(async (req) => {
       JSON.stringify({ status: "ok", conversation_id: conversationId }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
+
+    } finally {
+      // Release concurrency lock
+      if (lockAcquired) {
+        await releaseLock(supabase, lockSessionId);
+      }
+    }
   } catch (error: any) {
     log.error(`Webhook error: ${error.message}`, { stack: error.stack });
 

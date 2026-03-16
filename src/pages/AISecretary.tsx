@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Bot, MessageCircle, Calendar, Bell, Sparkles, Clock, Settings, Zap, Mic, CreditCard, Shield, BarChart3, ChevronDown, Loader2, Plus, Trash2, Pencil, MapPin, User, Ban, Save } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Bot, MessageCircle, Calendar, Bell, Sparkles, Clock, Settings, Zap, Mic, CreditCard, Shield, BarChart3, ChevronDown, Loader2, Plus, Trash2, Pencil, MapPin, User, Ban, Save, Phone, Search, Eye, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -47,6 +47,10 @@ import {
   DEFAULT_BEHAVIOR_SETTINGS,
   DAY_NAMES_FULL,
   PREDEFINED_MESSAGE_TYPES,
+  getConversations,
+  getConversationMessages,
+  ConversationSummary,
+  ConversationMessage,
 } from '@/services/secretary';
 import { cn } from '@/lib/utils';
 
@@ -160,6 +164,15 @@ export default function AISecretary() {
   const [localMinAdvanceHours, setLocalMinAdvanceHours] = useState('2');
   const [localIntervalMinutes, setLocalIntervalMinutes] = useState('30');
   const [rulesChanged, setRulesChanged] = useState(false);
+
+  // Conversations
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationFilter, setConversationFilter] = useState('all');
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState<ConversationSummary | null>(null);
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   // Group schedule by day
   const scheduleByDay = useMemo(() => {
@@ -666,6 +679,54 @@ export default function AISecretary() {
   };
 
   // =====================================================
+  // Conversations Handlers
+  // =====================================================
+  const loadConversations = useCallback(async () => {
+    if (!clinicId) return;
+    setConversationsLoading(true);
+    try {
+      const data = await getConversations(clinicId, {
+        status: conversationFilter !== 'all' ? conversationFilter : undefined,
+        search: conversationSearch || undefined,
+      });
+      setConversations(data);
+    } catch (e) {
+      console.warn('Error loading conversations:', e);
+    } finally {
+      setConversationsLoading(false);
+    }
+  }, [clinicId, conversationFilter, conversationSearch]);
+
+  const handleViewConversation = async (conv: ConversationSummary) => {
+    setSelectedConversation(conv);
+    setMessagesLoading(true);
+    try {
+      const msgs = await getConversationMessages(conv.id);
+      setConversationMessages(msgs);
+    } catch (e) {
+      console.warn('Error loading messages:', e);
+      setConversationMessages([]);
+    } finally {
+      setMessagesLoading(false);
+    }
+  };
+
+  const formatConversationDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'active': return <Badge className="bg-green-100 text-green-700 border-green-200">Ativa</Badge>;
+      case 'completed': return <Badge className="bg-blue-100 text-blue-700 border-blue-200">Concluída</Badge>;
+      case 'transferred': return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Transferida</Badge>;
+      case 'abandoned': return <Badge className="bg-gray-100 text-gray-600 border-gray-200">Abandonada</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  // =====================================================
   // Scheduling Rules Handlers
   // =====================================================
   const handleSaveSchedulingRules = async () => {
@@ -1082,6 +1143,121 @@ export default function AISecretary() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Conversations Viewer */}
+      <CollapsibleSection title="Conversas Recentes" icon={MessageCircle}>
+        {selectedConversation ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedConversation(null)}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
+              </Button>
+              <div>
+                <p className="font-medium text-sm">{selectedConversation.contact_name || selectedConversation.phone_number}</p>
+                <p className="text-xs text-muted-foreground">{selectedConversation.phone_number}</p>
+              </div>
+              {getStatusBadge(selectedConversation.status)}
+            </div>
+            <div className="border rounded-lg p-4 max-h-[500px] overflow-y-auto space-y-3 bg-muted/20">
+              {messagesLoading ? (
+                <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+              ) : conversationMessages.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma mensagem encontrada</p>
+              ) : (
+                conversationMessages.map(msg => (
+                  <div key={msg.id} className={cn(
+                    "max-w-[80%] p-3 rounded-xl text-sm",
+                    msg.sender === 'patient'
+                      ? "bg-white border ml-0 mr-auto"
+                      : msg.sender === 'ai'
+                      ? "bg-primary/10 border border-primary/20 ml-auto mr-0"
+                      : "bg-amber-50 border border-amber-200 ml-auto mr-0"
+                  )}>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {msg.sender === 'patient' ? 'Paciente' : msg.sender === 'ai' ? 'IA' : 'Humano'}
+                      <span className="ml-2">{formatConversationDate(msg.sent_at)}</span>
+                    </p>
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por telefone ou nome..."
+                  value={conversationSearch}
+                  onChange={(e) => setConversationSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={conversationFilter} onValueChange={setConversationFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="active">Ativas</SelectItem>
+                  <SelectItem value="completed">Concluídas</SelectItem>
+                  <SelectItem value="transferred">Transferidas</SelectItem>
+                  <SelectItem value="abandoned">Abandonadas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" onClick={loadConversations} disabled={conversationsLoading}>
+                {conversationsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              </Button>
+            </div>
+
+            {conversations.length === 0 ? (
+              <div className="text-center py-6">
+                <MessageCircle className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground mb-2">Nenhuma conversa encontrada</p>
+                <Button variant="outline" size="sm" onClick={loadConversations}>
+                  Carregar Conversas
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {conversations.map(conv => (
+                  <div
+                    key={conv.id}
+                    className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border cursor-pointer hover:bg-muted/80 transition-colors"
+                    onClick={() => handleViewConversation(conv)}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="p-2 bg-background rounded-full border">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {conv.contact_name || conv.phone_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {conv.messages_count} msgs · {formatConversationDate(conv.last_message_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-2">
+                      {conv.appointment_created && (
+                        <Badge variant="secondary" className="text-xs bg-green-50 text-green-700">
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Agendou
+                        </Badge>
+                      )}
+                      {getStatusBadge(conv.status)}
+                      <Eye className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Behavior Settings */}
       {settings && (

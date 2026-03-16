@@ -210,6 +210,29 @@ export const TOOLS = [
       required: ["reason"],
     },
   },
+  {
+    name: "enviar_arquivo",
+    description:
+      "Envia um arquivo do sistema para o paciente via WhatsApp. Use para enviar documentos, exames ou imagens quando solicitado.",
+    parameters: {
+      type: "object",
+      properties: {
+        file_path: {
+          type: "string",
+          description: "Caminho do arquivo no Supabase Storage (ex: 'exams/paciente-123/resultado.pdf').",
+        },
+        file_name: {
+          type: "string",
+          description: "Nome do arquivo para exibição (ex: 'Resultado_Exame.pdf').",
+        },
+        caption: {
+          type: "string",
+          description: "Legenda/mensagem a enviar junto do arquivo (opcional).",
+        },
+      },
+      required: ["file_path", "file_name"],
+    },
+  },
 ];
 
 // Convert tools to OpenAI function calling format

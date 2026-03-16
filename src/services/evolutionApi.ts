@@ -8,8 +8,12 @@ import { supabase } from '@/lib/supabase';
 
 interface ConnectionStatus {
   status: 'connected' | 'connecting' | 'disconnected' | 'api_offline' | 'not_configured';
+  provider?: 'meta' | 'evolution';
   instanceName?: string;
   instanceExists?: boolean;
+  phoneNumber?: string;
+  verifiedName?: string;
+  qualityRating?: string;
   message?: string;
 }
 
@@ -25,7 +29,11 @@ interface ProxyResponse {
   instanceName?: string;
   qrcode?: QRCodeData;
   status?: string;
+  provider?: string;
   instanceExists?: boolean;
+  phoneNumber?: string;
+  verifiedName?: string;
+  qualityRating?: string;
   message?: string;
   messageId?: string;
 }
@@ -65,9 +73,13 @@ class EvolutionApiService {
     const data = await callProxy('status');
     return {
       status: (data.status as ConnectionStatus['status']) || 'disconnected',
-      instanceName: data.instanceName,
-      instanceExists: data.instanceExists,
-      message: data.message,
+      provider: (data.provider as ConnectionStatus['provider']) || undefined,
+      instanceName: data.instanceName as string | undefined,
+      instanceExists: data.instanceExists as boolean | undefined,
+      phoneNumber: data.phoneNumber as string | undefined,
+      verifiedName: data.verifiedName as string | undefined,
+      qualityRating: data.qualityRating as string | undefined,
+      message: data.message as string | undefined,
     };
   }
 

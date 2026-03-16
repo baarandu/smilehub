@@ -23,6 +23,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   multi_unidades: 'Múltiplas unidades',
   crm: 'CRM',
   analytics: 'Analytics',
+  secretaria_ia: 'Secretária IA',
 };
 
 /** Translate a feature key to its label, falling back to the key itself */
@@ -49,7 +50,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
   ],
   profissional_v2: [
     'crm', 'analytics', 'assinatura_digital',
-    'dentista_ia', 'contabilidade_ia',
+    'dentista_ia', 'contabilidade_ia', 'secretaria_ia',
     'central_protese', 'central_ortodontia', 'imposto_renda',
     'whatsapp_confirmacao', 'multi_unidades',
     'suporte_chat',

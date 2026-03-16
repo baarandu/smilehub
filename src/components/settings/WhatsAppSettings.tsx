@@ -28,6 +28,9 @@ export function WhatsAppSettings() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<UIStatus>('disconnected');
+  const [provider, setProvider] = useState<'meta' | 'evolution' | undefined>();
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [verifiedName, setVerifiedName] = useState<string>('');
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [instanceExists, setInstanceExists] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -44,7 +47,10 @@ export function WhatsAppSettings() {
     try {
       const result = await evolutionApi.getStatus();
       setStatus(result.status);
+      setProvider(result.provider);
       setInstanceExists(result.instanceExists ?? false);
+      setPhoneNumber(result.phoneNumber || '');
+      setVerifiedName(result.verifiedName || '');
 
       // If connected, clear QR code
       if (result.status === 'connected') {
@@ -224,13 +230,19 @@ export function WhatsAppSettings() {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Not configured - Evolution API not set on server */}
+        {/* Not configured */}
         {status === 'not_configured' && (
           <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
             <p className="text-sm text-orange-800">
-              O servidor de integração WhatsApp ainda não foi configurado. Entre em contato com o suporte.
+              O WhatsApp ainda não foi configurado. Configure os secrets no Supabase Dashboard:
             </p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={checkStatus}>
+            <ul className="text-sm text-orange-700 mt-2 space-y-1 list-disc list-inside">
+              <li><code className="bg-orange-100 px-1 rounded">WHATSAPP_ACCESS_TOKEN</code> — Token do Meta for Developers</li>
+              <li><code className="bg-orange-100 px-1 rounded">WHATSAPP_PHONE_NUMBER_ID</code> — ID do número no Meta</li>
+              <li><code className="bg-orange-100 px-1 rounded">WHATSAPP_VERIFY_TOKEN</code> — Token de verificação do webhook</li>
+              <li><code className="bg-orange-100 px-1 rounded">WHATSAPP_INSTANCE_NAME</code> — Nome da instância (ex: smilecare)</li>
+            </ul>
+            <Button variant="outline" size="sm" className="mt-3" onClick={checkStatus}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Verificar novamente
             </Button>
@@ -328,7 +340,9 @@ export function WhatsAppSettings() {
                 <span className="font-medium">WhatsApp conectado e pronto para uso!</span>
               </div>
               <p className="text-sm text-green-700 mt-1">
-                A Secretária IA está atendendo automaticamente pelo número conectado.
+                {provider === 'meta' && phoneNumber
+                  ? `Conectado via Meta Cloud API — ${verifiedName ? verifiedName + ' ' : ''}${phoneNumber}`
+                  : 'A Secretária IA está atendendo automaticamente pelo número conectado.'}
               </p>
             </div>
 
@@ -364,22 +378,24 @@ export function WhatsAppSettings() {
               </div>
             </div>
 
-            {/* Disconnect Button */}
-            <div className="pt-4 border-t">
-              <Button
-                variant="outline"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={handleDisconnect}
-                disabled={isDisconnecting}
-              >
-                {isDisconnecting ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <PowerOff className="w-4 h-4 mr-2" />
-                )}
-                Desconectar WhatsApp
-              </Button>
-            </div>
+            {/* Disconnect Button (only for Evolution API) */}
+            {provider !== 'meta' && (
+              <div className="pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={handleDisconnect}
+                  disabled={isDisconnecting}
+                >
+                  {isDisconnecting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <PowerOff className="w-4 h-4 mr-2" />
+                  )}
+                  Desconectar WhatsApp
+                </Button>
+              </div>
+            )}
           </>
         )}
       </CardContent>
