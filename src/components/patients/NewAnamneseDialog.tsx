@@ -417,9 +417,12 @@ export function NewAnamneseDialog({
               </Popover>
             </div>
 
-            <Separator />
+            {/* ── Saúde Geral e Tratamentos ── */}
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-primary">Saúde Geral e Tratamentos</h3>
+              <Separator />
+            </div>
 
-            {/* Tratamento Médico */}
             <QuestionField
               label="Está em algum tratamento médico?"
               value={form.medicalTreatment}
@@ -429,7 +432,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual tratamento?"
             />
 
-            {/* Cirurgia Recente */}
             <QuestionField
               label="Cirurgia recente?"
               value={form.recentSurgery}
@@ -439,7 +441,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual cirurgia e quando?"
             />
 
-            {/* Problemas de Cicatrização */}
             <QuestionField
               label="Problema de cicatrização?"
               value={form.healingProblems}
@@ -449,17 +450,12 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Descreva o problema"
             />
 
-            {/* Problemas Respiratórios */}
-            <QuestionField
-              label="Tem doença respiratória?"
-              value={form.respiratoryProblems}
-              onValueChange={(value) => setForm({ ...form, respiratoryProblems: value })}
-              details={form.respiratoryProblemsDetails}
-              onDetailsChange={(text) => setForm({ ...form, respiratoryProblemsDetails: text })}
-              detailsPlaceholder="Qual problema?"
-            />
+            {/* ── Medicações e Alergias ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Medicações e Alergias</h3>
+              <Separator />
+            </div>
 
-            {/* Medicação */}
             <QuestionField
               label="Faz ou está fazendo uso de alguma medicação?"
               value={form.currentMedication}
@@ -469,7 +465,15 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Quais medicações?"
             />
 
-            {/* Alergia */}
+            <QuestionField
+              label="Usa medicação de uso contínuo?"
+              value={form.continuousMedication}
+              onValueChange={(value) => setForm({ ...form, continuousMedication: value })}
+              details={form.continuousMedicationDetails}
+              onDetailsChange={(text) => setForm({ ...form, continuousMedicationDetails: text })}
+              detailsPlaceholder="Quais medicações e dosagens?"
+            />
+
             <QuestionField
               label="Tem algum tipo de alergia?"
               value={form.allergy}
@@ -479,7 +483,21 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Quais alergias? (medicamentos, alimentos, materiais, etc.)"
             />
 
-            {/* Reação Adversa à Anestesia Local */}
+            <QuestionField
+              label="Tem alergia a medicamentos?"
+              value={form.drugAllergy}
+              onValueChange={(value) => setForm({ ...form, drugAllergy: value })}
+              details={form.drugAllergyDetails}
+              onDetailsChange={(text) => setForm({ ...form, drugAllergyDetails: text })}
+              detailsPlaceholder="Quais medicamentos?"
+            />
+
+            {/* ── Anestesia ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Anestesia</h3>
+              <Separator />
+            </div>
+
             <QuestionField
               label="Tem histórico de reação adversa à anestesia local?"
               value={form.localAnesthesiaHistory}
@@ -489,37 +507,21 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Descreva a reação"
             />
 
-            {/* Diabetes */}
             <QuestionField
-              label="Tem diabetes?"
-              value={form.diabetes}
-              onValueChange={(value) => setForm({ ...form, diabetes: value })}
-              details={form.diabetesDetails}
-              onDetailsChange={(text) => setForm({ ...form, diabetesDetails: text })}
-              detailsPlaceholder="Tipo e tratamento"
+              label="Já teve reação adversa a anestésico?"
+              value={form.anesthesiaReaction}
+              onValueChange={(value) => setForm({ ...form, anesthesiaReaction: value })}
+              details={form.anesthesiaReactionDetails}
+              onDetailsChange={(text) => setForm({ ...form, anesthesiaReactionDetails: text })}
+              detailsPlaceholder="Qual anestésico e reação?"
             />
 
-            {/* Depressão, Ansiedade ou Pânico */}
-            <QuestionField
-              label="Depressão, pânico ou ansiedade?"
-              value={form.depressionAnxietyPanic}
-              onValueChange={(value) => setForm({ ...form, depressionAnxietyPanic: value })}
-              details={form.depressionAnxietyPanicDetails}
-              onDetailsChange={(text) => setForm({ ...form, depressionAnxietyPanicDetails: text })}
-              detailsPlaceholder="Descreva o quadro"
-            />
+            {/* ── Doenças Sistêmicas e Crônicas ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Doenças Sistêmicas e Crônicas</h3>
+              <Separator />
+            </div>
 
-            {/* Convulsão ou Epilepsia */}
-            <QuestionField
-              label="Histórico de convulsão ou epilepsia?"
-              value={form.seizureEpilepsy}
-              onValueChange={(value) => setForm({ ...form, seizureEpilepsy: value })}
-              details={form.seizureEpilepsyDetails}
-              onDetailsChange={(text) => setForm({ ...form, seizureEpilepsyDetails: text })}
-              detailsPlaceholder="Frequência e medicação"
-            />
-
-            {/* Doença Cardíaca */}
             <QuestionField
               label="Tem cardiopatia?"
               value={form.heartDisease}
@@ -529,7 +531,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual condição?"
             />
 
-            {/* Hipertensão */}
             <QuestionField
               label="Tem hipertensão?"
               value={form.hypertension}
@@ -539,7 +540,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Tratamento?"
             />
 
-            {/* Marca-passo */}
             <QuestionField
               label="Tem marca-passo?"
               value={form.pacemaker}
@@ -549,7 +549,24 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Modelo/tipo?"
             />
 
-            {/* Artrite */}
+            <QuestionField
+              label="Tem diabetes?"
+              value={form.diabetes}
+              onValueChange={(value) => setForm({ ...form, diabetes: value })}
+              details={form.diabetesDetails}
+              onDetailsChange={(text) => setForm({ ...form, diabetesDetails: text })}
+              detailsPlaceholder="Tipo e tratamento"
+            />
+
+            <QuestionField
+              label="Tem doença respiratória?"
+              value={form.respiratoryProblems}
+              onValueChange={(value) => setForm({ ...form, respiratoryProblems: value })}
+              details={form.respiratoryProblemsDetails}
+              onDetailsChange={(text) => setForm({ ...form, respiratoryProblemsDetails: text })}
+              detailsPlaceholder="Qual problema?"
+            />
+
             <QuestionField
               label="Tem artrite?"
               value={form.arthritis}
@@ -559,7 +576,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual tipo?"
             />
 
-            {/* Gastrite ou Refluxo */}
             <QuestionField
               label="Tem gastrite ou refluxo?"
               value={form.gastritisReflux}
@@ -569,7 +585,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Tratamento?"
             />
 
-            {/* Doença Infecciosa */}
             <QuestionField
               label="Alguma doença infecciosa ou importante?"
               value={form.infectiousDisease}
@@ -579,7 +594,36 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Qual doença?"
             />
 
-            {/* Gestante ou Amamentando */}
+            {/* ── Saúde Mental e Neurológica ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Saúde Mental e Neurológica</h3>
+              <Separator />
+            </div>
+
+            <QuestionField
+              label="Depressão, pânico ou ansiedade?"
+              value={form.depressionAnxietyPanic}
+              onValueChange={(value) => setForm({ ...form, depressionAnxietyPanic: value })}
+              details={form.depressionAnxietyPanicDetails}
+              onDetailsChange={(text) => setForm({ ...form, depressionAnxietyPanicDetails: text })}
+              detailsPlaceholder="Descreva o quadro"
+            />
+
+            <QuestionField
+              label="Histórico de convulsão ou epilepsia?"
+              value={form.seizureEpilepsy}
+              onValueChange={(value) => setForm({ ...form, seizureEpilepsy: value })}
+              details={form.seizureEpilepsyDetails}
+              onDetailsChange={(text) => setForm({ ...form, seizureEpilepsyDetails: text })}
+              detailsPlaceholder="Frequência e medicação"
+            />
+
+            {/* ── Condições Especiais e Hábitos ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Condições Especiais e Hábitos</h3>
+              <Separator />
+            </div>
+
             <QuestionField
               label="Está grávida ou amamentando?"
               value={form.pregnantOrBreastfeeding}
@@ -589,7 +633,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Período de gestação?"
             />
 
-            {/* Fumante ou Bebe */}
             <QuestionField
               label="É fumante ou etilista?"
               value={form.smokerOrDrinker}
@@ -599,7 +642,6 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Frequência/quantidade"
             />
 
-            {/* Jejum */}
             <QuestionField
               label="Está de jejum?"
               value={form.fasting}
@@ -609,7 +651,12 @@ export function NewAnamneseDialog({
               detailsPlaceholder="Há quanto tempo?"
             />
 
-            {/* Bruxismo, DTM ou Dor Orofacial */}
+            {/* ── Odontológico ── */}
+            <div className="space-y-1 pt-2">
+              <h3 className="text-sm font-semibold text-primary">Odontológico</h3>
+              <Separator />
+            </div>
+
             <QuestionField
               label="Tem bruxismo, DTM ou dor orofacial?"
               value={form.bruxismDtmOrofacialPain}
