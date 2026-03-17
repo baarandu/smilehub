@@ -376,6 +376,12 @@ export function NewAnamneseModal({
                                 setForm({ ...form, date: `${year}-${month}-${day}` });
                             }}
                         />
+                        {/* ── Saúde Geral e Tratamentos ── */}
+                        <View className="mb-2 mt-2">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Saúde Geral e Tratamentos</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
+
                         <QuestionField
                             label="Está em algum tratamento médico?"
                             value={form.medicalTreatment}
@@ -403,14 +409,11 @@ export function NewAnamneseModal({
                             detailsPlaceholder="Descreva o problema"
                         />
 
-                        <QuestionField
-                            label="Tem doença respiratória?"
-                            value={form.respiratoryProblems}
-                            onValueChange={(v) => setForm({ ...form, respiratoryProblems: v })}
-                            details={form.respiratoryProblemsDetails}
-                            onDetailsChange={(t) => setForm({ ...form, respiratoryProblemsDetails: t })}
-                            detailsPlaceholder="Qual problema?"
-                        />
+                        {/* ── Medicações e Alergias ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Medicações e Alergias</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
 
                         <QuestionField
                             label="Faz ou está fazendo uso de alguma medicação?"
@@ -419,6 +422,15 @@ export function NewAnamneseModal({
                             details={form.currentMedicationDetails}
                             onDetailsChange={(t) => setForm({ ...form, currentMedicationDetails: t })}
                             detailsPlaceholder="Quais medicações?"
+                        />
+
+                        <QuestionField
+                            label="Usa medicação de uso contínuo?"
+                            value={form.continuousMedication}
+                            onValueChange={(v) => setForm({ ...form, continuousMedication: v })}
+                            details={form.continuousMedicationDetails}
+                            onDetailsChange={(t) => setForm({ ...form, continuousMedicationDetails: t })}
+                            detailsPlaceholder="Quais medicações e dosagens?"
                         />
 
                         <QuestionField
@@ -431,6 +443,21 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
+                            label="Tem alergia a medicamentos?"
+                            value={form.drugAllergy}
+                            onValueChange={(v) => setForm({ ...form, drugAllergy: v })}
+                            details={form.drugAllergyDetails}
+                            onDetailsChange={(t) => setForm({ ...form, drugAllergyDetails: t })}
+                            detailsPlaceholder="Quais medicamentos?"
+                        />
+
+                        {/* ── Anestesia ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Anestesia</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
+
+                        <QuestionField
                             label="Tem histórico de reação adversa à anestesia local?"
                             value={form.localAnesthesiaHistory}
                             onValueChange={(v) => setForm({ ...form, localAnesthesiaHistory: v })}
@@ -440,31 +467,19 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
-                            label="Tem diabetes?"
-                            value={form.diabetes}
-                            onValueChange={(v) => setForm({ ...form, diabetes: v })}
-                            details={form.diabetesDetails}
-                            onDetailsChange={(t) => setForm({ ...form, diabetesDetails: t })}
-                            detailsPlaceholder="Tipo e tratamento"
+                            label="Já teve reação adversa a anestésico?"
+                            value={form.anesthesiaReaction}
+                            onValueChange={(v) => setForm({ ...form, anesthesiaReaction: v })}
+                            details={form.anesthesiaReactionDetails}
+                            onDetailsChange={(t) => setForm({ ...form, anesthesiaReactionDetails: t })}
+                            detailsPlaceholder="Qual anestésico e reação?"
                         />
 
-                        <QuestionField
-                            label="Depressão, pânico ou ansiedade?"
-                            value={form.depressionAnxietyPanic}
-                            onValueChange={(v) => setForm({ ...form, depressionAnxietyPanic: v })}
-                            details={form.depressionAnxietyPanicDetails}
-                            onDetailsChange={(t) => setForm({ ...form, depressionAnxietyPanicDetails: t })}
-                            detailsPlaceholder="Descreva o quadro"
-                        />
-
-                        <QuestionField
-                            label="Histórico de convulsão ou epilepsia?"
-                            value={form.seizureEpilepsy}
-                            onValueChange={(v) => setForm({ ...form, seizureEpilepsy: v })}
-                            details={form.seizureEpilepsyDetails}
-                            onDetailsChange={(t) => setForm({ ...form, seizureEpilepsyDetails: t })}
-                            detailsPlaceholder="Frequência e medicação"
-                        />
+                        {/* ── Doenças Sistêmicas e Crônicas ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Doenças Sistêmicas e Crônicas</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
 
                         <QuestionField
                             label="Tem cardiopatia?"
@@ -494,6 +509,24 @@ export function NewAnamneseModal({
                         />
 
                         <QuestionField
+                            label="Tem diabetes?"
+                            value={form.diabetes}
+                            onValueChange={(v) => setForm({ ...form, diabetes: v })}
+                            details={form.diabetesDetails}
+                            onDetailsChange={(t) => setForm({ ...form, diabetesDetails: t })}
+                            detailsPlaceholder="Tipo e tratamento"
+                        />
+
+                        <QuestionField
+                            label="Tem doença respiratória?"
+                            value={form.respiratoryProblems}
+                            onValueChange={(v) => setForm({ ...form, respiratoryProblems: v })}
+                            details={form.respiratoryProblemsDetails}
+                            onDetailsChange={(t) => setForm({ ...form, respiratoryProblemsDetails: t })}
+                            detailsPlaceholder="Qual problema?"
+                        />
+
+                        <QuestionField
                             label="Tem artrite?"
                             value={form.arthritis}
                             onValueChange={(v) => setForm({ ...form, arthritis: v })}
@@ -519,6 +552,36 @@ export function NewAnamneseModal({
                             onDetailsChange={(t) => setForm({ ...form, infectiousDiseaseDetails: t })}
                             detailsPlaceholder="Qual doença?"
                         />
+
+                        {/* ── Saúde Mental e Neurológica ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Saúde Mental e Neurológica</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
+
+                        <QuestionField
+                            label="Depressão, pânico ou ansiedade?"
+                            value={form.depressionAnxietyPanic}
+                            onValueChange={(v) => setForm({ ...form, depressionAnxietyPanic: v })}
+                            details={form.depressionAnxietyPanicDetails}
+                            onDetailsChange={(t) => setForm({ ...form, depressionAnxietyPanicDetails: t })}
+                            detailsPlaceholder="Descreva o quadro"
+                        />
+
+                        <QuestionField
+                            label="Histórico de convulsão ou epilepsia?"
+                            value={form.seizureEpilepsy}
+                            onValueChange={(v) => setForm({ ...form, seizureEpilepsy: v })}
+                            details={form.seizureEpilepsyDetails}
+                            onDetailsChange={(t) => setForm({ ...form, seizureEpilepsyDetails: t })}
+                            detailsPlaceholder="Frequência e medicação"
+                        />
+
+                        {/* ── Condições Especiais e Hábitos ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Condições Especiais e Hábitos</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
 
                         <QuestionField
                             label="Está grávida ou amamentando?"
@@ -546,6 +609,12 @@ export function NewAnamneseModal({
                             onDetailsChange={(t) => setForm({ ...form, fastingDetails: t })}
                             detailsPlaceholder="Há quanto tempo?"
                         />
+
+                        {/* ── Odontológico ── */}
+                        <View className="mb-2 mt-4">
+                            <Text className="text-sm font-semibold text-[#b94a48] mb-2">Odontológico</Text>
+                            <View className="h-px bg-gray-200" />
+                        </View>
 
                         <QuestionField
                             label="Tem bruxismo, DTM ou dor orofacial?"
