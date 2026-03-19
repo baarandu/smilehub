@@ -216,14 +216,28 @@ serve(async (req: Request) => {
     let examId: string | null = null;
 
     if (supersignToken && supersignAccountId) {
-      // Try multiple endpoints to download the signed PDF from SuperSign
-      const downloadEndpoints = [
-        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/documents/signed`,
-        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/download`,
-        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/signed-document`,
-      ];
-
       let pdfBuffer: Uint8Array | null = null;
+
+      // First, get document IDs from envelope details
+      let docIds: string[] = [];
+      try {
+        const envRes = await fetch(`${SUPERSIGN_API}/v2/envelopes/${envelopeId}`, {
+          headers: { Authorization: `Bearer ${supersignToken}`, "x-account-id": supersignAccountId },
+        });
+        if (envRes.ok) {
+          const envData = await envRes.json();
+          docIds = (envData.documents || []).map((d: any) => d.id).filter(Boolean);
+          logger.info("Envelope documents found", { docIds });
+        }
+      } catch (e) {
+        logger.warn("Failed to fetch envelope details", { error: String(e) });
+      }
+
+      // Try document-level download with type=signed (correct SuperSign API endpoint)
+      const downloadEndpoints = [
+        ...docIds.map((docId: string) => `${SUPERSIGN_API}/v2/documents/${docId}/download?type=signed`),
+        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/documents/signed`,
+      ];
 
       for (const endpoint of downloadEndpoints) {
         try {
@@ -238,15 +252,36 @@ serve(async (req: Request) => {
 
           if (pdfRes.ok) {
             const contentType = pdfRes.headers.get("content-type") || "";
-            const buffer = new Uint8Array(await pdfRes.arrayBuffer());
 
-            // Verify we got a PDF (check magic bytes %PDF or content-type)
-            if (buffer.length > 100 && (contentType.includes("pdf") || (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46))) {
-              pdfBuffer = buffer;
-              logger.info("Signed PDF downloaded successfully", { endpoint, size: buffer.length });
-              break;
+            // SuperSign returns JSON with downloadUrl — follow it to get actual PDF
+            if (contentType.includes("json")) {
+              try {
+                const jsonData = await pdfRes.json();
+                const dlUrl = jsonData.downloadUrl || jsonData.download_url || jsonData.url;
+                if (dlUrl) {
+                  logger.info("Following downloadUrl from JSON response", { dlUrl: dlUrl.substring(0, 80) });
+                  const actualPdfRes = await fetch(dlUrl);
+                  if (actualPdfRes.ok) {
+                    const buffer = new Uint8Array(await actualPdfRes.arrayBuffer());
+                    if (buffer.length > 100 && buffer[0] === 0x25 && buffer[1] === 0x50) {
+                      pdfBuffer = buffer;
+                      logger.info("Signed PDF downloaded successfully", { endpoint, size: buffer.length });
+                      break;
+                    }
+                  }
+                }
+              } catch (jsonErr) {
+                logger.warn("Failed to parse JSON response", { error: String(jsonErr) });
+              }
             } else {
-              logger.warn("Response was not a PDF", { endpoint, contentType, size: buffer.length });
+              const buffer = new Uint8Array(await pdfRes.arrayBuffer());
+              if (buffer.length > 100 && (contentType.includes("pdf") || (buffer[0] === 0x25 && buffer[1] === 0x50))) {
+                pdfBuffer = buffer;
+                logger.info("Signed PDF downloaded successfully", { endpoint, size: buffer.length });
+                break;
+              } else {
+                logger.warn("Response was not a PDF", { endpoint, contentType, size: buffer.length });
+              }
             }
           } else {
             logger.warn("Download endpoint returned error", { endpoint, status: pdfRes.status });
@@ -317,6 +352,8 @@ serve(async (req: Request) => {
               patient_id: sig.patient_id,
               clinic_id: sig.clinic_id,
               name: `${sig.title} (Assinado)`,
+              title: `${sig.title} (Assinado)`,
+              date: new Date().toISOString().split("T")[0],
               order_date: new Date().toISOString().split("T")[0],
               file_urls: [signedPdfUrl],
               file_type: "signed_document",
