@@ -216,67 +216,124 @@ serve(async (req: Request) => {
     let examId: string | null = null;
 
     if (supersignToken && supersignAccountId) {
-      // Fetch envelope details to get signedFileKey
-      const envelopeRes = await fetch(`${SUPERSIGN_API}/v2/envelopes/${envelopeId}`, {
-        headers: {
-          Authorization: `Bearer ${supersignToken}`,
-          "x-account-id": supersignAccountId,
-        },
-      });
+      // Try multiple endpoints to download the signed PDF from SuperSign
+      const downloadEndpoints = [
+        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/documents/signed`,
+        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/download`,
+        `${SUPERSIGN_API}/v2/envelopes/${envelopeId}/signed-document`,
+      ];
 
-      if (envelopeRes.ok) {
-        const envelopeData = await envelopeRes.json();
-        const signedFileKey = envelopeData.signedFileKey || envelopeData.signed_file_key;
+      let pdfBuffer: Uint8Array | null = null;
 
-        if (signedFileKey) {
-          // Download the signed PDF
-          const pdfRes = await fetch(`${SUPERSIGN_API}/v2/envelopes/${envelopeId}/documents/signed`, {
+      for (const endpoint of downloadEndpoints) {
+        try {
+          logger.info("Trying to download signed PDF", { endpoint });
+          const pdfRes = await fetch(endpoint, {
+            headers: {
+              Authorization: `Bearer ${supersignToken}`,
+              "x-account-id": supersignAccountId,
+              Accept: "application/pdf",
+            },
+          });
+
+          if (pdfRes.ok) {
+            const contentType = pdfRes.headers.get("content-type") || "";
+            const buffer = new Uint8Array(await pdfRes.arrayBuffer());
+
+            // Verify we got a PDF (check magic bytes %PDF or content-type)
+            if (buffer.length > 100 && (contentType.includes("pdf") || (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46))) {
+              pdfBuffer = buffer;
+              logger.info("Signed PDF downloaded successfully", { endpoint, size: buffer.length });
+              break;
+            } else {
+              logger.warn("Response was not a PDF", { endpoint, contentType, size: buffer.length });
+            }
+          } else {
+            logger.warn("Download endpoint returned error", { endpoint, status: pdfRes.status });
+          }
+        } catch (dlErr) {
+          logger.warn("Download endpoint failed", { endpoint, error: String(dlErr) });
+        }
+      }
+
+      // Fallback: try fetching envelope details for a download URL
+      if (!pdfBuffer) {
+        try {
+          logger.info("Trying envelope details for download URL");
+          const envelopeRes = await fetch(`${SUPERSIGN_API}/v2/envelopes/${envelopeId}`, {
             headers: {
               Authorization: `Bearer ${supersignToken}`,
               "x-account-id": supersignAccountId,
             },
           });
 
-          if (pdfRes.ok) {
-            const pdfBuffer = new Uint8Array(await pdfRes.arrayBuffer());
-            const storagePath = `documents/${sig.clinic_id}/signed_${Date.now()}.pdf`;
+          if (envelopeRes.ok) {
+            const envelopeData = await envelopeRes.json();
+            logger.info("Envelope details fetched", {
+              status: envelopeData.status,
+              hasSignedFileKey: !!(envelopeData.signedFileKey || envelopeData.signed_file_key),
+              hasSignedFileUrl: !!(envelopeData.signedFileUrl || envelopeData.signed_file_url || envelopeData.signedDocumentUrl),
+              keys: Object.keys(envelopeData).join(","),
+            });
 
-            // Upload signed PDF to storage
-            const { error: uploadErr } = await supabase.storage
-              .from("exams")
-              .upload(storagePath, pdfBuffer, {
-                contentType: "application/pdf",
-                upsert: true,
-              });
+            // Try direct download URL from envelope data
+            const downloadUrl = envelopeData.signedFileUrl || envelopeData.signed_file_url
+              || envelopeData.signedDocumentUrl || envelopeData.signed_document_url;
 
-            if (!uploadErr) {
-              // Store the storage path (not a signed URL) — frontend generates signed URLs on demand
-              signedPdfUrl = storagePath;
-
-              // Create exam record
-              const { data: exam, error: examError } = await supabase
-                .from("exams")
-                .insert({
-                  patient_id: sig.patient_id,
-                  clinic_id: sig.clinic_id,
-                  name: `${sig.title} (Assinado)`,
-                  order_date: new Date().toISOString().split("T")[0],
-                  file_urls: [signedPdfUrl],
-                  file_type: "signed_document",
-                })
-                .select("id")
-                .single();
-
-              if (!examError && exam) {
-                examId = exam.id;
-              } else {
-                logger.warn("Failed to create exam record", { error: examError?.message });
+            if (downloadUrl) {
+              const pdfRes = await fetch(downloadUrl);
+              if (pdfRes.ok) {
+                const buffer = new Uint8Array(await pdfRes.arrayBuffer());
+                if (buffer.length > 100) {
+                  pdfBuffer = buffer;
+                  logger.info("Signed PDF downloaded from envelope URL", { size: buffer.length });
+                }
               }
-            } else {
-              logger.warn("Failed to upload signed PDF", { error: uploadErr.message });
             }
           }
+        } catch (envErr) {
+          logger.warn("Failed to fetch envelope details", { error: String(envErr) });
         }
+      }
+
+      if (pdfBuffer) {
+        const storagePath = `documents/${sig.clinic_id}/signed_${Date.now()}.pdf`;
+
+        // Upload signed PDF to storage
+        const { error: uploadErr } = await supabase.storage
+          .from("exams")
+          .upload(storagePath, pdfBuffer, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+
+        if (!uploadErr) {
+          signedPdfUrl = storagePath;
+
+          // Create exam record
+          const { data: exam, error: examError } = await supabase
+            .from("exams")
+            .insert({
+              patient_id: sig.patient_id,
+              clinic_id: sig.clinic_id,
+              name: `${sig.title} (Assinado)`,
+              order_date: new Date().toISOString().split("T")[0],
+              file_urls: [signedPdfUrl],
+              file_type: "signed_document",
+            })
+            .select("id")
+            .single();
+
+          if (!examError && exam) {
+            examId = exam.id;
+          } else {
+            logger.warn("Failed to create exam record", { error: examError?.message });
+          }
+        } else {
+          logger.warn("Failed to upload signed PDF", { error: uploadErr.message });
+        }
+      } else {
+        logger.warn("Could not download signed PDF from any endpoint", { envelopeId });
       }
     }
 
@@ -330,7 +387,14 @@ serve(async (req: Request) => {
             const dentistName = esc(dentist.full_name || "Doutor(a)");
             const patientName = esc(patient?.name || "Paciente");
             const docTitle = esc(sig.title || "Documento");
-            const downloadUrl = signedPdfUrl || "";
+            // Generate a long-lived signed URL for the email download link
+            let downloadUrl = "";
+            if (signedPdfUrl) {
+              const { data: dlUrlData } = await supabase.storage
+                .from("exams")
+                .createSignedUrl(signedPdfUrl, 60 * 60 * 24 * 30); // 30 days
+              downloadUrl = dlUrlData?.signedUrl || "";
+            }
 
             await fetch("https://api.resend.com/emails", {
               method: "POST",
