@@ -84,7 +84,7 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string, letterheadUrl?: string, paperSize?: { widthMm: number; heightMm: number }): Promise<Blob> {
+    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string, letterheadUrl?: string, paperSize?: { widthMm: number; heightMm: number }, dentistCRO?: string): Promise<Blob> {
         const { default: jsPDF } = await import('jspdf');
 
         const doc = new jsPDF({
@@ -170,6 +170,14 @@ export const documentTemplatesService = {
             doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
             y += 5;
             doc.text(signerName, pageWidth / 2, y, { align: 'center' });
+            if (dentistCRO) {
+                y += 5;
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text(`CRO ${dentistCRO}`, pageWidth / 2, y, { align: 'center' });
+                doc.setTextColor(0);
+                doc.setFontSize(10);
+            }
         } else {
             const leftCenter = pageWidth / 4;
             const rightCenter = (pageWidth * 3) / 4;
@@ -178,6 +186,14 @@ export const documentTemplatesService = {
             y += 5;
             doc.text(patientName, leftCenter, y, { align: 'center' });
             doc.text(signerName, rightCenter, y, { align: 'center' });
+            if (dentistCRO) {
+                y += 5;
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text(`CRO ${dentistCRO}`, rightCenter, y, { align: 'center' });
+                doc.setTextColor(0);
+                doc.setFontSize(10);
+            }
         }
 
         const pdfOutput = doc.output('arraybuffer');
@@ -188,8 +204,9 @@ export const documentTemplatesService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Get dentist name for signature
+        // Get dentist name and CRO for signature
         let dentistName: string | undefined;
+        let dentistCRO: string | undefined;
         const nameLower = name.toLowerCase();
         const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
             || nameLower.includes('autoriza');
@@ -197,13 +214,16 @@ export const documentTemplatesService = {
         if (!isConsentForm) {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('full_name, gender')
+                .select('full_name, gender, cro')
                 .eq('id', user.id)
                 .maybeSingle() as any;
 
             if (profile && profile.full_name) {
                 const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
                 dentistName = `${prefix} ${profile.full_name}`;
+            }
+            if (profile?.cro) {
+                dentistCRO = profile.cro;
             }
         }
 
@@ -217,7 +237,7 @@ export const documentTemplatesService = {
         if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
         const clinicId = clinicUser.clinic_id as string;
 
-        const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName);
+        const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName, undefined, undefined, dentistCRO);
 
         // Path must start with clinicId/ for RLS policy
         const fileName = `${clinicId}/doc_${patientId}_${Date.now()}.pdf`;

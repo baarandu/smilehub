@@ -601,6 +601,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             return;
         }
 
+        // Open window SYNCHRONOUSLY before any async work — Safari blocks popups otherwise
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast({ title: 'Popup bloqueado pelo navegador. Permita popups para este site.', variant: 'destructive' });
+            return;
+        }
+        // Show a loading state while we prepare the document
+        printWindow.document.write('<html><head><title>Carregando...</title></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666;"><p>Preparando documento...</p></body></html>');
+
         const patient = patients.find(p => p.id === selectedPatientId);
         const templateName = selectedTemplate?.name || '';
         const nameLower = templateName.toLowerCase();
@@ -682,6 +691,18 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         }
                     }` : '';
 
+        const documentContent = (() => {
+            let content = editableContent;
+            if (isMinorAuth) {
+                content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '');
+            }
+            if (isConsentForm) {
+                content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
+                content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
+            }
+            return content;
+        })();
+
         const html = `
             <!DOCTYPE html>
             <html>
@@ -735,31 +756,19 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             </head>
             <body>
                 <h1>${templateName}</h1>
-                <div class="content">${(() => {
-                    let content = editableContent;
-                    if (isMinorAuth) {
-                        content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '');
-                    }
-                    if (isConsentForm) {
-                        content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
-                        content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
-                    }
-                    return content;
-                })()}</div>
+                <div class="content">${documentContent}</div>
                 ${signatureHtml}
             </body>
             </html>
         `;
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            const parsed = new DOMParser().parseFromString(html, 'text/html');
-            printWindow.document.replaceChild(
-                printWindow.document.importNode(parsed.documentElement, true),
-                printWindow.document.documentElement
-            );
-            printWindow.print();
-        }
+        // Write HTML content and trigger print after load (Safari needs onload)
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.onload = () => printWindow.print();
+        // Fallback for browsers that fire load synchronously or miss the event
+        setTimeout(() => { try { printWindow.print(); } catch (_) {} }, 500);
     };
 
     const handleSaveToExams = async () => {
@@ -810,8 +819,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         try {
             setIsCreatingSignature(true);
 
-            // Get dentist name for PDF
+            // Get dentist name and CRO for PDF
             let dentistName: string | undefined;
+            let dentistCRO: string | undefined;
             const nameLower = selectedTemplate.name.toLowerCase();
             const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
             if (!isConsentForm) {
@@ -819,12 +829,15 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 if (user) {
                     const { data: profile } = await supabase
                         .from('profiles')
-                        .select('full_name, gender')
+                        .select('full_name, gender, cro')
                         .eq('id', user.id)
                         .maybeSingle() as any;
                     if (profile?.full_name) {
                         const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
                         dentistName = `${prefix} ${profile.full_name}`;
+                    }
+                    if (profile?.cro) {
+                        dentistCRO = profile.cro;
                     }
                 }
             }
@@ -836,7 +849,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 editableContent,
                 dentistName,
                 useLetterhead ? letterheadUrl ?? undefined : undefined,
-                useLetterhead ? { widthMm: paperWidthMm, heightMm: paperHeightMm } : undefined
+                useLetterhead ? { widthMm: paperWidthMm, heightMm: paperHeightMm } : undefined,
+                dentistCRO
             );
 
             // Upload PDF to storage first (avoids large base64 in request body)
