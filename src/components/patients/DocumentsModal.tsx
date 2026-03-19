@@ -11,7 +11,7 @@ import { documentTemplatesService } from '@/services/documentTemplates';
 import { getPatients } from '@/services/patients';
 import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, Patient } from '@/types/database';
-import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, Save, PenTool, AlertCircle, Upload, Image, X, Eye, EyeOff } from 'lucide-react';
+import { FileText, Plus, Pencil, Trash2, FileDown, ArrowLeft, Loader2, Info, PenTool, AlertCircle, Upload, Image, X, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useCreateSignature } from '@/hooks/useDigitalSignatures';
@@ -322,7 +322,6 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const [selectedPatientId, setSelectedPatientId] = useState('');
     const [documentDate, setDocumentDate] = useState(new Date().toISOString().split('T')[0]);
     const [editableContent, setEditableContent] = useState('');
-    const [isSavingExam, setIsSavingExam] = useState(false);
     const [isSavingAsTemplate, setIsSavingAsTemplate] = useState(false);
 
     // Letterhead
@@ -769,29 +768,29 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         printWindow.onload = () => printWindow.print();
         // Fallback for browsers that fire load synchronously or miss the event
         setTimeout(() => { try { printWindow.print(); } catch (_) {} }, 500);
-    };
 
-    const handleSaveToExams = async () => {
-        if (!editableContent || !selectedPatientId || !selectedTemplate) {
-            toast({ title: 'Dados insuficientes', variant: 'destructive' });
-            return;
-        }
-
-        try {
-            setIsSavingExam(true);
-            const patient = patients.find(p => p.id === selectedPatientId);
-            await documentTemplatesService.saveAsExam(
-                selectedPatientId,
-                patient?.name || 'Paciente',
-                selectedTemplate.name,
-                editableContent
-            );
-            toast({ title: 'Documento salvo nos exames do paciente!' });
-        } catch (error) {
-            console.error('Error saving to exams:', error);
-            toast({ title: 'Erro ao salvar documento', variant: 'destructive' });
-        } finally {
-            setIsSavingExam(false);
+        // Ask dentist if they want to save to patient exams
+        if (selectedPatientId && selectedTemplate) {
+            const shouldSave = await confirm({
+                title: 'Salvar documento',
+                description: 'Deseja salvar este documento nos exames do paciente?',
+                confirmLabel: 'Salvar',
+                cancelLabel: 'Não',
+            });
+            if (shouldSave) {
+                const patientObj = patients.find(p => p.id === selectedPatientId);
+                documentTemplatesService.saveAsExam(
+                    selectedPatientId,
+                    patientObj?.name || 'Paciente',
+                    selectedTemplate.name,
+                    editableContent
+                ).then(() => {
+                    toast({ title: 'Documento salvo nos exames do paciente' });
+                }).catch((err) => {
+                    console.error('Error saving to exams:', err);
+                    toast({ title: 'Erro ao salvar nos exames', variant: 'destructive' });
+                });
+            }
         }
     };
 
@@ -867,6 +866,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 toast({ title: `Erro ao salvar PDF: ${uploadError.message}`, variant: 'destructive' });
                 return;
             }
+
+            // Note: signed PDF will be saved to exams automatically by the
+            // supersign-webhook when the envelope is completed
 
             // Create envelope (send only storage path, not the full PDF)
             const result = await createSignature.mutateAsync({
@@ -1372,20 +1374,10 @@ Nesta data {{data}}, declaro que...`}
                                     Voltar
                                 </Button>
                                 {!digitalSignEnabled && (
-                                    <>
-                                        <Button onClick={handleSaveToExams} disabled={!editableContent || isSavingExam} variant="outline">
-                                            {isSavingExam ? (
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            ) : (
-                                                <Save className="w-4 h-4 mr-2" />
-                                            )}
-                                            Salvar em Exames
-                                        </Button>
-                                        <Button onClick={handleDownloadPDF} disabled={!editableContent}>
-                                            <FileDown className="w-4 h-4 mr-2" />
-                                            Imprimir / PDF
-                                        </Button>
-                                    </>
+                                    <Button onClick={handleDownloadPDF} disabled={!editableContent}>
+                                        <FileDown className="w-4 h-4 mr-2" />
+                                        Imprimir / PDF
+                                    </Button>
                                 )}
                                 {digitalSignEnabled && (
                                     <Button

@@ -5,6 +5,8 @@ import { Loader2, RefreshCw, PenTool, ExternalLink, FileSignature } from 'lucide
 import { usePatientSignatures, useSigningUrl } from '@/hooks/useDigitalSignatures';
 import { SignatureStatusBadge, SignatoryStatusLabel } from './SignatureStatusBadge';
 import { SigningModal } from './SigningModal';
+import { getAccessibleUrl } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { DigitalSignature } from '@/types/digitalSignature';
 
 interface SignaturesPanelProps {
@@ -45,6 +47,27 @@ export function SignaturesPanel({ patientId }: SignaturesPanelProps) {
     }
   };
 
+  const handleOpenPdf = async (storagePath: string) => {
+    const newWindow = window.open('', '_blank');
+    if (!newWindow) {
+      toast.error('Popup bloqueado pelo navegador');
+      return;
+    }
+    newWindow.document.title = 'Carregando documento...';
+    try {
+      const signedUrl = await getAccessibleUrl(storagePath);
+      if (signedUrl) {
+        newWindow.location.href = signedUrl;
+      } else {
+        newWindow.close();
+        toast.error('Erro ao abrir documento');
+      }
+    } catch {
+      newWindow.close();
+      toast.error('Erro ao abrir documento');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -70,64 +93,74 @@ export function SignaturesPanel({ patientId }: SignaturesPanelProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {signatures.map((sig) => (
-            <div
-              key={sig.id}
-              className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{sig.title}</p>
-                  <SignatureStatusBadge status={sig.status} />
-                </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {formatDate(sig.created_at)}
-                  </span>
-                  <SignatoryStatusLabel
-                    status={sig.dentist_status}
-                    label="Dentista"
-                  />
-                  {sig.patient_status && (
+          {signatures.map((sig) => {
+            const pdfUrl = sig.signed_pdf_url || sig.original_pdf_url;
+            const canSign = sig.dentist_status !== 'SIGNED' && sig.status !== 'COMPLETED' && sig.status !== 'ERROR' && sig.status !== 'EXPIRED' && sig.status !== 'VOIDED';
+
+            return (
+              <div
+                key={sig.id}
+                className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 ${pdfUrl || canSign ? 'cursor-pointer' : ''}`}
+                onClick={() => {
+                  if (pdfUrl) {
+                    handleOpenPdf(pdfUrl);
+                  } else if (canSign) {
+                    handleSign(sig);
+                  }
+                }}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{sig.title}</p>
+                    <SignatureStatusBadge status={sig.status} />
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(sig.created_at)}
+                    </span>
                     <SignatoryStatusLabel
-                      status={sig.patient_status}
-                      label="Paciente"
+                      status={sig.dentist_status}
+                      label="Dentista"
                     />
+                    {sig.patient_status && (
+                      <SignatoryStatusLabel
+                        status={sig.patient_status}
+                        label="Paciente"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 ml-2">
+                  {pdfUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleOpenPdf(pdfUrl); }}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Ver PDF
+                    </Button>
+                  )}
+                  {canSign && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); handleSign(sig); }}
+                      disabled={signingUrl.isPending}
+                    >
+                      {signingUrl.isPending ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <PenTool className="w-3 h-3 mr-1" />
+                      )}
+                      Assinar
+                    </Button>
                   )}
                 </div>
               </div>
-
-              <div className="flex gap-2 ml-2">
-                {sig.status === 'COMPLETED' && sig.signed_pdf_url && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a href={sig.signed_pdf_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      Ver
-                    </a>
-                  </Button>
-                )}
-                {sig.dentist_status !== 'SIGNED' && sig.status !== 'COMPLETED' && sig.status !== 'ERROR' && sig.status !== 'EXPIRED' && sig.status !== 'VOIDED' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleSign(sig)}
-                    disabled={signingUrl.isPending}
-                  >
-                    {signingUrl.isPending ? (
-                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    ) : (
-                      <PenTool className="w-3 h-3 mr-1" />
-                    )}
-                    Assinar
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

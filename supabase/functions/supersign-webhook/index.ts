@@ -250,17 +250,15 @@ serve(async (req: Request) => {
               });
 
             if (!uploadErr) {
-              // Bucket is private — store the path and generate a signed URL
-              const { data: urlData } = await supabase.storage
-                .from("exams")
-                .createSignedUrl(storagePath, 60 * 60 * 24 * 7); // 7-day expiry
-              signedPdfUrl = urlData?.signedUrl || storagePath;
+              // Store the storage path (not a signed URL) — frontend generates signed URLs on demand
+              signedPdfUrl = storagePath;
 
               // Create exam record
               const { data: exam, error: examError } = await supabase
                 .from("exams")
                 .insert({
                   patient_id: sig.patient_id,
+                  clinic_id: sig.clinic_id,
                   name: `${sig.title} (Assinado)`,
                   order_date: new Date().toISOString().split("T")[0],
                   file_urls: [signedPdfUrl],

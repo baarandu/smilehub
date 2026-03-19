@@ -298,7 +298,7 @@ async function handleCreate(
       title,
       status: envelopeData.status || "DRAFT",
       document_template_id: documentTemplateId,
-      original_pdf_url: pdfUrl,
+      original_pdf_url: pdfStoragePath,
       dentist_signatory_id: dentistSig.id || null,
       dentist_status: dentistSig.status || "PENDING",
       dentist_signature_token: dentistSig.signatureToken || null,
