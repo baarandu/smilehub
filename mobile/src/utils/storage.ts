@@ -3,6 +3,26 @@ import { supabase } from '../lib/supabase';
 export async function getAccessibleUrl(url: string | null): Promise<string | null> {
     if (!url) return null;
 
+    // Storage path (not a full URL) — e.g. "clinicId/signed_xxx.pdf"
+    if (!url.startsWith('http') && !url.startsWith('//')) {
+        try {
+            const { data, error } = await supabase
+                .storage
+                .from('exams')
+                .createSignedUrl(url, 3600);
+
+            if (error || !data?.signedUrl) {
+                console.warn('Error creating signed URL from path:', error);
+                return null;
+            }
+
+            return data.signedUrl;
+        } catch (e) {
+            console.error('Error generating signed URL:', e);
+            return null;
+        }
+    }
+
     // Check if it's a Supabase Storage URL
     if (url.includes('/storage/v1/object/public/')) {
         try {
