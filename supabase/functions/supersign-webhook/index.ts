@@ -332,7 +332,7 @@ serve(async (req: Request) => {
       }
 
       if (pdfBuffer) {
-        const storagePath = `documents/${sig.clinic_id}/signed_${Date.now()}.pdf`;
+        const storagePath = `${sig.clinic_id}/signed_${Date.now()}.pdf`;
 
         // Upload signed PDF to storage
         const { error: uploadErr } = await supabase.storage
