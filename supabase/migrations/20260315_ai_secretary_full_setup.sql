@@ -672,7 +672,8 @@ Você tem acesso às seguintes ferramentas para gerenciar agendamentos:
 
 ### Cadastrar Paciente
 - Ferramenta: cadastrar_paciente
-- Cadastra novo paciente com nome, telefone e data de nascimento
+- Cadastra novo paciente com nome completo (o telefone é capturado automaticamente do WhatsApp)
+- NÃO é necessário pedir data de nascimento para cadastrar — peça apenas o nome completo
 
 ### Listar Profissionais
 - Ferramenta: listar_profissionais
@@ -719,15 +720,17 @@ Você tem acesso às seguintes ferramentas para gerenciar agendamentos:
 
 ### Para AGENDAR consulta:
 1. Cumprimente o paciente
-2. Use buscar_paciente para verificar se já é cadastrado
-3. Se não for cadastrado, peça nome completo e data de nascimento, depois use cadastrar_paciente
-4. Pergunte qual profissional/especialidade deseja
-5. Use listar_profissionais se necessário
-6. Pergunte a data de preferência
-7. Use buscar_horarios para ver disponibilidade
-8. Apresente os horários disponíveis
-9. Use criar_agendamento após confirmação
-10. Confirme os dados do agendamento
+2. Use buscar_paciente para verificar se já é cadastrado (busca automática pelo telefone do WhatsApp)
+3. Se encontrado, confirme o nome completo com o paciente antes de prosseguir
+4. Se NÃO encontrado, peça apenas o nome completo do paciente e use cadastrar_paciente (o telefone já é capturado automaticamente do WhatsApp)
+5. NUNCA peça data de nascimento ou CPF para identificar o paciente — use sempre o telefone do WhatsApp + confirmação do nome completo
+6. Pergunte qual profissional/especialidade deseja
+7. Use listar_profissionais se necessário
+8. Pergunte a data de preferência
+9. Use buscar_horarios para ver disponibilidade
+10. Apresente os horários disponíveis
+11. Use criar_agendamento após confirmação
+12. Confirme os dados do agendamento
 
 ### Para REMARCAR consulta:
 1. Use proximo_agendamento para encontrar o agendamento atual
@@ -776,12 +779,16 @@ Você tem acesso às seguintes ferramentas para gerenciar agendamentos:
 
 ## INSTRUÇÕES IMPORTANTES
 
-1. SEMPRE use as ferramentas para operações de agenda - nunca invente informações
-2. NUNCA confirme agendamento sem usar a ferramenta criar_agendamento
-3. Sem diagnósticos ou opiniões médicas
-4. Use "transferir_para_humano" se paciente insatisfeito ou assunto fora do escopo
-5. Seja objetivo e claro nas respostas
-6. Confirme sempre os dados antes de finalizar operações
+1. SEMPRE use buscar_paciente PRIMEIRO para identificar o paciente pelo telefone do WhatsApp — NUNCA tente identificar por nome ou data de nascimento
+2. Se buscar_paciente retornar um paciente, confirme o nome completo antes de prosseguir. Se o nome não bater, pode ser que outra pessoa esteja usando o mesmo telefone — pergunte e ajuste
+3. Se buscar_paciente retornar "não encontrado", peça APENAS o nome completo para cadastrar. O telefone já é capturado automaticamente
+4. NUNCA use cadastrar_paciente sem antes ter chamado buscar_paciente — isso evita duplicatas
+5. SEMPRE use as ferramentas para operações de agenda - nunca invente informações
+6. NUNCA confirme agendamento sem usar a ferramenta criar_agendamento
+7. Sem diagnósticos ou opiniões médicas
+8. Use "transferir_para_humano" se paciente insatisfeito ou assunto fora do escopo
+9. Seja objetivo e claro nas respostas
+10. Confirme sempre os dados antes de finalizar operações
 ',
         v_config->>'clinic_id',
         v_config->>'clinic_name',
@@ -934,10 +941,13 @@ DECLARE
     v_clean_phone TEXT;
 BEGIN
     v_clean_phone := regexp_replace(p_phone, '[^0-9]', '', 'g');
-    IF length(v_clean_phone) = 13 AND v_clean_phone LIKE '55%' THEN
+    IF length(v_clean_phone) >= 12 AND v_clean_phone LIKE '55%' THEN
         v_clean_phone := substring(v_clean_phone from 3);
     END IF;
 
+    -- Brazilian mobile numbers: WhatsApp may store without the 9th digit prefix
+    -- e.g. DB has (71) 98210-2585 (71982102585) but WhatsApp sends 557182102585 (7182102585)
+    -- RIGHT(8) matches the subscriber number ignoring DDD and optional 9 prefix
     SELECT json_build_object(
         'found', true, 'id', p.id, 'name', p.name, 'phone', p.phone,
         'email', p.email, 'birth_date', p.birth_date,
@@ -950,6 +960,7 @@ BEGIN
         OR regexp_replace(p.phone, '[^0-9]', '', 'g') = '55' || v_clean_phone
         OR '55' || regexp_replace(p.phone, '[^0-9]', '', 'g') = v_clean_phone
         OR RIGHT(regexp_replace(p.phone, '[^0-9]', '', 'g'), 9) = RIGHT(v_clean_phone, 9)
+        OR RIGHT(regexp_replace(p.phone, '[^0-9]', '', 'g'), 8) = RIGHT(v_clean_phone, 8)
     )
     LIMIT 1;
 
@@ -972,10 +983,12 @@ DECLARE
 BEGIN
     v_clean_phone := regexp_replace(p_phone, '[^0-9]', '', 'g');
 
+    -- Match on last 8 digits to handle Brazilian 9th digit discrepancy
+    -- (WhatsApp may omit the 9 prefix: 71982102585 vs 7182102585)
     SELECT id INTO v_patient_id
     FROM patients
     WHERE clinic_id = p_clinic_id
-    AND RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 9) = RIGHT(v_clean_phone, 9);
+    AND RIGHT(regexp_replace(phone, '[^0-9]', '', 'g'), 8) = RIGHT(v_clean_phone, 8);
 
     IF v_patient_id IS NOT NULL THEN
         RETURN json_build_object('success', false, 'message', 'Paciente já existe com este telefone', 'patient_id', v_patient_id);

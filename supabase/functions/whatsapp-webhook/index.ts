@@ -346,6 +346,16 @@ serve(async (req) => {
   try {
     const payload = await req.json();
 
+    // DEBUG: Log every single request to trace messages.upsert
+    log.info("RAW_PAYLOAD", {
+      event: payload.event,
+      object: payload.object,
+      instance: payload.instance,
+      hasData: !!payload.data,
+      useMeta: USE_META_API,
+      keys: Object.keys(payload).join(","),
+    });
+
     // ── Detect payload format: Meta Cloud API vs Evolution API ─────
     let instanceName: string;
     let messageId: string;
@@ -401,8 +411,9 @@ serve(async (req) => {
     } else {
       // ── Evolution API payload format (legacy) ─────────────────────
 
-      // Validate API key for Evolution
-      const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey");
+      // Validate API key for Evolution (check header, body payload, or URL query param)
+      // Evolution API v2 sends apikey in the request body, not headers
+      const apiKey = payload.apikey || req.headers.get("x-api-key") || req.headers.get("apikey");
       const expectedKey = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY");
 
       if (!expectedKey || !apiKey) {
@@ -410,10 +421,18 @@ serve(async (req) => {
         return new Response("Unauthorized", { status: 401 });
       }
 
+      // Timing-safe comparison via HMAC (crypto.subtle.timingSafeEqual not available in Deno)
       const encoder = new TextEncoder();
-      const a = encoder.encode(apiKey);
-      const b = encoder.encode(expectedKey);
-      if (a.byteLength !== b.byteLength || !crypto.subtle.timingSafeEqual(a, b)) {
+      const hmacKey = await crypto.subtle.importKey(
+        "raw", encoder.encode("webhook-key-compare"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+      );
+      const sigA = await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(apiKey));
+      const sigB = await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(expectedKey));
+      const arrA = new Uint8Array(sigA);
+      const arrB = new Uint8Array(sigB);
+      let mismatch = arrA.byteLength ^ arrB.byteLength;
+      for (let i = 0; i < arrA.byteLength; i++) mismatch |= arrA[i] ^ arrB[i];
+      if (mismatch !== 0) {
         log.warn("Invalid API key");
         return new Response("Unauthorized", { status: 401 });
       }

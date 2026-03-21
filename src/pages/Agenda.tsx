@@ -67,6 +67,15 @@ export default function Agenda() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [teamModalOpen, setTeamModalOpen] = useState(false);
 
+  // Open settings modal if navigated with ?openSettings=true
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('openSettings') === 'true') {
+      setSettingsModalOpen(true);
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search]);
+
   const handleRequestAddDentist = useCallback(() => {
     setDialogOpen(false);
     setSettingsModalOpen(false);

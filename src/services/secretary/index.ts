@@ -14,6 +14,8 @@ export type {
 } from './types';
 
 // Constants
+export type { BehaviorPresetId, BehaviorPresetConfig } from './constants';
+
 export {
     PREDEFINED_MESSAGE_TYPES,
     DEFAULT_BEHAVIOR_SETTINGS,
@@ -24,6 +26,8 @@ export {
     DAY_NAMES_FULL,
     DEFAULT_SETTINGS,
     DEFAULT_BEHAVIOR_PROMPT,
+    BEHAVIOR_PRESETS,
+    detectActivePreset,
 } from './constants';
 
 // Settings CRUD

@@ -7,7 +7,7 @@ export const TOOLS = [
   {
     name: "buscar_paciente",
     description:
-      "Busca um paciente pelo número de telefone. Retorna dados do paciente se encontrado. Use SEMPRE no início da conversa para identificar o paciente.",
+      "Busca um paciente pelo número de telefone do WhatsApp. Retorna dados do paciente se encontrado. OBRIGATÓRIO: use SEMPRE no início da conversa ANTES de qualquer outra ação. A identificação é feita pelo telefone — NÃO peça nome ou data de nascimento para identificar.",
     parameters: {
       type: "object",
       properties: {},
@@ -17,7 +17,7 @@ export const TOOLS = [
   {
     name: "cadastrar_paciente",
     description:
-      "Cadastra um novo paciente na clínica. Use quando o paciente não for encontrado pela busca por telefone e fornecer nome e data de nascimento.",
+      "Cadastra um novo paciente na clínica. Use SOMENTE quando buscar_paciente retornar 'não encontrado'. Peça apenas o nome completo — o telefone é capturado automaticamente do WhatsApp. Data de nascimento e email são opcionais, não é necessário perguntar.",
     parameters: {
       type: "object",
       properties: {
@@ -27,11 +27,11 @@ export const TOOLS = [
         },
         birth_date: {
           type: "string",
-          description: "Data de nascimento no formato YYYY-MM-DD.",
+          description: "Data de nascimento no formato YYYY-MM-DD (opcional, não é necessário perguntar).",
         },
         email: {
           type: "string",
-          description: "E-mail do paciente (opcional).",
+          description: "E-mail do paciente (opcional, não é necessário perguntar).",
         },
       },
       required: ["name"],

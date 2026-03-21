@@ -36,6 +36,7 @@ export function WhatsAppSettings() {
   const [isCreating, setIsCreating] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [errorDetail, setErrorDetail] = useState<string>('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Test message
@@ -51,14 +52,17 @@ export function WhatsAppSettings() {
       setInstanceExists(result.instanceExists ?? false);
       setPhoneNumber(result.phoneNumber || '');
       setVerifiedName(result.verifiedName || '');
+      setErrorDetail(result.message || '');
 
       // If connected, clear QR code
       if (result.status === 'connected') {
         setQrCode(null);
+        setErrorDetail('');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking WhatsApp status:', error);
       setStatus('api_offline');
+      setErrorDetail(error.message || 'Erro de conexão com o servidor');
     } finally {
       setLoading(false);
     }
@@ -259,6 +263,11 @@ export function WhatsAppSettings() {
             <p className="text-sm text-red-700">
               O servidor WhatsApp está temporariamente indisponível. Tente novamente em alguns minutos.
             </p>
+            {errorDetail && (
+              <p className="text-xs text-red-500 mt-1 font-mono bg-red-100 px-2 py-1 rounded">
+                {errorDetail}
+              </p>
+            )}
             <Button variant="outline" size="sm" className="mt-2" onClick={checkStatus}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Tentar novamente

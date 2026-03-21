@@ -109,6 +109,93 @@ export const EMOJI_OPTIONS = {
     no: { label: 'Não', description: 'Não usa emojis' },
 };
 
+// Behavior Presets
+export type BehaviorPresetId = 'natural' | 'rapida' | 'discreta' | 'custom';
+
+export interface BehaviorPresetConfig {
+  id: BehaviorPresetId;
+  label: string;
+  emoji: string;
+  description: string;
+  overrides: Partial<AISecretaryBehavior>;
+}
+
+export const BEHAVIOR_PRESETS: BehaviorPresetConfig[] = [
+  {
+    id: 'natural',
+    label: 'Natural',
+    emoji: '🤝',
+    description: 'Simula atendimento humano com delays, indicadores de digitação e reações',
+    overrides: {
+      send_typing_indicator: true,
+      send_recording_indicator: true,
+      mark_as_read: true,
+      react_to_messages: true,
+      response_cadence_enabled: true,
+      response_delay_min_ms: 2000,
+      response_delay_max_ms: 5000,
+      typing_speed_cpm: 300,
+      wait_for_complete_message: true,
+      wait_timeout_ms: 8000,
+      send_appointment_reminders: true,
+      reminder_times: [24, 2],
+    },
+  },
+  {
+    id: 'rapida',
+    label: 'Rápida',
+    emoji: '⚡',
+    description: 'Respostas instantâneas, sem delays nem indicadores — máxima eficiência',
+    overrides: {
+      send_typing_indicator: false,
+      send_recording_indicator: false,
+      mark_as_read: true,
+      react_to_messages: false,
+      response_cadence_enabled: false,
+      response_delay_min_ms: 0,
+      response_delay_max_ms: 0,
+      wait_for_complete_message: false,
+      send_appointment_reminders: true,
+      reminder_times: [24],
+    },
+  },
+  {
+    id: 'discreta',
+    label: 'Discreta',
+    emoji: '🔇',
+    description: 'Sem confirmações de leitura, sem digitação, sem reações — perfil baixo',
+    overrides: {
+      send_typing_indicator: false,
+      send_recording_indicator: false,
+      mark_as_read: false,
+      react_to_messages: false,
+      response_cadence_enabled: true,
+      response_delay_min_ms: 3000,
+      response_delay_max_ms: 8000,
+      typing_speed_cpm: 200,
+      wait_for_complete_message: true,
+      wait_timeout_ms: 10000,
+      send_appointment_reminders: true,
+      reminder_times: [24, 2],
+    },
+  },
+];
+
+/** Check if current behavior matches a preset */
+export function detectActivePreset(behavior: AISecretaryBehavior): BehaviorPresetId {
+  for (const preset of BEHAVIOR_PRESETS) {
+    const matches = Object.entries(preset.overrides).every(([key, value]) => {
+      const current = (behavior as any)[key];
+      if (Array.isArray(value) && Array.isArray(current)) {
+        return JSON.stringify(value) === JSON.stringify(current);
+      }
+      return current === value;
+    });
+    if (matches) return preset.id;
+  }
+  return 'custom';
+}
+
 // Day names in Portuguese
 export const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 export const DAY_NAMES_FULL = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
