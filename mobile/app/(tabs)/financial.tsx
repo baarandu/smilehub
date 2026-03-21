@@ -7,6 +7,7 @@ import type { FinancialTransaction, FinancialTransactionWithPatient } from '../.
 import { IncomeTab } from '../../src/components/financial/IncomeTab';
 import { ExpensesTab } from '../../src/components/financial/ExpensesTab';
 import { ClosureTab } from '../../src/components/financial/ClosureTab';
+import { ReceivablesTab } from '../../src/components/financial/ReceivablesTab';
 import { NewExpenseModal } from '../../src/components/financial/NewExpenseModal';
 
 const MONTHS = [
@@ -15,7 +16,7 @@ const MONTHS = [
 ];
 
 type PeriodType = 'monthly' | 'yearly';
-type TabType = 'income' | 'expenses' | 'closure';
+type TabType = 'income' | 'expenses' | 'receivables' | 'closure';
 
 export default function Financial() {
     const [transactions, setTransactions] = useState<FinancialTransactionWithPatient[]>([]);
@@ -216,7 +217,7 @@ export default function Financial() {
                                 borderBottomColor: activeTab === 'income' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'income' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Receitas</Text>
+                            <Text className={`font-medium text-xs ${activeTab === 'income' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Receitas</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('expenses')}
@@ -228,7 +229,19 @@ export default function Financial() {
                                 borderBottomColor: activeTab === 'expenses' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'expenses' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Despesas</Text>
+                            <Text className={`font-medium text-xs ${activeTab === 'expenses' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Despesas</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => setActiveTab('receivables')}
+                            style={{
+                                flex: 1,
+                                paddingBottom: 12,
+                                alignItems: 'center',
+                                borderBottomWidth: 2,
+                                borderBottomColor: activeTab === 'receivables' ? '#b94a48' : 'transparent'
+                            }}
+                        >
+                            <Text className={`font-medium text-xs ${activeTab === 'receivables' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>A Receber</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={() => setActiveTab('closure')}
@@ -240,7 +253,7 @@ export default function Financial() {
                                 borderBottomColor: activeTab === 'closure' ? '#b94a48' : 'transparent'
                             }}
                         >
-                            <Text className={`font-medium ${activeTab === 'closure' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Fechamento</Text>
+                            <Text className={`font-medium text-xs ${activeTab === 'closure' ? 'text-[#a03f3d]' : 'text-gray-500'}`}>Fechamento</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -255,6 +268,7 @@ export default function Financial() {
 
                     {activeTab === 'income' && <IncomeTab transactions={transactions} loading={loading} onEdit={handleEditTransaction} onRefresh={loadData} refreshing={loading} />}
                     {activeTab === 'expenses' && <ExpensesTab transactions={transactions} loading={loading} onEdit={handleEditTransaction} onRefresh={loadData} refreshing={loading} />}
+                    {activeTab === 'receivables' && <ReceivablesTab loading={loading} onRefresh={loadData} refreshing={loading} />}
                     {activeTab === 'closure' && <ClosureTab transactions={transactions} loading={loading} onRefresh={loadData} refreshing={loading} />}
                 </View>
 
