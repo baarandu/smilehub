@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Download, X, Loader2 } from 'lucide-react';
@@ -11,6 +12,43 @@ interface PdfPreviewDialogProps {
     title?: string;
 }
 
+// Convert blob URL to data URL for Safari compatibility
+function usePdfDataUrl(blobUrl: string | null) {
+    const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!blobUrl) {
+            setDataUrl(null);
+            return;
+        }
+
+        // If already a data URL, use directly
+        if (blobUrl.startsWith('data:')) {
+            setDataUrl(blobUrl);
+            return;
+        }
+
+        let cancelled = false;
+        fetch(blobUrl)
+            .then(res => res.blob())
+            .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    if (!cancelled) setDataUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+            })
+            .catch(() => {
+                // Fallback: use blob URL directly (works in Chrome/Firefox)
+                if (!cancelled) setDataUrl(blobUrl);
+            });
+
+        return () => { cancelled = true; };
+    }, [blobUrl]);
+
+    return dataUrl;
+}
+
 export function PdfPreviewDialog({
     open,
     onClose,
@@ -19,6 +57,8 @@ export function PdfPreviewDialog({
     loading = false,
     title = "Pré-visualização do PDF"
 }: PdfPreviewDialogProps) {
+    const dataUrl = usePdfDataUrl(open ? pdfUrl : null);
+
     return (
         <Dialog open={open} onOpenChange={onClose}>
             <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
@@ -29,14 +69,14 @@ export function PdfPreviewDialog({
                 </DialogHeader>
 
                 <div className="flex-1 min-h-[60vh] bg-gray-100">
-                    {loading ? (
+                    {loading || (pdfUrl && !dataUrl) ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="w-8 h-8 animate-spin text-[#a03f3d]" />
                             <span className="ml-2 text-gray-600">Gerando pré-visualização...</span>
                         </div>
-                    ) : pdfUrl ? (
+                    ) : dataUrl ? (
                         <iframe
-                            src={pdfUrl}
+                            src={dataUrl}
                             className="w-full h-full min-h-[60vh] border-0"
                             title="PDF Preview"
                         />
