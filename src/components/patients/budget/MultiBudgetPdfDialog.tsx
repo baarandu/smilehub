@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Eye, Square, CheckSquare, Calendar, Banknote, ChevronDown, ChevronRight } from 'lucide-react';
+import { Eye, Square, CheckSquare, Calendar, Banknote, ChevronDown, ChevronRight } from 'lucide-react';
 import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
 import { profileService } from '@/services/profile';
@@ -225,14 +225,9 @@ export function MultiBudgetPdfDialog({ open, onClose, budgets, patientName }: Mu
         <>
             <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
                 <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
-                    <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
-                        <div>
-                            <h2 className="text-xl font-semibold text-gray-900">Gerar Orçamento em PDF</h2>
-                            <p className="text-gray-500 text-sm mt-1">Selecione os itens para incluir no PDF</p>
-                        </div>
-                        <button onClick={onClose} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
-                            <X className="w-5 h-5 text-gray-600" />
-                        </button>
+                    <div className="bg-white border-b px-6 py-4 flex-shrink-0">
+                        <h2 className="text-xl font-semibold text-gray-900">Gerar Orçamento em PDF</h2>
+                        <p className="text-gray-500 text-sm mt-1">Selecione os itens para incluir no PDF</p>
                     </div>
 
                     <ScrollArea className="flex-1 overflow-auto">
