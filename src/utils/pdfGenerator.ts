@@ -26,7 +26,9 @@ interface BudgetPDFData {
 function getStatusLabel(status: string): string {
     switch (status) {
         case 'approved': return 'Confirmado';
-        case 'paid': return 'Pago';
+        case 'paid':
+        case 'completed': return 'Pago';
+        case 'partially_paid': return 'Parcial';
         default: return 'Pendente';
     }
 }
@@ -224,7 +226,13 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(107, 114, 128);
-    doc.text(`Responsável: ${responsibleName}${croText}`, colX + 13, infoY + 15);
+    let responsibleText = `Responsável: ${responsibleName}${croText}`;
+    const maxResponsibleWidth = (pageWidth - margin) - (colX + 13) - 2;
+    while (doc.getTextWidth(responsibleText) > maxResponsibleWidth && responsibleText.length > 15) {
+        responsibleText = responsibleText.slice(0, -1);
+    }
+    if (responsibleText !== `Responsável: ${responsibleName}${croText}`) responsibleText += '...';
+    doc.text(responsibleText, colX + 13, infoY + 15);
 
     y += 45;
 
@@ -311,12 +319,15 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
         const badgeX = col3 - 5;
         const badgeY = y - 3;
 
-        if (status === 'paid') {
+        if (status === 'paid' || status === 'completed') {
             doc.setFillColor(219, 234, 254); // Blue bg
             doc.setTextColor(29, 78, 216); // Blue text
         } else if (status === 'approved') {
             doc.setFillColor(220, 252, 231); // Green bg
             doc.setTextColor(21, 128, 61); // Green text
+        } else if (status === 'partially_paid') {
+            doc.setFillColor(219, 234, 254); // Blue bg
+            doc.setTextColor(29, 78, 216); // Blue text
         } else {
             doc.setFillColor(254, 243, 199); // Yellow bg
             doc.setTextColor(180, 83, 9); // Yellow text
