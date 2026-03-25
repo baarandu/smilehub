@@ -228,7 +228,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                         {budgets.length >= 2 && (
                             <Button onClick={() => setConsolidatedPdfOpen(true)} size="sm" variant="outline" className="gap-2">
                                 <FileText className="w-4 h-4" />
-                                <span className="hidden sm:inline">PDF Consolidado</span>
+                                <span className="hidden sm:inline">Gerar Orçamento PDF</span>
                             </Button>
                         )}
                         <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-[#a03f3d] hover:bg-[#8b3634]">
