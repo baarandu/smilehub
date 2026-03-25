@@ -467,11 +467,24 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     y += 25;
 
     // ========== INFO CARD ==========
+    // Calculate info card height based on text wrapping
+    const colWidth = (pageWidth - 2 * margin - 20) / 3;
+    const nameMaxWidth = colWidth - 15;
+    const responsibleName = dentistName || clinicName || 'Dentista';
+    const responsibleFull = responsibleName + (dentistCRO ? ` — CRO ${dentistCRO}` : '');
+
+    // Pre-calculate wrapped lines to determine card height
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    const nameLines: string[] = doc.splitTextToSize(patientName, nameMaxWidth);
+    const respLines: string[] = doc.splitTextToSize(responsibleFull, nameMaxWidth);
+    const maxLines = Math.max(nameLines.length, respLines.length, 1);
+    const cardHeight = 18 + (maxLines * 5);
+
     doc.setFillColor(254, 242, 242);
-    drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, 25, 4);
+    drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, cardHeight, 4);
 
     const infoY = y + 8;
-    const colWidth = (pageWidth - 2 * margin - 20) / 3;
 
     // Column 1: Patient
     let colX = margin + 8;
@@ -490,14 +503,9 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.text('PACIENTE', colX + 13, infoY + 2);
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    let displayName = patientName;
-    const maxNameWidth = colWidth - 15;
-    while (doc.getTextWidth(displayName) > maxNameWidth && displayName.length > 0) {
-        displayName = displayName.slice(0, -1);
-    }
-    if (displayName !== patientName) displayName += '...';
-    doc.text(displayName, colX + 13, infoY + 9);
+    doc.setFontSize(10);
+    doc.setTextColor(31, 41, 55);
+    doc.text(nameLines, colX + 13, infoY + 8);
 
     // Column 2: Number of budgets
     colX = margin + 8 + colWidth + 5;
@@ -515,13 +523,11 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.setFontSize(8);
     doc.setTextColor(31, 41, 55);
     doc.text('ORÇAMENTOS', colX + 13, infoY + 2);
-    doc.setFontSize(11);
-    doc.text(`${budgets.length} plano${budgets.length > 1 ? 's' : ''} de tratamento`, colX + 13, infoY + 9);
+    doc.setFontSize(10);
+    doc.text(`${budgets.length} plano${budgets.length > 1 ? 's' : ''} de tratamento`, colX + 13, infoY + 8);
 
     // Column 3: Responsible
     colX = margin + 8 + (colWidth + 5) * 2;
-    const responsibleName = dentistName || clinicName || 'Dentista';
-    const responsibleFull = responsibleName + (dentistCRO ? ` — CRO ${dentistCRO}` : '');
 
     doc.setFillColor(255, 255, 255);
     drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
@@ -535,15 +541,10 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.setFontSize(8);
     doc.setTextColor(31, 41, 55);
     doc.text('RESPONSÁVEL', colX + 13, infoY + 2);
-    doc.setFontSize(11);
-    let respDisplay = responsibleFull;
-    while (doc.getTextWidth(respDisplay) > colWidth - 15 && respDisplay.length > 0) {
-        respDisplay = respDisplay.slice(0, -1);
-    }
-    if (respDisplay !== responsibleFull) respDisplay += '...';
-    doc.text(respDisplay, colX + 13, infoY + 9);
+    doc.setFontSize(10);
+    doc.text(respLines, colX + 13, infoY + 8);
 
-    y += 35;
+    y += cardHeight + 10;
 
     // ========== BUDGET SECTIONS ==========
     let grandTotal = 0;
@@ -709,10 +710,11 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(55, 65, 81);
-    doc.text('Valor Total', col4 - 70, y);
+    doc.text('Valor Total', pageWidth / 2, y, { align: 'center' });
+    y += 10;
     doc.setFontSize(18);
     doc.setTextColor(185, 74, 72);
-    doc.text(`R$ ${formatMoney(grandTotal)}`, col4, y, { align: 'right' });
+    doc.text(`R$ ${formatMoney(grandTotal)}`, pageWidth / 2, y, { align: 'center' });
 
     // ========== FOOTER ==========
     y += 20;
