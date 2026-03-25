@@ -136,6 +136,15 @@ export default function Alerts() {
                 <DialogTitle>Modelos de Mensagem</DialogTitle>
               </DialogHeader>
               <div className="space-y-6 py-4 max-h-[500px] overflow-y-auto pr-2">
+                {/* Variable Help */}
+                <div className="bg-muted/50 rounded-lg p-3 border border-border/50 text-xs text-muted-foreground space-y-1">
+                  <p className="font-semibold text-foreground text-sm mb-1.5">Variáveis disponíveis</p>
+                  <p><code className="bg-background px-1.5 py-0.5 rounded font-mono text-[11px]">{'{name}'}</code> — Nome do paciente (ou do responsável, se for criança)</p>
+                  <p><code className="bg-background px-1.5 py-0.5 rounded font-mono text-[11px]">{'{responsavel}'}</code> — Nome do pai, mãe ou responsável legal</p>
+                  <p><code className="bg-background px-1.5 py-0.5 rounded font-mono text-[11px]">{'{paciente}'}</code> — Nome do paciente (criança)</p>
+                  <p className="text-[10px] pt-1 italic">Para adultos, as 3 variáveis mostram o mesmo nome.</p>
+                </div>
+
                 {/* Custom Templates */}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -191,7 +200,7 @@ export default function Alerts() {
                             className="bg-background text-sm resize-none"
                             placeholder="Use {name}, {responsavel} ou {paciente}..."
                           />
-                          <p className="text-[10px] text-muted-foreground font-medium">Variáveis: {'{name}'} nome, {'{responsavel}'} pai/mãe, {'{paciente}'} criança</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">Use as variáveis acima para personalizar a mensagem.</p>
                         </div>
                       ))}
                     </div>
@@ -210,7 +219,7 @@ export default function Alerts() {
                       rows={3}
                       placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Use {'{name}'} para o nome. Para crianças: {'{responsavel}'} (pai/mãe) e {'{paciente}'} (criança).</p>
+                    <p className="text-xs text-muted-foreground">Use as variáveis acima para personalizar a mensagem.</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -225,7 +234,7 @@ export default function Alerts() {
                       rows={3}
                       placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Use {'{name}'} para o nome. Para crianças: {'{responsavel}'} (pai/mãe) e {'{paciente}'} (criança).</p>
+                    <p className="text-xs text-muted-foreground">Use as variáveis acima para personalizar a mensagem.</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -240,7 +249,7 @@ export default function Alerts() {
                       rows={3}
                       placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Confirmar consultas de amanhã. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
+                    <p className="text-xs text-muted-foreground">Confirmar consultas de amanhã.</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -255,7 +264,7 @@ export default function Alerts() {
                       rows={3}
                       placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Pós-consulta de ontem. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
+                    <p className="text-xs text-muted-foreground">Enviada após consulta de ontem.</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -270,7 +279,7 @@ export default function Alerts() {
                       rows={3}
                       placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Paciente faltou. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
+                    <p className="text-xs text-muted-foreground">Enviada quando paciente faltou.</p>
                   </div>
                 </div>
               </div>
