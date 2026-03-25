@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench, ExternalLink } from 'lucide-react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { BudgetViewDialog } from './BudgetViewDialog';
 import { NewBudgetDialog } from './NewBudgetDialog';
 import { isProstheticTreatment, hasLabTreatment, getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
 import { useProstheticBudgetItems } from '@/hooks/useProstheticBudgetItems';
+import { MultiBudgetPdfDialog } from './budget/MultiBudgetPdfDialog';
 
 
 interface BudgetsTabProps {
@@ -29,6 +30,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [editingBudget, setEditingBudget] = useState<BudgetWithItems | null>(null);
+    const [consolidatedPdfOpen, setConsolidatedPdfOpen] = useState(false);
 
     const prostheticItems = useProstheticBudgetItems(patientId);
 
@@ -223,6 +225,12 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {budgets.length >= 2 && (
+                            <Button onClick={() => setConsolidatedPdfOpen(true)} size="sm" variant="outline" className="gap-2">
+                                <FileText className="w-4 h-4" />
+                                <span className="hidden sm:inline">PDF Consolidado</span>
+                            </Button>
+                        )}
                         <Button onClick={handleAddBudget} size="sm" className="gap-2 bg-[#a03f3d] hover:bg-[#8b3634]">
                             <Plus className="w-4 h-4" />
                             <span className="hidden sm:inline">Adicionar</span>
@@ -293,6 +301,13 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 onClose={() => { setNewDialogOpen(false); setEditingBudget(null); }}
                 onSuccess={loadBudgets}
                 budget={editingBudget}
+            />
+
+            <MultiBudgetPdfDialog
+                open={consolidatedPdfOpen}
+                onClose={() => setConsolidatedPdfOpen(false)}
+                budgets={sortedBudgets}
+                patientName={patientName || 'Paciente'}
             />
         </>
     );

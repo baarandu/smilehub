@@ -416,6 +416,330 @@ export async function generateBudgetPDF(data: BudgetPDFData): Promise<PdfResult>
     return { blobUrl: '', hash, documentId };
 }
 
+// Generate consolidated PDF with multiple budgets as sections
+export async function generateConsolidatedBudgetPDFPreview(data: {
+    budgets: BudgetWithItems[];
+    patientName: string;
+    clinicName?: string;
+    dentistName?: string | null;
+    logoUrl?: string | null;
+    letterheadUrl?: string | null;
+    isClinic?: boolean;
+    dentistCRO?: string | null;
+}): Promise<PdfResult> {
+    const { budgets, patientName, clinicName, dentistName, dentistCRO } = data;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    const documentId = generateDocumentId();
+
+    let y = 20;
+
+    // ========== HEADER ==========
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(31, 41, 55);
+    doc.text('Plano de Tratamento Consolidado', margin, y + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(107, 114, 128);
+    doc.text('Orçamentos agrupados do paciente', margin, y + 13);
+
+    // Date (right side)
+    const dateText = new Date().toLocaleDateString('pt-BR');
+    const dateTextWidth = doc.getTextWidth(dateText);
+    const calendarX = pageWidth - margin - dateTextWidth - 10;
+
+    doc.setDrawColor(107, 114, 128);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(calendarX, y + 2, 6, 6, 0.8, 0.8, 'S');
+    doc.line(calendarX + 1.5, y + 1, calendarX + 1.5, y + 3);
+    doc.line(calendarX + 4.5, y + 1, calendarX + 4.5, y + 3);
+    doc.line(calendarX, y + 4, calendarX + 6, y + 4);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text(dateText, pageWidth - margin, y + 7, { align: 'right' });
+
+    y += 25;
+
+    // ========== INFO CARD ==========
+    doc.setFillColor(254, 242, 242);
+    drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, 25, 4);
+
+    const infoY = y + 8;
+    const colWidth = (pageWidth - 2 * margin - 20) / 3;
+
+    // Column 1: Patient
+    let colX = margin + 8;
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    doc.circle(colX + 5, infoY + 1, 1.5, 'S');
+    doc.line(colX + 2, infoY + 7, colX + 3, infoY + 5);
+    doc.line(colX + 3, infoY + 5, colX + 7, infoY + 5);
+    doc.line(colX + 7, infoY + 5, colX + 8, infoY + 7);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('PACIENTE', colX + 13, infoY + 2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    let displayName = patientName;
+    const maxNameWidth = colWidth - 15;
+    while (doc.getTextWidth(displayName) > maxNameWidth && displayName.length > 0) {
+        displayName = displayName.slice(0, -1);
+    }
+    if (displayName !== patientName) displayName += '...';
+    doc.text(displayName, colX + 13, infoY + 9);
+
+    // Column 2: Number of budgets
+    colX = margin + 8 + colWidth + 5;
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    doc.line(colX + 2.5, infoY - 0.5, colX + 2.5, infoY + 6);
+    doc.line(colX + 2.5, infoY + 6, colX + 7.5, infoY + 6);
+    doc.line(colX + 7.5, infoY + 6, colX + 7.5, infoY + 1.5);
+    doc.line(colX + 7.5, infoY + 1.5, colX + 5.5, infoY - 0.5);
+    doc.line(colX + 5.5, infoY - 0.5, colX + 2.5, infoY - 0.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('ORÇAMENTOS', colX + 13, infoY + 2);
+    doc.setFontSize(11);
+    doc.text(`${budgets.length} plano${budgets.length > 1 ? 's' : ''} de tratamento`, colX + 13, infoY + 9);
+
+    // Column 3: Responsible
+    colX = margin + 8 + (colWidth + 5) * 2;
+    const responsibleName = dentistName || clinicName || 'Dentista';
+    const responsibleFull = responsibleName + (dentistCRO ? ` — CRO ${dentistCRO}` : '');
+
+    doc.setFillColor(255, 255, 255);
+    drawRoundedRect(doc, colX, infoY - 2, 10, 10, 2);
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.4);
+    doc.circle(colX + 5, infoY + 3, 3.5, 'S');
+    doc.line(colX + 5, infoY + 3, colX + 5, infoY + 0.8);
+    doc.line(colX + 5, infoY + 3, colX + 7, infoY + 4.2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    doc.text('RESPONSÁVEL', colX + 13, infoY + 2);
+    doc.setFontSize(11);
+    let respDisplay = responsibleFull;
+    while (doc.getTextWidth(respDisplay) > colWidth - 15 && respDisplay.length > 0) {
+        respDisplay = respDisplay.slice(0, -1);
+    }
+    if (respDisplay !== responsibleFull) respDisplay += '...';
+    doc.text(respDisplay, colX + 13, infoY + 9);
+
+    y += 35;
+
+    // ========== BUDGET SECTIONS ==========
+    let grandTotal = 0;
+    const tableX = margin + 5;
+    const tableWidth = pageWidth - 2 * margin - 10;
+    const col1 = tableX;
+    const col2 = tableX + 40;
+    const col3 = tableX + tableWidth - 80;
+    const col4 = tableX + tableWidth - 5;
+
+    for (let bIdx = 0; bIdx < budgets.length; bIdx++) {
+        const budget = budgets[bIdx];
+        let parsedNotes: any = {};
+        try { parsedNotes = JSON.parse(budget.notes || '{}'); } catch {}
+        const teeth: ToothEntry[] = parsedNotes.teeth || [];
+
+        const budgetDate = new Date(budget.date + 'T00:00:00');
+        const sectionTotal = teeth.reduce((sum, t) => {
+            return sum + Object.values(t.values).reduce(
+                (a, b) => a + (parseInt(b as string) || 0) / 100, 0
+            );
+        }, 0);
+        grandTotal += sectionTotal;
+
+        // Check page space for section header
+        if (y > 240) {
+            doc.addPage();
+            y = 20;
+        }
+
+        // Section header
+        doc.setFillColor(248, 248, 248);
+        drawRoundedRect(doc, margin, y, pageWidth - 2 * margin, 14, 3);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(31, 41, 55);
+        doc.text(`Orçamento ${bIdx + 1}`, margin + 8, y + 6);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(107, 114, 128);
+        doc.text(budgetDate.toLocaleDateString('pt-BR'), margin + 60, y + 6);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(185, 74, 72);
+        doc.text(`R$ ${formatMoney(sectionTotal)}`, pageWidth - margin - 8, y + 6, { align: 'right' });
+
+        // Budget location if available
+        if (budget.location) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(107, 114, 128);
+            doc.text(budget.location, margin + 60, y + 12);
+            y += 18;
+        } else {
+            y += 18;
+        }
+
+        // Table header
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(31, 41, 55);
+        doc.text('Dente', col1, y);
+        doc.text('Procedimento', col2, y);
+        doc.text('Status', col3, y);
+        doc.text('Valor', col4, y, { align: 'right' });
+
+        y += 3;
+        doc.setDrawColor(243, 244, 246);
+        doc.setLineWidth(0.3);
+        doc.line(tableX, y, tableX + tableWidth, y);
+        y += 7;
+
+        // Table rows
+        for (const tooth of teeth) {
+            if (y > 265) {
+                doc.addPage();
+                y = 20;
+            }
+
+            const toothNumber = tooth.tooth;
+            const treatments = tooth.treatments.join(', ');
+            const itemValue = Object.values(tooth.values).reduce(
+                (sum, val) => sum + (parseFloat(val as string) || 0) / 100, 0
+            );
+            const status = tooth.status || 'pending';
+            const statusLabel = getStatusLabel(status);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(107, 114, 128);
+            doc.text(toothNumber, col1, y);
+
+            doc.setTextColor(31, 41, 55);
+            let displayTreatment = treatments;
+            const maxTreatmentWidth = col3 - col2 - 10;
+            while (doc.getTextWidth(displayTreatment) > maxTreatmentWidth && displayTreatment.length > 0) {
+                displayTreatment = displayTreatment.slice(0, -1);
+            }
+            if (displayTreatment !== treatments) displayTreatment += '...';
+            doc.text(displayTreatment, col2, y);
+
+            // Status badge
+            const badgeWidth = doc.getTextWidth(statusLabel) + 12;
+            const badgeX = col3 - 5;
+            const badgeY = y - 3;
+
+            if (status === 'paid' || status === 'completed') {
+                doc.setFillColor(219, 234, 254);
+                doc.setTextColor(29, 78, 216);
+            } else if (status === 'approved') {
+                doc.setFillColor(220, 252, 231);
+                doc.setTextColor(21, 128, 61);
+            } else if (status === 'partially_paid') {
+                doc.setFillColor(219, 234, 254);
+                doc.setTextColor(29, 78, 216);
+            } else {
+                doc.setFillColor(254, 243, 199);
+                doc.setTextColor(180, 83, 9);
+            }
+
+            drawRoundedRect(doc, badgeX, badgeY, badgeWidth, 6, 3);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(8);
+            doc.text(statusLabel, badgeX + 6, y);
+
+            // Value
+            doc.setTextColor(31, 41, 55);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text(`R$ ${formatMoney(itemValue)}`, col4, y, { align: 'right' });
+
+            y += 4;
+            doc.setDrawColor(243, 244, 246);
+            doc.line(tableX, y, tableX + tableWidth, y);
+            y += 8;
+        }
+
+        // Section subtotal
+        y += 2;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(107, 114, 128);
+        doc.text('Subtotal:', col4 - 55, y);
+        doc.setTextColor(31, 41, 55);
+        doc.text(`R$ ${formatMoney(sectionTotal)}`, col4, y, { align: 'right' });
+        y += 12;
+    }
+
+    // ========== GRAND TOTAL ==========
+    if (y > 250) {
+        doc.addPage();
+        y = 20;
+    }
+
+    doc.setDrawColor(185, 74, 72);
+    doc.setLineWidth(0.5);
+    doc.line(tableX + tableWidth - 90, y, tableX + tableWidth, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(55, 65, 81);
+    doc.text('Valor Total Consolidado', col4 - 70, y);
+    doc.setFontSize(18);
+    doc.setTextColor(185, 74, 72);
+    doc.text(`R$ ${formatMoney(grandTotal)}`, col4, y, { align: 'right' });
+
+    // ========== FOOTER ==========
+    y += 20;
+    if (y < 270) {
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageWidth - margin, y);
+
+        y += 8;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(156, 163, 175);
+        doc.text('Este orçamento consolidado tem validade de 30 dias a partir da data de emissão.', pageWidth / 2, y, { align: 'center', maxWidth: pageWidth - 2 * margin });
+
+        y += 12;
+        doc.setFontSize(7);
+        doc.setTextColor(180, 180, 180);
+        doc.text(`ID: ${documentId} | Emitido em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, y, { align: 'center' });
+    }
+
+    const arrayBuffer = doc.output('arraybuffer');
+    const hash = await computePdfHash(arrayBuffer);
+    const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+    const blobUrl = URL.createObjectURL(blob);
+    return { blobUrl, hash, documentId };
+}
+
 // Download from existing blob URL
 export function downloadPDFFromBlob(blobUrl: string, patientName: string): void {
     const link = document.createElement('a');
