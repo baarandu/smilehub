@@ -709,7 +709,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(55, 65, 81);
-    doc.text('Valor Total Consolidado', col4 - 70, y);
+    doc.text('Valor Total', col4 - 70, y);
     doc.setFontSize(18);
     doc.setTextColor(185, 74, 72);
     doc.text(`R$ ${formatMoney(grandTotal)}`, col4, y, { align: 'right' });
