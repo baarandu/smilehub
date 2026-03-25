@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -93,6 +93,10 @@ export function NewAnamneseDialog({
   const { data: existingSignatures } = useRecordSignatures('anamnesis', anamnese?.id);
   const isSigned = (existingSignatures?.length || 0) > 0;
   const [saving, setSaving] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const handleVoicePhaseChange = useCallback((phase: string) => {
+    setVoiceActive(phase === 'recording' || phase === 'processing');
+  }, []);
   const [form, setForm] = useState({
     date: (() => {
       const today = new Date();
@@ -362,14 +366,13 @@ export function NewAnamneseDialog({
           <DialogTitle>{anamnese ? 'Editar Anamnese' : 'Nova Anamnese'}</DialogTitle>
         </DialogHeader>
 
-        {!anamnese && (
-          <div className="px-1 pb-2">
-            <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
-          </div>
-        )}
-
-        <ScrollArea className="max-h-[55vh] pr-4">
+        <ScrollArea className="max-h-[65vh] pr-4">
           <div className="space-y-6">
+            {!anamnese && (
+              <div className="px-1 pb-2">
+                <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} onPhaseChange={handleVoicePhaseChange} />
+              </div>
+            )}
             {anamnese && isSigned && (
               <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
                 <span className="text-amber-600 font-medium shrink-0">⚠️ Registro assinado.</span>
@@ -696,8 +699,8 @@ export function NewAnamneseDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Salvando...' : anamnese ? 'Atualizar' : 'Salvar'}
+          <Button onClick={handleSave} disabled={saving || voiceActive}>
+            {saving ? 'Salvando...' : voiceActive ? 'Aguarde a gravação...' : anamnese ? 'Atualizar' : 'Salvar'}
           </Button>
         </DialogFooter>
       </DialogContent>

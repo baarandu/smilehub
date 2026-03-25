@@ -72,6 +72,10 @@ export function NewProcedureDialog({
   const [selectedBudgetKeys, setSelectedBudgetKeys] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const handleVoicePhaseChange = useCallback((phase: string) => {
+    setVoiceActive(phase === 'recording' || phase === 'processing');
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -286,7 +290,7 @@ export function NewProcedureDialog({
               <div className="flex items-center justify-between">
                 <Label htmlFor="description">Descrição do Procedimento</Label>
                 {!procedure && (
-                  <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} />
+                  <InlineVoiceRecorder patientId={patientId} onResult={handleVoiceResult} onPhaseChange={handleVoicePhaseChange} />
                 )}
               </div>
               <Textarea
@@ -326,13 +330,15 @@ export function NewProcedureDialog({
             type="submit"
             form="procedure-form"
             className="flex-1 bg-[#a03f3d] hover:bg-[#8b3634]"
-            disabled={isLoading}
+            disabled={isLoading || voiceActive}
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Salvando...
               </>
+            ) : voiceActive ? (
+              'Aguarde a gravação...'
             ) : (
               'Salvar'
             )}

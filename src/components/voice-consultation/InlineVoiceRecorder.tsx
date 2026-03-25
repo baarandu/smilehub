@@ -16,12 +16,13 @@ import type { ExtractionResult } from '@/types/voiceConsultation';
 interface InlineVoiceRecorderProps {
   patientId?: string;
   onResult: (result: ExtractionResult) => void;
+  onPhaseChange?: (phase: Phase) => void;
   extractionType?: 'adult' | 'child';
 }
 
-type Phase = 'idle' | 'consent' | 'recording' | 'processing' | 'done';
+export type Phase = 'idle' | 'consent' | 'recording' | 'processing' | 'done';
 
-export function InlineVoiceRecorder({ patientId, onResult, extractionType }: InlineVoiceRecorderProps) {
+export function InlineVoiceRecorder({ patientId, onResult, onPhaseChange, extractionType }: InlineVoiceRecorderProps) {
   const { clinicId } = useClinic();
   const [userId, setUserId] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -40,6 +41,11 @@ export function InlineVoiceRecorder({ patientId, onResult, extractionType }: Inl
       if (data.user) setUserId(data.user.id);
     });
   }, []);
+
+  // Notify parent of phase changes
+  useEffect(() => {
+    onPhaseChange?.(phase);
+  }, [phase, onPhaseChange]);
 
   // Sync voice consultation phase to our local phase
   useEffect(() => {
