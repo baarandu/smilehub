@@ -48,6 +48,7 @@ interface UseVoiceConsultationReturn {
     budgetId?: string | null,
   ) => Promise<void>;
   discard: () => Promise<void>;
+  reset: () => void;
   isSaving: boolean;
 }
 
@@ -204,6 +205,16 @@ export function useVoiceConsultation({
     }
   }, [session]);
 
+  const reset = useCallback(() => {
+    setPhase('consent');
+    setProcessingStep(null);
+    setTranscription(null);
+    setExtractionResult(null);
+    setProcessingError(null);
+    setSession(null);
+    recorder.resetRecording();
+  }, [recorder]);
+
   return {
     phase,
     setPhase,
@@ -217,6 +228,7 @@ export function useVoiceConsultation({
     finishRecording,
     saveAll,
     discard,
+    reset,
     isSaving,
   };
 }

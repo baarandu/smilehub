@@ -88,7 +88,7 @@ export function InlineVoiceRecorder({ patientId, onResult, onPhaseChange, extrac
   const handleReset = useCallback(() => {
     setPhase('idle');
     setConsentGiven(false);
-    voiceConsultation.setPhase('consent');
+    voiceConsultation.reset();
   }, [voiceConsultation]);
 
   if (!clinicId || !userId) return null;
@@ -169,7 +169,7 @@ export function InlineVoiceRecorder({ patientId, onResult, onPhaseChange, extrac
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => { setPhase('consent'); voiceConsultation.setPhase('consent'); }}
+            onClick={() => { setPhase('consent'); voiceConsultation.reset(); }}
           >
             Tentar novamente
           </Button>
