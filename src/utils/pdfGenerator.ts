@@ -440,12 +440,12 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
     doc.setTextColor(31, 41, 55);
-    doc.text('Plano de Tratamento Consolidado', margin, y + 7);
+    doc.text('Plano de Tratamento', margin, y + 7);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128);
-    doc.text('Orçamentos agrupados do paciente', margin, y + 13);
+    doc.text('Proposta de Tratamento Personalizada', margin, y + 13);
 
     // Date (right side)
     const dateText = new Date().toLocaleDateString('pt-BR');
