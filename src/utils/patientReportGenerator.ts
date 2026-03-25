@@ -581,20 +581,20 @@ export function buildReportHtml({
     `;
 }
 
-export const generatePatientReport = async (options: ReportOptions) => {
+export const generatePatientReport = async (options: ReportOptions, printWindow?: Window | null) => {
     const htmlContent = buildReportHtml(options);
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
+    const targetWindow = printWindow || window.open('', '_blank');
+    if (targetWindow) {
         const parsed = new DOMParser().parseFromString(htmlContent, 'text/html');
-        printWindow.document.replaceChild(
-            printWindow.document.importNode(parsed.documentElement, true),
-            printWindow.document.documentElement
+        targetWindow.document.replaceChild(
+            targetWindow.document.importNode(parsed.documentElement, true),
+            targetWindow.document.documentElement
         );
-        printWindow.focus();
+        targetWindow.focus();
 
         setTimeout(() => {
-            printWindow.print();
+            targetWindow.print();
         }, 1000);
     }
 };

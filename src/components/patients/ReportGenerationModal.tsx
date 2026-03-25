@@ -165,13 +165,16 @@ export function ReportGenerationModal({
     };
 
     const handleGenerate = async () => {
+        // Open window synchronously before any async work (Safari blocks popups after await)
+        const printWindow = window.open('', '_blank');
         try {
             setGenerating(true);
             const reportData = await collectReportData();
-            await generatePatientReport(reportData);
+            await generatePatientReport(reportData, printWindow);
             onOpenChange(false);
         } catch (error) {
             console.error('Error generating report:', error);
+            printWindow?.close();
         } finally {
             setGenerating(false);
         }
