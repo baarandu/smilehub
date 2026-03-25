@@ -106,7 +106,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
     if (!budget) return null;
 
     // Group items by status (partially_paid shows in approved section)
-    const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid' && t.status !== 'partially_paid');
+    const pendingItems = teeth.filter(t => t.status !== 'approved' && t.status !== 'paid' && t.status !== 'partially_paid' && t.status !== 'completed');
     const approvedItems = teeth.filter(t => t.status === 'approved' || t.status === 'partially_paid');
     const paidItems = teeth.filter(t => t.status === 'paid' || t.status === 'completed');
 

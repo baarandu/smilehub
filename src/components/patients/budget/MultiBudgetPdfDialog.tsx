@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,10 +53,13 @@ export function MultiBudgetPdfDialog({ open, onClose, budgets, patientName }: Mu
         return keys;
     }, [budgets, budgetTeeth]);
 
-    const handleOpen = () => {
-        setSelectedItems(new Set(allKeys));
-        setExpandedBudgets(new Set(budgets.map(b => b.id)));
-    };
+    // Initialize state when dialog opens
+    useEffect(() => {
+        if (open) {
+            setSelectedItems(new Set(allKeys));
+            setExpandedBudgets(new Set(budgets.map(b => b.id)));
+        }
+    }, [open]);
 
     const getItemValue = (tooth: ToothEntry) => {
         return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
@@ -220,7 +223,7 @@ export function MultiBudgetPdfDialog({ open, onClose, budgets, patientName }: Mu
 
     return (
         <>
-            <Dialog open={open} onOpenChange={(isOpen) => { if (isOpen) handleOpen(); else onClose(); }}>
+            <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
                 <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
                     <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
                         <div>
