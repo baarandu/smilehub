@@ -227,7 +227,7 @@ export function MultiBudgetPdfDialog({ open, onClose, budgets, patientName }: Mu
                 <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
                     <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0">
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-900">PDF Consolidado</h2>
+                            <h2 className="text-xl font-semibold text-gray-900">Gerar Orçamento em PDF</h2>
                             <p className="text-gray-500 text-sm mt-1">Selecione os itens para incluir no PDF</p>
                         </div>
                         <button onClick={onClose} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
