@@ -189,9 +189,9 @@ export default function Alerts() {
                             onChange={(e) => templates.handleUpdateCustomTemplate(template.id, { message: e.target.value })}
                             rows={3}
                             className="bg-background text-sm resize-none"
-                            placeholder="Sua mensagem aqui... Use {name} para o nome do paciente."
+                            placeholder="Use {name}, {responsavel} ou {paciente}..."
                           />
-                          <p className="text-[10px] text-muted-foreground font-medium">Variável disponível: {'{name}'}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">Variáveis: {'{name}'} nome, {'{responsavel}'} pai/mãe, {'{paciente}'} criança</p>
                         </div>
                       ))}
                     </div>
@@ -208,9 +208,9 @@ export default function Alerts() {
                       value={templates.birthdayTemplate}
                       onChange={(e) => templates.setBirthdayTemplate(e.target.value)}
                       rows={3}
-                      placeholder="Use {name} para o nome do paciente"
+                      placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+                    <p className="text-xs text-muted-foreground">Use {'{name}'} para o nome. Para crianças: {'{responsavel}'} (pai/mãe) e {'{paciente}'} (criança).</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -223,9 +223,9 @@ export default function Alerts() {
                       value={templates.returnTemplate}
                       onChange={(e) => templates.setReturnTemplate(e.target.value)}
                       rows={3}
-                      placeholder="Use {name} para o nome do paciente"
+                      placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Use {'{name}'} para substituir pelo nome do paciente.</p>
+                    <p className="text-xs text-muted-foreground">Use {'{name}'} para o nome. Para crianças: {'{responsavel}'} (pai/mãe) e {'{paciente}'} (criança).</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -238,9 +238,9 @@ export default function Alerts() {
                       value={templates.confirmationTemplate}
                       onChange={(e) => templates.setConfirmationTemplate(e.target.value)}
                       rows={3}
-                      placeholder="Use {name} para o nome do paciente"
+                      placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Usada para confirmar consultas de amanhã. Use {'{name}'} para o nome.</p>
+                    <p className="text-xs text-muted-foreground">Confirmar consultas de amanhã. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -253,9 +253,9 @@ export default function Alerts() {
                       value={templates.followUpTemplate}
                       onChange={(e) => templates.setFollowUpTemplate(e.target.value)}
                       rows={3}
-                      placeholder="Use {name} para o nome do paciente"
+                      placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Enviada ao paciente que compareceu à consulta de ontem. Use {'{name}'} para o nome.</p>
+                    <p className="text-xs text-muted-foreground">Pós-consulta de ontem. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -268,9 +268,9 @@ export default function Alerts() {
                       value={templates.noShowTemplate}
                       onChange={(e) => templates.setNoShowTemplate(e.target.value)}
                       rows={3}
-                      placeholder="Use {name} para o nome do paciente"
+                      placeholder="Use {name}, {responsavel} ou {paciente}"
                     />
-                    <p className="text-xs text-muted-foreground">Enviada ao paciente que faltou à consulta de ontem. Use {'{name}'} para o nome.</p>
+                    <p className="text-xs text-muted-foreground">Paciente faltou. {'{name}'}, {'{responsavel}'} (pai/mãe), {'{paciente}'} (criança).</p>
                   </div>
                 </div>
               </div>

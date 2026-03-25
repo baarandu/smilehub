@@ -12,28 +12,39 @@ export interface ChildInfo {
     legal_guardian?: string | null;
 }
 
-/** For child patients, resolves the guardian name and appends a reference to the child */
-function resolveMessageForChild(
+/** Resolves template variables: {name}, {responsavel}, {paciente} */
+function resolveTemplateVariables(
     message: string,
     patientName: string,
     childInfo?: ChildInfo
 ): string {
-    if (!childInfo || childInfo.patient_type !== 'child') return message;
+    const patientFirst = patientName.split(' ')[0];
+    const isChild = childInfo?.patient_type === 'child';
 
-    const guardianName =
-        childInfo.mother_name?.split(' ')[0] ||
-        childInfo.father_name?.split(' ')[0] ||
-        childInfo.legal_guardian?.split(' ')[0];
+    const guardianFirst = isChild
+        ? (childInfo.mother_name?.split(' ')[0] ||
+           childInfo.father_name?.split(' ')[0] ||
+           childInfo.legal_guardian?.split(' ')[0] ||
+           patientFirst)
+        : patientFirst;
 
-    if (guardianName) {
-        // Replace the patient's first name with the guardian's first name
-        const patientFirst = patientName.split(' ')[0];
-        message = message.replace(patientFirst, guardianName);
+    const hasExplicitVars = message.includes('{responsavel}') || message.includes('{paciente}');
+
+    if (hasExplicitVars) {
+        // Use explicit variables — dentist controls the message fully
+        return message
+            .replace(/\{responsavel\}/g, guardianFirst)
+            .replace(/\{paciente\}/g, patientFirst)
+            .replace(/\{name\}/g, isChild ? guardianFirst : patientFirst);
     }
 
-    // Append child reference
-    const childFirst = patientName.split(' ')[0];
-    message += `\n\nReferente à consulta de ${childFirst}.`;
+    // Legacy behavior: only {name} used
+    message = message.replace(/\{name\}/g, isChild ? guardianFirst : patientFirst);
+
+    // For child patients with only {name}, append child reference
+    if (isChild && guardianFirst !== patientFirst) {
+        message += `\n\nReferente à consulta de ${patientFirst}.`;
+    }
 
     return message;
 }
@@ -82,10 +93,9 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
         alertInfo?: { patientId: string; alertDate: string },
         childInfo?: ChildInfo
     ) => {
-        const firstName = name.split(' ')[0];
         const template = getTemplateByType(type);
-        const message = resolveMessageForChild(
-            template.replace('{name}', firstName),
+        const message = resolveTemplateVariables(
+            template,
             name,
             childInfo
         );
@@ -143,9 +153,8 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
 
     const handleSelectPatient = async (patient: Patient) => {
         if (!sendingTemplate) return;
-        const firstName = patient.name.split(' ')[0];
-        const message = resolveMessageForChild(
-            sendingTemplate.replace('{name}', firstName),
+        const message = resolveTemplateVariables(
+            sendingTemplate,
             patient.name,
             {
                 patient_type: (patient as any).patient_type,
@@ -160,7 +169,7 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
             setIsSendingWhatsapp(messageId);
             try {
                 await evolutionApi.sendTest(patient.phone, message);
-                toast.success(`Mensagem enviada para ${firstName}!`);
+                toast.success(`Mensagem enviada para ${patient.name.split(' ')[0]}!`);
             } catch (error) {
                 console.error('Error sending WhatsApp:', error);
                 toast.error('Falha ao enviar. Abrindo WhatsApp Web...');
