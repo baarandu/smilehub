@@ -76,6 +76,7 @@ const REFERRAL_LABELS: Record<string, string> = {
   convenio: 'Convênio',
   passou_na_frente: 'Passou na frente',
   outro: 'Outro',
+  nao_informado: 'Não Informado',
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
