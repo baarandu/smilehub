@@ -115,7 +115,6 @@ async function fetchAnalytics(
     prevTransactionsResult,
     patientsResult,
     appointmentsResult,
-    proceduresResult,
     allProceduresResult,
     budgetsResult,
     dentistsResult,
@@ -132,13 +131,6 @@ async function fetchAnalytics(
     supabase
       .from('appointments')
       .select('id, date, status, patient_id, dentist_id, procedure_name')
-      .eq('clinic_id', clinicId)
-      .gte('date', startStr)
-      .lte('date', endStr),
-
-    supabase
-      .from('procedures')
-      .select('id, date, description, value, status, created_by, patient_id')
       .eq('clinic_id', clinicId)
       .gte('date', startStr)
       .lte('date', endStr),
@@ -166,7 +158,6 @@ async function fetchAnalytics(
   const prevTransactions = prevTransactionsResult || [];
   const patients = (patientsResult.data || []) as any[];
   const appointments = (appointmentsResult.data || []) as any[];
-  const procedures = (proceduresResult.data || []) as any[];
   const allProcedures = (allProceduresResult.data || []) as any[];
   const budgets = (budgetsResult.data || []) as any[];
   const dentists = (dentistsResult.data || []) as any[];
@@ -319,15 +310,31 @@ async function fetchAnalytics(
     if (a.status === 'cancelled') dayData[dayIndex].cancelled++;
   }
 
-  // --- Top procedures ---
+  // --- Top procedures (extract treatment names from budget teeth) ---
   const procMap = new Map<string, { count: number; value: number }>();
-  for (const p of procedures) {
-    const name = p.description || 'Outros';
-    const existing = procMap.get(name) || { count: 0, value: 0 };
-    existing.count++;
-    existing.value += (p.value || 0);
-    procMap.set(name, existing);
+
+  // Extract from budgets teeth JSON (most accurate source)
+  for (const b of budgets) {
+    if (!b.notes) continue;
+    try {
+      const parsed = JSON.parse(b.notes);
+      if (!parsed.teeth || !Array.isArray(parsed.teeth)) continue;
+      for (const tooth of parsed.teeth) {
+        if (!tooth.treatments || !Array.isArray(tooth.treatments)) continue;
+        const toothTotal = (Object.values(tooth.values || {}) as any[]).reduce((s: number, v: any) => s + (parseFloat(v) || 0), 0);
+        const perTreatment = tooth.treatments.length > 0 ? toothTotal / tooth.treatments.length : 0;
+        for (const treatment of tooth.treatments) {
+          const name = (treatment || '').trim();
+          if (!name) continue;
+          const existing = procMap.get(name) || { count: 0, value: 0 };
+          existing.count++;
+          existing.value += perTreatment;
+          procMap.set(name, existing);
+        }
+      }
+    } catch { /* ignore invalid JSON */ }
   }
+
   const topProcedures = Array.from(procMap.entries())
     .map(([name, data]) => ({ name, count: data.count, value: Math.round(data.value * 100) / 100 }))
     .sort((a, b) => b.count - a.count)
