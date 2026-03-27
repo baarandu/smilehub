@@ -30,6 +30,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
         hasChildren: false,
         childrenCount: '',
         referralSource: '',
+        referralSourceOther: '',
         emergencyContact: '',
         emergencyPhone: '',
         healthInsurance: '',
@@ -58,6 +59,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 hasChildren: (patient as any).has_children || false,
                 childrenCount: (patient as any).children_count ? String((patient as any).children_count) : '',
                 referralSource: (patient as any).referral_source || '',
+                referralSourceOther: (patient as any).referral_source_other || '',
                 emergencyContact: patient.emergency_contact || '',
                 emergencyPhone: patient.emergency_phone || '',
                 healthInsurance: patient.health_insurance || '',
@@ -165,6 +167,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 has_children: form.hasChildren || false,
                 children_count: form.childrenCount ? parseInt(form.childrenCount, 10) : null,
                 referral_source: form.referralSource || null,
+                referral_source_other: form.referralSourceOther || null,
                 emergency_contact: form.emergencyContact || null,
                 emergency_phone: form.emergencyPhone || null,
                 health_insurance: form.healthInsurance || null,
@@ -340,7 +343,10 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                         ].map((option) => (
                                             <TouchableOpacity
                                                 key={option.value}
-                                                onPress={() => setForm({ ...form, referralSource: form.referralSource === option.value ? '' : option.value })}
+                                                onPress={() => {
+                                                    const newSource = form.referralSource === option.value ? '' : option.value;
+                                                    setForm({ ...form, referralSource: newSource, referralSourceOther: newSource === 'outro' ? form.referralSourceOther : '' });
+                                                }}
                                                 className={`px-3 py-2 rounded-lg border ${form.referralSource === option.value ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-200'}`}
                                             >
                                                 <Text className={`text-sm ${form.referralSource === option.value ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
@@ -349,6 +355,17 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                             </TouchableOpacity>
                                         ))}
                                     </View>
+                                    {form.referralSource === 'outro' && (
+                                        <View className="mt-2">
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Descreva a origem"
+                                                placeholderTextColor="#9CA3AF"
+                                                value={form.referralSourceOther}
+                                                onChangeText={(text) => setForm({ ...form, referralSourceOther: text })}
+                                            />
+                                        </View>
+                                    )}
                                 </View>
                             </View>
 

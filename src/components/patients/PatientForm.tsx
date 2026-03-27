@@ -45,6 +45,7 @@ const emptyForm: PatientFormData = {
   hasChildren: false,
   childrenCount: '',
   referralSource: '',
+  referralSourceOther: '',
   emergencyContact: '',
   emergencyPhone: '',
   healthInsurance: '',
@@ -399,11 +400,14 @@ export function PatientForm({
                   />
                 </div>
               )}
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="referralSource">Como conheceu a clínica?</Label>
                 <Select
                   value={form.referralSource}
-                  onValueChange={(value) => updateField('referralSource', value)}
+                  onValueChange={(value) => {
+                    updateField('referralSource', value);
+                    if (value !== 'outro') updateField('referralSourceOther', '');
+                  }}
                 >
                   <SelectTrigger id="referralSource">
                     <SelectValue placeholder="Selecione" />
@@ -423,6 +427,17 @@ export function PatientForm({
                   </SelectContent>
                 </Select>
               </div>
+              {form.referralSource === 'outro' && (
+                <div className="space-y-2">
+                  <Label htmlFor="referralSourceOther">Qual?</Label>
+                  <Input
+                    id="referralSourceOther"
+                    value={form.referralSourceOther}
+                    onChange={(e) => updateField('referralSourceOther', e.target.value)}
+                    placeholder="Descreva a origem"
+                  />
+                </div>
+              )}
             </div>
           </TabsContent>
 
