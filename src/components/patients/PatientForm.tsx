@@ -44,6 +44,7 @@ const emptyForm: PatientFormData = {
   maritalStatus: '',
   hasChildren: false,
   childrenCount: '',
+  referralSource: '',
   emergencyContact: '',
   emergencyPhone: '',
   healthInsurance: '',
@@ -398,6 +399,30 @@ export function PatientForm({
                   />
                 </div>
               )}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="referralSource">Como conheceu a clínica?</Label>
+                <Select
+                  value={form.referralSource}
+                  onValueChange={(value) => updateField('referralSource', value)}
+                >
+                  <SelectTrigger id="referralSource">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="indicacao">Indicação de paciente</SelectItem>
+                    <SelectItem value="instagram">Instagram</SelectItem>
+                    <SelectItem value="facebook">Facebook</SelectItem>
+                    <SelectItem value="google">Google / Busca online</SelectItem>
+                    <SelectItem value="google_maps">Google Maps</SelectItem>
+                    <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
+                    <SelectItem value="site">Site da clínica</SelectItem>
+                    <SelectItem value="convenio">Convênio / Plano de saúde</SelectItem>
+                    <SelectItem value="passou_na_frente">Passou na frente</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </TabsContent>
 

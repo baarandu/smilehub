@@ -38,6 +38,7 @@ export interface AnalyticsData {
   revenueByDentist: { name: string; value: number; count: number }[];
   appointmentsByDayOfWeek: { day: string; total: number; completed: number; cancelled: number }[];
   paymentMethods: { method: string; value: number; count: number }[];
+  patientsByReferral: { source: string; count: number }[];
 }
 
 export interface AnalyticsPeriod {
@@ -61,6 +62,20 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelado',
   no_show: 'Faltou',
   waiting: 'Aguardando',
+};
+
+const REFERRAL_LABELS: Record<string, string> = {
+  indicacao: 'Indicação',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  google: 'Google',
+  google_maps: 'Google Maps',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  site: 'Site',
+  convenio: 'Convênio',
+  passou_na_frente: 'Passou na frente',
+  outro: 'Outro',
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -104,7 +119,7 @@ async function fetchAnalytics(
 
     supabase
       .from('patients')
-      .select('id, created_at, birth_date')
+      .select('id, created_at, birth_date, referral_source')
       .eq('clinic_id', clinicId)
       .is('deleted_at', null),
 
@@ -342,6 +357,20 @@ async function fetchAnalytics(
 
   const avgTicket = incomeCount > 0 ? incomeSum / incomeCount : 0;
 
+  // --- Referral sources ---
+  const referralMap = new Map<string, number>();
+  for (const p of patients) {
+    const src = p.referral_source || 'nao_informado';
+    referralMap.set(src, (referralMap.get(src) || 0) + 1);
+  }
+  const patientsByReferral = Array.from(referralMap.entries())
+    .map(([source, count]) => ({
+      source: REFERRAL_LABELS[source] || source,
+      count,
+    }))
+    .filter(r => r.source !== 'nao_informado' || r.count > 0)
+    .sort((a, b) => b.count - a.count);
+
   return {
     periodRevenue: Math.round(periodRevenue * 100) / 100,
     periodExpenses: Math.round(periodExpenses * 100) / 100,
@@ -363,6 +392,7 @@ async function fetchAnalytics(
     revenueByDentist,
     appointmentsByDayOfWeek: dayData,
     paymentMethods,
+    patientsByReferral,
   };
 }
 

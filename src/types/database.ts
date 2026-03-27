@@ -2277,6 +2277,7 @@ export type Database = {
           notes: string | null
           occupation: string | null
           phone: string
+          referral_source: string | null
           return_alert_date: string | null
           return_alert_flag: boolean | null
           rg: string | null
@@ -2309,6 +2310,7 @@ export type Database = {
           notes?: string | null
           occupation?: string | null
           phone: string
+          referral_source?: string | null
           return_alert_date?: string | null
           return_alert_flag?: boolean | null
           rg?: string | null
@@ -2341,6 +2343,7 @@ export type Database = {
           notes?: string | null
           occupation?: string | null
           phone?: string
+          referral_source?: string | null
           return_alert_date?: string | null
           return_alert_flag?: boolean | null
           rg?: string | null
@@ -3474,6 +3477,7 @@ export type PatientFormData = {
   maritalStatus: string
   hasChildren: boolean
   childrenCount: string
+  referralSource: string
   emergencyContact: string
   emergencyPhone: string
   healthInsurance: string

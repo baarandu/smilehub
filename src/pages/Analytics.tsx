@@ -13,6 +13,7 @@ import {
   Percent,
   FileCheck,
   CalendarRange,
+  Share2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -548,7 +549,85 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* Row 4: Payment Methods + Revenue by Dentist */}
+      {/* Row 4: Referral Sources */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-primary" />
+              Origem dos Pacientes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              {data.patientsByReferral.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  Sem dados de origem
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.patientsByReferral}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="count"
+                      nameKey="source"
+                      label={({ source, count }) => `${source} (${count})`}
+                      labelLine={{ strokeWidth: 1 }}
+                    >
+                      {data.patientsByReferral.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => [v, 'Pacientes']} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Share2 className="h-4 w-4 text-primary" />
+              Ranking de Origem
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              {data.patientsByReferral.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  Sem dados de origem
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.patientsByReferral.slice(0, 8)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <YAxis
+                      dataKey="source"
+                      type="category"
+                      tick={{ fontSize: 11 }}
+                      width={120}
+                      tickFormatter={(v) => v.length > 16 ? v.slice(0, 16) + '...' : v}
+                    />
+                    <Tooltip formatter={(v: number) => [v, 'Pacientes']} />
+                    <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} name="Pacientes" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Row 5: Payment Methods + Revenue by Dentist */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-2">

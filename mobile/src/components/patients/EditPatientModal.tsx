@@ -29,6 +29,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
         maritalStatus: '',
         hasChildren: false,
         childrenCount: '',
+        referralSource: '',
         emergencyContact: '',
         emergencyPhone: '',
         healthInsurance: '',
@@ -56,6 +57,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 maritalStatus: (patient as any).marital_status || '',
                 hasChildren: (patient as any).has_children || false,
                 childrenCount: (patient as any).children_count ? String((patient as any).children_count) : '',
+                referralSource: (patient as any).referral_source || '',
                 emergencyContact: patient.emergency_contact || '',
                 emergencyPhone: patient.emergency_phone || '',
                 healthInsurance: patient.health_insurance || '',
@@ -162,6 +164,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 marital_status: form.maritalStatus || null,
                 has_children: form.hasChildren || false,
                 children_count: form.childrenCount ? parseInt(form.childrenCount, 10) : null,
+                referral_source: form.referralSource || null,
                 emergency_contact: form.emergencyContact || null,
                 emergency_phone: form.emergencyPhone || null,
                 health_insurance: form.healthInsurance || null,
@@ -317,6 +320,35 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                             />
                                         </View>
                                     )}
+                                </View>
+
+                                <View>
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Como conheceu a clínica?</Text>
+                                    <View className="flex-row flex-wrap gap-2">
+                                        {[
+                                            { value: 'indicacao', label: 'Indicação' },
+                                            { value: 'instagram', label: 'Instagram' },
+                                            { value: 'facebook', label: 'Facebook' },
+                                            { value: 'google', label: 'Google' },
+                                            { value: 'google_maps', label: 'Google Maps' },
+                                            { value: 'tiktok', label: 'TikTok' },
+                                            { value: 'youtube', label: 'YouTube' },
+                                            { value: 'site', label: 'Site' },
+                                            { value: 'convenio', label: 'Convênio' },
+                                            { value: 'passou_na_frente', label: 'Passou na frente' },
+                                            { value: 'outro', label: 'Outro' },
+                                        ].map((option) => (
+                                            <TouchableOpacity
+                                                key={option.value}
+                                                onPress={() => setForm({ ...form, referralSource: form.referralSource === option.value ? '' : option.value })}
+                                                className={`px-3 py-2 rounded-lg border ${form.referralSource === option.value ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-200'}`}
+                                            >
+                                                <Text className={`text-sm ${form.referralSource === option.value ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                                                    {option.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 </View>
                             </View>
 
