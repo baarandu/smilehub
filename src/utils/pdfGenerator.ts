@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import type { BudgetWithItems } from '@/types/database';
-import { formatMoney, type ToothEntry } from '@/utils/budgetUtils';
+import { formatMoney, getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 import { computePdfHash, generateDocumentId } from '@/utils/pdfHash';
 
 export interface PdfResult {
@@ -262,7 +262,7 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
     const tableX = margin + 5;
     const tableWidth = pageWidth - 2 * margin - 10;
     const col1 = tableX;
-    const col2 = tableX + 80;
+    const col2 = tableX + 50;
     const col3 = tableX + tableWidth - 80;
     const col4 = tableX + tableWidth - 5;
 
@@ -289,7 +289,7 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
             y = 20;
         }
 
-        const toothNumber = tooth.tooth;
+        const toothNumber = getToothDisplayName(tooth.tooth, false);
         const treatments = tooth.treatments.join(', ');
         const itemValue = Object.values(tooth.values).reduce(
             (sum, val) => sum + (parseFloat(val as string) || 0) / 100,
@@ -298,17 +298,11 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
         const status = tooth.status || 'pending';
         const statusLabel = getStatusLabel(status);
 
-        // Tooth number — truncate if too wide
+        // Tooth number
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(107, 114, 128);
-        const maxToothWidth = col2 - col1 - 5;
-        let displayTooth = toothNumber;
-        while (doc.getTextWidth(displayTooth) > maxToothWidth && displayTooth.length > 0) {
-            displayTooth = displayTooth.slice(0, -1);
-        }
-        if (displayTooth !== toothNumber) displayTooth += '...';
-        doc.text(displayTooth, col1, y);
+        doc.text(toothNumber, col1, y);
 
         // Procedure
         doc.setTextColor(31, 41, 55);
@@ -557,7 +551,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     const tableX = margin + 5;
     const tableWidth = pageWidth - 2 * margin - 10;
     const col1 = tableX;
-    const col2 = tableX + 80;
+    const col2 = tableX + 50;
     const col3 = tableX + tableWidth - 80;
     const col4 = tableX + tableWidth - 5;
 
@@ -633,7 +627,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
                 y = 20;
             }
 
-            const toothNumber = tooth.tooth;
+            const toothNumber = getToothDisplayName(tooth.tooth, false);
             const treatments = tooth.treatments.join(', ');
             const itemValue = Object.values(tooth.values).reduce(
                 (sum, val) => sum + (parseFloat(val as string) || 0) / 100, 0
@@ -641,17 +635,11 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
             const status = tooth.status || 'pending';
             const statusLabel = getStatusLabel(status);
 
-            // Tooth — truncate if too wide
+            // Tooth
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(10);
             doc.setTextColor(107, 114, 128);
-            const maxToothWidth = col2 - col1 - 5;
-            let displayTooth = toothNumber;
-            while (doc.getTextWidth(displayTooth) > maxToothWidth && displayTooth.length > 0) {
-                displayTooth = displayTooth.slice(0, -1);
-            }
-            if (displayTooth !== toothNumber) displayTooth += '...';
-            doc.text(displayTooth, col1, y);
+            doc.text(toothNumber, col1, y);
 
             doc.setTextColor(31, 41, 55);
             let displayTreatment = treatments;

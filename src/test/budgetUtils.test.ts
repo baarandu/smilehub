@@ -96,7 +96,7 @@ describe('getToothDisplayName', () => {
   it('converte IDs curtos de volta ao nome completo', () => {
     expect(getToothDisplayName('ARC_SUP')).toBe('Arcada Superior');
     expect(getToothDisplayName('ARC_INF')).toBe('Arcada Inferior');
-    expect(getToothDisplayName('ARC_AMBAS')).toBe('Arcada Superior + Arcada Inferior');
+    expect(getToothDisplayName('ARC_AMBAS')).toBe('Ambas Arcadas');
   });
 });
 

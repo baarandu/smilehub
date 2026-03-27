@@ -174,7 +174,7 @@ export const getToothDisplayName = (tooth: string, includePrefix = true): string
     // Convert short IDs back to full names
     if (tooth === 'ARC_SUP') return 'Arcada Superior';
     if (tooth === 'ARC_INF') return 'Arcada Inferior';
-    if (tooth === 'ARC_AMBAS') return 'Arcada Superior + Arcada Inferior';
+    if (tooth === 'ARC_AMBAS') return 'Ambas Arcadas';
 
     if (tooth.includes('Arcada')) {
         return tooth;
