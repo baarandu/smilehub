@@ -8,7 +8,12 @@ import {
     MapPin,
     AlertCircle,
     Filter,
-    Download
+    Download,
+    ArrowDownCircle,
+    ArrowUpCircle,
+    CalendarClock,
+    Receipt,
+    Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,13 +39,16 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Transaction } from '@/components/financial/types';
 import { toast } from 'sonner';
+import { receivablesService } from '@/services/receivables';
 
 interface ClosureTabProps {
     transactions: Transaction[];
     loading: boolean;
+    periodStart: string; // YYYY-MM-DD
+    periodEnd: string;   // YYYY-MM-DD
 }
 
-export function ClosureTab({ transactions, loading }: ClosureTabProps) {
+export function ClosureTab({ transactions, loading, periodStart, periodEnd }: ClosureTabProps) {
     // Ensure transactions is an array and filter out any invalid items
     const safeTransactions = useMemo(() => {
         return (transactions || []).filter(t => t && typeof t === 'object');
@@ -65,6 +73,83 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
         queryKey: ['locations'],
         queryFn: locationsService.getAll
     });
+
+    // Fetch receivables linked to income transactions (to determine origin month)
+    const incomeTransactionIds = useMemo(() => {
+        return safeTransactions
+            .filter(t => t.type === 'income' && t.id)
+            .map(t => t.id);
+    }, [safeTransactions]);
+
+    const { data: linkedReceivables = [] } = useQuery({
+        queryKey: ['receivables', 'by-transactions', incomeTransactionIds],
+        queryFn: () => receivablesService.getReceivablesByTransactionIds(incomeTransactionIds),
+        enabled: incomeTransactionIds.length > 0,
+    });
+
+    // Fetch receivables created in this period (for "faturamento gerado")
+    const { data: periodReceivables = [] } = useQuery({
+        queryKey: ['receivables', 'created-in-period', periodStart, periodEnd],
+        queryFn: () => receivablesService.getReceivablesCreatedInPeriod(
+            `${periodStart}T00:00:00`,
+            `${periodEnd}T23:59:59`
+        ),
+        enabled: !!periodStart && !!periodEnd,
+    });
+
+    // Map: transactionId → receivable created_at
+    const receivableOriginMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const r of linkedReceivables) {
+            if (r.financial_transaction_id) {
+                map[r.financial_transaction_id] = r.created_at;
+            }
+        }
+        return map;
+    }, [linkedReceivables]);
+
+    // Classify income: faturamento do mês vs recebíveis de outros meses
+    const { billingThisMonth, receivablesFromOtherMonths } = useMemo(() => {
+        const billing: Transaction[] = [];
+        const fromOther: Transaction[] = [];
+
+        const periodStartDate = new Date(periodStart);
+        const periodEndDate = new Date(periodEnd);
+
+        for (const t of safeTransactions.filter(t => t.type === 'income')) {
+            const originDateStr = receivableOriginMap[t.id];
+            if (originDateStr) {
+                const originDate = new Date(originDateStr);
+                // If receivable was created within the selected period → billing this month
+                if (originDate >= periodStartDate && originDate <= periodEndDate) {
+                    billing.push(t);
+                } else {
+                    fromOther.push(t);
+                }
+            } else {
+                // No linked receivable (manual entry) → billing this month
+                billing.push(t);
+            }
+        }
+        return { billingThisMonth: billing, receivablesFromOtherMonths: fromOther };
+    }, [safeTransactions, receivableOriginMap, periodStart, periodEnd]);
+
+    const totalBillingThisMonth = billingThisMonth.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+    const totalFromOtherMonths = receivablesFromOtherMonths.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    // Block 2: Faturamento gerado no mês (receivables created in period)
+    const billingGenerated = useMemo(() => {
+        const totalGenerated = periodReceivables.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        const receivedThisMonth = periodReceivables
+            .filter(r => r.status === 'confirmed')
+            .reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        const pendingFuture = periodReceivables
+            .filter(r => r.status === 'pending' || r.status === 'overdue')
+            .reduce((sum, r) => sum + Number(r.amount || 0), 0);
+        const pendingCount = periodReceivables.filter(r => r.status === 'pending' || r.status === 'overdue').length;
+
+        return { totalGenerated, receivedThisMonth, pendingFuture, pendingCount };
+    }, [periodReceivables]);
 
     const getNormalizedMethod = (description?: string) => {
         if (!description) return 'Outros';
@@ -307,6 +392,93 @@ export function ClosureTab({ transactions, loading }: ClosureTabProps) {
                             {formatCurrency(netBalance)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">Considerando taxas descontadas</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Composição da Receita + Faturamento Gerado */}
+            <div className="grid gap-4 md:grid-cols-2">
+                {/* Block 1: Composição da Receita Recebida */}
+                <Card className="border-blue-100 bg-blue-50/20">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-blue-100 rounded-lg">
+                                <ArrowDownCircle className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base text-blue-900">Composição da Receita</CardTitle>
+                                <CardDescription className="text-xs">De onde veio o que entrou no caixa</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-blue-100">
+                            <div className="flex items-center gap-2">
+                                <Receipt className="h-4 w-4 text-green-600" />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">Faturamento do período</p>
+                                    <p className="text-xs text-gray-500">Tratamentos cobrados neste período</p>
+                                </div>
+                            </div>
+                            <span className="font-bold text-green-700">{formatCurrency(totalBillingThisMonth)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-blue-100">
+                            <div className="flex items-center gap-2">
+                                <CalendarClock className="h-4 w-4 text-blue-600" />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">Recebíveis de outros meses</p>
+                                    <p className="text-xs text-gray-500">Parcelas de períodos anteriores</p>
+                                </div>
+                            </div>
+                            <span className="font-bold text-blue-700">{formatCurrency(totalFromOtherMonths)}</span>
+                        </div>
+                        <div className="h-px bg-blue-200/60 my-1" />
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-sm font-semibold text-gray-700">Total Recebido</span>
+                            <span className="text-lg font-bold text-gray-900">{formatCurrency(totalIncome)}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Block 2: Faturamento Gerado no Mês */}
+                <Card className="border-purple-100 bg-purple-50/20">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-purple-100 rounded-lg">
+                                <ArrowUpCircle className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base text-purple-900">Faturamento Gerado</CardTitle>
+                                <CardDescription className="text-xs">Quanto foi vendido neste período</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-purple-100">
+                            <div className="flex items-center gap-2">
+                                <Receipt className="h-4 w-4 text-green-600" />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">Recebido neste período</p>
+                                    <p className="text-xs text-gray-500">Parcelas já confirmadas</p>
+                                </div>
+                            </div>
+                            <span className="font-bold text-green-700">{formatCurrency(billingGenerated.receivedThisMonth)}</span>
+                        </div>
+                        <div className="flex justify-between items-center p-3 bg-white rounded-lg border border-purple-100">
+                            <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-amber-600" />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">A receber (parcelas futuras)</p>
+                                    <p className="text-xs text-gray-500">{billingGenerated.pendingCount} parcela{billingGenerated.pendingCount !== 1 ? 's' : ''} pendente{billingGenerated.pendingCount !== 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                            <span className="font-bold text-amber-700">{formatCurrency(billingGenerated.pendingFuture)}</span>
+                        </div>
+                        <div className="h-px bg-purple-200/60 my-1" />
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-sm font-semibold text-gray-700">Total Faturado</span>
+                            <span className="text-lg font-bold text-purple-800">{formatCurrency(billingGenerated.totalGenerated)}</span>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

@@ -590,7 +590,12 @@ export default function Financial() {
         </TabsContent>
 
         <TabsContent value="closure">
-          <ClosureTab transactions={transactions} loading={loading} />
+          <ClosureTab
+            transactions={transactions}
+            loading={loading}
+            periodStart={getDateRange().start.toISOString().split('T')[0]}
+            periodEnd={getDateRange().end.toISOString().split('T')[0]}
+          />
         </TabsContent>
       </Tabs>
     </div>

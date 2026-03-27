@@ -300,6 +300,42 @@ export const receivablesService = {
     return (data || []) as PaymentReceivable[];
   },
 
+  /**
+   * Get receivables linked to specific financial transaction IDs.
+   * Used to determine origin month of each income transaction.
+   */
+  async getReceivablesByTransactionIds(transactionIds: string[]): Promise<PaymentReceivable[]> {
+    if (transactionIds.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('payment_receivables')
+      .select('id, financial_transaction_id, created_at, split_group_id, split_index, amount, status')
+      .in('financial_transaction_id', transactionIds);
+
+    if (error) throw error;
+    return (data || []) as PaymentReceivable[];
+  },
+
+  /**
+   * Get all receivables created in a date range (for "faturamento gerado" calculation).
+   * Returns all receivables regardless of status.
+   */
+  async getReceivablesCreatedInPeriod(startDate: string, endDate: string): Promise<PaymentReceivable[]> {
+    const clinicId = await getClinicId();
+
+    const { data, error } = await supabase
+      .from('payment_receivables')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .neq('status', 'cancelled')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as PaymentReceivable[];
+  },
+
   async getReceivablesByGroup(splitGroupId: string): Promise<PaymentReceivable[]> {
     const { data, error } = await supabase
       .from('payment_receivables')
