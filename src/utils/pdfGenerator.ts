@@ -289,7 +289,10 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
             y = 20;
         }
 
-        const toothNumber = getToothDisplayName(tooth.tooth, false);
+        let toothNumber = getToothDisplayName(tooth.tooth, false);
+        if (toothNumber.includes('Arcada Superior') && toothNumber.includes('Arcada Inferior')) {
+            toothNumber = 'Ambas Arcadas';
+        }
         const treatments = tooth.treatments.join(', ');
         const itemValue = Object.values(tooth.values).reduce(
             (sum, val) => sum + (parseFloat(val as string) || 0) / 100,
@@ -627,7 +630,10 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
                 y = 20;
             }
 
-            const toothNumber = getToothDisplayName(tooth.tooth, false);
+            let toothNumber = getToothDisplayName(tooth.tooth, false);
+        if (toothNumber.includes('Arcada Superior') && toothNumber.includes('Arcada Inferior')) {
+            toothNumber = 'Ambas Arcadas';
+        }
             const treatments = tooth.treatments.join(', ');
             const itemValue = Object.values(tooth.values).reduce(
                 (sum, val) => sum + (parseFloat(val as string) || 0) / 100, 0
