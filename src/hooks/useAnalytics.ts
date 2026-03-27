@@ -31,6 +31,7 @@ export interface AnalyticsData {
   pendingBudgetsCount: number;
   pendingBudgetsValue: number;
   avgInstallments: number;
+  avgFirstProcedureValue: number;
 
   // Charts
   revenueByMonth: { month: string; receita: number; despesas: number; lucro: number }[];
@@ -115,6 +116,7 @@ async function fetchAnalytics(
     patientsResult,
     appointmentsResult,
     proceduresResult,
+    allProceduresResult,
     budgetsResult,
     dentistsResult,
   ] = await Promise.all([
@@ -136,10 +138,17 @@ async function fetchAnalytics(
 
     supabase
       .from('procedures')
-      .select('id, date, description, value, status, created_by')
+      .select('id, date, description, value, status, created_by, patient_id')
       .eq('clinic_id', clinicId)
       .gte('date', startStr)
       .lte('date', endStr),
+
+    supabase
+      .from('procedures')
+      .select('id, date, value, patient_id, status')
+      .eq('clinic_id', clinicId)
+      .in('status', ['completed', 'paid'])
+      .order('date', { ascending: true }),
 
     supabase
       .from('budgets')
@@ -158,6 +167,7 @@ async function fetchAnalytics(
   const patients = (patientsResult.data || []) as any[];
   const appointments = (appointmentsResult.data || []) as any[];
   const procedures = (proceduresResult.data || []) as any[];
+  const allProcedures = (allProceduresResult.data || []) as any[];
   const budgets = (budgetsResult.data || []) as any[];
   const dentists = (dentistsResult.data || []) as any[];
 
@@ -379,6 +389,19 @@ async function fetchAnalytics(
   }
   const avgInstallments = installmentsCount > 0 ? installmentsSum / installmentsCount : 0;
 
+  // --- Average first procedure value (entry value) ---
+  const firstProcByPatient = new Map<string, number>();
+  for (const proc of allProcedures) {
+    if (!proc.patient_id || !proc.value) continue;
+    if (!firstProcByPatient.has(proc.patient_id)) {
+      firstProcByPatient.set(proc.patient_id, proc.value);
+    }
+  }
+  const firstValues = Array.from(firstProcByPatient.values());
+  const avgFirstProcedureValue = firstValues.length > 0
+    ? firstValues.reduce((a, b) => a + b, 0) / firstValues.length
+    : 0;
+
   // --- Payment methods ---
   const paymentMethods = Array.from(paymentMethodMap.entries())
     .map(([method, data]) => ({
@@ -420,6 +443,7 @@ async function fetchAnalytics(
     pendingBudgetsCount,
     pendingBudgetsValue: Math.round(pendingBudgetsValue * 100) / 100,
     avgInstallments: Math.round(avgInstallments * 10) / 10,
+    avgFirstProcedureValue: Math.round(avgFirstProcedureValue * 100) / 100,
     revenueByMonth,
     newPatientsByMonth,
     appointmentsByStatus,

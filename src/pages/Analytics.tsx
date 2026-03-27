@@ -379,6 +379,12 @@ export default function Analytics() {
           icon={CreditCard}
           subtitle="Parcelas por pagamento"
         />
+        <KpiCard
+          title="Valor Médio de Entrada"
+          value={data.avgFirstProcedureValue > 0 ? formatCurrency(data.avgFirstProcedureValue) : '-'}
+          icon={DollarSign}
+          subtitle="Média do 1º procedimento"
+        />
       </div>
 
       {/* Row 1: Revenue + New Patients */}
