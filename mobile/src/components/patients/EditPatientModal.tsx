@@ -270,7 +270,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                 </View>
 
                                 <View>
-                                    <Text className="text-sm font-medium text-gray-700 mb-2">Sexo</Text>
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Gênero</Text>
                                     <View className="flex-row gap-2">
                                         {[
                                             { value: 'masculino', label: 'Masculino' },
