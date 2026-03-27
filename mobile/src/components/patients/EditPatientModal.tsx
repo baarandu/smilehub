@@ -26,6 +26,9 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
         state: '',
         zipCode: '',
         occupation: '',
+        maritalStatus: '',
+        hasChildren: false,
+        childrenCount: '',
         emergencyContact: '',
         emergencyPhone: '',
         healthInsurance: '',
@@ -50,6 +53,9 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 state: patient.state || '',
                 zipCode: patient.zip_code || '',
                 occupation: patient.occupation || '',
+                maritalStatus: (patient as any).marital_status || '',
+                hasChildren: (patient as any).has_children || false,
+                childrenCount: (patient as any).children_count ? String((patient as any).children_count) : '',
                 emergencyContact: patient.emergency_contact || '',
                 emergencyPhone: patient.emergency_phone || '',
                 healthInsurance: patient.health_insurance || '',
@@ -153,6 +159,9 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 state: form.state || null,
                 zip_code: form.zipCode || null,
                 occupation: form.occupation || null,
+                marital_status: form.maritalStatus || null,
+                has_children: form.hasChildren || false,
+                children_count: form.childrenCount ? parseInt(form.childrenCount, 10) : null,
                 emergency_contact: form.emergencyContact || null,
                 emergency_phone: form.emergencyPhone || null,
                 health_insurance: form.healthInsurance || null,
@@ -260,6 +269,54 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                         value={form.occupation}
                                         onChangeText={(text) => setForm({ ...form, occupation: text })}
                                     />
+                                </View>
+
+                                <View>
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Estado Civil</Text>
+                                    <View className="flex-row flex-wrap gap-2">
+                                        {[
+                                            { value: 'solteiro', label: 'Solteiro(a)' },
+                                            { value: 'casado', label: 'Casado(a)' },
+                                            { value: 'divorciado', label: 'Divorciado(a)' },
+                                            { value: 'viuvo', label: 'Viúvo(a)' },
+                                            { value: 'uniao_estavel', label: 'União Estável' },
+                                        ].map((option) => (
+                                            <TouchableOpacity
+                                                key={option.value}
+                                                onPress={() => setForm({ ...form, maritalStatus: form.maritalStatus === option.value ? '' : option.value })}
+                                                className={`px-3 py-2 rounded-lg border ${form.maritalStatus === option.value ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-200'}`}
+                                            >
+                                                <Text className={`text-sm ${form.maritalStatus === option.value ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                                                    {option.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </View>
+
+                                <View>
+                                    <View className="flex-row items-center justify-between mb-2">
+                                        <Text className="text-sm font-medium text-gray-700">Possui filhos?</Text>
+                                        <TouchableOpacity
+                                            onPress={() => setForm({ ...form, hasChildren: !form.hasChildren, childrenCount: !form.hasChildren ? form.childrenCount : '' })}
+                                            className={`w-12 h-7 rounded-full justify-center ${form.hasChildren ? 'bg-blue-500' : 'bg-gray-300'}`}
+                                        >
+                                            <View className={`w-5 h-5 rounded-full bg-white shadow ${form.hasChildren ? 'ml-6' : 'ml-1'}`} />
+                                        </TouchableOpacity>
+                                    </View>
+                                    {form.hasChildren && (
+                                        <View className="mt-1">
+                                            <Text className="text-sm font-medium text-gray-700 mb-2">Quantos filhos?</Text>
+                                            <TextInput
+                                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                                                placeholder="Ex: 2"
+                                                placeholderTextColor="#9CA3AF"
+                                                keyboardType="numeric"
+                                                value={form.childrenCount}
+                                                onChangeText={(text) => setForm({ ...form, childrenCount: text.replace(/\D/g, '') })}
+                                            />
+                                        </View>
+                                    )}
                                 </View>
                             </View>
 

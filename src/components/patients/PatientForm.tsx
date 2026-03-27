@@ -41,6 +41,9 @@ const emptyForm: PatientFormData = {
   state: '',
   zipCode: '',
   occupation: '',
+  maritalStatus: '',
+  hasChildren: false,
+  childrenCount: '',
   emergencyContact: '',
   emergencyPhone: '',
   healthInsurance: '',
@@ -338,7 +341,7 @@ export function PatientForm({
                   placeholder="00.000.000-0"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="occupation">Profissão</Label>
                 <Input
                   id="occupation"
@@ -347,6 +350,54 @@ export function PatientForm({
                   placeholder="Ex: Engenheiro(a)"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="maritalStatus">Estado Civil</Label>
+                <Select
+                  value={form.maritalStatus}
+                  onValueChange={(value) => updateField('maritalStatus', value)}
+                >
+                  <SelectTrigger id="maritalStatus">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solteiro">Solteiro(a)</SelectItem>
+                    <SelectItem value="casado">Casado(a)</SelectItem>
+                    <SelectItem value="divorciado">Divorciado(a)</SelectItem>
+                    <SelectItem value="viuvo">Viúvo(a)</SelectItem>
+                    <SelectItem value="uniao_estavel">União Estável</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Possui filhos?</Label>
+                <div className="flex items-center gap-3 h-10">
+                  <Switch
+                    id="hasChildren"
+                    checked={form.hasChildren}
+                    onCheckedChange={(checked) => {
+                      updateField('hasChildren', checked);
+                      if (!checked) updateField('childrenCount', '');
+                    }}
+                  />
+                  <Label htmlFor="hasChildren" className="font-normal">
+                    {form.hasChildren ? 'Sim' : 'Não'}
+                  </Label>
+                </div>
+              </div>
+              {form.hasChildren && (
+                <div className="space-y-2">
+                  <Label htmlFor="childrenCount">Quantos filhos?</Label>
+                  <Input
+                    id="childrenCount"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={form.childrenCount}
+                    onChange={(e) => updateField('childrenCount', e.target.value)}
+                    placeholder="Ex: 2"
+                  />
+                </div>
+              )}
             </div>
           </TabsContent>
 

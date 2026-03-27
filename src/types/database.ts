@@ -2265,9 +2265,12 @@ export type Database = {
           email: string | null
           emergency_contact: string | null
           emergency_phone: string | null
+          has_children: boolean | null
           health_insurance: string | null
           health_insurance_number: string | null
+          children_count: number | null
           id: string
+          marital_status: string | null
           medical_history: string | null
           medications: string | null
           name: string
@@ -2287,6 +2290,7 @@ export type Database = {
           allergies?: string | null
           avatar_url?: string | null
           birth_date?: string | null
+          children_count?: number | null
           city?: string | null
           clinic_id?: string | null
           cpf?: string | null
@@ -2294,9 +2298,11 @@ export type Database = {
           email?: string | null
           emergency_contact?: string | null
           emergency_phone?: string | null
+          has_children?: boolean | null
           health_insurance?: string | null
           health_insurance_number?: string | null
           id?: string
+          marital_status?: string | null
           medical_history?: string | null
           medications?: string | null
           name: string
@@ -2316,6 +2322,7 @@ export type Database = {
           allergies?: string | null
           avatar_url?: string | null
           birth_date?: string | null
+          children_count?: number | null
           city?: string | null
           clinic_id?: string | null
           cpf?: string | null
@@ -2323,9 +2330,11 @@ export type Database = {
           email?: string | null
           emergency_contact?: string | null
           emergency_phone?: string | null
+          has_children?: boolean | null
           health_insurance?: string | null
           health_insurance_number?: string | null
           id?: string
+          marital_status?: string | null
           medical_history?: string | null
           medications?: string | null
           name?: string
@@ -3462,6 +3471,9 @@ export type PatientFormData = {
   state: string
   zipCode: string
   occupation: string
+  maritalStatus: string
+  hasChildren: boolean
+  childrenCount: string
   emergencyContact: string
   emergencyPhone: string
   healthInsurance: string
