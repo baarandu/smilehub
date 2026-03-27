@@ -376,8 +376,10 @@ export function usePatientPayments(
             const budgetLocation = parsed.location || null;
             const installmentsCount = transactions ? transactions.length : 1;
 
-            // Calculate total value of all items
-            const totalValue = selectedItems.items.reduce((sum, item) => sum + calculateToothTotal(item.tooth.values), 0);
+            // Calculate total value of all items (original, without discount)
+            const originalTotal = selectedItems.items.reduce((sum, item) => sum + calculateToothTotal(item.tooth.values), 0);
+            // grossAmount already has discount applied
+            const totalAmount = breakdown?.grossAmount ?? originalTotal;
 
             // Taxa do orçamento (global para todos os itens)
             const budgetRate = budget.location_rate;
@@ -386,8 +388,9 @@ export function usePatientPayments(
             // Update all selected items to paid status
             for (const item of selectedItems.items) {
                 const selectedTooth = parsed.teeth[item.index];
-                const itemValue = calculateToothTotal(item.tooth.values);
-                const ratio = itemValue / totalValue;
+                const itemOriginalValue = calculateToothTotal(item.tooth.values);
+                const ratio = itemOriginalValue / originalTotal;
+                const itemValue = totalAmount * ratio;
 
                 // Pegar a taxa individual do item (fallback para taxa global se não definida ou for 0)
                 const toothRate = item.tooth.locationRate;
@@ -448,8 +451,9 @@ export function usePatientPayments(
 
             // Create one financial entry per item
             for (const item of selectedItems.items) {
-                const itemValue = calculateToothTotal(item.tooth.values);
-                const ratio = itemValue / totalValue;
+                const itemOriginalValue = calculateToothTotal(item.tooth.values);
+                const ratio = itemOriginalValue / originalTotal;
+                const itemValue = totalAmount * ratio;
                 // Taxa individual (fallback para taxa global se não definida ou for 0)
                 const toothRateForTx = item.tooth.locationRate;
                 const targetLocationRate = (toothRateForTx && toothRateForTx > 0) ? toothRateForTx : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
@@ -459,20 +463,18 @@ export function usePatientPayments(
                 if (transactions && transactions.length > 0) {
                     for (let i = 0; i < transactions.length; i++) {
                         const t = transactions[i];
-                        const itemAmount = t.amount * ratio;
+                        const txRatio = transactions.length > 1 ? (t.amount / totalAmount) : 1;
+                        const itemAmount = itemValue * txRatio;
                         const suffix = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
 
                         let deductionPayload: Record<string, any> = {};
                         if (breakdown) {
-                            const txRatio = t.amount / breakdown.grossAmount;
-                            // SEMPRE calcular locationAmt usando a taxa individual do item (não a média do breakdown)
-                            const cardFeeAmt = breakdown.cardFeeAmount * txRatio * ratio;
+                            const cardFeeAmt = breakdown.cardFeeAmount * ratio * txRatio;
                             const baseForLocation = itemAmount - cardFeeAmt;
                             const locationAmt = (baseForLocation * targetLocationRate) / 100;
 
-                            const taxAmt = breakdown.taxAmount * txRatio * ratio;
-                            const anticipationAmt = (breakdown.anticipationAmount || 0) * txRatio * ratio;
-                            // Recalcular net_amount com o location correto
+                            const taxAmt = breakdown.taxAmount * ratio * txRatio;
+                            const anticipationAmt = (breakdown.anticipationAmount || 0) * ratio * txRatio;
                             const netAmt = itemAmount - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
 
                             deductionPayload = {
@@ -518,14 +520,12 @@ export function usePatientPayments(
 
                     let deductionPayload: Record<string, any> = {};
                     if (breakdown) {
-                        // SEMPRE calcular locationAmt usando a taxa individual do item (não a média do breakdown)
                         const cardFeeAmt = breakdown.cardFeeAmount * ratio;
                         const baseForLocation = itemValue - cardFeeAmt;
                         const locationAmt = (baseForLocation * targetLocationRate) / 100;
 
                         const taxAmt = breakdown.taxAmount * ratio;
                         const anticipationAmt = (breakdown.anticipationAmount || 0) * ratio;
-                        // Recalcular net_amount com o location correto
                         const netAmt = itemValue - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
 
                         deductionPayload = {
