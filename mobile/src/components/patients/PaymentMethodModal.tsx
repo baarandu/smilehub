@@ -13,6 +13,7 @@ export interface PaymentTransaction {
 
 export interface FinancialBreakdown {
     grossAmount: number;
+    discountAmount: number;
     taxRate: number;
     taxAmount: number;
     cardFeeRate: number;
@@ -73,6 +74,11 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     // Anticipation State
     const [isAnticipated, setIsAnticipated] = useState(false);
 
+    // Discount State
+    const [discountStr, setDiscountStr] = useState('');
+    const discountAmount = parseFloat(discountStr) || 0;
+    const effectiveValue = Math.max(value - discountAmount, 0);
+
     // Payer Data State
     const [payerIsPatient, setPayerIsPatient] = useState(true);
     const [payerType, setPayerType] = useState<'PF' | 'PJ'>('PF');
@@ -116,6 +122,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         setPayerName('');
         setPayerCpf('');
         setSelectedPJSource('');
+        setDiscountStr('');
     };
 
     // ... (keep installment generation logic same) ...
@@ -125,8 +132,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             return;
         }
         const items = [];
-        const baseAmount = Math.floor((value / count) * 100) / 100;
-        let remainder = value - (baseAmount * count);
+        const baseAmount = Math.floor((effectiveValue / count) * 100) / 100;
+        let remainder = effectiveValue - (baseAmount * count);
         remainder = Math.round(remainder * 100) / 100;
 
         // Use budgetDate if available, otherwise today
@@ -160,7 +167,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     // Calculation Logic
     const calculateBreakdown = (): FinancialBreakdown => {
-        const grossAmount = value;
+        const grossAmount = effectiveValue;
 
         // 1. Tax
         const taxRate = filesSettings?.tax_rate || 0;
@@ -211,6 +218,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
         return {
             grossAmount,
+            discountAmount,
             taxRate,
             taxAmount,
             cardFeeRate,
@@ -247,15 +255,13 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         if (effectiveIsAnticipated) {
             transactions = [{
                 method: selectedMethod,
-                amount: value, // We save Gross amount in the transaction amount usually? 
-                // Or do we save Net? 
-                // Standard: Amount = Gross. Net_Amount = Net.
+                amount: effectiveValue,
                 date: baseDateStr
             }];
         } else if (isInstallments) {
             const totalPlanned = getTotalPlanned();
-            if (Math.abs(totalPlanned - value) > 0.05) {
-                Alert.alert('Erro no Valor', `A soma das parcelas (R$ ${formatCurrency(totalPlanned)}) deve ser igual ao valor total (R$ ${formatCurrency(value)}). Ajuste os valores.`);
+            if (Math.abs(totalPlanned - effectiveValue) > 0.05) {
+                Alert.alert('Erro no Valor', `A soma das parcelas (R$ ${formatCurrency(totalPlanned)}) deve ser igual ao valor total (R$ ${formatCurrency(effectiveValue)}). Ajuste os valores.`);
                 return;
             }
             transactions = installmentItems.map(item => {
@@ -269,7 +275,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         } else {
             transactions = [{
                 method: selectedMethod,
-                amount: value,
+                amount: effectiveValue,
                 date: baseDateStr
             }];
         }
@@ -339,7 +345,14 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                         <View className="flex-row items-center gap-3">
                             <View className="items-end">
                                 <Text className="text-[10px] text-gray-500">{itemName}</Text>
-                                <Text className="text-base font-bold text-[#a03f3d]">R$ {formatCurrency(value)}</Text>
+                                {discountAmount > 0 ? (
+                                    <>
+                                        <Text className="text-[10px] text-gray-400 line-through">R$ {formatCurrency(value)}</Text>
+                                        <Text className="text-base font-bold text-[#a03f3d]">R$ {formatCurrency(effectiveValue)}</Text>
+                                    </>
+                                ) : (
+                                    <Text className="text-base font-bold text-[#a03f3d]">R$ {formatCurrency(value)}</Text>
+                                )}
                             </View>
                             <TouchableOpacity onPress={onClose} className="p-1">
                                 <X size={20} color="#6B7280" />
@@ -561,12 +574,37 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                             )}
                         </View>
 
+                        {/* Discount */}
+                        <View className="mb-3">
+                            <Text className="text-xs font-medium text-gray-700 mb-1.5">Desconto (R$)</Text>
+                            <TextInput
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900"
+                                placeholder="0,00"
+                                placeholderTextColor="#9CA3AF"
+                                keyboardType="numeric"
+                                value={discountStr}
+                                onChangeText={(text) => {
+                                    const cleaned = text.replace(',', '.');
+                                    const val = parseFloat(cleaned);
+                                    if (text === '' || (val >= 0 && val <= value)) {
+                                        setDiscountStr(text);
+                                    }
+                                }}
+                            />
+                        </View>
+
                         {/* Breakdown - Compact */}
                         <View className="bg-slate-50 p-2.5 rounded-lg mb-2">
                             <View className="flex-row justify-between mb-1">
-                                <Text className="text-[10px] text-gray-500">Bruto</Text>
-                                <Text className="text-xs text-gray-700">R$ {formatCurrency(breakdown.grossAmount)}</Text>
+                                <Text className="text-[10px] text-gray-500">Valor Original</Text>
+                                <Text className="text-xs text-gray-700">R$ {formatCurrency(value)}</Text>
                             </View>
+                            {discountAmount > 0 && (
+                                <View className="flex-row justify-between mb-1">
+                                    <Text className="text-[10px] text-emerald-600">Desconto</Text>
+                                    <Text className="text-[10px] text-emerald-600">- R$ {formatCurrency(discountAmount)}</Text>
+                                </View>
+                            )}
                             {breakdown.cardFeeAmount > 0 && (
                                 <View className="flex-row justify-between">
                                     <Text className="text-[10px] text-gray-500">Taxa Cartão ({breakdown.cardFeeRate}%)</Text>
