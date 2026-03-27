@@ -328,10 +328,13 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             const totalTaxAmount = breakdown?.taxAmount || 0;
             const totalAnticipationAmount = breakdown?.anticipationAmount || 0;
 
+            const originalTotal = paymentBatch.totalValue;
+
             for (const idx of indices) {
                 const tooth = currentTeeth[idx];
-                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
-                const ratio = itemValue / totalAmount;
+                const itemOriginalValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const ratio = itemOriginalValue / originalTotal;
+                const itemValue = totalAmount * ratio;
 
                 const toothRate = (tooth as any).locationRate;
                 const budgetRate = (refreshedBudget as any).location_rate;
@@ -394,6 +397,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     paymentMethod: method as any,
                     paymentInstallments: installments,
                     paymentDate: new Date().toISOString().split('T')[0],
+                    discountAmount: itemOriginalValue - itemValue,
                     financialBreakdown: {
                         grossAmount: itemValue,
                         netAmount: itemNetAmount,
