@@ -344,6 +344,21 @@ export function PatientForm({
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="gender">Sexo</Label>
+                <Select
+                  value={form.gender}
+                  onValueChange={(value) => updateField('gender', value)}
+                >
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="occupation">Profissão</Label>
                 <Input
                   id="occupation"

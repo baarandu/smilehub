@@ -34,7 +34,7 @@ export interface AnalyticsData {
   newPatientsByMonth: { month: string; count: number }[];
   appointmentsByStatus: { status: string; count: number }[];
   topProcedures: { name: string; count: number; value: number }[];
-  patientsByAge: { range: string; count: number }[];
+  patientsByAge: { range: string; masculino: number; feminino: number; naoInformado: number }[];
   revenueByDentist: { name: string; value: number; count: number }[];
   appointmentsByDayOfWeek: { day: string; total: number; completed: number; cancelled: number }[];
   paymentMethods: { method: string; value: number; count: number }[];
@@ -120,7 +120,7 @@ async function fetchAnalytics(
 
     supabase
       .from('patients')
-      .select('id, created_at, birth_date, referral_source')
+      .select('id, created_at, birth_date, referral_source, gender')
       .eq('clinic_id', clinicId)
       .is('deleted_at', null),
 
@@ -255,14 +255,18 @@ async function fetchAnalytics(
     return { month: format(d, 'MMM/yy', { locale: ptBR }), count };
   });
 
-  // Age distribution (all patients, not period-dependent)
-  const patientsByAge = AGE_RANGES.map(r => ({ range: r.label, count: 0 }));
+  // Age + gender distribution (all patients, not period-dependent)
+  const patientsByAge = AGE_RANGES.map(r => ({ range: r.label, masculino: 0, feminino: 0, naoInformado: 0 }));
   const now = new Date();
   for (const p of patients) {
     if (!p.birth_date) continue;
     const age = differenceInYears(now, parseISO(p.birth_date));
     const idx = AGE_RANGES.findIndex(r => age >= r.min && age <= r.max);
-    if (idx >= 0) patientsByAge[idx].count++;
+    if (idx >= 0) {
+      if (p.gender === 'masculino') patientsByAge[idx].masculino++;
+      else if (p.gender === 'feminino') patientsByAge[idx].feminino++;
+      else patientsByAge[idx].naoInformado++;
+    }
   }
 
   // --- Appointments ---

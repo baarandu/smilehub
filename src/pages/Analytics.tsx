@@ -530,7 +530,7 @@ export default function Analytics() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-4 w-4 text-primary" />
-              Faixa Etária dos Pacientes
+              Perfil dos Pacientes
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -540,8 +540,11 @@ export default function Analytics() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip formatter={(v: number) => [v, 'Pacientes']} />
-                  <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} name="Pacientes" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="masculino" stackId="gender" fill="#3b82f6" radius={[0, 0, 0, 0]} name="Masculino" />
+                  <Bar dataKey="feminino" stackId="gender" fill="#ec4899" radius={[0, 0, 0, 0]} name="Feminino" />
+                  <Bar dataKey="naoInformado" stackId="gender" fill="#d1d5db" radius={[4, 4, 0, 0]} name="Não Informado" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

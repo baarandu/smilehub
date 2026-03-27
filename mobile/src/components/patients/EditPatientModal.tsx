@@ -21,6 +21,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
         birthDate: '',
         cpf: '',
         rg: '',
+        gender: '',
         address: '',
         city: '',
         state: '',
@@ -50,6 +51,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 birthDate: formatDateForDisplay(patient.birth_date),
                 cpf: patient.cpf || '',
                 rg: patient.rg || '',
+                gender: (patient as any).gender || '',
                 address: patient.address || '',
                 city: patient.city || '',
                 state: patient.state || '',
@@ -158,6 +160,7 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                 birth_date: formatDateForDB(form.birthDate),
                 cpf: form.cpf || null,
                 rg: form.rg || null,
+                gender: form.gender || null,
                 address: form.address || null,
                 city: form.city || null,
                 state: form.state || null,
@@ -263,6 +266,26 @@ export function EditPatientModal({ visible, patient, onClose, onSuccess }: EditP
                                             value={form.rg}
                                             onChangeText={(text) => setForm({ ...form, rg: text })}
                                         />
+                                    </View>
+                                </View>
+
+                                <View>
+                                    <Text className="text-sm font-medium text-gray-700 mb-2">Sexo</Text>
+                                    <View className="flex-row gap-2">
+                                        {[
+                                            { value: 'masculino', label: 'Masculino' },
+                                            { value: 'feminino', label: 'Feminino' },
+                                        ].map((option) => (
+                                            <TouchableOpacity
+                                                key={option.value}
+                                                onPress={() => setForm({ ...form, gender: form.gender === option.value ? '' : option.value })}
+                                                className={`flex-1 py-3 rounded-xl border items-center ${form.gender === option.value ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-200'}`}
+                                            >
+                                                <Text className={`text-sm ${form.gender === option.value ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                                                    {option.label}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
                                     </View>
                                 </View>
 
