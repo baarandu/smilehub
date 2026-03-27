@@ -84,7 +84,6 @@ export default function Pricing() {
     const [isTrialing, setIsTrialing] = useState(false);
     const [currentPeriodEnd, setCurrentPeriodEnd] = useState<string | null>(null);
 
-    const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
     const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
     const [pendingPlanChange, setPendingPlanChange] = useState<Plan | null>(null);
 
@@ -166,19 +165,20 @@ export default function Pricing() {
         }
 
         const isUpgrade = plan.price_monthly > currentPlan.price_monthly;
-        setPendingPlanChange(plan);
 
         if (isUpgrade) {
-            setUpgradeDialogOpen(true);
+            // Upgrade: open payment modal (with coupon option)
+            handleSubscribe(plan);
         } else {
+            // Downgrade: show confirmation dialog, then call Edge Function
+            setPendingPlanChange(plan);
             setDowngradeDialogOpen(true);
         }
     };
 
-    const confirmPlanChange = async () => {
+    const confirmDowngrade = async () => {
         if (!pendingPlanChange || !clinicId || !userId) return;
 
-        setUpgradeDialogOpen(false);
         setDowngradeDialogOpen(false);
         setProcessing(true);
 
@@ -187,7 +187,7 @@ export default function Pricing() {
 
             if (result.success) {
                 toast({
-                    title: result.isUpgrade ? 'Upgrade Realizado!' : 'Downgrade Agendado!',
+                    title: 'Downgrade Agendado!',
                     description: result.message,
                 });
                 await getCurrentUser();
@@ -662,44 +662,6 @@ export default function Pricing() {
                 }}
             />
 
-            {/* Upgrade Dialog */}
-            <AlertDialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar Upgrade</AlertDialogTitle>
-                        <AlertDialogDescription className="space-y-3">
-                            <p>
-                                Você está prestes a fazer upgrade para o plano <strong>{pendingPlanChange?.name}</strong>.
-                            </p>
-                            {isTrialing ? (
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-blue-800">
-                                    <p className="text-sm">
-                                        Como você ainda está no período de teste, a mudança será aplicada imediatamente.
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800">
-                                    <p className="text-sm">
-                                        Será cobrado um valor proporcional pela diferença de plano até o fim do período atual.
-                                    </p>
-                                </div>
-                            )}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={processing} className="rounded-xl">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmPlanChange}
-                            disabled={processing}
-                            className="bg-[#a03f3d] hover:bg-[#8b3634] rounded-xl"
-                        >
-                            {processing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                            Confirmar Upgrade
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
             {/* Downgrade Dialog */}
             <AlertDialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
                 <AlertDialogContent className="rounded-2xl">
@@ -732,7 +694,7 @@ export default function Pricing() {
                     <AlertDialogFooter>
                         <AlertDialogCancel disabled={processing} className="rounded-xl">Manter Plano Atual</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={confirmPlanChange}
+                            onClick={confirmDowngrade}
                             disabled={processing}
                             className="bg-amber-600 hover:bg-amber-700 rounded-xl"
                         >

@@ -116,6 +116,9 @@ export function createErrorResponse(
     "Erro no serviço de extração. Tente novamente.",
     "No content in GPT response",
     "No audio file provided",
+    // Stripe subscription
+    "ID da assinatura Stripe nao encontrado",
+    "Item da assinatura nao encontrado no Stripe",
     // Evolution Proxy
     "Evolution API não configurada no servidor.",
     "Apenas administradores podem gerenciar o WhatsApp",

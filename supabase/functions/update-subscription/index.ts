@@ -48,6 +48,7 @@ serve(async (req) => {
         const body = await req.json();
         const { clinicId, newPlanId, userId } = body;
 
+
         validateUUID(clinicId, "clinicId");
         validateUUID(newPlanId, "newPlanId");
 
@@ -68,10 +69,11 @@ serve(async (req) => {
         // 1. Get current subscription from our database
         const { data: currentSub, error: subError } = await supabase
             .from('subscriptions')
-            .select('*, subscription_plans(*)')
+            .select('*, subscription_plans!plan_id(*)')
             .eq('clinic_id', clinicId)
             .in('status', ['active', 'trialing'])
             .single();
+
 
         if (subError || !currentSub) {
             throw new Error('Nenhuma assinatura ativa encontrada');
@@ -83,6 +85,7 @@ serve(async (req) => {
             .select('*')
             .eq('id', newPlanId)
             .single();
+
 
         if (planError || !newPlan) {
             throw new Error('Plano nao encontrado');
@@ -139,12 +142,43 @@ serve(async (req) => {
         }
 
         // 4. For active (paid) subscriptions, we need to handle via Stripe
-        if (!currentSub.stripe_subscription_id) {
-            throw new Error('ID da assinatura Stripe nao encontrado. Contate o suporte.');
+        const hasValidStripeId = currentSub.stripe_subscription_id && currentSub.stripe_subscription_id.startsWith('sub_');
+
+        if (!hasValidStripeId) {
+            // No valid Stripe subscription (manual/coupon activation) — update directly in DB
+            const { error: updateError } = await supabase
+                .from('subscriptions')
+                .update({
+                    plan_id: newPlanId,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', currentSub.id);
+
+            if (updateError) {
+                throw new Error('Falha ao atualizar plano');
+            }
+
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_UPDATE", table_name: "Subscription", record_id: currentSub.id,
+                user_id: user.id, details: { new_plan_id: newPlanId, is_upgrade: isUpgrade, direct_update: true },
+            });
+
+            return new Response(
+                JSON.stringify({
+                    success: true,
+                    message: isUpgrade
+                        ? `Upgrade para ${newPlan.name} realizado com sucesso!`
+                        : `Downgrade para ${newPlan.name} realizado com sucesso!`,
+                    immediate: true,
+                    isUpgrade,
+                    newPlan: newPlan.name
+                }),
+                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+            );
         }
 
         // Retrieve Stripe subscription to get item ID
-        const stripeSubscription = await stripe.subscriptions.retrieve(currentSub.stripe_subscription_id);
+        const stripeSubscription = await stripe.subscriptions.retrieve(currentSub.stripe_subscription_id!);
         const subscriptionItemId = stripeSubscription.items.data[0]?.id;
 
         if (!subscriptionItemId) {
@@ -283,6 +317,19 @@ serve(async (req) => {
         }
 
     } catch (error: unknown) {
+
+        // Stripe errors have a user-friendly message — wrap them so createErrorResponse treats them as safe
+        if (error && typeof error === 'object' && 'type' in error && (error as any).type?.startsWith('Stripe')) {
+            const stripeMsg = (error as any).message || 'Erro no Stripe';
+            log.audit(supabase, {
+                action: "SUBSCRIPTION_ERROR", table_name: "Subscription",
+                details: { stripe_error: stripeMsg, stripe_type: (error as any).type },
+            });
+            return new Response(
+                JSON.stringify({ error: `Erro no processamento do pagamento: ${stripeMsg}` }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
         return createErrorResponse(error, corsHeaders, "update-subscription");
     }
 })

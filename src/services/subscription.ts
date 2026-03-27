@@ -130,7 +130,22 @@ export const subscriptionService = {
             body: { clinicId, newPlanId, userId },
         });
 
-        if (error) throw error;
+        if (error) {
+            // Extract real error message from Edge Function response
+            let message = 'Erro ao mudar plano. Tente novamente.';
+            try {
+                const context = (error as any).context;
+                if (context instanceof Response) {
+                    const body = await context.json();
+                    if (body?.error) message = body.error;
+                } else if (typeof context === 'object' && context?.error) {
+                    message = context.error;
+                }
+            } catch {
+                // fallback to generic message
+            }
+            throw new Error(message);
+        }
         return data;
     },
 
