@@ -14,6 +14,8 @@ import {
   FileCheck,
   CalendarRange,
   Share2,
+  ClipboardList,
+  CreditCard,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -360,10 +362,22 @@ export default function Analytics() {
           subtitle="No período"
         />
         <KpiCard
-          title="Aprovação de Orçamentos"
+          title="Conversão de Orçamentos"
           value={`${data.budgetApprovalRate}%`}
           icon={FileCheck}
-          subtitle="Aprovados / total"
+          subtitle="Aprovados+pagos / total"
+        />
+        <KpiCard
+          title="Oportunidades de Venda"
+          value={String(data.pendingBudgetsCount)}
+          icon={ClipboardList}
+          subtitle={`${formatCurrency(data.pendingBudgetsValue)} em orçamentos pendentes`}
+        />
+        <KpiCard
+          title="Parcelamento Médio"
+          value={data.avgInstallments > 0 ? `${data.avgInstallments}x` : '-'}
+          icon={CreditCard}
+          subtitle="Parcelas por pagamento"
         />
       </div>
 

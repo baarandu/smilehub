@@ -28,6 +28,9 @@ export interface AnalyticsData {
   noShowRate: number;
   avgTicket: number;
   budgetApprovalRate: number;
+  pendingBudgetsCount: number;
+  pendingBudgetsValue: number;
+  avgInstallments: number;
 
   // Charts
   revenueByMonth: { month: string; receita: number; despesas: number; lucro: number }[];
@@ -140,7 +143,7 @@ async function fetchAnalytics(
 
     supabase
       .from('budgets')
-      .select('id, status, total_amount, created_at')
+      .select('id, status, value, notes, created_at')
       .eq('clinic_id', clinicId),
 
     supabase
@@ -339,17 +342,42 @@ async function fetchAnalytics(
     }))
     .sort((a, b) => b.value - a.value);
 
-  // --- Budget approval rate (filtered by period) ---
+  // --- Budget metrics ---
   const periodBudgets = budgets.filter(b => {
     if (!b.created_at) return true;
     const d = b.created_at.slice(0, 10);
     return d >= startStr && d <= endStr;
   });
-  const approvedBudgets = periodBudgets.filter(b => b.status === 'approved' || b.status === 'completed').length;
-  const pendingBudgets = periodBudgets.filter(b => b.status === 'pending').length;
-  const budgetApprovalRate = (approvedBudgets + pendingBudgets) > 0
-    ? (approvedBudgets / (approvedBudgets + pendingBudgets)) * 100
+  const convertedBudgets = periodBudgets.filter(b =>
+    b.status === 'approved' || b.status === 'completed' || b.status === 'paid' || b.status === 'partially_paid'
+  ).length;
+  const budgetApprovalRate = periodBudgets.length > 0
+    ? (convertedBudgets / periodBudgets.length) * 100
     : 0;
+
+  // Pending budgets (sales opportunities)
+  const pendingBudgetsList = budgets.filter(b => b.status === 'pending');
+  const pendingBudgetsCount = pendingBudgetsList.length;
+  const pendingBudgetsValue = pendingBudgetsList.reduce((sum, b) => sum + (b.value || 0), 0);
+
+  // Average installments from paid teeth in budget notes
+  let installmentsSum = 0;
+  let installmentsCount = 0;
+  for (const b of budgets) {
+    if (!b.notes) continue;
+    try {
+      const parsed = JSON.parse(b.notes);
+      if (!parsed.teeth || !Array.isArray(parsed.teeth)) continue;
+      for (const tooth of parsed.teeth) {
+        if (tooth.paymentInstallments && tooth.paymentInstallments > 0 &&
+            (tooth.status === 'paid' || tooth.status === 'completed' || tooth.status === 'partially_paid')) {
+          installmentsSum += tooth.paymentInstallments;
+          installmentsCount++;
+        }
+      }
+    } catch { /* ignore invalid JSON */ }
+  }
+  const avgInstallments = installmentsCount > 0 ? installmentsSum / installmentsCount : 0;
 
   // --- Payment methods ---
   const paymentMethods = Array.from(paymentMethodMap.entries())
@@ -389,6 +417,9 @@ async function fetchAnalytics(
     noShowRate: Math.round(noShowRate * 10) / 10,
     avgTicket: Math.round(avgTicket * 100) / 100,
     budgetApprovalRate: Math.round(budgetApprovalRate * 10) / 10,
+    pendingBudgetsCount,
+    pendingBudgetsValue: Math.round(pendingBudgetsValue * 100) / 100,
+    avgInstallments: Math.round(avgInstallments * 10) / 10,
     revenueByMonth,
     newPatientsByMonth,
     appointmentsByStatus,
