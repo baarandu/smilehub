@@ -185,7 +185,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const selectedTooth = currentTeeth[paymentItem.index];
-            const totalAmount = getItemValue(selectedTooth);
+            const originalAmount = getItemValue(selectedTooth);
+            const totalAmount = breakdown?.grossAmount ?? originalAmount;
 
             const isAnticipated = breakdown?.isAnticipated || false;
             const numTransactions = isAnticipated ? 1 : (installments || 1);
@@ -314,7 +315,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const { indices } = paymentBatch;
-            const totalAmount = paymentBatch.totalValue;
+            const totalAmount = breakdown?.grossAmount ?? paymentBatch.totalValue;
 
             const isAnticipated = breakdown?.isAnticipated || false;
             const numInstallments = isAnticipated ? 1 : (installments || 1);

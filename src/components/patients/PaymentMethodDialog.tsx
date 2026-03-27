@@ -15,6 +15,7 @@ import type { SplitPaymentPortion } from '@/types/receivables';
 
 export interface FinancialBreakdown {
     grossAmount: number;
+    discountAmount: number;
     taxRate: number;
     taxAmount: number;
     cardFeeRate: number;
@@ -93,6 +94,11 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [payerCpf, setPayerCpf] = useState('');
     const [selectedPJSource, setSelectedPJSource] = useState('');
 
+    // Discount
+    const [discountStr, setDiscountStr] = useState('');
+    const discountAmount = parseFloat(discountStr) || 0;
+    const effectiveValue = Math.max(value - discountAmount, 0);
+
     // Financial Settings
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
     const [taxRate, setTaxRate] = useState(0);
@@ -126,6 +132,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             setPayerName('');
             setPayerCpf('');
             setSelectedPJSource('');
+            // Reset discount
+            setDiscountStr('');
             // Reset split mode
             setIsSplitMode(false);
             setSplitPortions([]);
@@ -170,7 +178,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
     // Calculate Breakdown
     const breakdown = useMemo((): FinancialBreakdown => {
-        const grossAmount = value;
+        const grossAmount = effectiveValue;
         const taxAmount = (grossAmount * taxRate) / 100;
 
         let cardFeeRate = 0;
@@ -234,6 +242,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
         return {
             grossAmount,
+            discountAmount,
             taxRate,
             taxAmount,
             cardFeeRate,
@@ -245,7 +254,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             netAmount,
             isAnticipated: isAnticipatedLogic
         };
-    }, [value, taxRate, cardFees, selectedMethod, installments, selectedBrand, anticipate, locationRate]);
+    }, [effectiveValue, discountAmount, taxRate, cardFees, selectedMethod, installments, selectedBrand, anticipate, locationRate]);
 
 
     const handleConfirm = () => {
@@ -273,8 +282,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     };
 
     const installmentValue = selectedMethod === 'credit' && parseInt(installments) > 1
-        ? value / parseInt(installments)
-        : value;
+        ? effectiveValue / parseInt(installments)
+        : effectiveValue;
 
     return (
         <Dialog open={open} onOpenChange={onClose}>
@@ -287,7 +296,14 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                     </div>
                     <div className="text-right">
                         <div className="text-sm text-muted-foreground">{itemName}</div>
-                        <div className="text-xl font-bold text-[#a03f3d]">R$ {formatMoney(value)}</div>
+                        {discountAmount > 0 ? (
+                            <>
+                                <div className="text-sm text-muted-foreground line-through">R$ {formatMoney(value)}</div>
+                                <div className="text-xl font-bold text-[#a03f3d]">R$ {formatMoney(effectiveValue)}</div>
+                            </>
+                        ) : (
+                            <div className="text-xl font-bold text-[#a03f3d]">R$ {formatMoney(value)}</div>
+                        )}
                     </div>
                 </div>
 
@@ -317,7 +333,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
                         {isSplitMode ? (
                             <SplitPaymentBuilder
-                                totalValue={value}
+                                totalValue={effectiveValue}
                                 locationRate={locationRate}
                                 taxRate={taxRate}
                                 cardFees={cardFees}
@@ -489,12 +505,38 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                             )}
                         </div>
 
+                        {/* Discount */}
+                        <div className="space-y-1.5">
+                            <Label className="text-sm font-medium">Desconto (R$)</Label>
+                            <Input
+                                type="number"
+                                min={0}
+                                max={value}
+                                step="0.01"
+                                placeholder="0,00"
+                                value={discountStr}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (e.target.value === '' || (val >= 0 && val <= value)) {
+                                        setDiscountStr(e.target.value);
+                                    }
+                                }}
+                                className="font-semibold"
+                            />
+                        </div>
+
                         {/* Financial Breakdown */}
                         <div className="bg-slate-50 p-4 rounded-lg space-y-2 text-sm">
                             <div className="flex justify-between text-slate-600">
-                                <span>Valor Bruto</span>
-                                <span>R$ {formatMoney(breakdown.grossAmount)}</span>
+                                <span>Valor Original</span>
+                                <span>R$ {formatMoney(value)}</span>
                             </div>
+                            {discountAmount > 0 && (
+                                <div className="flex justify-between text-emerald-600">
+                                    <span>Desconto</span>
+                                    <span>- R$ {formatMoney(discountAmount)}</span>
+                                </div>
+                            )}
                             {breakdown.taxAmount > 0 && (
                                 <div className="flex justify-between text-red-500">
                                     <span>Imposto ({breakdown.taxRate}%)</span>
