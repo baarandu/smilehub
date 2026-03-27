@@ -321,6 +321,7 @@ async function fetchAnalytics(
       if (!parsed.teeth || !Array.isArray(parsed.teeth)) continue;
       for (const tooth of parsed.teeth) {
         if (!tooth.treatments || !Array.isArray(tooth.treatments)) continue;
+        if (!['paid', 'completed', 'partially_paid'].includes(tooth.status)) continue;
         const toothTotal = (Object.values(tooth.values || {}) as any[]).reduce((s: number, v: any) => s + (parseFloat(v) || 0), 0);
         const perTreatment = tooth.treatments.length > 0 ? toothTotal / tooth.treatments.length : 0;
         for (const treatment of tooth.treatments) {
