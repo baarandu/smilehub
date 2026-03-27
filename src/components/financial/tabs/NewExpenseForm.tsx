@@ -238,9 +238,9 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 date: dbDate,
                 location: null,
                 recurrence_id: recurrenceId,
-                payment_method: paymentMethod
-                // clinic_id is handled in service now
-            });
+                payment_method: paymentMethod,
+                payment_status: 'pending'
+            } as any);
         }));
     };
 
@@ -259,8 +259,9 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 date: dbDate,
                 location: null,
                 recurrence_id: recurrenceId,
-                payment_method: paymentMethod
-            });
+                payment_method: paymentMethod,
+                payment_status: 'pending'
+            } as any);
         }));
     };
 

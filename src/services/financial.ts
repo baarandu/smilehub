@@ -150,6 +150,19 @@ export const financialService = {
         return data;
     },
 
+    async confirmExpense(id: string, date?: string): Promise<void> {
+        const { error } = await (supabase
+            .from('financial_transactions') as any)
+            .update({
+                payment_status: 'paid',
+                paid_at: new Date().toISOString(),
+                ...(date ? { date } : {})
+            })
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
     async updateTransaction(id: string, updates: Partial<FinancialTransactionInsert>): Promise<void> {
         const { error } = await (supabase
             .from('financial_transactions') as any)

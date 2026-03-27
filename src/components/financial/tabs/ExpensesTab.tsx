@@ -16,7 +16,9 @@ import {
     Package,
     Loader2,
     Eye,
-    User
+    User,
+    CheckCircle,
+    Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +73,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
     const [materialItems, setMaterialItems] = useState<any[]>([]);
     const [loadingMaterialItems, setLoadingMaterialItems] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     const deleteMutation = useMutation({
         mutationFn: financialService.deleteTransaction,
@@ -169,9 +172,13 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
         };
     }, [transactions]);
 
+    const paidExpenses = useMemo(() => filtered.filter(t => (t as any).payment_status !== 'pending'), [filtered]);
+    const pendingExpenses = useMemo(() => filtered.filter(t => (t as any).payment_status === 'pending'), [filtered]);
+
     const activeFilterCount = (locationFilter !== 'all' ? 1 : 0) + (categoryFilter !== 'all' ? 1 : 0);
 
-    const totalManualExpenses = filtered.reduce((sum, t) => sum + t.amount, 0);
+    const totalManualExpenses = paidExpenses.reduce((sum, t) => sum + t.amount, 0);
+    const totalPendingExpenses = pendingExpenses.reduce((sum, t) => sum + t.amount, 0);
     const totalExpenses = totalManualExpenses + automaticDeductions.total;
 
     const formatCurrency = (val: number) => {
@@ -224,18 +231,31 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                 </div>
             </div>
 
-            {/* Summary Cards - 3 cards horizontais */}
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            {/* Summary Cards */}
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-4">
                 <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Despesas Cadastradas</p>
+                        <p className="text-sm font-medium text-muted-foreground">Despesas Pagas</p>
                         <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
                             <TrendingDown className="h-4 w-4 text-red-600" />
                         </div>
                     </div>
                     <p className="text-2xl font-bold text-red-600">{formatCurrency(totalManualExpenses)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">no período</p>
+                    <p className="text-xs text-muted-foreground mt-1">{paidExpenses.length} no período</p>
                 </div>
+
+                {pendingExpenses.length > 0 && (
+                    <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-medium text-muted-foreground">A Pagar</p>
+                            <div className="h-8 w-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <Clock className="h-4 w-4 text-amber-600" />
+                            </div>
+                        </div>
+                        <p className="text-2xl font-bold text-amber-600">{formatCurrency(totalPendingExpenses)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{pendingExpenses.length} pendente{pendingExpenses.length !== 1 ? 's' : ''}</p>
+                    </div>
+                )}
 
                 <div className="bg-white rounded-xl border border-orange-100 p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-2">
@@ -256,7 +276,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                         </div>
                     </div>
                     <p className="text-2xl font-bold text-red-700">{formatCurrency(totalExpenses)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">consolidado</p>
+                    <p className="text-xs text-muted-foreground mt-1">consolidado (pagas)</p>
                 </div>
             </div>
 
@@ -317,23 +337,81 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                         </div>
                     )}
 
-                    {/* Lista de Despesas */}
+                    {/* Pending Expenses */}
+                    {pendingExpenses.length > 0 && (
+                        <div className="space-y-2">
+                            <h3 className="text-sm font-medium text-amber-700 flex items-center gap-1.5">
+                                <Clock className="h-3.5 w-3.5" />
+                                A Pagar ({pendingExpenses.length})
+                            </h3>
+                            <div className="bg-amber-50/50 rounded-lg border border-amber-100 divide-y divide-amber-100 max-h-[300px] overflow-y-auto">
+                                {pendingExpenses.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((t) => (
+                                    <div
+                                        key={t.id}
+                                        className="p-4 flex items-center justify-between hover:bg-amber-50 transition-colors"
+                                    >
+                                        <div className="flex items-start gap-4 flex-1 min-w-0">
+                                            <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-100">
+                                                <Clock className="h-5 w-5 text-amber-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-foreground truncate">{t.description}</p>
+                                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                    <span className="text-xs text-slate-400">{new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                                                    {t.category && (
+                                                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-slate-500">
+                                                            {t.category}
+                                                        </Badge>
+                                                    )}
+                                                    <Badge className="text-[10px] h-5 px-1.5 bg-amber-100 text-amber-700 hover:bg-amber-100">
+                                                        Pendente
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 flex-shrink-0">
+                                            <span className="font-bold text-amber-700">
+                                                {formatCurrency(t.amount)}
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
+                                                onClick={async () => {
+                                                    try {
+                                                        await financialService.confirmExpense(t.id);
+                                                        toast.success('Despesa confirmada como paga!');
+                                                        onRefresh?.();
+                                                    } catch {
+                                                        toast.error('Erro ao confirmar despesa');
+                                                    }
+                                                }}
+                                            >
+                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                Pagar
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Paid Expenses */}
                     <div className="space-y-2">
-                        <h3 className="text-sm font-medium text-muted-foreground">Despesas Cadastradas ({filtered.length})</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground">Despesas Pagas ({paidExpenses.length})</h3>
                         <div className="bg-white rounded-lg border divide-y max-h-[400px] overflow-y-auto">
-                {filtered.length === 0 ? (
+                {paidExpenses.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground italic">
-                        Nenhuma despesa encontrada.
+                        Nenhuma despesa paga no período.
                     </div>
                 ) : (
-                    filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
+                    paidExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
                         <div
                             key={t.id}
                             className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
                             onClick={async () => {
                                 setSelectedExpense(t);
                                 setDetailModalOpen(true);
-                                // If materials expense with related_entity_id, fetch shopping order items
                                 if (t.category === 'Materiais' && (t as any).related_entity_id) {
                                     setLoadingMaterialItems(true);
                                     try {
@@ -440,10 +518,41 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                 </div>
                             </div>
 
+                            {/* Pending Banner */}
+                            {(selectedExpense as any).payment_status === 'pending' && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-4 w-4 text-amber-600" />
+                                        <span className="text-sm font-medium text-amber-800">Despesa pendente de pagamento</span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-700 h-8"
+                                        disabled={confirming}
+                                        onClick={async () => {
+                                            setConfirming(true);
+                                            try {
+                                                await financialService.confirmExpense(selectedExpense.id);
+                                                toast.success('Despesa confirmada como paga!');
+                                                onRefresh?.();
+                                                setDetailModalOpen(false);
+                                            } catch {
+                                                toast.error('Erro ao confirmar despesa');
+                                            } finally {
+                                                setConfirming(false);
+                                            }
+                                        }}
+                                    >
+                                        {confirming ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+                                        Confirmar Pagamento
+                                    </Button>
+                                </div>
+                            )}
+
                             {/* Amount */}
-                            <div className="text-center py-4 bg-red-50 rounded-lg">
+                            <div className={`text-center py-4 rounded-lg ${(selectedExpense as any).payment_status === 'pending' ? 'bg-amber-50' : 'bg-red-50'}`}>
                                 <p className="text-sm text-muted-foreground mb-1">Valor da Despesa</p>
-                                <p className="text-3xl font-bold text-red-600">- {formatCurrency(selectedExpense.amount)}</p>
+                                <p className={`text-3xl font-bold ${(selectedExpense as any).payment_status === 'pending' ? 'text-amber-700' : 'text-red-600'}`}>- {formatCurrency(selectedExpense.amount)}</p>
                             </div>
 
                             {/* Material Items */}

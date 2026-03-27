@@ -186,7 +186,7 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
     }, [safeTransactions, locationFilter, methodFilter]);
 
     const income = filteredTransactions.filter(t => t.type === 'income');
-    const expenses = filteredTransactions.filter(t => t.type === 'expense');
+    const expenses = filteredTransactions.filter(t => t.type === 'expense' && (t as any).payment_status !== 'pending');
 
     const activeFilterCount = (locationFilter !== 'all' ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0);
 

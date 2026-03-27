@@ -17,6 +17,9 @@ export interface Transaction {
     name: string;
   } | null;
   status?: string;
+  payment_status?: 'paid' | 'pending';
+  paid_at?: string | null;
+  recurrence_id?: string | null;
   created_at?: string;
 }
 
