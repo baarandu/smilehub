@@ -115,7 +115,8 @@ export function applyDateMask(text: string): string {
 }
 
 // Currency Formatting (Brazilian Real — no prefix)
-export { formatDecimal as formatCurrency } from './formatters';
+import { formatDecimal } from './formatters';
+export const formatCurrency = formatDecimal;
 
 // Parse currency string to number
 export function getNumericValue(currencyString: string): number {
