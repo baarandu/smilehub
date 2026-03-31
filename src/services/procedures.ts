@@ -20,7 +20,7 @@ export const proceduresService = {
     if (error) throw error;
 
     // Fetch creator names
-    const procedures = (data || []) as any[];
+    const procedures = data || [];
     const creatorIds = [...new Set(procedures.map(p => p.created_by).filter(Boolean))];
 
     let creatorNames: Record<string, string> = {};
@@ -45,7 +45,7 @@ export const proceduresService = {
 
     const { data, error } = await supabase
       .from('procedures')
-      .insert({ ...procedure, created_by: userId, clinic_id: clinicId } as any)
+      .insert({ ...procedure, created_by: userId, clinic_id: clinicId })
       .select()
       .single();
 
@@ -54,8 +54,8 @@ export const proceduresService = {
   },
 
   async update(id: string, procedure: Partial<ProcedureInsert> & { budget_links?: BudgetLink[] | null }): Promise<Procedure> {
-    const { data, error } = await (supabase
-      .from('procedures') as any)
+    const { data, error } = await supabase
+      .from('procedures')
       .update(procedure)
       .eq('id', id)
       .select()
@@ -67,8 +67,8 @@ export const proceduresService = {
 
   async delete(id: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await (supabase
-      .from('procedures') as any)
+    const { error } = await supabase
+      .from('procedures')
       .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id })
       .eq('id', id);
 

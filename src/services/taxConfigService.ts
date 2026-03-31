@@ -48,7 +48,7 @@ export const taxConfigService = {
     if (error) throw error;
 
     // Sort brackets by bracket_order
-    return ((data as any[]) || []).map(config => ({
+    return (data || []).map(config => ({
       ...config,
       brackets: config.brackets?.sort((a: TaxRateBracket, b: TaxRateBracket) => a.bracket_order - b.bracket_order) || [],
     }));
@@ -74,7 +74,7 @@ export const taxConfigService = {
 
     if (error) throw error;
 
-    return ((data as any[]) || []).map(config => ({
+    return (data || []).map(config => ({
       ...config,
       brackets: config.brackets?.sort((a: TaxRateBracket, b: TaxRateBracket) => a.bracket_order - b.bracket_order) || [],
     }));
@@ -106,7 +106,7 @@ export const taxConfigService = {
 
     return {
       ...data,
-      brackets: (data as any).brackets?.sort((a: TaxRateBracket, b: TaxRateBracket) => a.bracket_order - b.bracket_order) || [],
+      brackets: (data as any)?.brackets?.sort((a: TaxRateBracket, b: TaxRateBracket) => a.bracket_order - b.bracket_order) || [],
     } as TaxRateConfiguration;
   },
 

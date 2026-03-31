@@ -36,8 +36,8 @@ export const alertsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return new Set();
 
-        const { data, error } = await (supabase
-            .from('alert_dismissals') as any)
+        const { data, error } = await supabase
+            .from('alert_dismissals')
             .select('alert_type, patient_id, alert_date')
             .eq('user_id', user.id);
 
@@ -78,7 +78,7 @@ export const alertsService = {
         // Get dismissed alerts
         const dismissed = await this.getDismissedAlerts();
 
-        return (patients as any[] || [])
+        return (patients || [])
             .filter(p => {
                 if (!p.birth_date) return false;
                 const [year, month, day] = p.birth_date.split('-').map(Number);
@@ -125,7 +125,7 @@ export const alertsService = {
 
         const latestProcedures = new Map<string, { date: string, patient: any }>();
 
-        (procedures as any[] || []).forEach((proc: any) => {
+        (procedures || []).forEach((proc: any) => {
             if (!latestProcedures.has(proc.patient_id)) {
                 latestProcedures.set(proc.patient_id, {
                     date: proc.date,
@@ -244,7 +244,7 @@ export const alertsService = {
         const attended: FollowUpAlert[] = [];
         const noShow: FollowUpAlert[] = [];
 
-        for (const apt of (data || []) as any[]) {
+        for (const apt of (data || []) as Record<string, any>[]) {
             const key = `follow_up:${apt.patient_id}:${yesterdayStr}`;
             if (dismissed.has(key)) continue;
 
@@ -281,8 +281,8 @@ export const alertsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { error } = await (supabase
-            .from('alert_dismissals') as any)
+        const { error } = await supabase
+            .from('alert_dismissals')
             .upsert({
                 user_id: user.id,
                 alert_type: alertType,

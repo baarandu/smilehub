@@ -16,7 +16,7 @@ export async function getClinicContext(): Promise<{ userId: string; clinicId: st
 
   if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
 
-  return { userId: user.id, clinicId: (clinicUser as any).clinic_id };
+  return { userId: user.id, clinicId: clinicUser.clinic_id };
 }
 
 /**
@@ -34,7 +34,7 @@ export async function getClinicContextSafe(): Promise<{ userId: string; clinicId
 
   if (!clinicUser?.clinic_id) return null;
 
-  return { userId: user.id, clinicId: (clinicUser as any).clinic_id };
+  return { userId: user.id, clinicId: clinicUser.clinic_id };
 }
 
 /**
@@ -60,8 +60,8 @@ export async function getClinicContextWithRole(): Promise<{
 
   return {
     userId: user.id,
-    clinicId: (clinicUser as any).clinic_id,
-    role: (clinicUser as any).role,
-    roles: (clinicUser as any).roles || [],
+    clinicId: clinicUser.clinic_id,
+    role: clinicUser.role,
+    roles: clinicUser.roles || [],
   };
 }

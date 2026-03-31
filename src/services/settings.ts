@@ -25,14 +25,14 @@ export const settingsService = {
         const existing = await this.getFinancialSettings();
 
         if (existing) {
-            const { error } = await (supabase
-                .from('financial_settings') as any)
+            const { error } = await supabase
+                .from('financial_settings')
                 .update({ tax_rate: rate, updated_at: new Date().toISOString() })
                 .eq('id', existing.id);
             if (error) throw error;
         } else {
-            const { error } = await (supabase
-                .from('financial_settings') as any)
+            const { error } = await supabase
+                .from('financial_settings')
                 .insert({ user_id: user.id, tax_rate: rate });
             if (error) throw error;
         }
@@ -45,14 +45,14 @@ export const settingsService = {
         const existing = await this.getFinancialSettings();
 
         if (existing) {
-            const { error } = await (supabase
-                .from('financial_settings') as any)
+            const { error } = await supabase
+                .from('financial_settings')
                 .update({ anticipation_rate: rate, updated_at: new Date().toISOString() })
                 .eq('id', existing.id);
             if (error) throw error;
         } else {
-            const { error } = await (supabase
-                .from('financial_settings') as any)
+            const { error } = await supabase
+                .from('financial_settings')
                 .insert({ user_id: user.id, anticipation_rate: rate });
             if (error) throw error;
         }
@@ -76,8 +76,8 @@ export const settingsService = {
 
         const payload = { ...fee, user_id: user.id };
 
-        const { error } = await (supabase
-            .from('card_fee_config') as any)
+        const { error } = await supabase
+            .from('card_fee_config')
             .upsert(payload, { onConflict: 'user_id, brand, payment_type, installments' });
 
         if (error) throw error;
@@ -109,8 +109,8 @@ export const settingsService = {
             return defaultBrands;
         }
 
-        const { data, error } = await (supabase
-            .from('card_brands') as any)
+        const { data, error } = await supabase
+            .from('card_brands')
             .select('*')
             .eq('clinic_id', clinicId)
             .order('name');
@@ -131,8 +131,8 @@ export const settingsService = {
 
         if (!clinicId) throw new Error('Clinic not found');
 
-        const { data, error } = await (supabase
-            .from('card_brands') as any)
+        const { data, error } = await supabase
+            .from('card_brands')
             .insert({ clinic_id: clinicId, name, is_default: false })
             .select()
             .single();
@@ -155,8 +155,8 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data, error } = await (supabase
-            .from('tax_config') as any)
+        const { data, error } = await supabase
+            .from('tax_config')
             .select('*')
             .eq('user_id', user.id)
             .order('name');
@@ -169,16 +169,16 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { error } = await (supabase
-            .from('tax_config') as any)
+        const { error } = await supabase
+            .from('tax_config')
             .insert({ user_id: user.id, name: tax.name, rate: tax.rate });
 
         if (error) throw error;
     },
 
     async deleteTax(id: string): Promise<void> {
-        const { error } = await (supabase
-            .from('tax_config') as any)
+        const { error } = await supabase
+            .from('tax_config')
             .delete()
             .eq('id', id);
 

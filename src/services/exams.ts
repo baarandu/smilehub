@@ -24,13 +24,13 @@ export const examsService = {
       ...exam,
       clinic_id: clinicId,
       // Add required fields if missing (table requires title, date, name, order_date as NOT NULL)
-      title: (exam as any).title || (exam as any).name || 'Exame',
-      date: (exam as any).date || (exam as any).order_date || new Date().toISOString().split('T')[0],
+      title: exam.title || exam.name || 'Exame',
+      date: exam.date || exam.order_date || new Date().toISOString().split('T')[0],
     };
 
     const { data, error } = await supabase
       .from('exams')
-      .insert(examData as any)
+      .insert(examData)
       .select()
       .single();
 
@@ -43,8 +43,8 @@ export const examsService = {
   },
 
   async update(id: string, exam: Partial<ExamInsert>): Promise<Exam> {
-    const { data, error } = await (supabase
-      .from('exams') as any)
+    const { data, error } = await supabase
+      .from('exams')
       .update(exam)
       .eq('id', id)
       .select()
@@ -56,8 +56,8 @@ export const examsService = {
 
   async delete(id: string): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await (supabase
-      .from('exams') as any)
+    const { error } = await supabase
+      .from('exams')
       .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id })
       .eq('id', id);
 

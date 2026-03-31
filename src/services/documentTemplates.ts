@@ -30,7 +30,7 @@ export const documentTemplatesService = {
 
         const { data, error } = await supabase
             .from('document_templates')
-            .insert({ ...template, user_id: user.id } as any)
+            .insert({ ...template, user_id: user.id })
             .select()
             .single();
 
@@ -39,9 +39,9 @@ export const documentTemplatesService = {
     },
 
     async update(id: string, template: DocumentTemplateUpdate): Promise<DocumentTemplate> {
-        const { data, error } = await (supabase
-            .from('document_templates') as any)
-            .update({ ...(template as any), updated_at: new Date().toISOString() })
+        const { data, error } = await supabase
+            .from('document_templates')
+            .update({ ...template, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
             .single();
@@ -217,7 +217,7 @@ export const documentTemplatesService = {
                 .from('profiles')
                 .select('full_name, gender, cro')
                 .eq('id', user.id)
-                .maybeSingle() as any;
+                .maybeSingle();
 
             if (profile && profile.full_name) {
                 const prefix = profile.gender === 'female' ? 'Dra.' : 'Dr.';
@@ -248,8 +248,8 @@ export const documentTemplatesService = {
             .from('exams')
             .getPublicUrl(fileName);
 
-        const { error: insertError } = await (supabase
-            .from('exams') as any)
+        const { error: insertError } = await supabase
+            .from('exams')
             .insert({
                 patient_id: patientId,
                 clinic_id: clinicId,

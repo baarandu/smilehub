@@ -43,8 +43,8 @@ export const digitalSignaturesService = {
   },
 
   async getByPatient(patientId: string): Promise<DigitalSignature[]> {
-    const { data, error } = await (supabase
-      .from('digital_signatures') as any)
+    const { data, error } = await supabase
+      .from('digital_signatures')
       .select('*')
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false });

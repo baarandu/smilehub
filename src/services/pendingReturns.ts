@@ -29,7 +29,7 @@ export async function getPendingReturns(clinicId?: string): Promise<PendingRetur
       patients:patient_id!inner (id, name, phone)
     `)
         .eq('clinic_id', clinicId)
-        .is('patients.deleted_at' as any, null)
+        .is('patients.deleted_at', null)
         .is('deleted_at', null)
         .in('status', ['pending', 'in_progress'])
         .lt('date', thirtyDaysAgoStr)

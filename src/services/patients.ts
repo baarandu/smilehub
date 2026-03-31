@@ -20,7 +20,7 @@ export async function getPatients(page?: number, limit?: number, clinicId?: stri
     .order('name');
 
   if (clinicId) {
-    query = query.eq('clinic_id', clinicId) as any;
+    query = query.eq('clinic_id', clinicId);
   }
 
   if (page !== undefined && limit !== undefined) {
@@ -97,7 +97,7 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
   const { data, error } = await supabase
     .from('patients_secure')
     .select('*')
-    .eq('id', (inserted as any).id)
+    .eq('id', inserted.id)
     .single() as { data: Patient | null; error: any };
 
   if (error) throw error;
@@ -297,7 +297,7 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
     .limit(20);
 
   if (clinicId) {
-    q = q.eq('clinic_id', clinicId) as any;
+    q = q.eq('clinic_id', clinicId);
   }
 
   const { data, error } = await q as { data: Patient[] | null; error: any };

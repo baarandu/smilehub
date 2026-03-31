@@ -96,7 +96,7 @@ export async function createDocument(
 ): Promise<PatientDocument> {
   const { data, error } = await supabase
     .from('patient_documents')
-    .insert(document as any)
+    .insert(document)
     .select()
     .single();
 

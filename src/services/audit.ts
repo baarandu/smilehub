@@ -18,7 +18,7 @@ export const auditService = {
                 table_name: tableName,
                 record_id: recordId,
                 new_data: details || {}
-            } as any);
+            });
         } catch (error) {
             console.error('Failed to log action:', error);
             // Non-blocking error
@@ -37,7 +37,7 @@ export const auditService = {
         if (logsError) throw logsError;
         if (!logs || logs.length === 0) return [];
 
-        const logsData = logs as any[];
+        const logsData = logs;
 
         // 2. Extract unique user IDs
         const userIds = [...new Set(logsData.map(log => log.user_id).filter(id => id !== null))];
@@ -46,11 +46,11 @@ export const auditService = {
         let profilesMap: Record<string, { full_name: string | null, email: string | null }> = {};
 
         if (userIds.length > 0) {
-            const { data: profiles, error: profilesError } = await (supabase as any)
+            const { data: profiles, error: profilesError } = await supabase
                 .rpc('get_profiles_for_users', { user_ids: userIds });
 
             if (!profilesError && profiles) {
-                profilesMap = (profiles as any[]).reduce((acc, profile) => {
+                profilesMap = (profiles || []).reduce((acc: Record<string, any>, profile: any) => {
                     acc[profile.id] = { full_name: profile.full_name, email: profile.email };
                     return acc;
                 }, {} as Record<string, any>);

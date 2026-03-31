@@ -59,7 +59,7 @@ export const receivablesService = {
 
       const { data, error } = await supabase
         .from('payment_receivables')
-        .insert(receivable as any)
+        .insert(receivable)
         .select()
         .single();
 
@@ -374,7 +374,7 @@ export const receivablesService = {
       return;
     }
 
-    const parsed = JSON.parse((budget as any).notes || '{}');
+    const parsed = JSON.parse(budget.notes || '{}');
     const teeth = parsed.teeth as ToothEntry[];
     if (!teeth || !teeth[toothIndex]) {
       console.error('Tooth not found at index', toothIndex, 'in budget', budgetId);

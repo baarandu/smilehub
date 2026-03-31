@@ -81,7 +81,7 @@ export const profileService = {
                 .from('clinics')
                 .select('id, name, logo_url, address, city, state, phone, email')
                 .eq('id', clinicId)
-                .maybeSingle() as any;
+                .maybeSingle();
 
             if (clinic) {
                 clinicName = clinic.name;
@@ -99,7 +99,7 @@ export const profileService = {
             .from('profiles')
             .select('full_name, gender, cro')
             .eq('id', userId)
-            .maybeSingle() as any;
+            .maybeSingle();
 
         const rawName = profile?.full_name || null;
         const gender = profile?.gender || null;
@@ -129,7 +129,7 @@ export const profileService = {
                 .from('clinic_settings')
                 .select('letterhead_url, letterhead_width_mm, letterhead_height_mm')
                 .eq('user_id', userId)
-                .maybeSingle() as any;
+                .maybeSingle();
             letterheadUrl = settings?.letterhead_url || null;
             if (settings?.letterhead_width_mm) letterheadWidthMm = Number(settings.letterhead_width_mm);
             if (settings?.letterhead_height_mm) letterheadHeightMm = Number(settings.letterhead_height_mm);
@@ -177,8 +177,8 @@ export const profileService = {
             return;
         }
 
-        const { error } = await (supabase
-            .from('clinics') as any)
+        const { error } = await supabase
+            .from('clinics')
             .update(data)
             .eq('id', clinicId);
 
@@ -209,8 +209,8 @@ export const profileService = {
 
         const logoUrl = urlData.publicUrl;
 
-        const { error: updateError } = await (supabase
-            .from('clinics') as any)
+        const { error: updateError } = await supabase
+            .from('clinics')
             .update({ logo_url: logoUrl })
             .eq('id', clinicId);
 
@@ -229,8 +229,8 @@ export const profileService = {
         const { clinicId } = ctx;
 
         // Update clinic to remove logo URL
-        await (supabase
-            .from('clinics') as any)
+        await supabase
+            .from('clinics')
             .update({ logo_url: null })
             .eq('id', clinicId);
     },
@@ -239,8 +239,8 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { error } = await (supabase
-            .from('profiles') as any)
+        const { error } = await supabase
+            .from('profiles')
             .update(data)
             .eq('id', user.id);
 
@@ -274,8 +274,8 @@ export const profileService = {
         const letterheadUrl = urlData.publicUrl;
 
         // Upsert into clinic_settings
-        const { error: upsertError } = await (supabase
-            .from('clinic_settings') as any)
+        const { error: upsertError } = await supabase
+            .from('clinic_settings')
             .upsert(
                 {
                     user_id: userId,
@@ -298,8 +298,8 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { error } = await (supabase
-            .from('clinic_settings') as any)
+        const { error } = await supabase
+            .from('clinic_settings')
             .update({ letterhead_width_mm: widthMm, letterhead_height_mm: heightMm })
             .eq('user_id', user.id);
 
@@ -311,8 +311,8 @@ export const profileService = {
         if (!user) throw new Error('User not authenticated');
 
         // Remove from clinic_settings
-        await (supabase
-            .from('clinic_settings') as any)
+        await supabase
+            .from('clinic_settings')
             .update({ letterhead_url: null })
             .eq('user_id', user.id);
     },
@@ -331,8 +331,8 @@ export const profileService = {
             return; // Name already set during creation
         }
 
-        const { error } = await (supabase
-            .from('clinics') as any)
+        const { error } = await supabase
+            .from('clinics')
             .update({ name })
             .eq('id', clinicId);
 

@@ -13,7 +13,7 @@ export interface ScheduleSetting {
   is_active: boolean;
 }
 
-const table = () => supabase.from('schedule_settings') as any;
+const table = () => supabase.from('schedule_settings');
 
 export const scheduleSettingsService = {
   async getByClinic(clinicId: string): Promise<ScheduleSetting[]> {
@@ -73,8 +73,8 @@ export const scheduleSettingsService = {
 
   async getDentists(clinicId: string): Promise<{ id: string; name: string }[]> {
     // Fetch clinic_users with 'dentist' in roles array
-    const { data: clinicUsers, error: cuError } = await (supabase
-      .from('clinic_users') as any)
+    const { data: clinicUsers, error: cuError } = await supabase
+      .from('clinic_users')
       .select('user_id, roles')
       .eq('clinic_id', clinicId);
 
@@ -87,7 +87,7 @@ export const scheduleSettingsService = {
     if (dentistUserIds.length === 0) return [];
 
     // Fetch profile names via RPC
-    const { data: profiles, error: pError } = await (supabase as any)
+    const { data: profiles, error: pError } = await supabase
       .rpc('get_profiles_for_users', { user_ids: dentistUserIds });
 
     if (pError) throw pError;

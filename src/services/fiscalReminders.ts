@@ -73,7 +73,7 @@ export const fiscalRemindersService = {
     async createReminder(reminder: Omit<FiscalReminder, 'id' | 'created_at' | 'updated_at'>): Promise<FiscalReminder> {
         const { data, error } = await supabase
             .from('fiscal_document_reminders')
-            .insert(reminder as any)
+            .insert(reminder)
             .select()
             .single();
 
@@ -83,8 +83,8 @@ export const fiscalRemindersService = {
 
     // Update a reminder
     async updateReminder(id: string, updates: Partial<FiscalReminder>): Promise<FiscalReminder> {
-        const { data, error } = await (supabase
-            .from('fiscal_document_reminders') as any)
+        const { data, error } = await supabase
+            .from('fiscal_document_reminders')
             .update({ ...updates, updated_at: new Date().toISOString() })
             .eq('id', id)
             .select()
@@ -327,7 +327,7 @@ export const fiscalRemindersService = {
     ): Promise<void> {
         const { error } = await supabase
             .from('fiscal_documents')
-            .update({ expiration_date: expirationDate } as any)
+            .update({ expiration_date: expirationDate })
             .eq('id', documentId);
 
         if (error) throw error;

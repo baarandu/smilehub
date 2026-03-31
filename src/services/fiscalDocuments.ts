@@ -259,7 +259,7 @@ export const fiscalDocumentsService = {
 
         const { data, error } = await supabase
             .from('fiscal_documents')
-            .insert(documentData as any)
+            .insert(documentData)
             .select()
             .single();
 
@@ -271,7 +271,7 @@ export const fiscalDocumentsService = {
     async update(id: string, updates: FiscalDocumentUpdate): Promise<FiscalDocument> {
         const { data, error } = await supabase
             .from('fiscal_documents')
-            .update(updates as any)
+            .update(updates)
             .eq('id', id)
             .select()
             .single();

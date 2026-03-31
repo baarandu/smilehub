@@ -82,7 +82,7 @@ export const consultationsService = {
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase
       .from('consultations')
-      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id } as any)
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id })
       .eq('id', id);
 
     if (error) throw error;
@@ -141,7 +141,7 @@ export const consultationsService = {
       .from('consultations')
       .select('*, patients!inner(clinic_id)', { count: 'exact', head: true })
       .is('deleted_at', null)
-      .is('patients.deleted_at' as any, null)
+      .is('patients.deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today);
 

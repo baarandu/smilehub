@@ -31,7 +31,7 @@ export const budgetsService = {
         if (error) throw error;
 
         // Fetch creator names for budgets with created_by
-        const budgets = (data || []) as any[];
+        const budgets = data || [];
         const creatorIds = [...new Set(budgets.map(b => b.created_by).filter(Boolean))];
 
         let creatorNames: Record<string, string> = {};
@@ -60,7 +60,7 @@ export const budgetsService = {
         // Create budget first with created_by
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert({ ...budget, created_by: user?.id } as any)
+            .insert({ ...budget, created_by: user?.id })
             .select()
             .single();
 
@@ -71,18 +71,18 @@ export const budgetsService = {
         if (items.length > 0) {
             const itemsWithBudgetId = items.map(item => ({
                 ...item,
-                budget_id: (budgetData as any).id,
+                budget_id: budgetData.id,
             }));
 
             const { error: itemsError } = await supabase
                 .from('budget_items')
-                .insert(itemsWithBudgetId as any);
+                .insert(itemsWithBudgetId);
 
             if (itemsError) throw itemsError;
         }
 
         // Return full budget with items
-        return this.getById((budgetData as any).id);
+        return this.getById(budgetData.id);
     },
 
     async getById(id: string): Promise<BudgetWithItems> {
@@ -103,8 +103,7 @@ export const budgetsService = {
     async update(id: string, budget: BudgetUpdate): Promise<Budget> {
         const { data, error } = await supabase
             .from('budgets')
-            // @ts-expect-error: Supabase types mismatch workaround
-            .update(budget as any)
+            .update(budget)
             .eq('id', id)
             .select()
             .single();
@@ -199,7 +198,7 @@ export const budgetsService = {
             .eq('clinic_id', clinicId);
 
         if (error) throw error;
-        const budgets = (data || []) as any[];
+        const budgets = data || [];
 
         // Group budgets by their calculated status to do batch updates
         const statusGroups: Record<string, string[]> = {};
@@ -225,7 +224,7 @@ export const budgetsService = {
             Object.entries(statusGroups).map(([status, ids]) =>
                 supabase
                     .from('budgets')
-                    .update({ status } as any)
+                    .update({ status })
                     .in('id', ids)
             )
         );

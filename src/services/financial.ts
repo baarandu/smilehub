@@ -61,7 +61,7 @@ export const financialService = {
         if (error) throw error;
 
         // Fetch creator names
-        const transactions = (data || []) as any[];
+        const transactions = data || [];
         const creatorIds = [...new Set(transactions.map(t => t.created_by || t.user_id).filter(Boolean))];
 
         let creatorNames: Record<string, string> = {};
@@ -91,7 +91,7 @@ export const financialService = {
                 clinic_id: clinicId,
                 user_id: userId,  // Track which user created the transaction
                 created_by: userId  // Also store in created_by for consistency
-            } as any)
+            })
             .select()
             .single();
 
@@ -122,7 +122,7 @@ export const financialService = {
                 clinic_id: clinicId,
                 user_id: userId,  // Track which user created the expense
                 created_by: userId  // Also store in created_by for consistency
-            } as any)
+            })
             .select()
             .single();
 
@@ -131,8 +131,8 @@ export const financialService = {
     },
 
     async confirmExpense(id: string, date?: string): Promise<void> {
-        const { error } = await (supabase
-            .from('financial_transactions') as any)
+        const { error } = await supabase
+            .from('financial_transactions')
             .update({
                 payment_status: 'paid',
                 paid_at: new Date().toISOString(),
@@ -144,8 +144,8 @@ export const financialService = {
     },
 
     async updateTransaction(id: string, updates: Partial<FinancialTransactionInsert>): Promise<void> {
-        const { error } = await (supabase
-            .from('financial_transactions') as any)
+        const { error } = await supabase
+            .from('financial_transactions')
             .update(updates)
             .eq('id', id);
 
@@ -164,8 +164,8 @@ export const financialService = {
     },
 
     async updateRecurrence(recurrenceId: string, updates: any): Promise<void> {
-        const { error } = await (supabase
-            .from('financial_transactions') as any)
+        const { error } = await supabase
+            .from('financial_transactions')
             .update(updates)
             .eq('recurrence_id', recurrenceId);
 
@@ -202,7 +202,7 @@ export const financialService = {
         if (fetchError) throw fetchError;
         if (!transaction) throw new Error('Transaction not found');
 
-        const txn = transaction as any;
+        const txn = transaction;
 
         // 2. If there's a linked budget (related_entity_id), revert the specific tooth status
         if (txn.related_entity_id) {
@@ -215,7 +215,7 @@ export const financialService = {
                 .eq('id', budgetId)
                 .single();
 
-            const budgetData = budget as any;
+            const budgetData = budget;
 
             if (!budgetError && budgetData && budgetData.notes) {
                 try {
@@ -266,8 +266,8 @@ export const financialService = {
                             );
                             const newStatus = allPaid ? 'completed' : (hasApprovedOrPaid ? 'approved' : 'pending');
 
-                            await (supabase
-                                .from('budgets') as any)
+                            await supabase
+                                .from('budgets')
                                 .update({
                                     notes: JSON.stringify(parsed),
                                     status: newStatus
@@ -324,8 +324,8 @@ export const financialService = {
      */
     async deleteExpenseAndRevertMaterials(transactionId: string): Promise<void> {
         // 1. Try to get the expense to find related_entity_id (may fail due to RLS)
-        const { data: transaction } = await (supabase
-            .from('financial_transactions') as any)
+        const { data: transaction } = await supabase
+            .from('financial_transactions')
             .select('category, related_entity_id')
             .eq('id', transactionId)
             .maybeSingle();
@@ -335,8 +335,8 @@ export const financialService = {
             const shoppingOrderId = transaction.related_entity_id;
 
             // Revert shopping order to pending status
-            await (supabase
-                .from('shopping_orders') as any)
+            await supabase
+                .from('shopping_orders')
                 .update({
                     status: 'pending',
                     completed_at: null
@@ -418,7 +418,7 @@ export const financialService = {
 
 
 
-                await (supabase.from('financial_transactions') as any).update({
+                await supabase.from('financial_transactions').update({
                     location_rate: newRate,
                     location_amount: newLocationAmount,
                     net_amount: newNetAmount
@@ -511,10 +511,10 @@ export const financialService = {
             }
 
             let teeth: ToothEntry[] = [];
-            let defaultLocationRate = (budget as any).location_rate || 0;
+            let defaultLocationRate = budget.location_rate || 0;
 
             try {
-                const parsed = JSON.parse((budget as any).notes || '{}');
+                const parsed = JSON.parse(budget.notes || '{}');
                 teeth = parsed.teeth || [];
                 if (parsed.locationRate) {
                     defaultLocationRate = parseFloat(parsed.locationRate);
@@ -642,7 +642,7 @@ export const financialService = {
                 newNetAmount -= newLocationAmountTotal;
 
                 // 6. Atualiza a transação
-                const { error: updateError } = await (supabase.from('financial_transactions') as any)
+                const { error: updateError } = await supabase.from('financial_transactions')
                     .update({
                         location_rate: effectiveRate,
                         location_amount: newLocationAmountTotal,
