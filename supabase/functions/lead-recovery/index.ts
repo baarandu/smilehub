@@ -8,6 +8,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { createLogger } from "../_shared/logger.ts";
+import { fetchWithRetry } from "../_shared/fetchWithRetry.ts";
 
 const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL") || "";
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
@@ -22,7 +23,7 @@ async function sendWhatsAppText(
   phone: string,
   text: string
 ): Promise<void> {
-  const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${instance}`, {
+  const response = await fetchWithRetry(`${EVOLUTION_API_URL}/message/sendText/${instance}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

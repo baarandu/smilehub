@@ -8,7 +8,7 @@ import type {
 } from '@/types/database';
 
 export const appointmentsService = {
-  async getAll(clinicId?: string): Promise<AppointmentWithPatient[]> {
+  async getAll(clinicId?: string, page?: number, pageSize = 500): Promise<AppointmentWithPatient[]> {
     let query = supabase
       .from('appointments')
       .select(`
@@ -20,6 +20,11 @@ export const appointmentsService = {
 
     if (clinicId) {
       query = query.eq('clinic_id', clinicId);
+    }
+
+    if (page !== undefined) {
+      const from = page * pageSize;
+      query = query.range(from, from + pageSize - 1);
     }
 
     const { data, error } = await query as { data: AppointmentWithPatient[] | null; error: any };

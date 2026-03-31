@@ -230,7 +230,7 @@ export const receivablesService = {
     return (data || []) as PaymentReceivable[];
   },
 
-  async getClinicReceivables(filters?: ReceivableFilters): Promise<PaymentReceivable[]> {
+  async getClinicReceivables(filters?: ReceivableFilters, page?: number, pageSize = 500): Promise<PaymentReceivable[]> {
     const { clinicId } = await getClinicContext();
 
     let query = supabase
@@ -254,6 +254,11 @@ export const receivablesService = {
     }
     if (filters?.patientId) {
       query = query.eq('patient_id', filters.patientId);
+    }
+
+    if (page !== undefined) {
+      const from = page * pageSize;
+      query = query.range(from, from + pageSize - 1);
     }
 
     const { data, error } = await query;

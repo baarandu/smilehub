@@ -31,7 +31,7 @@ export const financialService = {
         };
     },
 
-    async getTransactions(start: Date, end: Date): Promise<any[]> {
+    async getTransactions(start: Date, end: Date, page?: number, pageSize = 500): Promise<any[]> {
         // Get user context to determine filtering
         const context = await this.getUserContext();
 
@@ -49,6 +49,11 @@ export const financialService = {
         // If user is a dentist (not owner/admin), filter by their user_id
         if (!context.canSeeAllFinancials) {
             query = query.eq('user_id', context.userId);
+        }
+
+        if (page !== undefined) {
+            const from = page * pageSize;
+            query = query.range(from, from + pageSize - 1);
         }
 
         const { data, error } = await query;

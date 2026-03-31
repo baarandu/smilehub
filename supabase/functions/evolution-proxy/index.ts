@@ -13,12 +13,12 @@ import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { extractBearerToken } from "../_shared/validation.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { fetchWithRetry } from "../_shared/fetchWithRetry.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL") || "";
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
-const WHATSAPP_WEBHOOK_API_KEY = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY") || "";
 
 // ─── Evolution API HTTP client ────────────────────────────────
 async function evolutionRequest<T>(
@@ -26,7 +26,7 @@ async function evolutionRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${EVOLUTION_API_URL}${endpoint}`;
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
@@ -151,6 +151,9 @@ async function updateConnectionStatus(
 }
 
 // ─── Setup webhook on Evolution API ───────────────────────────
+// Clean URL — no apikey in query string or headers that Evolution doesn't persist.
+// Auth contract: Evolution sends its own apikey in the payload (payload.apikey).
+// The webhook validates payload.apikey === EVOLUTION_API_KEY.
 async function setupWebhook(instanceName: string): Promise<void> {
   const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
@@ -158,8 +161,8 @@ async function setupWebhook(instanceName: string): Promise<void> {
     method: "POST",
     body: JSON.stringify({
       url: webhookUrl,
-      headers: { "x-api-key": WHATSAPP_WEBHOOK_API_KEY },
       enabled: true,
+      webhook_by_events: true,
       webhookByEvents: true,
       events: ["MESSAGES_UPSERT"],
     }),
@@ -282,6 +285,10 @@ async function handleConnect(
   const instanceName = await getInstanceName(supabase, clinicId);
 
   logger.info("Getting QR code", { instanceName });
+
+  // Webhook is NOT re-applied here. Use "setup-webhook" action explicitly
+  // if the webhook config needs to change. Auto-reapply on connect was
+  // overwriting manually validated configs on every reconnection.
 
   const qr = await evolutionRequest<any>(
     `/instance/connect/${instanceName}`

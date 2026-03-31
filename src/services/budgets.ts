@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
 import { calculateBudgetStatus } from '@/utils/budgetUtils';
+import { getClinicContext } from './clinicContext';
 
 const MAX_ITEM_VALUE_CENTS = 10_000_000; // R$ 100.000,00
 
@@ -263,12 +264,17 @@ export const budgetsService = {
     },
 
     async reconcileAllStatuses(): Promise<void> {
+        const { clinicId } = await getClinicContext();
         const { data, error } = await supabase
             .from('budgets')
-            .select('id, notes, status');
+            .select('id, notes, status')
+            .eq('clinic_id', clinicId);
 
         if (error) throw error;
         const budgets = (data || []) as any[];
+
+        // Group budgets by their calculated status to do batch updates
+        const statusGroups: Record<string, string[]> = {};
 
         for (const budget of budgets) {
             if (!budget.notes) continue;
@@ -277,12 +283,23 @@ export const budgetsService = {
                 if (parsed.teeth && Array.isArray(parsed.teeth)) {
                     const calculatedStatus = calculateBudgetStatus(parsed.teeth);
                     if (calculatedStatus !== budget.status) {
-                        await this.update(budget.id, { status: calculatedStatus });
+                        if (!statusGroups[calculatedStatus]) statusGroups[calculatedStatus] = [];
+                        statusGroups[calculatedStatus].push(budget.id);
                     }
                 }
             } catch (e) {
-                console.error(`Error reconciling budget ${budget.id}`, e);
+                console.error(`Error parsing budget ${budget.id}`, e);
             }
         }
+
+        // Batch update by status
+        await Promise.all(
+            Object.entries(statusGroups).map(([status, ids]) =>
+                supabase
+                    .from('budgets')
+                    .update({ status } as any)
+                    .in('id', ids)
+            )
+        );
     }
 };

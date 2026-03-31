@@ -3,6 +3,8 @@
  * Handles all communication with Evolution API from the Edge Function.
  */
 
+import { fetchWithRetry } from "../_shared/fetchWithRetry.ts";
+
 const EVOLUTION_API_URL = Deno.env.get("EVOLUTION_API_URL") || "";
 const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
 
@@ -23,7 +25,7 @@ async function request<T>(
 ): Promise<T> {
   const url = `${EVOLUTION_API_URL}${endpoint}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
