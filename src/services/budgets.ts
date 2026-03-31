@@ -134,116 +134,44 @@ export const budgetsService = {
     },
 
     async getAllPending(clinicId?: string): Promise<{ budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[]> {
-        let query = supabase
-            .from('budgets')
-            .select(`
-                id,
-                patient_id,
-                date,
-                value,
-                notes,
-                patients!inner (name)
-            `)
-            .is('patients.deleted_at', null)
-            .order('created_at', { ascending: false });
+        const resolvedClinicId = clinicId || (await getClinicContext()).clinicId;
 
-        if (clinicId) {
-            query = query.eq('clinic_id', clinicId);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.rpc('get_pending_budget_items', {
+            p_clinic_id: resolvedClinicId,
+        });
 
         if (error) throw error;
 
-        const pendingItems: { budgetId: string; patientId: string; patientName: string; date: string; tooth: any; totalBudgetValue: number }[] = [];
-
-        (data || []).forEach((budget: any) => {
-            if (!budget.notes) return;
-            try {
-                const parsed = JSON.parse(budget.notes);
-                if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                    parsed.teeth.forEach((tooth: any) => {
-                        if (tooth.status === 'pending') {
-                            pendingItems.push({
-                                budgetId: budget.id,
-                                patientId: budget.patient_id,
-                                patientName: budget.patients?.name || 'Paciente',
-                                date: budget.date,
-                                tooth,
-                                totalBudgetValue: budget.value
-                            });
-                        }
-                    });
-                }
-            } catch (e) {
-                // Invalid JSON, skip
-            }
-        });
-
-        return pendingItems;
+        return (data || []).map((row: any) => ({
+            budgetId: row.budget_id,
+            patientId: row.patient_id,
+            patientName: row.patient_name || 'Paciente',
+            date: row.budget_date,
+            tooth: row.tooth,
+            totalBudgetValue: row.total_budget_value,
+        }));
     },
 
     async getPendingCount(clinicId?: string): Promise<number> {
-        let query = supabase
-            .from('budgets')
-            .select('notes, patients!inner(id)')
-            .is('patients.deleted_at', null);
+        const resolvedClinicId = clinicId || (await getClinicContext()).clinicId;
 
-        if (clinicId) {
-            query = query.eq('clinic_id', clinicId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        let count = 0;
-        (data || []).forEach((budget: any) => {
-            if (!budget.notes) return;
-            try {
-                const parsed = JSON.parse(budget.notes);
-                if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                    count += parsed.teeth.filter((tooth: any) => tooth.status === 'pending').length;
-                }
-            } catch (e) {
-                // Invalid JSON, skip
-            }
+        const { data, error } = await supabase.rpc('get_pending_budget_count', {
+            p_clinic_id: resolvedClinicId,
         });
 
-        return count;
+        if (error) throw error;
+        return data ?? 0;
     },
 
     async getPendingPatientsCount(clinicId?: string): Promise<number> {
-        let query = supabase
-            .from('budgets')
-            .select('patient_id, notes, patients!inner(id)')
-            .is('patients.deleted_at', null);
+        const resolvedClinicId = clinicId || (await getClinicContext()).clinicId;
 
-        if (clinicId) {
-            query = query.eq('clinic_id', clinicId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const patientsWithPending = new Set<string>();
-        (data || []).forEach((budget: any) => {
-            if (!budget.notes) return;
-            try {
-                const parsed = JSON.parse(budget.notes);
-                if (parsed.teeth && Array.isArray(parsed.teeth)) {
-                    const hasPending = parsed.teeth.some((tooth: any) => tooth.status === 'pending');
-                    if (hasPending) {
-                        patientsWithPending.add(budget.patient_id);
-                    }
-                }
-            } catch (e) {
-                // Invalid JSON, skip
-            }
+        const { data, error } = await supabase.rpc('get_pending_patients_count', {
+            p_clinic_id: resolvedClinicId,
         });
 
-        return patientsWithPending.size;
+        if (error) throw error;
+        return data ?? 0;
     },
 
     async updateToothStatus(budgetId: string, toothIndex: number, newStatus: 'paid' | 'completed'): Promise<void> {
