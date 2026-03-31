@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, DocumentTemplateInsert, DocumentTemplateUpdate } from '@/types/database';
+import { getClinicContext } from './clinicContext';
 
 export const documentTemplatesService = {
     async getAll(): Promise<DocumentTemplate[]> {
@@ -227,15 +228,7 @@ export const documentTemplatesService = {
             }
         }
 
-        // Get clinic_id for storage path and DB insert
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-        const clinicId = clinicUser.clinic_id as string;
+        const { clinicId } = await getClinicContext();
 
         const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName, undefined, undefined, dentistCRO);
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getClinicContext, getClinicContextSafe } from './clinicContext';
 
 export interface UserProfile {
     id: string;
@@ -44,8 +45,8 @@ export const profileService = {
     },
 
     async getClinicInfo(): Promise<ClinicInfo> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const ctx = await getClinicContextSafe();
+        if (!ctx) {
             return {
                 clinicName: 'Clínica Odontológica',
                 dentistName: null,
@@ -64,14 +65,7 @@ export const profileService = {
             };
         }
 
-        // Get clinic_id from clinic_users
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        const clinicId = clinicUser?.clinic_id || null;
+        const { userId, clinicId } = ctx;
 
         // Get clinic details directly
         let clinicName: string | null = null;
@@ -104,7 +98,7 @@ export const profileService = {
         const { data: profile } = await supabase
             .from('profiles')
             .select('full_name, gender, cro')
-            .eq('id', user.id)
+            .eq('id', userId)
             .maybeSingle() as any;
 
         const rawName = profile?.full_name || null;
@@ -134,7 +128,7 @@ export const profileService = {
             const { data: settings } = await supabase
                 .from('clinic_settings')
                 .select('letterhead_url, letterhead_width_mm, letterhead_height_mm')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .maybeSingle() as any;
             letterheadUrl = settings?.letterhead_url || null;
             if (settings?.letterhead_width_mm) letterheadWidthMm = Number(settings.letterhead_width_mm);
@@ -162,16 +156,7 @@ export const profileService = {
     },
 
     async updateClinicInfo(data: { name?: string; address?: string; city?: string; state?: string; phone?: string; email?: string }): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        const clinicId = clinicUser?.clinic_id;
+        const { userId, clinicId } = await getClinicContext();
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
@@ -206,19 +191,7 @@ export const profileService = {
     },
 
     async uploadLogo(file: File): Promise<string | null> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        // Get user's clinic
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-        const clinicId = clinicUser.clinic_id;
+        const { userId, clinicId } = await getClinicContext();
         const fileExt = file.name.split('.').pop();
         const fileName = `${clinicId}/logo.${fileExt}`;
 
@@ -250,22 +223,16 @@ export const profileService = {
     },
 
     async removeLogo(): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const ctx = await getClinicContextSafe();
+        if (!ctx) return;
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        if (!clinicUser?.clinic_id) return;
+        const { clinicId } = ctx;
 
         // Update clinic to remove logo URL
         await (supabase
             .from('clinics') as any)
             .update({ logo_url: null })
-            .eq('id', clinicUser.clinic_id);
+            .eq('id', clinicId);
     },
 
     async updateProfile(data: { full_name?: string; gender?: string; cro?: string }): Promise<void> {
@@ -290,18 +257,7 @@ export const profileService = {
     },
 
     async uploadLetterhead(file: File, widthMm = 210, heightMm = 297): Promise<string | null> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-        const clinicId = clinicUser.clinic_id;
+        const { userId, clinicId } = await getClinicContext();
         const fileExt = file.name.split('.').pop();
         const fileName = `${clinicId}/letterhead.${fileExt}`;
 
@@ -322,7 +278,7 @@ export const profileService = {
             .from('clinic_settings') as any)
             .upsert(
                 {
-                    user_id: user.id,
+                    user_id: userId,
                     letterhead_url: letterheadUrl,
                     letterhead_width_mm: widthMm,
                     letterhead_height_mm: heightMm,
@@ -362,16 +318,7 @@ export const profileService = {
     },
 
     async updateClinicName(name: string): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle() as any;
-
-        const clinicId = clinicUser?.clinic_id;
+        const { userId, clinicId } = await getClinicContext();
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {

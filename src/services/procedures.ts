@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Procedure, ProcedureInsert, ProcedureWithCreator } from '@/types/database';
+import { getClinicContext } from './clinicContext';
 
 export interface BudgetLink {
   budgetId: string;
@@ -40,19 +41,11 @@ export const proceduresService = {
   },
 
   async create(procedure: ProcedureInsert & { budget_links?: BudgetLink[] | null }): Promise<Procedure> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    // Get clinic_id for the current user
-    const { data: clinicUser } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
+    const { userId, clinicId } = await getClinicContext();
 
     const { data, error } = await supabase
       .from('procedures')
-      .insert({ ...procedure, created_by: user.id, clinic_id: (clinicUser as any)?.clinic_id } as any)
+      .insert({ ...procedure, created_by: userId, clinic_id: clinicId } as any)
       .select()
       .single();
 

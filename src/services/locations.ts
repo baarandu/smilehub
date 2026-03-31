@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getClinicContext } from './clinicContext';
 
 export interface Location {
   id: string;
@@ -19,23 +20,9 @@ export interface LocationUpdate {
   address?: string | null;
 }
 
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-
-  const { data: clinicUser } = await supabase
-    .from('clinic_users')
-    .select('clinic_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-  return clinicUser.clinic_id;
-}
-
 export const locationsService = {
   async getAll(): Promise<Location[]> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
     const { data, error } = await supabase
       .from('locations')
       .select('*')
@@ -47,7 +34,7 @@ export const locationsService = {
   },
 
   async create(location: LocationInsert): Promise<Location> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
     const { data, error } = await supabase
       .from('locations')
       .insert({ ...location, clinic_id: clinicId })

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
+import { getClinicContextSafe } from './clinicContext';
 
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row'];
 export type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert'];
@@ -7,21 +8,12 @@ export type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert'
 export const auditService = {
     async log(action: string, tableName: string, recordId?: string, details?: any) {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            // Get clinic_id for the user
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user.id)
-                .single();
-
-            if (!clinicUser) return;
+            const ctx = await getClinicContextSafe();
+            if (!ctx) return;
 
             await supabase.from('audit_logs').insert({
-                clinic_id: (clinicUser as any).clinic_id,
-                user_id: user.id,
+                clinic_id: ctx.clinicId,
+                user_id: ctx.userId,
                 action,
                 table_name: tableName,
                 record_id: recordId,

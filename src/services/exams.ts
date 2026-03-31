@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Exam, ExamInsert } from '@/types/database';
+import { getClinicContext } from './clinicContext';
 
 export const examsService = {
   async getByPatient(patientId: string): Promise<Exam[]> {
@@ -16,32 +17,12 @@ export const examsService = {
   },
 
   async create(exam: ExamInsert): Promise<Exam> {
-    // Get user's clinic_id
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('[examsService.create] User not authenticated');
-      throw new Error('User not authenticated');
-    }
-
-    const { data: clinicUser, error: clinicError } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (clinicError) {
-      console.error('[examsService.create] Clinic error:', clinicError);
-      throw new Error('Clinic not found: ' + clinicError.message);
-    }
-    if (!clinicUser) {
-      console.error('[examsService.create] No clinic user found');
-      throw new Error('Clinic not found');
-    }
+    const { clinicId } = await getClinicContext();
 
     // Ensure required fields are populated
     const examData = {
       ...exam,
-      clinic_id: clinicUser.clinic_id,
+      clinic_id: clinicId,
       // Add required fields if missing (table requires title, date, name, order_date as NOT NULL)
       title: (exam as any).title || (exam as any).name || 'Exame',
       date: (exam as any).date || (exam as any).order_date || new Date().toISOString().split('T')[0],

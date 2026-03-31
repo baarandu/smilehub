@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getClinicContextSafe } from './clinicContext';
 import type {
   FiscalProfile,
   PJSource,
@@ -50,16 +51,8 @@ export const incomeTaxService = {
    * Get the user's clinic ID
    */
   async getClinicId(): Promise<string | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const { data: clinicUser } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
-
-    return (clinicUser as any)?.clinic_id || null;
+    const context = await getClinicContextSafe();
+    return context?.clinicId || null;
   },
 
   // ============ FISCAL PROFILE ============

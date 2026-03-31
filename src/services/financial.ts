@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getClinicContext, getClinicContextWithRole } from './clinicContext';
 import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/database';
 import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 
@@ -13,26 +14,18 @@ export const financialService = {
         role: string;
         canSeeAllFinancials: boolean;
     } | null> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        const context = await getClinicContextWithRole();
+        if (!context) return null;
+        const { userId: userIdVal, clinicId, role, roles } = context;
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id, role, roles')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser) return null;
-
-        const userRoles: string[] = (clinicUser as any).roles || [(clinicUser as any).role];
-        const role = (clinicUser as any).role;
+        const userRoles: string[] = roles || [role];
         // Owners, admins, and managers can see all financials
         // Dentists and other roles only see their own transactions
         const canSeeAll = userRoles.some(r => ['owner', 'admin', 'manager'].includes(r));
 
         return {
-            userId: user.id,
-            clinicId: (clinicUser as any).clinic_id,
+            userId: userIdVal,
+            clinicId,
             role,
             canSeeAllFinancials: canSeeAll
         };
@@ -84,24 +77,15 @@ export const financialService = {
     },
 
     async createTransaction(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Usuário não autenticado');
-
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+        const { userId, clinicId } = await getClinicContext();
 
         const { data, error } = await supabase
             .from('financial_transactions')
             .insert({
                 ...transaction,
-                clinic_id: (clinicUser as any).clinic_id,
-                user_id: user.id,  // Track which user created the transaction
-                created_by: user.id  // Also store in created_by for consistency
+                clinic_id: clinicId,
+                user_id: userId,  // Track which user created the transaction
+                created_by: userId  // Also store in created_by for consistency
             } as any)
             .select()
             .single();
@@ -118,16 +102,7 @@ export const financialService = {
         location?: string | null;
         related_entity_id?: string | null;
     }): Promise<FinancialTransaction> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Usuário não autenticado');
-
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+        const { userId, clinicId } = await getClinicContext();
 
         const { data, error } = await supabase
             .from('financial_transactions')
@@ -139,9 +114,9 @@ export const financialService = {
                 date: expense.date,
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
-                clinic_id: (clinicUser as any).clinic_id,
-                user_id: user.id,  // Track which user created the expense
-                created_by: user.id  // Also store in created_by for consistency
+                clinic_id: clinicId,
+                user_id: userId,  // Track which user created the expense
+                created_by: userId  // Also store in created_by for consistency
             } as any)
             .select()
             .single();

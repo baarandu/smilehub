@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getClinicContext } from './clinicContext';
 import { CardFeeConfig, CardFeeConfigInsert, FinancialSettings } from '@/types/database';
 
 export const settingsService = {
@@ -93,15 +94,7 @@ export const settingsService = {
 
     // Card Brands
     async getCardBrands(): Promise<{ id: string; name: string; is_default: boolean }[]> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
-
-        // Get clinic_id
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
+        const { userId, clinicId } = await getClinicContext();
 
         const defaultBrands = [
             { id: 'visa', name: 'Visa', is_default: true },
@@ -112,14 +105,14 @@ export const settingsService = {
             { id: 'others', name: 'Outras Bandeiras', is_default: true },
         ];
 
-        if (!clinicUser) {
+        if (!clinicId) {
             return defaultBrands;
         }
 
         const { data, error } = await (supabase
             .from('card_brands') as any)
             .select('*')
-            .eq('clinic_id', clinicUser.clinic_id)
+            .eq('clinic_id', clinicId)
             .order('name');
 
         if (error) {
@@ -134,20 +127,13 @@ export const settingsService = {
     },
 
     async addCardBrand(name: string): Promise<{ id: string; name: string; is_default: boolean }> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { userId, clinicId } = await getClinicContext();
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser) throw new Error('Clinic not found');
+        if (!clinicId) throw new Error('Clinic not found');
 
         const { data, error } = await (supabase
             .from('card_brands') as any)
-            .insert({ clinic_id: clinicUser.clinic_id, name, is_default: false })
+            .insert({ clinic_id: clinicId, name, is_default: false })
             .select()
             .single();
 

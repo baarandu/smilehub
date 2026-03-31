@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import { supabase } from '@/lib/supabase';
 import { auditService } from '@/services/audit';
+import { getClinicContextWithRole } from '@/services/clinicContext';
 import {
   ParsedData,
   ValidationResult,
@@ -262,22 +263,9 @@ export function validateData(
 
 // Get clinic context
 async function getClinicContext() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
-
-  const { data: clinicUser } = await supabase
-    .from('clinic_users')
-    .select('clinic_id, role')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
-
-  return {
-    userId: user.id,
-    clinicId: (clinicUser as any).clinic_id as string,
-    role: (clinicUser as any).role as string,
-  };
+  const context = await getClinicContextWithRole();
+  if (!context) throw new Error('Clínica não encontrada');
+  return context;
 }
 
 // Find patient by identifier (name, CPF, or phone)

@@ -2,20 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { PaymentReceivable, SplitPaymentPortion, OverdueSummary, ReceivableFilters } from '@/types/receivables';
 import { financialService } from './financial';
 import { calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
-
-async function getClinicId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
-
-  const { data: clinicUser } = await supabase
-    .from('clinic_users')
-    .select('clinic_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
-  return (clinicUser as any).clinic_id;
-}
+import { getClinicContext } from './clinicContext';
 
 export const receivablesService = {
   async createSplitPayment(
@@ -27,7 +14,7 @@ export const receivablesService = {
     splitGroupId: string,
     budgetLocation?: string | null,
   ): Promise<PaymentReceivable[]> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
@@ -244,7 +231,7 @@ export const receivablesService = {
   },
 
   async getClinicReceivables(filters?: ReceivableFilters): Promise<PaymentReceivable[]> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
 
     let query = supabase
       .from('payment_receivables')
@@ -275,7 +262,7 @@ export const receivablesService = {
   },
 
   async getOverdueSummary(): Promise<OverdueSummary> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
 
     const { data, error } = await supabase
       .rpc('get_overdue_summary', { p_clinic_id: clinicId });
@@ -291,7 +278,7 @@ export const receivablesService = {
   },
 
   async getReceivablesDueToday(): Promise<PaymentReceivable[]> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
 
     const { data, error } = await supabase
       .rpc('get_receivables_due_today', { p_clinic_id: clinicId });
@@ -321,7 +308,7 @@ export const receivablesService = {
    * Returns all receivables regardless of status.
    */
   async getReceivablesCreatedInPeriod(startDate: string, endDate: string): Promise<PaymentReceivable[]> {
-    const clinicId = await getClinicId();
+    const { clinicId } = await getClinicContext();
 
     const { data, error } = await supabase
       .from('payment_receivables')

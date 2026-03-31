@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { Patient, PatientInsert, PatientUpdate, PatientFormData } from '@/types/database';
 import { sanitizeForDisplay } from '@/utils/security';
+import { getClinicContext, getClinicContextSafe } from './clinicContext';
 
 /** Remove accents, collapse whitespace, lowercase — for duplicate comparison */
 function normalizeName(name: string): string {
@@ -48,16 +49,7 @@ export async function getPatientById(id: string): Promise<Patient | null> {
 
 export async function createPatient(patient: PatientInsert): Promise<Patient> {
   // Get clinic_id for the current user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado');
-
-  const { data: clinicUser } = await supabase
-    .from('clinic_users')
-    .select('clinic_id')
-    .eq('user_id', user.id)
-    .single() as { data: { clinic_id: string } | null };
-
-  if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
+  const { userId, clinicId } = await getClinicContext();
 
   // Check for duplicate: same name + phone in the same clinic
   const normalized = patient.name ? normalizeName(patient.name) : '';
@@ -69,7 +61,7 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     const { data: existing } = await supabase
       .from('patients')
       .select('id, name, phone')
-      .eq('clinic_id', clinicUser.clinic_id)
+      .eq('clinic_id', clinicId)
       .ilike('name', `%${firstName}%`)
       .is('deleted_at', null);
 
@@ -89,8 +81,8 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
 
   const patientWithClinic = {
     ...patient,
-    clinic_id: clinicUser.clinic_id as string,
-    user_id: user.id,
+    clinic_id: clinicId,
+    user_id: userId,
   };
 
   const { data: inserted, error: insertError } = await supabase
@@ -163,23 +155,18 @@ export async function createPatientFromForm(formData: PatientFormData): Promise<
   // If child patient with minor consent granted, upsert consent record
   if (formData.patientType === 'child' && formData.minorConsent) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: clinicUser } = await supabase
-        .from('clinic_users')
-        .select('clinic_id')
-        .eq('user_id', user!.id)
-        .single() as { data: { clinic_id: string } | null };
+      const consentCtx = await getClinicContextSafe();
 
-      if (clinicUser?.clinic_id) {
+      if (consentCtx) {
         const guardianName = formData.legalGuardian || formData.motherName || formData.fatherName || '';
         await supabase
           .from('patient_consents')
           .upsert({
             patient_id: created.id,
-            clinic_id: clinicUser.clinic_id,
+            clinic_id: consentCtx.clinicId,
             consent_type: 'minor_data_processing',
             granted: true,
-            granted_by: user!.id,
+            granted_by: consentCtx.userId,
             granted_at: new Date().toISOString(),
             revoked_at: null,
             guardian_name: guardianName || null,
