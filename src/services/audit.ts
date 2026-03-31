@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { getClinicContextSafe } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 export type AuditLog = Database['public']['Tables']['audit_logs']['Row'];
 export type AuditLogInsert = Database['public']['Tables']['audit_logs']['Insert'];
@@ -20,7 +21,7 @@ export const auditService = {
                 new_data: details || {}
             });
         } catch (error) {
-            console.error('Failed to log action:', error);
+            logger.error('Failed to log action:', error);
             // Non-blocking error
         }
     },

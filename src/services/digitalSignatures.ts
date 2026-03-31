@@ -6,6 +6,7 @@ import type {
   SignatureStatusResponse,
   SigningUrlResponse,
 } from '@/types/digitalSignature';
+import { logger } from '@/utils/logger';
 
 async function callEdgeFunction<T>(action: string, payload: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('supersign-envelope', {
@@ -13,13 +14,13 @@ async function callEdgeFunction<T>(action: string, payload: Record<string, unkno
   });
 
   if (error) {
-    console.error('[digitalSignatures] Error:', error);
+    logger.error('[digitalSignatures] Error:', error);
     // Try to extract the actual error message from the response
     let message = error.message || 'Erro na operação de assinatura digital';
     if (error.context && typeof error.context.json === 'function') {
       try {
         const body = await error.context.json();
-        console.error('[digitalSignatures] Server error body:', body);
+        logger.error('[digitalSignatures] Server error body:', body);
         message = body.error || message;
       } catch { /* ignore parse errors */ }
     }

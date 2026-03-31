@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { getClinicContext, getClinicContextWithRole } from './clinicContext';
 import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/database';
 import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
+import { logger } from '@/utils/logger';
 
 export const financialService = {
     /**
@@ -276,7 +277,7 @@ export const financialService = {
                         }
                     }
                 } catch (e) {
-                    console.error('Error parsing budget notes:', e);
+                    logger.error('Error parsing budget notes:', e);
                 }
             }
         }

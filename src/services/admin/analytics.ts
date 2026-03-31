@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/utils/logger';
 
 export type PeriodView = 'monthly' | 'yearly';
 
@@ -74,7 +75,7 @@ export const analyticsService = {
         });
 
         if (error) {
-            console.error('Error fetching overview metrics:', error);
+            logger.error('Error fetching overview metrics:', error);
             return {
                 totalClinics: 0,
                 totalUsers: 0,
@@ -236,7 +237,7 @@ export const analyticsService = {
         });
 
         if (error) {
-            console.error('Error fetching recent clinics:', error);
+            logger.error('Error fetching recent clinics:', error);
             return [];
         }
 
@@ -258,13 +259,13 @@ export const analyticsService = {
             const { data, error } = await supabase.functions.invoke('get-stripe-metrics');
 
             if (error) {
-                console.error('Error fetching Stripe metrics:', error);
+                logger.error('Error fetching Stripe metrics:', error);
                 return null;
             }
 
             return data as StripeMetrics;
         } catch (err) {
-            console.error('Error invoking Stripe metrics function:', err);
+            logger.error('Error invoking Stripe metrics function:', err);
             return null;
         }
     }

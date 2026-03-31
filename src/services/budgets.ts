@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
 import { calculateBudgetStatus } from '@/utils/budgetUtils';
 import { getClinicContext } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 const MAX_ITEM_VALUE_CENTS = 10_000_000; // R$ 100.000,00
 
@@ -215,7 +216,7 @@ export const budgetsService = {
                     }
                 }
             } catch (e) {
-                console.error(`Error parsing budget ${budget.id}`, e);
+                logger.error(`Error parsing budget ${budget.id}`, e);
             }
         }
 

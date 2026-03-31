@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { toLocalDateString } from '@/utils/formatters';
+import { logger } from '@/utils/logger';
 
 export interface PatientChildInfo {
     patient_type?: string | null;
@@ -42,7 +43,7 @@ export const alertsService = {
             .eq('user_id', user.id);
 
         if (error) {
-            console.error('Error fetching dismissals:', error);
+            logger.error('Error fetching dismissals:', error);
             return new Set();
         }
 
@@ -309,7 +310,7 @@ export const alertsService = {
         const { data, error } = await query;
 
         if (error) {
-            console.error('Error fetching prosthesis scheduling alerts:', error);
+            logger.error('Error fetching prosthesis scheduling alerts:', error);
             return [];
         }
 

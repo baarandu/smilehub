@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { Exam, ExamInsert } from '@/types/database';
 import { getClinicContext } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 export const examsService = {
   async getByPatient(patientId: string): Promise<Exam[]> {
@@ -35,7 +36,7 @@ export const examsService = {
       .single();
 
     if (error) {
-      console.error('[examsService.create] Insert error:', error);
+      logger.error('[examsService.create] Insert error:', error);
       throw error;
     }
 

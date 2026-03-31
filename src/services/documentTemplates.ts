@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { DocumentTemplate, DocumentTemplateInsert, DocumentTemplateUpdate } from '@/types/database';
 import { getClinicContext } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 export const documentTemplatesService = {
     async getAll(): Promise<DocumentTemplate[]> {
@@ -114,7 +115,7 @@ export const documentTemplatesService = {
                     reader.readAsDataURL(blob);
                 });
             } catch (e) {
-                console.error('Error loading letterhead image:', e);
+                logger.error('Error loading letterhead image:', e);
             }
         }
 

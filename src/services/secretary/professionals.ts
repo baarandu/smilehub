@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import type { ClinicProfessional } from './types';
+import { logger } from '@/utils/logger';
 
 export async function getClinicProfessionals(clinicId: string): Promise<ClinicProfessional[]> {
     try {
@@ -19,7 +20,7 @@ export async function getClinicProfessionals(clinicId: string): Promise<ClinicPr
         }
         return (data || []) as ClinicProfessional[];
     } catch (error) {
-        console.error('Error fetching professionals:', error);
+        logger.error('Error fetching professionals:', error);
         return [];
     }
 }
@@ -41,7 +42,7 @@ export async function addClinicProfessional(
         if (error) throw error;
         return data as ClinicProfessional;
     } catch (error) {
-        console.error('Error adding professional:', error);
+        logger.error('Error adding professional:', error);
         return null;
     }
 }
@@ -59,7 +60,7 @@ export async function updateClinicProfessional(
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error updating professional:', error);
+        logger.error('Error updating professional:', error);
         return false;
     }
 }
@@ -74,7 +75,7 @@ export async function deleteClinicProfessional(id: string): Promise<boolean> {
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error deleting professional:', error);
+        logger.error('Error deleting professional:', error);
         return false;
     }
 }

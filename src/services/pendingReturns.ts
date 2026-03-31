@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Procedure, Patient } from '@/types/database';
+import { logger } from '@/utils/logger';
 
 export interface PendingReturn {
     procedure: Procedure;
@@ -36,7 +37,7 @@ export async function getPendingReturns(clinicId?: string): Promise<PendingRetur
         .order('date', { ascending: true });
 
     if (error) {
-        console.error('Error fetching pending returns:', error);
+        logger.error('Error fetching pending returns:', error);
         throw error;
     }
 
@@ -112,7 +113,7 @@ export async function markProcedureCompleted(procedureId: string): Promise<void>
         .eq('id', procedureId);
 
     if (error) {
-        console.error('Error marking procedure as completed:', error);
+        logger.error('Error marking procedure as completed:', error);
         throw error;
     }
 }

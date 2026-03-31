@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import type { AISecretarySettings, AISecretaryStats } from './types';
 import { DEFAULT_SETTINGS } from './constants';
+import { logger } from '@/utils/logger';
 
 // Get settings for current clinic - returns null if table doesn't exist or no data
 export async function getSecretarySettings(clinicId: string): Promise<AISecretarySettings | null> {
@@ -18,13 +19,13 @@ export async function getSecretarySettings(clinicId: string): Promise<AISecretar
             if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('does not exist')) {
                 return null;
             }
-            console.warn('Error fetching secretary settings:', error);
+            logger.warn('Error fetching secretary settings:', error);
             return null;
         }
 
         return data as unknown as AISecretarySettings;
     } catch (error) {
-        console.warn('Error in getSecretarySettings:', error);
+        logger.warn('Error in getSecretarySettings:', error);
         return null;
     }
 }
@@ -62,7 +63,7 @@ export async function saveSecretarySettings(
             return data as AISecretarySettings;
         }
     } catch (error) {
-        console.error('Error saving secretary settings:', error);
+        logger.error('Error saving secretary settings:', error);
         return null;
     }
 }
@@ -89,7 +90,7 @@ export async function updateSecretarySetting(
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error(`Error updating ${field}:`, error);
+        logger.error(`Error updating ${field}:`, error);
         return false;
     }
 }
@@ -121,7 +122,7 @@ export async function getSecretaryStats(clinicId: string): Promise<AISecretarySt
                 .lte('started_at', lastDayOfMonth);
             totalConversations = result.count || 0;
         } catch (e) {
-            console.warn('ai_secretary_conversations table may not exist');
+            logger.warn('ai_secretary_conversations table may not exist');
         }
 
         try {
@@ -156,7 +157,7 @@ export async function getSecretaryStats(clinicId: string): Promise<AISecretarySt
             transferred_conversations: transferred,
         };
     } catch (error) {
-        console.error('Error fetching stats:', error);
+        logger.error('Error fetching stats:', error);
         return defaultStats;
     }
 }

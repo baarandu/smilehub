@@ -3,6 +3,7 @@ import type { PaymentReceivable, SplitPaymentPortion, OverdueSummary, Receivable
 import { financialService } from './financial';
 import { calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import { getClinicContext } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 export const receivablesService = {
   async createSplitPayment(
@@ -357,7 +358,7 @@ export const receivablesService = {
       .order('split_index', { ascending: true });
 
     if (groupError) {
-      console.error('Error fetching receivables group:', groupError);
+      logger.error('Error fetching receivables group:', groupError);
       return;
     }
 
@@ -370,14 +371,14 @@ export const receivablesService = {
       .single();
 
     if (budgetError || !budget) {
-      console.error('Error fetching budget for sync:', budgetError);
+      logger.error('Error fetching budget for sync:', budgetError);
       return;
     }
 
     const parsed = JSON.parse(budget.notes || '{}');
     const teeth = parsed.teeth as ToothEntry[];
     if (!teeth || !teeth[toothIndex]) {
-      console.error('Tooth not found at index', toothIndex, 'in budget', budgetId);
+      logger.error('Tooth not found at index', toothIndex, 'in budget', budgetId);
       return;
     }
 
@@ -414,7 +415,7 @@ export const receivablesService = {
       .eq('id', budgetId);
 
     if (saveError) {
-      console.error('Error saving budget after sync:', saveError);
+      logger.error('Error saving budget after sync:', saveError);
     } else {
     }
   },

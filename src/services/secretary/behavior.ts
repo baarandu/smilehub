@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import type { AISecretaryBehavior } from './types';
 import { DEFAULT_BEHAVIOR_SETTINGS } from './constants';
+import { logger } from '@/utils/logger';
 
 // Behavior Settings CRUD - returns null if table doesn't exist
 export async function getBehaviorSettings(clinicId: string): Promise<AISecretaryBehavior | null> {
@@ -18,13 +19,13 @@ export async function getBehaviorSettings(clinicId: string): Promise<AISecretary
             if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('does not exist')) {
                 return null;
             }
-            console.warn('Error fetching behavior settings:', error);
+            logger.warn('Error fetching behavior settings:', error);
             return null;
         }
 
         return data as AISecretaryBehavior;
     } catch (error) {
-        console.warn('Error in getBehaviorSettings:', error);
+        logger.warn('Error in getBehaviorSettings:', error);
         return null;
     }
 }
@@ -61,7 +62,7 @@ export async function saveBehaviorSettings(
             return data as AISecretaryBehavior;
         }
     } catch (error) {
-        console.error('Error saving behavior settings:', error);
+        logger.error('Error saving behavior settings:', error);
         return null;
     }
 }
@@ -87,7 +88,7 @@ export async function updateBehaviorSetting(
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error(`Error updating behavior ${field}:`, error);
+        logger.error(`Error updating behavior ${field}:`, error);
         return false;
     }
 }
@@ -112,7 +113,7 @@ export async function updateBehaviorSettings(
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error updating behavior settings:', error);
+        logger.error('Error updating behavior settings:', error);
         return false;
     }
 }

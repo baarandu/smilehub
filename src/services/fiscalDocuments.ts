@@ -11,6 +11,7 @@ import type {
     FISCAL_CATEGORY_LABELS,
     getChecklistByRegime,
 } from '@/types/fiscalDocuments';
+import { logger } from '@/utils/logger';
 
 const BUCKET_NAME = 'fiscal-documents';
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
@@ -92,7 +93,7 @@ async function uploadFile(
         });
 
     if (error) {
-        console.error('Storage upload error:', error);
+        logger.error('Storage upload error:', error);
         if (error.message?.includes('bucket') || error.message?.includes('not found')) {
             throw new Error('Bucket de armazenamento não encontrado. Verifique se a migração do storage foi executada no Supabase.');
         }

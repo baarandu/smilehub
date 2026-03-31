@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { logger } from '@/utils/logger';
 
 export interface AppSettings {
     annual_discount_percent: number;
@@ -19,13 +20,13 @@ export const appSettingsService = {
 
             if (error) {
                 // If table doesn't exist or no data, return default
-                console.log('Using default annual discount:', DEFAULT_SETTINGS.annual_discount_percent);
+                logger.log('Using default annual discount:', DEFAULT_SETTINGS.annual_discount_percent);
                 return DEFAULT_SETTINGS.annual_discount_percent;
             }
 
             return Number(data?.value) || DEFAULT_SETTINGS.annual_discount_percent;
         } catch (error) {
-            console.error('Error fetching annual discount:', error);
+            logger.error('Error fetching annual discount:', error);
             return DEFAULT_SETTINGS.annual_discount_percent;
         }
     },
@@ -61,7 +62,7 @@ export const appSettingsService = {
 
             return settings;
         } catch (error) {
-            console.error('Error fetching app settings:', error);
+            logger.error('Error fetching app settings:', error);
             return DEFAULT_SETTINGS;
         }
     }

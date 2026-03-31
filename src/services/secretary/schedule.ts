@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import type { ScheduleEntry } from './types';
+import { logger } from '@/utils/logger';
 
 export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntry[]> {
     try {
@@ -25,7 +26,7 @@ export async function getScheduleEntries(clinicId: string): Promise<ScheduleEntr
             location_name: null,
         }));
     } catch (error) {
-        console.error('Error fetching schedule:', error);
+        logger.error('Error fetching schedule:', error);
         return [];
     }
 }
@@ -60,7 +61,7 @@ export async function addScheduleEntry(
         if (error) throw error;
         return data as ScheduleEntry;
     } catch (error) {
-        console.error('Error adding schedule entry:', error);
+        logger.error('Error adding schedule entry:', error);
         return null;
     }
 }
@@ -86,7 +87,7 @@ export async function updateScheduleEntry(
         if (error) throw error;
         return data as ScheduleEntry;
     } catch (error) {
-        console.error('Error updating schedule entry:', error);
+        logger.error('Error updating schedule entry:', error);
         return null;
     }
 }
@@ -101,7 +102,7 @@ export async function deleteScheduleEntry(id: string): Promise<boolean> {
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error deleting schedule entry:', error);
+        logger.error('Error deleting schedule entry:', error);
         return false;
     }
 }
@@ -127,7 +128,7 @@ export async function createDefaultSchedule(clinicId: string): Promise<boolean> 
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error creating default schedule:', error);
+        logger.error('Error creating default schedule:', error);
         return false;
     }
 }

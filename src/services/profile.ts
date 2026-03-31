@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext, getClinicContextSafe } from './clinicContext';
+import { logger } from '@/utils/logger';
 
 export interface UserProfile {
     id: string;
@@ -37,7 +38,7 @@ export const profileService = {
             .single();
 
         if (error) {
-            console.error('Error fetching profile:', error);
+            logger.error('Error fetching profile:', error);
             return null;
         }
 
@@ -215,7 +216,7 @@ export const profileService = {
             .eq('id', clinicId);
 
         if (updateError) {
-            console.error('Error updating clinic with logo:', updateError);
+            logger.error('Error updating clinic with logo:', updateError);
             throw updateError;
         }
 
@@ -287,7 +288,7 @@ export const profileService = {
             );
 
         if (upsertError) {
-            console.error('Error updating clinic_settings with letterhead:', upsertError);
+            logger.error('Error updating clinic_settings with letterhead:', upsertError);
             throw upsertError;
         }
 

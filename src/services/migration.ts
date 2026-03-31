@@ -17,6 +17,7 @@ import {
 } from '@/types/migration';
 import { applyMappings } from '@/utils/migrationMappers';
 import type { Patient, PatientInsert, ProcedureInsert, FinancialTransactionInsert } from '@/types/database';
+import { logger } from '@/utils/logger';
 
 const BATCH_SIZE = 50;
 
@@ -30,7 +31,7 @@ export async function parseCSV(file: File): Promise<ParsedData> {
       delimitersToGuess: [',', ';', '\t', '|'], // Detecta separadores comuns incluindo ; (padrão BR)
       complete: (results) => {
         if (results.errors.length > 0) {
-          console.warn('CSV parse warnings:', results.errors);
+          logger.warn('CSV parse warnings:', results.errors);
         }
 
         // Filtra headers vazios que podem vir de colunas extras

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { TaxRegime, FiscalDocumentCategory } from '@/types/fiscalDocuments';
 import { getChecklistByRegime, FISCAL_CATEGORY_LABELS } from '@/types/fiscalDocuments';
+import { logger } from '@/utils/logger';
 
 export interface FiscalReminder {
     id: string;
@@ -123,7 +124,7 @@ export const fiscalRemindersService = {
             if (error) {
                 // Column might not exist yet - return empty array
                 if (error.code === '42703') {
-                    console.warn('expiration_date column not found - migration needed');
+                    logger.warn('expiration_date column not found - migration needed');
                     return [];
                 }
                 throw error;
@@ -136,7 +137,7 @@ export const fiscalRemindersService = {
         } catch (err: any) {
             // Handle column not exists error gracefully
             if (err?.code === '42703') {
-                console.warn('expiration_date column not found - migration needed');
+                logger.warn('expiration_date column not found - migration needed');
                 return [];
             }
             throw err;
@@ -315,7 +316,7 @@ export const fiscalRemindersService = {
             try {
                 await this.createReminder(reminder);
             } catch (error) {
-                console.error('Error creating default reminder:', error);
+                logger.error('Error creating default reminder:', error);
             }
         }
     },

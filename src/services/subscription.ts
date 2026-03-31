@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
+import { logger } from '@/utils/logger';
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row'];
 type Plan = Database['public']['Tables']['subscription_plans']['Row'];
@@ -25,7 +26,7 @@ export const subscriptionService = {
             .limit(1);
 
         if (error) {
-            console.error('Error fetching subscription:', error);
+            logger.error('Error fetching subscription:', error);
             return { subscription: null, plan: null, isActive: false, isTrialing: false };
         }
 

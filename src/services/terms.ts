@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { CURRENT_TERMS_VERSION } from '@/lib/termsVersion';
+import { logger } from '@/utils/logger';
 
 export async function acceptTerms(ipAddress?: string, userAgent?: string): Promise<void> {
   const ua = userAgent || navigator.userAgent;
@@ -29,7 +30,7 @@ export async function checkTermsAccepted(): Promise<boolean> {
   });
 
   if (error) {
-    console.error('Error checking terms acceptance:', error);
+    logger.error('Error checking terms acceptance:', error);
     return false;
   }
 

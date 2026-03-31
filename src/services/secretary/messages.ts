@@ -3,6 +3,7 @@
 import { supabase } from '@/lib/supabase';
 import type { CustomMessage } from './types';
 import { PREDEFINED_MESSAGE_TYPES } from './constants';
+import { logger } from '@/utils/logger';
 
 export async function getCustomMessages(clinicId: string): Promise<CustomMessage[]> {
     try {
@@ -17,13 +18,13 @@ export async function getCustomMessages(clinicId: string): Promise<CustomMessage
             if (error.code === '42P01' || error.message?.includes('does not exist')) {
                 return [];
             }
-            console.warn('Error fetching custom messages:', error);
+            logger.warn('Error fetching custom messages:', error);
             return [];
         }
 
         return (data || []) as CustomMessage[];
     } catch (error) {
-        console.warn('Error in getCustomMessages:', error);
+        logger.warn('Error in getCustomMessages:', error);
         return [];
     }
 }
@@ -52,7 +53,7 @@ export async function addCustomMessage(
         if (error) throw error;
         return data as CustomMessage;
     } catch (error) {
-        console.error('Error adding custom message:', error);
+        logger.error('Error adding custom message:', error);
         return null;
     }
 }
@@ -70,7 +71,7 @@ export async function updateCustomMessage(
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error updating custom message:', error);
+        logger.error('Error updating custom message:', error);
         return false;
     }
 }
@@ -85,7 +86,7 @@ export async function deleteCustomMessage(id: string): Promise<boolean> {
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error deleting custom message:', error);
+        logger.error('Error deleting custom message:', error);
         return false;
     }
 }
@@ -113,7 +114,7 @@ export async function initializePredefinedMessages(clinicId: string): Promise<bo
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error initializing predefined messages:', error);
+        logger.error('Error initializing predefined messages:', error);
         return false;
     }
 }

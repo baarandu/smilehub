@@ -2,6 +2,7 @@
 
 import { supabase } from '@/lib/supabase';
 import type { BlockedNumber } from './types';
+import { logger } from '@/utils/logger';
 
 export async function getBlockedNumbers(clinicId: string): Promise<BlockedNumber[]> {
     try {
@@ -19,7 +20,7 @@ export async function getBlockedNumbers(clinicId: string): Promise<BlockedNumber
         }
         return (data || []) as BlockedNumber[];
     } catch (error) {
-        console.error('Error fetching blocked numbers:', error);
+        logger.error('Error fetching blocked numbers:', error);
         return [];
     }
 }
@@ -46,7 +47,7 @@ export async function addBlockedNumber(
         if (error) throw error;
         return data as BlockedNumber;
     } catch (error) {
-        console.error('Error adding blocked number:', error);
+        logger.error('Error adding blocked number:', error);
         return null;
     }
 }
@@ -61,7 +62,7 @@ export async function removeBlockedNumber(id: string): Promise<boolean> {
         if (error) throw error;
         return true;
     } catch (error) {
-        console.error('Error removing blocked number:', error);
+        logger.error('Error removing blocked number:', error);
         return false;
     }
 }
