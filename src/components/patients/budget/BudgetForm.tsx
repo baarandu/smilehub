@@ -205,25 +205,28 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
             onUpdateItem(newItem, editingIndex);
             toast({ title: "Item atualizado", description: "Item editado com sucesso." });
         } else {
-            // Add mode: create one item per selected tooth
+            // Add mode: create one item per tooth × treatment (each treatment is a separate payable item)
             for (const tooth of selectedTeeth) {
-                const newItem: ToothEntry = {
-                    tooth,
-                    faces: hasFaces ? [...selectedFaces] : [],
-                    treatments: [...selectedTreatments],
-                    values: { ...values },
-                    materials: { ...resolvedMaterials },
-                    labTreatments: Object.keys(itemLabTreatments).length > 0 ? { ...itemLabTreatments } : undefined,
-                    status: 'pending',
-                    locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
-                };
-                onAddItem(newItem);
+                for (const treatment of selectedTreatments) {
+                    const treatmentHasFaces = treatment === 'Restauração';
+                    const newItem: ToothEntry = {
+                        tooth,
+                        faces: treatmentHasFaces ? [...selectedFaces] : [],
+                        treatments: [treatment],
+                        values: { [treatment]: values[treatment] },
+                        materials: resolvedMaterials[treatment] ? { [treatment]: resolvedMaterials[treatment] } : {},
+                        labTreatments: itemLabTreatments[treatment] !== undefined ? { [treatment]: itemLabTreatments[treatment] } : undefined,
+                        status: 'pending',
+                        locationRate: itemLocationRate ? parseFloat(itemLocationRate) : 0,
+                    };
+                    onAddItem(newItem);
+                }
             }
-            const count = selectedTeeth.length;
+            const count = selectedTeeth.length * selectedTreatments.length;
             toast({
                 title: count > 1 ? `${count} itens adicionados` : "Item adicionado",
                 description: count > 1
-                    ? `${count} dentes com o mesmo tratamento incluídos no plano.`
+                    ? `${count} itens incluídos no plano (cada tratamento pode ser pago separadamente).`
                     : "Item incluído na lista.",
             });
         }

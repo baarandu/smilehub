@@ -253,26 +253,38 @@ export function NewBudgetModal({
             }
         });
 
-        const newEntry: ToothEntry = {
-            tooth: selectedTooth,
-            faces: showFaces ? selectedFaces : [],
-            treatments: [...selectedTreatments],
-            values: { ...treatmentValues },
-            materials: { ...treatmentMaterials },
-            labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
-            status: editingIndex !== null ? teethList[editingIndex]?.status || 'pending' : 'pending',
-            locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
-        };
-
         if (editingIndex !== null) {
-            // Update existing entry
+            // Update existing entry (single item)
+            const newEntry: ToothEntry = {
+                tooth: selectedTooth,
+                faces: showFaces ? selectedFaces : [],
+                treatments: [...selectedTreatments],
+                values: { ...treatmentValues },
+                materials: { ...treatmentMaterials },
+                labTreatments: Object.keys(itemLabTreatments).length > 0 ? itemLabTreatments : undefined,
+                status: teethList[editingIndex]?.status || 'pending',
+                locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
+            };
             const newList = [...teethList];
             newList[editingIndex] = newEntry;
             setTeethList(newList);
             setEditingIndex(null);
         } else {
-            // Add as new entry
-            setTeethList([...teethList, newEntry]);
+            // Add mode: one item per treatment (each treatment can be paid separately)
+            const newEntries: ToothEntry[] = selectedTreatments.map(treatment => {
+                const treatmentHasFaces = treatment === 'Restauração';
+                return {
+                    tooth: selectedTooth,
+                    faces: treatmentHasFaces ? [...selectedFaces] : [],
+                    treatments: [treatment],
+                    values: { [treatment]: treatmentValues[treatment] },
+                    materials: treatmentMaterials[treatment] ? { [treatment]: treatmentMaterials[treatment] } : {},
+                    labTreatments: itemLabTreatments[treatment] !== undefined ? { [treatment]: itemLabTreatments[treatment] } : undefined,
+                    status: 'pending' as const,
+                    locationRate: itemLocationRate ? parseFloat(itemLocationRate.replace(',', '.')) : 0,
+                };
+            });
+            setTeethList([...teethList, ...newEntries]);
         }
 
         // Clear fields for next tooth
