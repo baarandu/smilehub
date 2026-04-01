@@ -22,8 +22,10 @@ const DEV_ORIGINS = [
   'http://127.0.0.1:8082',
 ];
 
-// Include all origins — real security is handled by JWT auth
-const ALLOWED_ORIGINS = [...PRODUCTION_ORIGINS, ...DEV_ORIGINS];
+const IS_PRODUCTION = Deno.env.get('ENVIRONMENT') === 'production';
+const ALLOWED_ORIGINS = IS_PRODUCTION
+  ? PRODUCTION_ORIGINS
+  : [...PRODUCTION_ORIGINS, ...DEV_ORIGINS];
 
 export function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('origin') || '';
