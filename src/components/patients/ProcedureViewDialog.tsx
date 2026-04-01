@@ -8,11 +8,13 @@ import {
 } from '@/components/ui/dialog';
 import type { Procedure } from '@/types/database';
 import type { BudgetLink } from '@/services/procedures';
+import { useBudgetPlanItems } from '@/hooks/useBudgetProcedures';
 
 interface ProcedureViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   procedure: Procedure | null;
+  patientId: string;
   onEdit?: () => void;
 }
 
@@ -20,8 +22,11 @@ export function ProcedureViewDialog({
   open,
   onOpenChange,
   procedure,
+  patientId,
   onEdit,
 }: ProcedureViewDialogProps) {
+  const { planItems } = useBudgetPlanItems(patientId);
+
   if (!procedure) return null;
 
   const formatDate = (date: string) => {
@@ -45,43 +50,8 @@ export function ProcedureViewDialog({
     }
   };
 
-  const parseDescription = (description: string) => {
-    const parts = description.split('\n\nObs: ');
-    const itemsPart = parts[0];
-    const obsPart = parts.length > 1 ? parts[1] : (itemsPart.startsWith('Obs: ') ? itemsPart.replace('Obs: ', '') : null);
-
-    const lines = itemsPart.split('\n');
-    const structuredItems: { treatment: string; tooth: string; value: string }[] = [];
-    const unstructuredLines: string[] = [];
-
-    lines.forEach(line => {
-      const cleanLine = line.trim().replace(/^•\s*/, '');
-      if (!cleanLine) return;
-
-      let sections = cleanLine.split(' | ');
-      if (sections.length < 3) {
-        sections = cleanLine.split(' - ');
-      }
-
-      if (sections.length >= 3) {
-        structuredItems.push({
-          treatment: sections[0].trim(),
-          tooth: sections[1].trim(),
-          value: sections.slice(2).join(' - ').trim()
-        });
-      } else if (!cleanLine.startsWith('Obs:')) {
-        unstructuredLines.push(line);
-      }
-    });
-
-    return { structuredItems, unstructuredLines, obsPart };
-  };
-
   const budgetLinks = (procedure as any).budget_links as BudgetLink[] | null;
   const statusInfo = getStatusInfo(procedure.status);
-  const { structuredItems, unstructuredLines, obsPart } = procedure.description
-    ? parseDescription(procedure.description)
-    : { structuredItems: [], unstructuredLines: [], obsPart: null };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,12 +90,21 @@ export function ProcedureViewDialog({
                 <LinkIcon className="w-3.5 h-3.5" />
                 Itens do Orçamento Vinculados
               </h4>
-              <div className="space-y-1">
-                {budgetLinks.map((link, idx) => (
-                  <p key={idx} className="text-sm text-purple-900">
-                    Item {idx + 1}
-                  </p>
-                ))}
+              <div className="space-y-2">
+                {budgetLinks.map((link, idx) => {
+                  const planItem = planItems.find(
+                    (item) => item.budgetId === link.budgetId && item.toothIndex === link.toothIndex
+                  );
+                  return (
+                    <div key={idx} className="text-sm text-purple-900">
+                      {planItem ? (
+                        <p>{planItem.label}</p>
+                      ) : (
+                        <p>Item {idx + 1}</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -140,42 +119,9 @@ export function ProcedureViewDialog({
 
           {/* Description / Details */}
           {procedure.description && (
-            <div className="space-y-3">
-              {/* Structured Items */}
-              {structuredItems.length > 0 && (
-                <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase mb-3">Detalhamento</h4>
-                  <div className="space-y-3">
-                    {structuredItems.map((item, idx) => (
-                      <div key={idx} className="border-b border-border pb-2 last:border-0 last:pb-0">
-                        <p className="font-semibold text-foreground">{item.tooth}</p>
-                        <p className="text-sm text-muted-foreground">{item.treatment}</p>
-                        {item.value && (
-                          <p className="text-sm font-medium text-primary mt-1">{item.value}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Unstructured Lines */}
-              {structuredItems.length === 0 && unstructuredLines.length > 0 && (
-                <div className="bg-muted/50 rounded-lg p-4 border border-border">
-                  <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Descrição</h4>
-                  {unstructuredLines.map((line, idx) => (
-                    <p key={idx} className="text-sm text-foreground">{line}</p>
-                  ))}
-                </div>
-              )}
-
-              {/* Observations */}
-              {obsPart && (
-                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                  <h4 className="text-xs font-bold text-amber-700 uppercase mb-2">Descrição do Procedimento</h4>
-                  <p className="text-sm text-amber-900">{obsPart}</p>
-                </div>
-              )}
+            <div className="bg-muted/50 rounded-lg p-4 border border-border">
+              <h4 className="text-xs font-bold text-muted-foreground uppercase mb-2">Descrição do Procedimento</h4>
+              <p className="text-sm text-foreground whitespace-pre-line">{procedure.description}</p>
             </div>
           )}
         </div>

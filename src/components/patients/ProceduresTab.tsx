@@ -240,6 +240,7 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
           }
         }}
         procedure={viewingProcedure}
+        patientId={patientId}
         onEdit={() => {
           if (viewingProcedure) {
             handleEdit(viewingProcedure);
