@@ -94,7 +94,7 @@ BEGIN
     RETURNING id INTO new_clinic_id;
 
     INSERT INTO public.clinic_users (user_id, clinic_id, role, roles)
-    VALUES (new.id, new_clinic_id, 'admin', ARRAY['admin']);
+    VALUES (new.id, new_clinic_id, 'admin', ARRAY['admin', 'dentist']);
 
     -- Get the Profissional plan specifically for trial (slug = 'profissional_v2')
     SELECT id INTO trial_plan_id
