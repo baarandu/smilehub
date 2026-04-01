@@ -251,7 +251,16 @@ serve(async (req) => {
 
     if (!content) throw new Error("No content in GPT response");
 
-    const parsedData = JSON.parse(content);
+    let parsedData: any;
+    try {
+      parsedData = JSON.parse(content);
+    } catch {
+      throw new Error("LLM returned invalid JSON");
+    }
+
+    if (!parsedData || typeof parsedData !== 'object' || !Array.isArray(parsedData.items)) {
+      throw new Error("LLM returned unexpected format: missing items array");
+    }
 
     // Audit log
     log.audit(supabase, {

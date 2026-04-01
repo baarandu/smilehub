@@ -403,7 +403,16 @@ serve(async (req) => {
 
     if (!content) throw new Error("No content in GPT response");
 
-    const extractedData = JSON.parse(content);
+    let extractedData: any;
+    try {
+      extractedData = JSON.parse(content);
+    } catch {
+      throw new Error("LLM returned invalid JSON");
+    }
+
+    if (!extractedData || typeof extractedData !== 'object') {
+      throw new Error("LLM returned unexpected format");
+    }
 
     // Update session with extracted data
     if (session_id) {

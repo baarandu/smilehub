@@ -29,20 +29,28 @@ const handler = async (request: Request): Promise<Response> => {
             );
         }
 
-        // Timing-safe comparison to prevent timing attacks
-        const timingSafeEqual = (a: string, b: string): boolean => {
-            if (a.length !== b.length) return false;
+        // Timing-safe comparison via HMAC to prevent timing attacks
+        const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
+            const encoder = new TextEncoder();
+            const key = await crypto.subtle.importKey(
+                'raw', encoder.encode('hmac-key'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+            );
+            const [sigA, sigB] = await Promise.all([
+                crypto.subtle.sign('HMAC', key, encoder.encode(a)),
+                crypto.subtle.sign('HMAC', key, encoder.encode(b)),
+            ]);
+            const viewA = new Uint8Array(sigA);
+            const viewB = new Uint8Array(sigB);
+            if (viewA.length !== viewB.length) return false;
             let result = 0;
-            for (let i = 0; i < a.length; i++) {
-                result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-            }
+            for (let i = 0; i < viewA.length; i++) result |= viewA[i] ^ viewB[i];
             return result === 0;
         };
 
         const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
         const isAuthorized =
-            (bearerToken.length > 0 && timingSafeEqual(bearerToken, expectedSecret)) ||
-            (webhookSecret.length > 0 && timingSafeEqual(webhookSecret, expectedSecret));
+            (bearerToken.length > 0 && await timingSafeEqual(bearerToken, expectedSecret)) ||
+            (webhookSecret.length > 0 && await timingSafeEqual(webhookSecret, expectedSecret));
 
         if (!isAuthorized) {
             return new Response(

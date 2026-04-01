@@ -127,11 +127,13 @@ export const receivablesService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
-    // Fetch the receivable
+    // Fetch the receivable (scoped to clinic for defense-in-depth)
+    const { clinicId } = await getClinicContext();
     const { data: receivable, error: fetchError } = await supabase
       .from('payment_receivables')
       .select('*')
       .eq('id', receivableId)
+      .eq('clinic_id', clinicId)
       .single();
 
     if (fetchError || !receivable) throw new Error('Parcela não encontrada');
@@ -199,17 +201,21 @@ export const receivablesService = {
   },
 
   async cancelReceivable(receivableId: string): Promise<void> {
+    const { clinicId } = await getClinicContext();
+
     // Fetch before cancelling to get group info
     const { data: receivable } = await supabase
       .from('payment_receivables')
       .select('split_group_id, budget_id, tooth_index')
       .eq('id', receivableId)
+      .eq('clinic_id', clinicId)
       .single();
 
     const { error } = await supabase
       .from('payment_receivables')
       .update({ status: 'cancelled' })
-      .eq('id', receivableId);
+      .eq('id', receivableId)
+      .eq('clinic_id', clinicId);
 
     if (error) throw error;
 

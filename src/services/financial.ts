@@ -193,11 +193,14 @@ export const financialService = {
 
     // Delete income and revert linked budget tooth to approved status
     async deleteIncomeAndRevertBudget(transactionId: string, orthoAction: 'delete' | 'pause' | 'keep' = 'delete'): Promise<void> {
+        const { clinicId } = await getClinicContext();
+
         // 1. Get the transaction to find the linked budget
         const { data: transaction, error: fetchError } = await supabase
             .from('financial_transactions')
             .select('*')
             .eq('id', transactionId)
+            .eq('clinic_id', clinicId)
             .single();
 
         if (fetchError) throw fetchError;
@@ -315,7 +318,8 @@ export const financialService = {
         const { error: deleteError } = await supabase
             .from('financial_transactions')
             .delete()
-            .eq('id', transactionId);
+            .eq('id', transactionId)
+            .eq('clinic_id', clinicId);
 
         if (deleteError) throw deleteError;
     },
@@ -324,11 +328,14 @@ export const financialService = {
      * Delete an expense and revert the linked shopping order to pending status if it's a materials expense
      */
     async deleteExpenseAndRevertMaterials(transactionId: string): Promise<void> {
-        // 1. Try to get the expense to find related_entity_id (may fail due to RLS)
+        const { clinicId } = await getClinicContext();
+
+        // 1. Try to get the expense to find related_entity_id
         const { data: transaction } = await supabase
             .from('financial_transactions')
             .select('category, related_entity_id')
             .eq('id', transactionId)
+            .eq('clinic_id', clinicId)
             .maybeSingle();
 
         // 2. If it's a materials expense with a linked shopping order, revert it
@@ -349,7 +356,8 @@ export const financialService = {
         const { error: deleteError } = await supabase
             .from('financial_transactions')
             .delete()
-            .eq('id', transactionId);
+            .eq('id', transactionId)
+            .eq('clinic_id', clinicId);
 
         if (deleteError) throw deleteError;
     },

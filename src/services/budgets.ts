@@ -87,6 +87,7 @@ export const budgetsService = {
     },
 
     async getById(id: string): Promise<BudgetWithItems> {
+        const { clinicId } = await getClinicContext();
         const { data, error } = await supabase
             .from('budgets')
             .select(`
@@ -94,6 +95,7 @@ export const budgetsService = {
         budget_items (*)
       `)
             .eq('id', id)
+            .eq('clinic_id', clinicId)
             .single();
 
         if (error) throw error;

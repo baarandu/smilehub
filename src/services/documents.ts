@@ -16,6 +16,17 @@ const ALLOWED_MIME_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Map MIME type to safe file extension (ignores user-supplied filename extension)
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'application/pdf': 'pdf',
+};
+
 // Validate file before upload
 function validateFile(file: File): void {
   // Check MIME type
@@ -47,7 +58,7 @@ export async function uploadFile(
     throw new Error('clinicId é obrigatório para upload de arquivos');
   }
 
-  const fileExt = file.name.split('.').pop();
+  const fileExt = MIME_TO_EXT[file.type] || file.name.split('.').pop() || 'bin';
   const fileName = `${clinicId}/${patientId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
   const { data, error } = await supabase.storage
