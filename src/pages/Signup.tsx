@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { passwordSchema, getPasswordStrength } from '@/lib/validation';
+import { acceptTerms } from '@/services/terms';
 
 type Gender = 'male' | 'female';
 
@@ -79,6 +80,15 @@ export default function Signup() {
             });
 
             if (error) throw error;
+
+            // User accepted terms during signup — persist to DB
+            if (termsAccepted) {
+                try {
+                    await acceptTerms();
+                } catch {
+                    // Non-blocking: modal will catch on next login if this fails
+                }
+            }
 
             toast.success('Cadastro concluído! Sua conta foi criada com sucesso.');
             navigate('/login');
