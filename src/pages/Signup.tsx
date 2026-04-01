@@ -217,19 +217,13 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <div
-                            className="flex items-start space-x-3 cursor-pointer"
-                            onClick={(e) => {
-                                if ((e.target as HTMLElement).closest('a')) return;
-                                setTermsAccepted((prev) => !prev);
-                            }}
-                        >
+                        <div className="flex items-start space-x-3">
                             <Checkbox
                                 id="terms-signup"
                                 checked={termsAccepted}
                                 onCheckedChange={(checked) => setTermsAccepted(checked === true)}
                             />
-                            <span className="text-sm text-gray-600 leading-relaxed cursor-pointer select-none">
+                            <label htmlFor="terms-signup" className="text-sm text-gray-600 leading-relaxed cursor-pointer select-none">
                                 Li e aceito os{' '}
                                 <Link to="/termos" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
                                     Termos de Uso
@@ -238,7 +232,7 @@ export default function Signup() {
                                 <Link to="/privacidade" target="_blank" className="text-[#a03f3d] hover:underline font-medium">
                                     Política de Privacidade
                                 </Link>.
-                            </span>
+                            </label>
                         </div>
 
                         <Button
