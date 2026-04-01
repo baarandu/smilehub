@@ -47,7 +47,7 @@ serve(async (req) => {
         });
 
         const body = await req.json();
-        const { priceId, email, userId, customerId, planName, amount, couponCode } = body;
+        const { priceId, email, userId, customerId, planName, couponCode } = body;
 
         validateRequired(email, "email");
         validateRequired(userId, "userId");
@@ -58,12 +58,21 @@ serve(async (req) => {
             throw new Error("Unauthorized");
         }
 
-        // Validate amount range if provided (R$9.99 - R$999.99 = 999-99999 centavos)
-        if (amount !== undefined && amount !== null) {
-            if (typeof amount !== 'number' || amount < 999 || amount > 99999) {
-                throw new Error("Valor de assinatura inválido.");
-            }
+        // Fetch plan price from database (server-side source of truth)
+        const { data: plan, error: planError } = await supabase
+            .from('subscription_plans')
+            .select('price_monthly, name, is_active')
+            .eq('id', priceId)
+            .single();
+
+        if (planError || !plan) {
+            throw new Error("Plano não encontrado.");
         }
+        if (!plan.is_active) {
+            throw new Error("Plano não está ativo.");
+        }
+
+        const amount = plan.price_monthly;
 
         // Validate coupon if provided
         let validatedCoupon: any = null;
