@@ -5,14 +5,12 @@ import { executeToolCall } from "./toolExecutors.ts";
 import { buildSystemPrompt } from "./systemPrompt.ts";
 import { splitAndSend } from "./messageSplitter.ts";
 import * as evolution from "./evolutionClient.ts";
-import * as meta from "./metaClient.ts";
 import { createLogger } from "../_shared/logger.ts";
 
-// ─── Detect which WhatsApp provider to use ──────────────────────────────────
-const USE_META_API = !!Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-
-// Unified client — delegates to Meta or Evolution based on env config
-const whatsapp = USE_META_API ? meta : evolution;
+// ─── Provider: Evolution API only ───────────────────────────────────────────
+// Meta Cloud API support removed to eliminate ambiguity.
+// If Meta is needed in the future, make provider explicit via DB config.
+const whatsapp = evolution;
 
 // ─── Soft rate limit (logging only, never blocks webhook delivery) ────────────
 const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
@@ -92,12 +90,99 @@ function extractPhone(remoteJid: string): string {
   return remoteJid.replace(/@.*$/, "");
 }
 
+/** Check if a JID is a @lid (linked device ID) — not a real phone number. */
+function isLidJid(jid: string): boolean {
+  return typeof jid === "string" && jid.includes("@lid");
+}
+
+/**
+ * Validate that a resolved phone looks like a usable number (digits only, 10-15 chars).
+ * Does not enforce strict E.164 but rejects garbage like LID hashes.
+ */
+function isValidPhone(phone: string): boolean {
+  const digits = phone.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15 && /^\d+$/.test(digits);
+}
+
+/**
+ * Resolve the real sender phone from an Evolution payload.
+ *
+ * Only trusts @s.whatsapp.net JIDs — never extracts digits from @lid hashes,
+ * because LID values look like valid phone numbers but are NOT the sender.
+ *
+ * Priority:
+ *   1. payload.data.key.participant (set when @lid remoteJid, contains real JID)
+ *   2. payload.sender (Evolution sometimes puts the real JID here)
+ *   3. remoteJid (only if @s.whatsapp.net, NOT @lid)
+ *   4. null → caller must abort
+ */
+function resolveEvolutionPhone(payload: any, remoteJid: string, log: any): string | null {
+  const messageData = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
+  const participant = messageData?.key?.participant || messageData?.participant || "";
+  const sender = typeof payload?.sender === "string" ? payload.sender : "";
+
+  // Log all candidate fields for debugging
+  log.info("PHONE_RESOLUTION_CANDIDATES", {
+    remoteJid,
+    participant,
+    sender,
+    isLid: isLidJid(remoteJid),
+  });
+
+  // 1. participant — most reliable when remoteJid is @lid
+  if (participant.includes("@s.whatsapp.net")) {
+    const phone = extractPhone(participant);
+    if (isValidPhone(phone)) {
+      log.info("Phone resolved from participant", { phone, participant });
+      return phone;
+    }
+  }
+
+  // 2. payload.sender
+  if (sender.includes("@s.whatsapp.net")) {
+    const phone = extractPhone(sender);
+    if (isValidPhone(phone)) {
+      log.info("Phone resolved from payload.sender", { phone, sender });
+      return phone;
+    }
+  }
+
+  // 3. remoteJid — ONLY if it's a real @s.whatsapp.net JID
+  if (remoteJid.includes("@s.whatsapp.net") && !isLidJid(remoteJid)) {
+    const phone = extractPhone(remoteJid);
+    if (isValidPhone(phone)) {
+      log.info("Phone resolved from remoteJid", { phone, remoteJid });
+      return phone;
+    }
+  }
+
+  // 4. ABORT — do NOT extract digits from @lid, they are not phone numbers
+  log.error("ABORT: cannot resolve sender phone — all candidates failed", {
+    remoteJid,
+    participant,
+    sender,
+  });
+  return null;
+}
+
+/**
+ * Get current time in Brazil timezone.
+ * Edge Functions (Deno Deploy) run in UTC — we must convert explicitly.
+ */
+function getBrazilNow(): Date {
+  // toLocaleString with timezone gives us the local representation,
+  // then we parse it back to get correct hours/minutes/day.
+  const nowUtc = new Date();
+  const brStr = nowUtc.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+  return new Date(brStr);
+}
+
 /** Check if current time is within clinic work hours */
 function isWithinWorkHours(config: any): boolean {
   const settings = config.settings;
   if (!settings) return true;
 
-  const now = new Date();
+  const now = getBrazilNow();
   // Map JS day (0=Sun) to pt-BR day keys
   const dayMap: Record<number, string> = {
     0: "dom",
@@ -318,25 +403,7 @@ async function transcribeAudio(
 serve(async (req) => {
   const log = createLogger("whatsapp-webhook");
 
-  // ── Meta Webhook Verification (GET) ─────────────────────────────
-  if (req.method === "GET") {
-    const url = new URL(req.url);
-    const mode = url.searchParams.get("hub.mode");
-    const token = url.searchParams.get("hub.verify_token");
-    const challenge = url.searchParams.get("hub.challenge");
-
-    const verifyToken = Deno.env.get("WHATSAPP_VERIFY_TOKEN") || "";
-
-    if (mode === "subscribe" && token === verifyToken) {
-      log.info("Meta webhook verified");
-      return new Response(challenge || "", { status: 200 });
-    }
-
-    log.warn("Meta webhook verification failed", { mode, token });
-    return new Response("Forbidden", { status: 403 });
-  }
-
-  // Only accept POST
+  // Only accept POST (Evolution sends POST)
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
@@ -346,17 +413,14 @@ serve(async (req) => {
   try {
     const payload = await req.json();
 
-    // DEBUG: Log every single request to trace messages.upsert
     log.info("RAW_PAYLOAD", {
       event: payload.event,
-      object: payload.object,
       instance: payload.instance,
       hasData: !!payload.data,
-      useMeta: USE_META_API,
       keys: Object.keys(payload).join(","),
     });
 
-    // ── Detect payload format: Meta Cloud API vs Evolution API ─────
+    // ── Evolution API payload parsing ─────────────────────────────────
     let instanceName: string;
     let messageId: string;
     let phone: string;
@@ -365,77 +429,42 @@ serve(async (req) => {
     let audioMessage: any;
     let remoteJid: string;
 
-    if (USE_META_API || payload.object === "whatsapp_business_account") {
-      // ── Meta Cloud API payload format ─────────────────────────────
-      const entry = payload.entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
+    {
+      // ── Auth: single contract — payload.apikey === EVOLUTION_API_KEY ──
+      // Fail-closed: if EVOLUTION_API_KEY is missing, reject all requests.
+      const evolutionKey = Deno.env.get("EVOLUTION_API_KEY") || "";
 
-      if (!value || !value.messages || value.messages.length === 0) {
-        // Status update or other non-message event
-        return new Response(JSON.stringify({ ignored: true, reason: "no_messages" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
+      if (!evolutionKey) {
+        log.error("EVOLUTION_API_KEY not configured — rejecting webhook");
+        return new Response("Server misconfigured", { status: 500 });
       }
 
-      const msg = value.messages[0];
-      const contact = value.contacts?.[0];
+      const payloadApiKey = payload.apikey || "";
+      const headerApiKey = req.headers.get("x-api-key") || req.headers.get("apikey") || "";
 
-      instanceName = "smilecare";
-      messageId = msg.id || "";
-      phone = msg.from || "";
-      pushName = contact?.profile?.name || "";
-      remoteJid = phone + "@s.whatsapp.net";
-      textContent = "";
-      audioMessage = null;
-
-      // Extract content based on message type
-      if (msg.type === "text") {
-        textContent = msg.text?.body || "";
-      } else if (msg.type === "audio") {
-        audioMessage = { id: msg.audio?.id, mime_type: msg.audio?.mime_type };
-      } else if (msg.type === "interactive") {
-        // Button/list replies
-        textContent = msg.interactive?.button_reply?.title ||
-          msg.interactive?.list_reply?.title || "";
-      } else {
-        return new Response(JSON.stringify({ ignored: true, reason: "unsupported_type" }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      log.info("Meta webhook received", { phone, type: msg.type, hasAudio: !!audioMessage });
-
-    } else {
-      // ── Evolution API payload format (legacy) ─────────────────────
-
-      // Validate API key for Evolution (check header, body payload, or URL query param)
-      // Evolution API v2 sends apikey in the request body, not headers
-      const apiKey = payload.apikey || req.headers.get("x-api-key") || req.headers.get("apikey");
-      const expectedKey = Deno.env.get("WHATSAPP_WEBHOOK_API_KEY");
-
-      if (!expectedKey || !apiKey) {
-        log.warn("Invalid API key");
-        return new Response("Unauthorized", { status: 401 });
-      }
-
-      // Timing-safe comparison via HMAC (crypto.subtle.timingSafeEqual not available in Deno)
+      // Timing-safe comparison
       const encoder = new TextEncoder();
       const hmacKey = await crypto.subtle.importKey(
         "raw", encoder.encode("webhook-key-compare"), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
       );
-      const sigA = await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(apiKey));
-      const sigB = await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(expectedKey));
-      const arrA = new Uint8Array(sigA);
-      const arrB = new Uint8Array(sigB);
-      let mismatch = arrA.byteLength ^ arrB.byteLength;
-      for (let i = 0; i < arrA.byteLength; i++) mismatch |= arrA[i] ^ arrB[i];
-      if (mismatch !== 0) {
-        log.warn("Invalid API key");
+      const timingSafeEqual = async (a: string, b: string): Promise<boolean> => {
+        if (!a || !b) return false;
+        const sigA = new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(a)));
+        const sigB = new Uint8Array(await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(b)));
+        let mismatch = sigA.byteLength ^ sigB.byteLength;
+        for (let i = 0; i < sigA.byteLength; i++) mismatch |= sigA[i] ^ sigB[i];
+        return mismatch === 0;
+      };
+
+      const validPayload = await timingSafeEqual(payloadApiKey, evolutionKey);
+      const validHeader = !validPayload && await timingSafeEqual(headerApiKey, evolutionKey);
+
+      if (!validPayload && !validHeader) {
+        log.warn("Invalid API key", { hasPayloadKey: !!payloadApiKey, hasHeaderKey: !!headerApiKey });
         return new Response("Unauthorized", { status: 401 });
       }
+
+      log.debug("Auth OK", { via: validPayload ? "payload.apikey" : "header" });
 
       const event = (payload.event || "").toLowerCase();
       instanceName = payload.instance;
@@ -489,8 +518,21 @@ serve(async (req) => {
       textContent = message.conversation || message.extendedTextMessage?.text || "";
       audioMessage = message.audioMessage || null;
       pushName = messageData.pushName || "";
-      phone = extractPhone(remoteJid);
+
+      // ── Resolve phone with @lid handling ─────────────────────────
+      const resolved = resolveEvolutionPhone(payload, remoteJid, log);
+      if (!resolved) {
+        log.error("ABORT: could not resolve valid phone", { remoteJid, instance: instanceName });
+        return new Response(JSON.stringify({ error: "unresolvable_phone", remoteJid }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      phone = resolved;
     }
+
+    // Track whether remoteJid is @lid — markAsRead/reactions won't work with it
+    const isLidRemoteJid = isLidJid(remoteJid);
 
     // Soft rate tracking (log only, never blocks delivery)
     const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -504,7 +546,7 @@ serve(async (req) => {
       });
     }
 
-    log.info(`Incoming message from ${phone}`, { instance: instanceName, hasAudio: !!audioMessage });
+    log.info(`Incoming message from ${phone}`, { instance: instanceName, hasAudio: !!audioMessage, isLidRemoteJid });
 
     // ── 3. Supabase client (service role) ────────────────────────────
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -547,12 +589,19 @@ serve(async (req) => {
 
     // ── 6. Check work hours ──────────────────────────────────────────
     if (!isWithinWorkHours(config)) {
-      const outOfHoursMsg =
+      const rawOutOfHoursMsg =
         config.settings?.out_of_hours_message ||
         "Olá! No momento estamos fora do horário de atendimento. Retornaremos em breve!";
 
-      // Mark as read if enabled
-      if (behavior.mark_as_read) {
+      // Interpolate {inicio} and {fim} placeholders
+      const startH = config.settings?.work_hours_start || "08:00";
+      const endH = config.settings?.work_hours_end || "18:00";
+      const outOfHoursMsg = rawOutOfHoursMsg
+        .replace("{inicio}", startH)
+        .replace("{fim}", endH);
+
+      // Mark as read if enabled (skip for @lid JIDs — Evolution can't process them)
+      if (behavior.mark_as_read && !isLidRemoteJid) {
         whatsapp.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
       }
 
@@ -580,8 +629,8 @@ serve(async (req) => {
       });
     }
 
-    // ── 8. Mark as read ──────────────────────────────────────────────
-    if (behavior.mark_as_read) {
+    // ── 8. Mark as read (skip @lid — Evolution can't process) ───────
+    if (behavior.mark_as_read && !isLidRemoteJid) {
       whatsapp.markAsRead(instanceName, remoteJid, messageId).catch(() => {});
     }
 
@@ -755,7 +804,7 @@ serve(async (req) => {
     const openaiMessages: any[] = [
       { role: "system", content: systemPrompt },
       ...sanitizeHistory(historyMessages),
-      { role: "user", content: textContent },
+      { role: "user", content: `<mensagem_paciente>${textContent}</mensagem_paciente>` },
     ];
 
     // ── 16b. Acquire concurrency lock ───────────────────────────────
@@ -885,15 +934,11 @@ serve(async (req) => {
     // ── 19. Behavior: humanized delay & reactions ────────────────────
     const delayMs = calculateDelay(responseText, behavior);
 
-    // React to message (fire-and-forget)
-    if (behavior.react_to_messages) {
+    // React to message (fire-and-forget, skip @lid JIDs)
+    if (behavior.react_to_messages && !isLidRemoteJid) {
       const emoji = getReactionEmoji(intent, behavior);
       if (emoji) {
-        if (USE_META_API) {
-          meta.reactToMessageWithPhone(phone, messageId, emoji).catch(() => {});
-        } else {
-          evolution.reactToMessage(instanceName, remoteJid, messageId, emoji).catch(() => {});
-        }
+        whatsapp.reactToMessage(instanceName, remoteJid, messageId, emoji).catch(() => {});
       }
     }
 

@@ -33,6 +33,24 @@ export interface StructuredLogger {
   audit: (supabase: any, event: AuditEvent) => void;
 }
 
+// Redact PII patterns from log values
+const PII_PATTERNS: [RegExp, string][] = [
+  [/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, '[CPF]'],           // CPF
+  [/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, '[CNPJ]'],  // CNPJ
+  [/\(\d{2}\)\s?\d{4,5}-?\d{4}/g, '[PHONE]'],                 // (XX) XXXXX-XXXX
+  [/\b55\d{10,11}\b/g, '[PHONE]'],                             // 55XXXXXXXXXXX
+  [/Bearer\s+[^\s]{20,}/g, 'Bearer [REDACTED]'],               // Bearer tokens
+  [/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]'], // Email
+];
+
+function sanitizePII(value: string): string {
+  let result = value;
+  for (const [pattern, replacement] of PII_PATTERNS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
 function formatLog(level: string, functionName: string, requestId: string, message: string, extra?: Record<string, unknown>): string {
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),
@@ -42,7 +60,7 @@ function formatLog(level: string, functionName: string, requestId: string, messa
     message,
     ...extra,
   };
-  return JSON.stringify(entry);
+  return sanitizePII(JSON.stringify(entry));
 }
 
 function extractRequestIp(req?: Request): string | null {

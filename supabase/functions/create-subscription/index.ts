@@ -84,7 +84,7 @@ serve(async (req) => {
             if (now < new Date(coupon.valid_from) || now > new Date(coupon.valid_until)) {
                 throw new Error("Cupom expirado.");
             }
-            if (coupon.max_uses !== null && coupon.used_count >= coupon.max_uses) {
+            if (coupon.max_uses !== null && (coupon.used_count || 0) >= coupon.max_uses) {
                 throw new Error("Cupom esgotado.");
             }
             if (coupon.applicable_plan_ids && coupon.applicable_plan_ids.length > 0 && priceId && !coupon.applicable_plan_ids.includes(priceId)) {
@@ -145,11 +145,12 @@ serve(async (req) => {
                 await supabase.from('subscriptions').insert({ ...subscriptionData, created_at: now.toISOString() });
             }
 
-            // Increment coupon used_count
-            await supabase
-                .from('discount_coupons')
-                .update({ used_count: (validatedCoupon.used_count || 0) + 1 })
-                .eq('id', validatedCoupon.id);
+            // Atomically increment coupon used_count (prevents race condition)
+            const { data: redeemed, error: redeemError } = await supabase
+                .rpc('redeem_coupon', { p_coupon_id: validatedCoupon.id });
+            if (redeemError || !redeemed?.length) {
+                throw new Error("Cupom esgotado (uso concorrente).");
+            }
 
             log.audit(supabase, {
                 action: "SUBSCRIPTION_CREATE", table_name: "Subscription", record_id: clinicId,
@@ -204,12 +205,13 @@ serve(async (req) => {
             }
         });
 
-        // 3.5 Increment coupon used_count
+        // 3.5 Atomically increment coupon used_count (prevents race condition)
         if (validatedCoupon) {
-            await supabase
-                .from('discount_coupons')
-                .update({ used_count: (validatedCoupon.used_count || 0) + 1 })
-                .eq('id', validatedCoupon.id);
+            const { data: redeemed, error: redeemError } = await supabase
+                .rpc('redeem_coupon', { p_coupon_id: validatedCoupon.id });
+            if (redeemError || !redeemed?.length) {
+                throw new Error("Cupom esgotado (uso concorrente).");
+            }
         }
 
         // 4. Extract Client Secret from PaymentIntent
