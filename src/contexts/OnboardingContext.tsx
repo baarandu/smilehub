@@ -50,7 +50,7 @@ const ONBOARDING_STEPS: Omit<OnboardingStep, 'completed'>[] = [
     id: 'schedule',
     title: 'Horários de atendimento',
     description: 'Configure os horários de cada dentista',
-    route: '/agenda',
+    route: '/agenda?openSettings=true',
     icon: 'clock',
   },
   {
