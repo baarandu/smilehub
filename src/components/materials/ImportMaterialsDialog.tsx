@@ -158,8 +158,8 @@ export function ImportMaterialsDialog({
       const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage.from('fiscal-documents').upload(path, invoiceFile);
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
-      return urlData.publicUrl;
+      // Return path only — resolve to signed URL at read time
+      return path;
     } catch (err) {
       console.error('Error uploading invoice:', err);
       toast.error('Erro ao salvar nota fiscal. Os itens serão importados sem a NF.');

@@ -133,10 +133,11 @@ export const dentistAgentService = {
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
+    // Chat images need immediate access by the AI model — return a signed URL
+    const { data: signedData } = await supabase.storage
       .from("exams")
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 3600);
 
-    return data.publicUrl;
+    return signedData?.signedUrl || fileName;
   },
 };

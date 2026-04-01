@@ -1,6 +1,7 @@
 import type { Procedure, Exam, Patient } from '@/types/database';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { getAccessibleUrl } from '@/lib/utils';
 
 interface ReportOptions {
     patient: Patient;
@@ -46,15 +47,14 @@ const formatCRO = (cro: string | undefined) => {
     return `CRO ${cro}`;
 };
 
-const processExamsWithImages = (exams: Exam[]) => {
-    return exams.map((exam) => {
+const processExamsWithImages = async (exams: Exam[]) => {
+    const results = await Promise.all(exams.map(async (exam) => {
         const uniquePaths = new Set<string>();
         if (exam.file_url) uniquePaths.add(exam.file_url);
         if (exam.file_urls && exam.file_urls.length > 0) {
             exam.file_urls.forEach(url => uniquePaths.add(url));
         }
 
-        const images: string[] = [];
         const isImage = (url: string) => {
             if (!url) return false;
             const lowerUrl = url.toLowerCase();
@@ -63,17 +63,20 @@ const processExamsWithImages = (exams: Exam[]) => {
             return /\.(jpg|jpeg|png|webp|heic)(\?|$)/i.test(url);
         };
 
-        uniquePaths.forEach(path => {
+        const images: string[] = [];
+        for (const path of uniquePaths) {
             if (path && isImage(path)) {
-                images.push(path);
+                const resolved = await getAccessibleUrl(path);
+                if (resolved) images.push(resolved);
             }
-        });
+        }
 
         return { ...exam, resolvedImages: images };
-    });
+    }));
+    return results;
 };
 
-export function buildReportHtml({
+export async function buildReportHtml({
     patient,
     procedures,
     exams,
@@ -88,8 +91,8 @@ export function buildReportHtml({
     clinicEmail,
     reportNumber,
     procedureNames = {},
-}: ReportOptions): string {
-    const examsWithImages = processExamsWithImages(exams);
+}: ReportOptions): Promise<string> {
+    const examsWithImages = await processExamsWithImages(exams);
     const dentistTitle = getDentistTitle(dentistName || '');
     const formattedCRO = formatCRO(dentistCRO);
 
@@ -582,7 +585,7 @@ export function buildReportHtml({
 }
 
 export const generatePatientReport = async (options: ReportOptions, printWindow?: Window | null) => {
-    const htmlContent = buildReportHtml(options);
+    const htmlContent = await buildReportHtml(options);
 
     const targetWindow = printWindow || window.open('', '_blank');
     if (targetWindow) {
@@ -600,7 +603,7 @@ export const generatePatientReport = async (options: ReportOptions, printWindow?
 };
 
 export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blob> => {
-    const htmlContent = buildReportHtml(options);
+    const htmlContent = await buildReportHtml(options);
 
     // Create a hidden container to render the HTML
     const container = document.createElement('div');

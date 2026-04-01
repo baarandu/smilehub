@@ -245,9 +245,8 @@ export const documentTemplatesService = {
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('exams')
-            .getPublicUrl(fileName);
+        // Store path only — getAccessibleUrl resolves to signed URL at read time
+        const publicUrl = fileName;
 
         const { error: insertError } = await supabase
             .from('exams')

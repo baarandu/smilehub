@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { Upload, X, File, Image, FileText, Trash2, Eye, Loader2, Plus } from 'lucide-react';
@@ -22,7 +22,7 @@ import { usePatientDocuments, useUploadDocument, useDeleteDocument } from '@/hoo
 import { DOCUMENT_CATEGORIES } from '@/services/documents';
 import { PatientDocument } from '@/types/database';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, getAccessibleUrl } from '@/lib/utils';
 
 interface DocumentUploadProps {
   patientId: string;
@@ -37,6 +37,19 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
   const [category, setCategory] = useState<PatientDocument['category']>('document');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<PatientDocument | null>(null);
+  const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!previewDocument?.file_url) {
+      setResolvedPreviewUrl(null);
+      return;
+    }
+    let cancelled = false;
+    getAccessibleUrl(previewDocument.file_url, 'patient-documents').then(url => {
+      if (!cancelled) setResolvedPreviewUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [previewDocument]);
 
   const { data: documents, isLoading } = usePatientDocuments(patientId);
   const uploadMutation = useUploadDocument();
@@ -298,15 +311,19 @@ export function DocumentUpload({ patientId }: DocumentUploadProps) {
           </DialogHeader>
           {previewDocument && (
             <div className="flex justify-center">
-              {previewDocument.file_type === 'image' ? (
+              {!resolvedPreviewUrl ? (
+                <div className="flex items-center justify-center h-40">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : previewDocument.file_type === 'image' ? (
                 <img
-                  src={previewDocument.file_url}
+                  src={resolvedPreviewUrl}
                   alt={previewDocument.name}
                   className="max-h-[70vh] object-contain rounded-lg"
                 />
               ) : (
                 <iframe
-                  src={previewDocument.file_url}
+                  src={resolvedPreviewUrl}
                   className="w-full h-[70vh] rounded-lg"
                   title={previewDocument.name}
                 />

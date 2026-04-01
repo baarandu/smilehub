@@ -416,7 +416,6 @@ export const receivablesService = {
 
     if (saveError) {
       logger.error('Error saving budget after sync:', saveError);
-    } else {
     }
   },
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Calendar, Loader2, Upload, X, File, Image } from 'lucide-react';
+import { getAccessibleUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -65,7 +66,9 @@ export function NewExamDialog({
         });
         setFileType(exam.file_type as 'document' | 'photo' | null);
         if (exam.file_url) {
-          setPreviewUrl(exam.file_url);
+          getAccessibleUrl(exam.file_url).then(url => {
+            if (url) setPreviewUrl(url);
+          });
         }
       } else {
         setForm({
@@ -132,11 +135,8 @@ export function NewExamDialog({
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage
-      .from('exams')
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
+    // Store the path — getAccessibleUrl resolves it to a signed URL at read time
+    return fileName;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

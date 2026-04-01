@@ -1,12 +1,23 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Package, Plus, Trash2, ShoppingCart, Check, ClipboardList, DollarSign, Store, Hash, Clock, Eye, Pencil, RefreshCw, FileUp, Receipt, Tag, Barcode } from 'lucide-react';
+import { getAccessibleUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/lib/supabase';
 import { financialService } from '@/services/financial';
+import {
+  fetchOrders,
+  saveOrder,
+  completeOrder,
+  createPendingOrder,
+  deleteOrder,
+  uploadInvoice,
+  deleteInvoice,
+  attachInvoiceToOrder,
+  removeInvoiceFile,
+} from '@/services/shoppingOrders';
 import { toast } from 'sonner';
 import { ShoppingItem, ShoppingOrder } from '@/types/materials';
-import { formatCurrency, formatDate, migrateItems } from '@/utils/materials';
+import { formatCurrency, formatDate } from '@/utils/materials';
 import { AddItemDialog, CheckoutDialog, OrderDetailDialog, ImportMaterialsDialog } from '@/components/materials';
 import { ExpensePaymentDialog, ExpensePaymentTransaction } from '@/components/materials/ExpensePaymentDialog';
 import { generateUUID, formatCurrency as formatCurrencyExpense } from '@/utils/expense';
@@ -48,9 +59,22 @@ export default function Materials() {
   const { hasFeature: hasImport } = usePlanFeature('estoque_importacao');
   const [clinicId, setClinicId] = useState<string | null>(null);
 
-  // Invoice State
+  // Invoice State — invoiceUrl is the path (for persistence), resolvedInvoiceUrl is for display
   const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [resolvedInvoiceUrl, setResolvedInvoiceUrl] = useState<string | null>(null);
   const invoiceInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!invoiceUrl) {
+      setResolvedInvoiceUrl(null);
+      return;
+    }
+    let cancelled = false;
+    getAccessibleUrl(invoiceUrl, 'fiscal-documents').then(url => {
+      if (!cancelled) setResolvedInvoiceUrl(url);
+    });
+    return () => { cancelled = true; };
+  }, [invoiceUrl]);
 
   // Other State
   const [loading, setLoading] = useState(false);
@@ -68,43 +92,20 @@ export default function Materials() {
   const loadOrders = useCallback(async () => {
     try {
       setLoadingOrders(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: clinicUser } = await supabase
-        .from('clinic_users')
-        .select('clinic_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!clinicUser) {
+      const result = await fetchOrders();
+      if (!result) {
         setLoadingOrders(false);
         return;
       }
 
-      setClinicId((clinicUser as any).clinic_id);
+      setClinicId(result.clinicId);
+      setPendingOrders(result.pending);
+      setHistoryOrders(result.completed);
 
-      const { data: pending } = await (supabase
-        .from('shopping_orders') as any)
-        .select('*')
-        .eq('clinic_id', (clinicUser as any).clinic_id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
-
-      const { data: completed } = await (supabase
-        .from('shopping_orders') as any)
-        .select('*')
-        .eq('clinic_id', (clinicUser as any).clinic_id)
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false });
-
-      setPendingOrders((pending || []).map((o: any) => ({ ...o, items: migrateItems(o.items) })));
-      setHistoryOrders((completed || []).map((o: any) => ({ ...o, items: migrateItems(o.items) })));
-
-      if (pending && pending.length > 0) {
-        const firstOrder = pending[0];
+      if (result.pending.length > 0) {
+        const firstOrder = result.pending[0];
         setCurrentOrderId(firstOrder.id);
-        setItems(migrateItems(firstOrder.items));
+        setItems(firstOrder.items || []);
         setInvoiceUrl(firstOrder.invoice_url || null);
       }
     } catch (error) {
@@ -175,12 +176,8 @@ export default function Materials() {
     }
 
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('fiscal-documents').upload(path, file);
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
-      setInvoiceUrl(urlData.publicUrl);
+      const url = await uploadInvoice(clinicId, file);
+      setInvoiceUrl(url);
       toast.success('Nota fiscal anexada!');
     } catch (err) {
       console.error('Error uploading invoice:', err);
@@ -199,33 +196,7 @@ export default function Materials() {
 
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not found');
-
-      const { data: clinicUser } = await supabase
-        .from('clinic_users')
-        .select('clinic_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!clinicUser) throw new Error('Clinic not found');
-
-      if (currentOrderId) {
-        await (supabase.from('shopping_orders') as any)
-          .update({ items: items, total_amount: currentTotal, invoice_url: invoiceUrl })
-          .eq('id', currentOrderId);
-      } else {
-        await (supabase.from('shopping_orders') as any)
-          .insert([{
-            clinic_id: (clinicUser as any).clinic_id,
-            items: items,
-            total_amount: currentTotal,
-            status: 'pending',
-            created_by: user.id,
-            invoice_url: invoiceUrl
-          }]);
-      }
-
+      await saveOrder(currentOrderId, items, currentTotal, invoiceUrl);
       toast.success('Lista salva com sucesso!');
       loadOrders();
     } catch (error) {
@@ -246,48 +217,8 @@ export default function Materials() {
 
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not found');
+      const shoppingOrderId = await completeOrder(currentOrderId, purchasedItems, purchasedTotal, invoiceUrl);
 
-      const { data: clinicUser } = await supabase
-        .from('clinic_users')
-        .select('clinic_id')
-        .eq('user_id', user.id)
-        .single();
-
-      let shoppingOrderId: string | null = null;
-
-      if (currentOrderId) {
-        await (supabase.from('shopping_orders') as any)
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            items: purchasedItems,
-            total_amount: purchasedTotal,
-            invoice_url: invoiceUrl
-          })
-          .eq('id', currentOrderId);
-        shoppingOrderId = currentOrderId;
-      } else if (clinicUser) {
-        const { data: newOrder } = await (supabase.from('shopping_orders') as any)
-          .insert([{
-            clinic_id: (clinicUser as any).clinic_id,
-            items: purchasedItems,
-            total_amount: purchasedTotal,
-            status: 'completed',
-            created_by: user.id,
-            completed_at: new Date().toISOString(),
-            invoice_url: invoiceUrl
-          }])
-          .select('id')
-          .single();
-
-        if (newOrder) {
-          shoppingOrderId = newOrder.id;
-        }
-      }
-
-      // Store purchase data and open payment modal
       setPendingPurchaseData({
         purchasedItems,
         unpurchasedItems,
@@ -359,23 +290,7 @@ export default function Materials() {
 
       // Create new pending order for unpurchased items
       if (unpurchasedItems.length > 0) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: clinicUser } = await supabase
-          .from('clinic_users')
-          .select('clinic_id')
-          .eq('user_id', user?.id || '')
-          .single();
-
-        if (clinicUser) {
-          await (supabase.from('shopping_orders') as any)
-            .insert([{
-              clinic_id: (clinicUser as any).clinic_id,
-              items: unpurchasedItems,
-              total_amount: unpurchasedTotal,
-              status: 'pending',
-              created_by: user?.id
-            }]);
-        }
+        await createPendingOrder(unpurchasedItems, unpurchasedTotal);
       }
 
       setShowPaymentModal(false);
@@ -405,9 +320,7 @@ export default function Materials() {
     if (!await confirm({ description: 'Tem certeza que deseja excluir este pedido?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
 
     try {
-      await (supabase.from('shopping_orders') as any)
-        .delete()
-        .eq('id', orderId);
+      await deleteOrder(orderId);
 
       if (orderId === currentOrderId) {
         setItems([]);
@@ -441,20 +354,10 @@ export default function Materials() {
 
   const handleDeleteInvoice = async (orderId: string) => {
     try {
-      // Find the order to get the URL
       const order = [...pendingOrders, ...historyOrders].find(o => o.id === orderId);
       if (!order?.invoice_url) return;
 
-      // Extract storage path from public URL
-      const match = order.invoice_url.match(/fiscal-documents\/(.+)$/);
-      if (match) {
-        await supabase.storage.from('fiscal-documents').remove([match[1]]);
-      }
-
-      // Update DB
-      await (supabase.from('shopping_orders') as any)
-        .update({ invoice_url: null })
-        .eq('id', orderId);
+      await deleteInvoice(order.invoice_url, orderId);
 
       // Update local state
       if (selectedOrder?.id === orderId) {
@@ -478,16 +381,7 @@ export default function Materials() {
       return;
     }
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${clinicId}/materiais/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from('fiscal-documents').upload(path, file);
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from('fiscal-documents').getPublicUrl(path);
-      const url = urlData.publicUrl;
-
-      await (supabase.from('shopping_orders') as any)
-        .update({ invoice_url: url })
-        .eq('id', orderId);
+      const url = await attachInvoiceToOrder(clinicId, orderId, file);
 
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, invoice_url: url });
@@ -579,7 +473,7 @@ export default function Materials() {
                         variant="outline"
                         size="sm"
                         className="gap-2 text-green-600 border-green-600/30 hover:bg-green-50"
-                        onClick={() => window.open(invoiceUrl, '_blank')}
+                        onClick={() => resolvedInvoiceUrl && window.open(resolvedInvoiceUrl, '_blank')}
                       >
                         <Receipt className="w-4 h-4" />
                         NF Anexada
@@ -591,9 +485,8 @@ export default function Materials() {
                         title="Excluir nota fiscal"
                         onClick={async () => {
                           if (await confirm({ description: 'Excluir a nota fiscal anexada?', variant: 'destructive', confirmLabel: 'Excluir' })) {
-                            const match = invoiceUrl?.match(/fiscal-documents\/(.+)$/);
-                            if (match) {
-                              supabase.storage.from('fiscal-documents').remove([match[1]]);
+                            if (invoiceUrl) {
+                              await removeInvoiceFile(invoiceUrl);
                             }
                             setInvoiceUrl(null);
                             toast.success('Nota fiscal excluída');

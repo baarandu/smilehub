@@ -59,12 +59,9 @@ export async function uploadFile(
 
   if (error) throw error;
 
-  const { data: urlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(data.path);
-
+  // Return path only — resolve to signed URL at read time via getAccessibleUrl
   return {
-    url: urlData.publicUrl,
+    url: data.path,
     path: data.path,
   };
 }
@@ -136,13 +133,32 @@ export async function uploadPatientDocument(
   return document;
 }
 
+/**
+ * Extract storage path from any format:
+ *  - Pure path: "clinicId/patientId/file.jpg"
+ *  - Public URL: ".../storage/v1/object/public/patient-documents/clinicId/file.jpg"
+ *  - Signed URL: ".../storage/v1/object/sign/patient-documents/clinicId/file.jpg?token=..."
+ *  - Legacy URL with bucket in path segments
+ */
+function extractStoragePath(urlOrPath: string): string | null {
+  // Supabase storage URL (public or signed) — extract path after bucket, strip query string
+  const storageMatch = urlOrPath.match(
+    new RegExp(`${BUCKET_NAME}/(.+?)(?:\\?|$)`)
+  );
+  if (storageMatch) return decodeURIComponent(storageMatch[1]);
+
+  // Pure path (no http prefix) — already usable
+  if (!urlOrPath.startsWith('http') && !urlOrPath.startsWith('//')) {
+    return urlOrPath;
+  }
+
+  return null;
+}
+
 // Delete document and file
 export async function deleteDocument(document: PatientDocument): Promise<void> {
-  // Extract path from URL
-  const urlParts = document.file_url.split('/');
-  const bucketIndex = urlParts.findIndex(part => part === BUCKET_NAME);
-  if (bucketIndex !== -1) {
-    const filePath = urlParts.slice(bucketIndex + 1).join('/');
+  const filePath = extractStoragePath(document.file_url);
+  if (filePath) {
     await deleteFile(filePath);
   }
 

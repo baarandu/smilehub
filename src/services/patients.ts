@@ -360,6 +360,56 @@ export async function anonymizePatient(
   }
 }
 
+export async function collectPatientExportData(patient: Patient) {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [
+    anamnesesResult,
+    appointmentsResult,
+    proceduresResult,
+    examsResult,
+    budgetsResult,
+    transactionsResult,
+  ] = await Promise.all([
+    supabase.from('anamneses').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+    supabase.from('appointments').select('*').eq('patient_id', patient.id).order('date', { ascending: false }),
+    supabase.from('procedures').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+    supabase.from('exams').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+    supabase.from('budgets').select('*').eq('patient_id', patient.id).order('created_at', { ascending: false }),
+    supabase.from('financial_transactions').select('*').eq('patient_id', patient.id).order('date', { ascending: false }),
+  ]);
+
+  return {
+    export_metadata: {
+      exported_at: new Date().toISOString(),
+      exported_by: user?.id || '',
+      format_version: '1.0',
+      lgpd_article: 'Art. 18 — Direito de acesso aos dados',
+    },
+    patient: {
+      name: patient.name,
+      email: patient.email,
+      phone: patient.phone,
+      cpf: patient.cpf,
+      rg: patient.rg,
+      birth_date: patient.birth_date,
+      gender: patient.gender,
+      address: patient.address,
+      notes: patient.notes,
+      created_at: patient.created_at,
+    },
+    anamneses: anamnesesResult.data || [],
+    appointments: (appointmentsResult.data || []).map((a: any) => ({ ...a, clinic_id: undefined })),
+    procedures: proceduresResult.data || [],
+    exams: examsResult.data || [],
+    budgets: budgetsResult.data || [],
+    financial_transactions: (transactionsResult.data || []).map((t: any) => ({
+      date: t.date, description: t.description, amount: t.amount,
+      type: t.type, category: t.category, payment_method: t.payment_method,
+    })),
+  };
+}
+
 // Convert Patient to PatientFormData
 export function patientToFormData(patient: Patient): PatientFormData {
   const p = patient as any;

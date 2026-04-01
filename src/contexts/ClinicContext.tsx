@@ -54,6 +54,15 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
+                setClinicId(null);
+                setClinicName(null);
+                setUserName(null);
+                setDisplayName(null);
+                setGender(null);
+                setRole(null);
+                setRoles([]);
+                setMembers([]);
+                setIsSuperAdmin(false);
                 setLoading(false);
                 return;
             }

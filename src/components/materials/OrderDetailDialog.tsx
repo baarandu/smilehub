@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { Receipt, ExternalLink, Trash2, Upload } from 'lucide-react';
+import { Receipt, ExternalLink, Trash2, Upload, Loader2 } from 'lucide-react';
+import { getAccessibleUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ShoppingOrder } from '@/types/materials';
@@ -23,6 +24,20 @@ export function OrderDetailDialog({
 }: OrderDetailDialogProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { confirm, ConfirmDialog } = useConfirmDialog();
+    const [resolvedInvoiceUrl, setResolvedInvoiceUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!order?.invoice_url) {
+            setResolvedInvoiceUrl(null);
+            return;
+        }
+        let cancelled = false;
+        getAccessibleUrl(order.invoice_url, 'fiscal-documents').then(url => {
+            if (!cancelled) setResolvedInvoiceUrl(url);
+        });
+        return () => { cancelled = true; };
+    }, [order?.invoice_url]);
+
     if (!order) return null;
 
     return (
@@ -92,10 +107,14 @@ export function OrderDetailDialog({
                                     </Button>
                                 )}
                             </div>
-                            {order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
+                            {!resolvedInvoiceUrl ? (
+                                <div className="flex justify-center py-4">
+                                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : order.invoice_url.match(/\.(jpg|jpeg|png|webp)(\?|$)/i) ? (
                                 <div className="space-y-2">
                                     <img
-                                        src={order.invoice_url}
+                                        src={resolvedInvoiceUrl}
                                         alt="Nota Fiscal"
                                         className="max-h-64 w-full object-contain rounded-lg border border-border"
                                     />
@@ -103,7 +122,7 @@ export function OrderDetailDialog({
                                         variant="outline"
                                         size="sm"
                                         className="gap-2 w-full"
-                                        onClick={() => window.open(order.invoice_url!, '_blank')}
+                                        onClick={() => window.open(resolvedInvoiceUrl, '_blank')}
                                     >
                                         <ExternalLink className="w-3 h-3" />
                                         Abrir em nova aba
@@ -113,7 +132,7 @@ export function OrderDetailDialog({
                                 <Button
                                     variant="outline"
                                     className="gap-2 w-full"
-                                    onClick={() => window.open(order.invoice_url!, '_blank')}
+                                    onClick={() => window.open(resolvedInvoiceUrl, '_blank')}
                                 >
                                     <ExternalLink className="w-4 h-4" />
                                     Abrir Nota Fiscal (PDF)

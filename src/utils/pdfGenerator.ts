@@ -561,7 +561,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
     for (let bIdx = 0; bIdx < budgets.length; bIdx++) {
         const budget = budgets[bIdx];
         let parsedNotes: any = {};
-        try { parsedNotes = JSON.parse(budget.notes || '{}'); } catch {}
+        try { parsedNotes = JSON.parse(budget.notes || '{}'); } catch { /* invalid JSON, use default */ }
         const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
         const budgetDate = new Date(budget.date + 'T00:00:00');
