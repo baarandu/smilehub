@@ -132,11 +132,13 @@ export default function Pricing() {
             setUserId(user.id);
             setUserEmail(user.email ?? '');
 
-            const { data: clinicUser } = await supabase
+            const { data: clinicUsers } = await supabase
                 .from('clinic_users')
                 .select('clinic_id')
                 .eq('user_id', user.id)
-                .single() as { data: { clinic_id: string } | null; error: unknown };
+                .order('role', { ascending: true })
+                .limit(1);
+            const clinicUser = clinicUsers?.[0] as { clinic_id: string } | undefined ?? null;
 
             if (clinicUser) {
                 setClinicId(clinicUser.clinic_id);
