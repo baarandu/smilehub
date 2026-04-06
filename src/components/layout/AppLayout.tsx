@@ -28,6 +28,13 @@ import {
 import { cn } from '@/lib/utils';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
@@ -70,7 +77,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [preLabCount, setPreLabCount] = useState(0);
   const [userEmail, setUserEmail] = useState('');
   const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
-  const { role, clinicId, isAdmin, isDentist, isSuperAdmin } = useClinic();
+  const { role, clinicId, clinicName, isAdmin, isDentist, isSuperAdmin, availableClinics, switchClinic } = useClinic();
+  const hasMultipleClinics = availableClinics.length > 1;
   const { returnToOnboardingIfNeeded } = useOnboarding();
 
   // Profile Settings Modal (triggered from onboarding steps)
@@ -205,9 +213,24 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 px-4 flex items-center justify-between shadow-card">
-        <div className="flex items-center gap-3">
-          <img src="/logo-login.png" alt="Logo" className="w-10 h-10 rounded-xl object-contain" />
-          <span className="font-semibold text-foreground">Organiza Odonto</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <img src="/logo-login.png" alt="Logo" className="w-10 h-10 rounded-xl object-contain shrink-0" />
+          {hasMultipleClinics && clinicId ? (
+            <Select value={clinicId} onValueChange={switchClinic}>
+              <SelectTrigger className="h-8 text-xs border-none bg-transparent shadow-none px-0 max-w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableClinics.map(c => (
+                  <SelectItem key={c.clinic_id} value={c.clinic_id} className="text-xs">
+                    {c.clinic_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="font-semibold text-foreground truncate">{clinicName || 'Organiza Odonto'}</span>
+          )}
         </div>
         <Button
           variant="ghost"
@@ -228,14 +251,30 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         {/* Logo */}
-        <div className="h-20 flex items-center gap-3 px-6 border-b border-border shrink-0">
-          <img src="/logo-login.png" alt="Logo" className="w-11 h-11 rounded-xl object-contain" />
-          <div>
-            <h1 className="font-bold text-lg"><span className="text-[#b94a48]">Organiza</span> <span className="text-foreground">Odonto</span></h1>
-            <p className="text-xs text-muted-foreground">
-              Gestão Odontológica {isSuperAdmin && <span className="text-primary">(Admin)</span>}
-            </p>
+        <div className={`${hasMultipleClinics ? 'h-auto py-4' : 'h-20'} flex flex-col gap-2 px-6 border-b border-border shrink-0`}>
+          <div className="flex items-center gap-3">
+            <img src="/logo-login.png" alt="Logo" className="w-11 h-11 rounded-xl object-contain" />
+            <div>
+              <h1 className="font-bold text-lg"><span className="text-[#b94a48]">Organiza</span> <span className="text-foreground">Odonto</span></h1>
+              <p className="text-xs text-muted-foreground">
+                Gestão Odontológica {isSuperAdmin && <span className="text-primary">(Admin)</span>}
+              </p>
+            </div>
           </div>
+          {hasMultipleClinics && clinicId && (
+            <Select value={clinicId} onValueChange={switchClinic}>
+              <SelectTrigger className="h-8 text-xs bg-muted/50 border-border/50">
+                <SelectValue placeholder="Selecionar clínica" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableClinics.map(c => (
+                  <SelectItem key={c.clinic_id} value={c.clinic_id} className="text-xs">
+                    {c.clinic_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Scrollable Navigation Area */}

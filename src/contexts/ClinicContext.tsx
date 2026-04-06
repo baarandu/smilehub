@@ -19,6 +19,13 @@ interface ClinicUserRow {
     clinics: { name: string } | null;
 }
 
+interface ClinicOption {
+    clinic_id: string;
+    clinic_name: string;
+    role: string;
+    roles: Role[];
+}
+
 interface ClinicContextType {
     clinicId: string | null;
     clinicName: string | null;
@@ -33,6 +40,8 @@ interface ClinicContextType {
     canEdit: boolean;
     loading: boolean;
     members: ClinicMember[];
+    availableClinics: ClinicOption[];
+    switchClinic: (clinicId: string) => void;
     refetch: () => Promise<void>;
 }
 
@@ -49,6 +58,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     const [members, setMembers] = useState<ClinicMember[]>([]);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [availableClinics, setAvailableClinics] = useState<ClinicOption[]>([]);
 
     const fetchClinicData = async () => {
         try {
@@ -104,14 +114,30 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 setDisplayName(null);
             }
 
-            // Get the first clinic (preferring admin role)
+            // Build available clinics list
             const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
-            const typedClinicUser = clinicUsersList && clinicUsersList.length > 0
-                ? (clinicUsersList.find(cu => {
-                    const r = cu.roles || [cu.role];
-                    return r.includes('admin');
-                }) || clinicUsersList[0])
-                : null;
+            const clinicOptions: ClinicOption[] = (clinicUsersList || []).map(cu => ({
+                clinic_id: cu.clinic_id,
+                clinic_name: cu.clinics?.name || 'Sem nome',
+                role: cu.role,
+                roles: (cu.roles || [cu.role]) as Role[],
+            }));
+            setAvailableClinics(clinicOptions);
+
+            // Pick clinic: saved preference > admin role > first
+            const savedClinicId = localStorage.getItem('selected_clinic_id');
+            let typedClinicUser: ClinicUserRow | null = null;
+            if (clinicUsersList && clinicUsersList.length > 0) {
+                if (savedClinicId) {
+                    typedClinicUser = clinicUsersList.find(cu => cu.clinic_id === savedClinicId) || null;
+                }
+                if (!typedClinicUser) {
+                    typedClinicUser = clinicUsersList.find(cu => {
+                        const r = cu.roles || [cu.role];
+                        return r.includes('admin');
+                    }) || clinicUsersList[0];
+                }
+            }
 
             if (typedClinicUser) {
                 setClinicId(typedClinicUser.clinic_id);
@@ -134,7 +160,15 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                             email: m.user_id,
                         })) as ClinicMember[]);
                     }
+                } else {
+                    setMembers([]);
                 }
+            } else {
+                setClinicId(null);
+                setClinicName(null);
+                setRole(null);
+                setRoles([]);
+                setMembers([]);
             }
         } catch (error) {
             console.error('Error fetching clinic data:', error);
@@ -158,6 +192,11 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
+    const switchClinic = (newClinicId: string) => {
+        localStorage.setItem('selected_clinic_id', newClinicId);
+        fetchClinicData();
+    };
+
     const value = useMemo<ClinicContextType>(() => ({
         clinicId,
         clinicName,
@@ -172,8 +211,10 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         canEdit: isSuperAdmin || roles.some(r => ['admin', 'editor', 'dentist'].includes(r)),
         loading,
         members,
+        availableClinics,
+        switchClinic,
         refetch: fetchClinicData,
-    }), [clinicId, clinicName, userName, displayName, gender, role, roles, isSuperAdmin, loading, members]);
+    }), [clinicId, clinicName, userName, displayName, gender, role, roles, isSuperAdmin, loading, members, availableClinics]);
 
     return (
         <ClinicContext.Provider value={value}>
