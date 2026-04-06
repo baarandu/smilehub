@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
 type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
@@ -48,6 +49,7 @@ interface ClinicContextType {
 const ClinicContext = createContext<ClinicContextType | null>(null);
 
 export function ClinicProvider({ children }: { children: ReactNode }) {
+    const queryClient = useQueryClient();
     const [clinicId, setClinicId] = useState<string | null>(null);
     const [clinicName, setClinicName] = useState<string | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
@@ -194,6 +196,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
     const switchClinic = (newClinicId: string) => {
         localStorage.setItem('selected_clinic_id', newClinicId);
+        // Clear all cached data so queries refetch with the new clinic
+        queryClient.clear();
         fetchClinicData();
     };
 
