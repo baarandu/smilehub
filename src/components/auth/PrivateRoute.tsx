@@ -43,7 +43,7 @@ export function PrivateRoute() {
             }
 
             // 1. Parallel: Check Super Admin + Clinic User
-            const [{ data: profile }, { data: clinicUser }] = await Promise.all([
+            const [{ data: profile }, { data: clinicUsers }] = await Promise.all([
                 supabase
                     .from('profiles')
                     .select('is_super_admin')
@@ -53,8 +53,10 @@ export function PrivateRoute() {
                     .from('clinic_users')
                     .select('clinic_id, role')
                     .eq('user_id', session.user.id)
-                    .single<{ clinic_id: string; role: string }>(),
+                    .order('role', { ascending: true })
+                    .limit(1),
             ]);
+            const clinicUser = (clinicUsers as { clinic_id: string; role: string }[] | null)?.[0] ?? null;
 
             if (profile && profile.is_super_admin) {
                 if (mounted) {
