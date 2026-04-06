@@ -104,10 +104,12 @@ export const budgetsService = {
     },
 
     async update(id: string, budget: BudgetUpdate): Promise<Budget> {
+        const { clinicId } = await getClinicContext();
         const { data, error } = await supabase
             .from('budgets')
             .update(budget)
             .eq('id', id)
+            .eq('clinic_id', clinicId)
             .select()
             .single();
 
@@ -117,6 +119,7 @@ export const budgetsService = {
     },
 
     async delete(id: string): Promise<void> {
+        const { clinicId } = await getClinicContext();
         // Delete items first (cascade should handle this, but just in case)
         await supabase
             .from('budget_items')
@@ -126,7 +129,8 @@ export const budgetsService = {
         const { error } = await supabase
             .from('budgets')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('clinic_id', clinicId);
 
         if (error) throw error;
     },

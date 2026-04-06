@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getClinicContext } from "./clinicContext";
 import type {
   DentistConversation,
   DentistMessage,
@@ -77,10 +78,12 @@ export const dentistAgentService = {
   async getConversation(
     conversationId: string
   ): Promise<DentistConversation | null> {
+    const { clinicId } = await getClinicContext();
     const { data, error } = await supabase
       .from("dentist_agent_conversations")
       .select("*")
       .eq("id", conversationId)
+      .eq("clinic_id", clinicId)
       .single();
 
     if (error) throw error;
@@ -101,10 +104,12 @@ export const dentistAgentService = {
 
   // Delete a conversation
   async deleteConversation(conversationId: string): Promise<void> {
+    const { clinicId } = await getClinicContext();
     const { error } = await supabase
       .from("dentist_agent_conversations")
       .delete()
-      .eq("id", conversationId);
+      .eq("id", conversationId)
+      .eq("clinic_id", clinicId);
 
     if (error) throw error;
   },
@@ -114,10 +119,12 @@ export const dentistAgentService = {
     conversationId: string,
     title: string
   ): Promise<void> {
+    const { clinicId } = await getClinicContext();
     const { error } = await supabase
       .from("dentist_agent_conversations")
       .update({ title })
-      .eq("id", conversationId);
+      .eq("id", conversationId)
+      .eq("clinic_id", clinicId);
 
     if (error) throw error;
   },

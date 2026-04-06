@@ -12,22 +12,29 @@ import { createLogger } from "../_shared/logger.ts";
 // If Meta is needed in the future, make provider explicit via DB config.
 const whatsapp = evolution;
 
-// ─── Soft rate limit (logging only, never blocks webhook delivery) ────────────
-const webhookIpCounts = new Map<string, { count: number; resetAt: number }>();
+// ─── Rate limit per instance (clinic) ────────────────────────────────────────
+const webhookInstanceCounts = new Map<string, { count: number; resetAt: number }>();
 const WEBHOOK_RATE_WINDOW_MS = 60_000; // 1 min
 const WEBHOOK_RATE_WARN_THRESHOLD = 120; // log warning above this
+const WEBHOOK_RATE_HARD_LIMIT = 500;    // reject above this (8+ msg/sec is anomalous)
 
-function trackWebhookRate(ip: string, log: any): void {
+/** Returns true if the request should be rejected (hard limit exceeded). */
+function trackWebhookRate(instance: string, log: any): boolean {
   const now = Date.now();
-  const entry = webhookIpCounts.get(ip);
+  const entry = webhookInstanceCounts.get(instance);
   if (!entry || now > entry.resetAt) {
-    webhookIpCounts.set(ip, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS });
-    return;
+    webhookInstanceCounts.set(instance, { count: 1, resetAt: now + WEBHOOK_RATE_WINDOW_MS });
+    return false;
   }
   entry.count++;
   if (entry.count === WEBHOOK_RATE_WARN_THRESHOLD) {
-    log.warn("Webhook rate threshold exceeded (logging only)", { ip, count: entry.count });
+    log.warn("Webhook rate threshold exceeded", { instance, count: entry.count });
   }
+  if (entry.count > WEBHOOK_RATE_HARD_LIMIT) {
+    log.error("Webhook HARD rate limit — rejecting", { instance, count: entry.count });
+    return true;
+  }
+  return false;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -534,9 +541,14 @@ serve(async (req) => {
     // Track whether remoteJid is @lid — markAsRead/reactions won't work with it
     const isLidRemoteJid = isLidJid(remoteJid);
 
-    // Soft rate tracking (log only, never blocks delivery)
-    const webhookIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    trackWebhookRate(webhookIp, log);
+    // Rate limit per instance — soft warn at 120/min, hard reject at 500/min
+    const rateLimited = trackWebhookRate(instanceName, log);
+    if (rateLimited) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // Skip messages with no text and no audio
     if (!textContent && !audioMessage) {
