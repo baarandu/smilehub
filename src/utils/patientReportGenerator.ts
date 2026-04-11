@@ -657,23 +657,6 @@ export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blo
 
         let cursorY = PAGE_MARGIN_TOP_MM;
 
-        // Collect top-level blocks to render independently. Expand the Exams
-        // section into its header + each exam-item so each exam can flow onto
-        // the next page without being cut in half.
-        const blocks: HTMLElement[] = [];
-        for (const child of Array.from(contentDiv.children)) {
-            if (!(child instanceof HTMLElement)) continue;
-            if (child.tagName === 'STYLE') continue;
-            const examItems = child.querySelectorAll(':scope > .exam-item');
-            if (child.classList.contains('section') && examItems.length > 0) {
-                const sectionHeader = child.querySelector(':scope > .section-header') as HTMLElement | null;
-                if (sectionHeader) blocks.push(sectionHeader);
-                examItems.forEach(e => blocks.push(e as HTMLElement));
-            } else {
-                blocks.push(child);
-            }
-        }
-
         const renderBlock = async (el: HTMLElement) => {
             const canvas = await html2canvas(el, {
                 scale: 2,
@@ -767,8 +750,82 @@ export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blo
             cursorY += BLOCK_GAP_MM;
         };
 
-        for (const block of blocks) {
-            await renderBlock(block);
+        // Walk top-level children of contentDiv. Sections that contain a list
+        // of independently-placeable items (exams, procedure rows) are
+        // expanded so rows/items can flow across pages without mid-block cuts
+        // while still filling the current page when they fit.
+        for (const child of Array.from(contentDiv.children)) {
+            if (!(child instanceof HTMLElement)) continue;
+            if (child.tagName === 'STYLE') continue;
+
+            const examItems = child.querySelectorAll(':scope > .exam-item');
+            const proceduresCard = child.querySelector(':scope > .procedures-card') as HTMLElement | null;
+
+            // Exams section — header, then each exam-item as its own block
+            if (child.classList.contains('section') && examItems.length > 0) {
+                const sectionHeader = child.querySelector(':scope > .section-header') as HTMLElement | null;
+                if (sectionHeader) await renderBlock(sectionHeader);
+                for (const e of Array.from(examItems)) {
+                    await renderBlock(e as HTMLElement);
+                }
+                continue;
+            }
+
+            // Procedures section — header + table. Try whole table first so a
+            // short table stays as a single visual card; if it doesn't fit in
+            // the remaining page space, split into per-row mini-tables with
+            // the column header repeated so rows flow across pages cleanly.
+            if (child.classList.contains('section') && proceduresCard) {
+                const sectionHeader = child.querySelector(':scope > .section-header') as HTMLElement | null;
+                if (sectionHeader) await renderBlock(sectionHeader);
+
+                const wholeCanvas = await html2canvas(proceduresCard, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                });
+                const wholeHeightMm = (wholeCanvas.height * usableWidthMm) / wholeCanvas.width;
+
+                if (cursorY + wholeHeightMm <= pageBottomMm) {
+                    pdf.addImage(
+                        wholeCanvas.toDataURL('image/jpeg', 0.95),
+                        'JPEG',
+                        PAGE_MARGIN_X_MM,
+                        cursorY,
+                        usableWidthMm,
+                        wholeHeightMm,
+                    );
+                    cursorY += wholeHeightMm + BLOCK_GAP_MM;
+                    continue;
+                }
+
+                // Doesn't fit — render each row as its own mini-table so they
+                // pack onto the current page and flow to the next as needed.
+                const table = proceduresCard.querySelector('table') as HTMLTableElement | null;
+                const thead = table?.querySelector('thead') ?? null;
+                const rows = table ? Array.from(table.querySelectorAll('tbody > tr')) : [];
+
+                for (const row of rows) {
+                    const cardClone = proceduresCard.cloneNode(false) as HTMLElement;
+                    const tableClone = (table as HTMLTableElement).cloneNode(false) as HTMLTableElement;
+                    if (thead) tableClone.appendChild(thead.cloneNode(true));
+                    const tbodyClone = document.createElement('tbody');
+                    tbodyClone.appendChild(row.cloneNode(true));
+                    tableClone.appendChild(tbodyClone);
+                    cardClone.appendChild(tableClone);
+                    contentDiv.appendChild(cardClone);
+                    try {
+                        await renderBlock(cardClone);
+                    } finally {
+                        contentDiv.removeChild(cardClone);
+                    }
+                }
+                continue;
+            }
+
+            // Default: render the child as a single block
+            await renderBlock(child);
         }
 
         return pdf.output('blob');
