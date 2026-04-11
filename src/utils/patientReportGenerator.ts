@@ -533,7 +533,7 @@ export async function buildReportHtml({
 
         ${examsWithImages.length > 0 ? `
         <!-- Exams Section -->
-        <div class="section ${procedures.length > 0 ? 'page-break' : ''}">
+        <div class="section">
             <div class="section-header">
                 <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2"/>
