@@ -605,7 +605,14 @@ export const generatePatientReport = async (options: ReportOptions, printWindow?
 export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blob> => {
     const htmlContent = await buildReportHtml(options);
 
-    // Create a hidden container to render the HTML
+    // Page layout constants (A4 portrait, margins in mm)
+    const PAGE_MARGIN_TOP_MM = 12;
+    const PAGE_MARGIN_BOTTOM_MM = 12;
+    const PAGE_MARGIN_X_MM = 10;
+    const BLOCK_GAP_MM = 3;
+
+    // Create a hidden container to render the HTML. Width chosen so that when
+    // mapped to (pdfWidth - 2*PAGE_MARGIN_X_MM) the scale matches ~96dpi.
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
@@ -632,44 +639,136 @@ export const generateReportPdfBlob = async (options: ReportOptions): Promise<Blo
     while (parsedBody.firstChild) {
         contentDiv.appendChild(parsedBody.firstChild);
     }
-    contentDiv.style.padding = '40px';
+    contentDiv.style.padding = '0';
     contentDiv.style.fontFamily = "'Helvetica', 'Arial', sans-serif";
     contentDiv.style.color = '#1f2937';
     contentDiv.style.lineHeight = '1.5';
     container.appendChild(contentDiv);
 
     try {
-        // Wait a bit for styles to apply
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Wait a bit for styles to apply and images to load
+        await new Promise(resolve => setTimeout(resolve, 300));
 
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            width: 794,
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
+        const usableWidthMm = pdfWidth - 2 * PAGE_MARGIN_X_MM;
+        const pageBottomMm = pdfHeight - PAGE_MARGIN_BOTTOM_MM;
 
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        let cursorY = PAGE_MARGIN_TOP_MM;
 
-        // Handle multi-page if content is taller than one page
-        let heightLeft = imgHeight;
-        let position = 0;
+        // Collect top-level blocks to render independently. Expand the Exams
+        // section into its header + each exam-item so each exam can flow onto
+        // the next page without being cut in half.
+        const blocks: HTMLElement[] = [];
+        for (const child of Array.from(contentDiv.children)) {
+            if (!(child instanceof HTMLElement)) continue;
+            if (child.tagName === 'STYLE') continue;
+            const examItems = child.querySelectorAll(':scope > .exam-item');
+            if (child.classList.contains('section') && examItems.length > 0) {
+                const sectionHeader = child.querySelector(':scope > .section-header') as HTMLElement | null;
+                if (sectionHeader) blocks.push(sectionHeader);
+                examItems.forEach(e => blocks.push(e as HTMLElement));
+            } else {
+                blocks.push(child);
+            }
+        }
 
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        const renderBlock = async (el: HTMLElement) => {
+            const canvas = await html2canvas(el, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+            });
+            const blockWidthPx = canvas.width;
+            const blockHeightPx = canvas.height;
+            if (blockWidthPx === 0 || blockHeightPx === 0) return;
 
-        while (heightLeft > 0) {
-            position -= pdfHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
+            const blockHeightMm = (blockHeightPx * usableWidthMm) / blockWidthPx;
+            const pxPerMm = blockWidthPx / usableWidthMm;
+
+            // Case 1: block fits entirely on the current page
+            if (cursorY + blockHeightMm <= pageBottomMm) {
+                pdf.addImage(
+                    canvas.toDataURL('image/jpeg', 0.95),
+                    'JPEG',
+                    PAGE_MARGIN_X_MM,
+                    cursorY,
+                    usableWidthMm,
+                    blockHeightMm,
+                );
+                cursorY += blockHeightMm + BLOCK_GAP_MM;
+                return;
+            }
+
+            // Case 2: block fits entirely on a fresh page → push to next page
+            const fullPageHeightMm = pageBottomMm - PAGE_MARGIN_TOP_MM;
+            if (blockHeightMm <= fullPageHeightMm) {
+                pdf.addPage();
+                cursorY = PAGE_MARGIN_TOP_MM;
+                pdf.addImage(
+                    canvas.toDataURL('image/jpeg', 0.95),
+                    'JPEG',
+                    PAGE_MARGIN_X_MM,
+                    cursorY,
+                    usableWidthMm,
+                    blockHeightMm,
+                );
+                cursorY += blockHeightMm + BLOCK_GAP_MM;
+                return;
+            }
+
+            // Case 3: block is taller than a full page → slice the canvas
+            // across pages. Start a fresh page if current one is nearly full.
+            if (cursorY + 10 > pageBottomMm) {
+                pdf.addPage();
+                cursorY = PAGE_MARGIN_TOP_MM;
+            }
+
+            let yOffsetPx = 0;
+            while (yOffsetPx < blockHeightPx) {
+                const availMm = pageBottomMm - cursorY;
+                if (availMm < 10) {
+                    pdf.addPage();
+                    cursorY = PAGE_MARGIN_TOP_MM;
+                    continue;
+                }
+                const availPx = Math.floor(availMm * pxPerMm);
+                const slicePx = Math.min(availPx, blockHeightPx - yOffsetPx);
+                if (slicePx <= 0) break;
+
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = blockWidthPx;
+                sliceCanvas.height = slicePx;
+                const ctx = sliceCanvas.getContext('2d');
+                if (!ctx) break;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, blockWidthPx, slicePx);
+                ctx.drawImage(canvas, 0, -yOffsetPx);
+
+                const sliceMm = slicePx / pxPerMm;
+                pdf.addImage(
+                    sliceCanvas.toDataURL('image/jpeg', 0.95),
+                    'JPEG',
+                    PAGE_MARGIN_X_MM,
+                    cursorY,
+                    usableWidthMm,
+                    sliceMm,
+                );
+                yOffsetPx += slicePx;
+                cursorY += sliceMm;
+
+                if (yOffsetPx < blockHeightPx) {
+                    pdf.addPage();
+                    cursorY = PAGE_MARGIN_TOP_MM;
+                }
+            }
+            cursorY += BLOCK_GAP_MM;
+        };
+
+        for (const block of blocks) {
+            await renderBlock(block);
         }
 
         return pdf.output('blob');
