@@ -105,7 +105,7 @@ export async function buildReportHtml({
         <title>Relatório do Paciente</title>
         <style>
             @page {
-                margin: 0;
+                margin: 12mm 10mm;
             }
             * {
                 box-sizing: border-box;
@@ -115,7 +115,7 @@ export async function buildReportHtml({
             }
             body {
                 font-family: 'Helvetica', 'Arial', sans-serif;
-                padding: 40px;
+                padding: 0;
                 color: #1f2937;
                 line-height: 1.5;
                 margin: 0;
@@ -200,13 +200,14 @@ export async function buildReportHtml({
             /* Section Styles */
             .section {
                 margin-bottom: 28px;
-                break-inside: avoid;
             }
             .section-header {
                 display: flex;
                 align-items: center;
                 gap: 10px;
                 margin-bottom: 16px;
+                break-after: avoid;
+                page-break-after: avoid;
             }
             .section-icon {
                 width: 24px;
@@ -228,6 +229,8 @@ export async function buildReportHtml({
                 border: 1px solid #e2e8f0;
                 border-radius: 12px;
                 padding: 24px 28px;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             .patient-grid {
                 display: grid;
@@ -259,6 +262,13 @@ export async function buildReportHtml({
             .procedures-table {
                 width: 100%;
                 border-collapse: collapse;
+            }
+            .procedures-table thead {
+                display: table-header-group;
+            }
+            .procedures-table tr {
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             .procedures-table th {
                 text-align: left;
@@ -300,6 +310,7 @@ export async function buildReportHtml({
                 background-color: #fdf2f2;
                 overflow: hidden;
                 break-inside: avoid;
+                page-break-inside: avoid;
             }
             .exam-header {
                 display: flex;
@@ -347,6 +358,8 @@ export async function buildReportHtml({
                 border-left-width: 4px;
                 padding: 16px 20px;
                 border-radius: 8px;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }
             .notes-title {
                 font-weight: 700;
@@ -389,7 +402,7 @@ export async function buildReportHtml({
 
             .page-break {
                 page-break-before: always;
-                padding-top: 40px;
+                break-before: page;
             }
 
             @media print {
