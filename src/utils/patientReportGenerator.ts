@@ -266,10 +266,6 @@ export async function buildReportHtml({
             .procedures-table thead {
                 display: table-header-group;
             }
-            .procedures-table tr {
-                break-inside: avoid;
-                page-break-inside: avoid;
-            }
             .procedures-table th {
                 text-align: left;
                 padding: 14px 20px;
