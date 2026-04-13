@@ -160,7 +160,7 @@ export default function Agenda() {
 
   const handleStatusChange = async (appointmentId: string, status: AppointmentWithPatient['status']) => {
     // Optimistic update
-    const queryKey = ['appointments', 'date', dateString];
+    const queryKey = ['appointments', 'date', dateString, clinicId];
     const previous = queryClient.getQueryData<AppointmentWithPatient[]>(queryKey);
     queryClient.setQueryData<AppointmentWithPatient[]>(queryKey, old =>
       old?.map(a => a.id === appointmentId ? { ...a, status } : a) ?? []
