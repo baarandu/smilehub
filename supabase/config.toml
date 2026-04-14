@@ -1,0 +1,14 @@
+project_id = "pakusdbmpgrfhjouiniz"
+
+# Third-party webhooks authenticate via signatures (HMAC / Stripe signing
+# secret), not Supabase JWTs. JWT verification must be disabled so the
+# signed request can reach the function, which then validates the signature.
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.supersign-webhook]
+verify_jwt = false
