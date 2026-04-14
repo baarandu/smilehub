@@ -14,6 +14,7 @@ import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -111,6 +112,13 @@ serve(async (req) => {
     if (clinicUserError || !clinicUser || !userRoles.includes("admin")) {
       throw new Error("Unauthorized");
     }
+
+    // Plan gate: requires 'contabilidade_ia' feature
+    await requirePlanFeature(supabase, {
+      clinicId: clinic_id,
+      userId: user.id,
+      feature: "contabilidade_ia",
+    });
 
     // Get fiscal profile for system prompt
     const { data: fiscalProfile } = await supabase

@@ -1,7 +1,7 @@
 // @ts-nocheck
 // This file runs in Deno (Supabase Edge Functions) - TypeScript errors in VSCode are expected
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
 import { createLogger } from "../_shared/logger.ts"
 
@@ -110,13 +110,12 @@ function safeTimestampToISO(timestamp: number | null | undefined): string | null
 
 async function handleSubscriptionEvent(subscription: Stripe.Subscription, statusOverride?: string) {
     const userId = subscription.metadata.supabase_user_id
+    const log = createLogger("stripe-webhook")
 
-    console.log(`[stripe-webhook] Processing subscription ${subscription.id}`)
-    console.log(`[stripe-webhook] User ID from metadata: ${userId}`)
-    console.log(`[stripe-webhook] Plan ID from metadata: ${subscription.metadata.plan_id}`)
+    log.info("Processing subscription", { subscriptionId: subscription.id, planId: subscription.metadata.plan_id })
 
     if (!userId) {
-        console.error('[stripe-webhook] ABORT: No supabase_user_id in subscription metadata')
+        log.error("ABORT: No supabase_user_id in subscription metadata")
         return
     }
 
@@ -128,12 +127,12 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription, status
         .single()
 
     if (clinicError || !clinicUser) {
-        console.error('[stripe-webhook] ABORT: Could not find clinic for user', userId, clinicError)
+        log.error("ABORT: could not find clinic for user", { error: clinicError?.message })
         return
     }
 
     const clinicId = clinicUser.clinic_id
-    console.log(`[stripe-webhook] Found clinic: ${clinicId}`)
+    log.debug("Found clinic", { clinicId })
 
     // 2. Resolve Plan ID
     let planId = subscription.metadata.plan_id
@@ -204,8 +203,10 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription, status
     } else {
         // New subscription - MUST have planId
         if (!planId) {
-            console.error('[stripe-webhook] ABORT: Cannot create subscription without plan_id')
-            console.error('[stripe-webhook] Metadata was:', JSON.stringify(subscription.metadata))
+            log.error("ABORT: cannot create subscription without plan_id", {
+                hasMetadata: !!subscription.metadata,
+                metadataKeys: Object.keys(subscription.metadata || {}),
+            })
             return
         }
 

@@ -12,6 +12,7 @@ import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 const EXTRACTION_PROMPT = `Você é um assistente de IA para uma clínica odontológica brasileira. Sua tarefa é extrair dados estruturados de uma transcrição de consulta odontológica.
 
@@ -332,6 +333,13 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!clinicUser) throw new Error("User not authorized for this clinic");
+
+      // Plan gate: requires 'consulta_voz' feature
+      await requirePlanFeature(supabase, {
+        clinicId: clinic_id,
+        userId: user.id,
+        feature: "consulta_voz",
+      });
     }
 
     // Check AI consent for existing patients (LGPD Art. 6-7)

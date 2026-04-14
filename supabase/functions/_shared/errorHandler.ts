@@ -9,6 +9,8 @@ import { ValidationError } from "./validation.ts";
 import { RateLimitError } from "./rateLimit.ts";
 import { ConsentError } from "./consent.ts";
 import { AIInjectionError } from "./aiSanitizer.ts";
+import { PlanRequiredError } from "./planGuard.ts";
+import { NotSuperAdminError } from "./adminGuard.ts";
 
 const SENSITIVE_PATTERNS = [
   /sk-[a-zA-Z0-9_]{20,}/g, // OpenAI keys
@@ -64,6 +66,28 @@ export function createErrorResponse(
   if (error instanceof ConsentError) {
     return new Response(
       JSON.stringify({ error: error.message }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // Super admin gate → 403
+  if (error instanceof NotSuperAdminError) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // Plan gate errors → 403 with feature code for UX
+  if (error instanceof PlanRequiredError) {
+    return new Response(
+      JSON.stringify({ error: error.message, feature: error.feature, plan_required: true }),
       {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

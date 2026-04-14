@@ -6,6 +6,7 @@ import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -56,6 +57,13 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!clinicUser) throw new Error("User not authorized for this clinic");
+
+    // Plan gate: requires 'consulta_voz' feature
+    await requirePlanFeature(supabase, {
+      clinicId,
+      userId: user.id,
+      feature: "consulta_voz",
+    });
 
     // Check AI consent for existing patients (LGPD Art. 6-7)
     const { data: sessionData } = await supabase

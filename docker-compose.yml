@@ -1,4 +1,28 @@
 services:
+  # Refuses to start the stack if the placeholder secrets from
+  # .env.docker.example were not replaced. Prevents accidental deploys
+  # with `change_me_to_a_secure_key` / `change_me_to_a_secure_password`.
+  env-validator:
+    image: alpine:3.19
+    container_name: evolution-env-validator
+    env_file:
+      - .env.docker
+    command: >-
+      sh -c '
+        fail=0;
+        for var in EVOLUTION_API_KEY POSTGRES_PASSWORD; do
+          eval "val=\$$$$var";
+          case "$$val" in
+            ""|change_me_*)
+              echo "FATAL: $$var is unset or uses a placeholder value. Edit .env.docker.";
+              fail=1;;
+          esac;
+        done;
+        if [ "$$fail" = "1" ]; then exit 1; fi;
+        echo "env-validator: ok"
+      '
+    restart: "no"
+
   evolution:
     image: atendai/evolution-api:v2.0.10
     container_name: evolution
@@ -30,8 +54,12 @@ services:
     networks:
       - evolution
     depends_on:
-      - postgres
-      - redis
+      env-validator:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
 
   postgres:
     image: postgres:15-alpine
@@ -47,6 +75,9 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - evolution
+    depends_on:
+      env-validator:
+        condition: service_completed_successfully
 
   redis:
     image: redis:7-alpine

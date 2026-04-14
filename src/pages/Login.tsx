@@ -12,6 +12,8 @@ import {
     recordFailedAttempt,
     resetRateLimit,
     getRemainingAttempts,
+    serverCheckLoginLockout,
+    serverRecordLoginAttempt,
     RATE_LIMIT_CONFIG
 } from '@/lib/rateLimit';
 
@@ -59,6 +61,14 @@ export default function Login() {
 
         setLoading(true);
         try {
+            // Authoritative lockout check (server-side, can't be bypassed)
+            const serverStatus = await serverCheckLoginLockout(actualEmail);
+            if (serverStatus.locked) {
+                setLockout({ locked: true, minutesRemaining: serverStatus.minutesRemaining });
+                toast.error(`Muitas tentativas. Tente novamente em ${serverStatus.minutesRemaining} minutos.`);
+                return;
+            }
+
             const { error } = await supabase.auth.signInWithPassword({
                 email: actualEmail,
                 password: actualPassword,
@@ -66,19 +76,21 @@ export default function Login() {
 
             if (error) throw error;
 
-            // Reset rate limit on successful login
+            // Reset rate limit on successful login (both local and server)
             resetRateLimit();
+            serverRecordLoginAttempt(actualEmail, true).catch(() => {});
             toast.success('Login realizado com sucesso!');
             navigate('/inicio');
         } catch (error: any) {
-            // Record failed attempt
-            const isLockedOut = recordFailedAttempt();
-            const remaining = getRemainingAttempts();
+            // Record failed attempt on both sides; server is authoritative
+            recordFailedAttempt();
+            const serverAfter = await serverRecordLoginAttempt(actualEmail, false);
 
-            if (isLockedOut) {
-                setLockout(checkRateLimit());
-                toast.error(`Conta bloqueada temporariamente. Tente novamente em ${RATE_LIMIT_CONFIG.lockoutMinutes} minutos.`);
-            } else if (remaining <= 2) {
+            if (serverAfter.locked) {
+                setLockout({ locked: true, minutesRemaining: serverAfter.minutesRemaining });
+                toast.error(`Conta bloqueada temporariamente. Tente novamente em ${serverAfter.minutesRemaining} minutos.`);
+            } else if ((serverAfter.remainingAttempts ?? getRemainingAttempts()) <= 2) {
+                const remaining = serverAfter.remainingAttempts ?? getRemainingAttempts();
                 toast.error(`${error.message}. Restam ${remaining} tentativas.`);
             } else {
                 toast.error(error.message || 'Erro ao fazer login');

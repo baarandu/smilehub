@@ -6,6 +6,7 @@ import { buildSystemPrompt } from "./systemPrompt.ts";
 import { splitAndSend } from "./messageSplitter.ts";
 import * as evolution from "./evolutionClient.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { checkForInjection } from "../_shared/aiSanitizer.ts";
 
 // ─── Provider: Evolution API only ───────────────────────────────────────────
 // Meta Cloud API support removed to eliminate ambiguity.
@@ -437,12 +438,16 @@ serve(async (req) => {
     let remoteJid: string;
 
     {
-      // ── Auth: single contract — payload.apikey === EVOLUTION_API_KEY ──
-      // Fail-closed: if EVOLUTION_API_KEY is missing, reject all requests.
-      const evolutionKey = Deno.env.get("EVOLUTION_API_KEY") || "";
+      // ── Auth: webhook secret, separate from outbound API key ──
+      // Prefer EVOLUTION_WEBHOOK_SECRET; fall back to EVOLUTION_API_KEY for backward compat.
+      // Fail-closed: if neither is configured, reject all requests.
+      const webhookSecret =
+        Deno.env.get("EVOLUTION_WEBHOOK_SECRET") ||
+        Deno.env.get("EVOLUTION_API_KEY") ||
+        "";
 
-      if (!evolutionKey) {
-        log.error("EVOLUTION_API_KEY not configured — rejecting webhook");
+      if (!webhookSecret) {
+        log.error("EVOLUTION_WEBHOOK_SECRET/EVOLUTION_API_KEY not configured — rejecting webhook");
         return new Response("Server misconfigured", { status: 500 });
       }
 
@@ -463,8 +468,8 @@ serve(async (req) => {
         return mismatch === 0;
       };
 
-      const validPayload = await timingSafeEqual(payloadApiKey, evolutionKey);
-      const validHeader = !validPayload && await timingSafeEqual(headerApiKey, evolutionKey);
+      const validPayload = await timingSafeEqual(payloadApiKey, webhookSecret);
+      const validHeader = !validPayload && await timingSafeEqual(headerApiKey, webhookSecret);
 
       if (!validPayload && !validHeader) {
         log.warn("Invalid API key", { hasPayloadKey: !!payloadApiKey, hasHeaderKey: !!headerApiKey });
@@ -806,6 +811,40 @@ serve(async (req) => {
       role: msg.sender === "patient" ? "user" : "assistant",
       content: msg.content,
     }));
+
+    // ── 14b. AI prompt-injection check ───────────────────────────────
+    // WhatsApp is an untrusted surface: any number can send messages to the AI.
+    // Log-only first so legitimate clinical phrasing isn't blocked; if a match
+    // is found, refuse the AI turn and send a canned response instead.
+    const injectionResult = checkForInjection(textContent, {
+      functionName: "whatsapp-webhook",
+      clinicId,
+    });
+    if (injectionResult.suspicious) {
+      const safeMsg =
+        "Não consegui processar sua mensagem agora. Pode reformular, por favor? Se for urgente, escreva 'atendente' para falar com alguém da clínica.";
+      await whatsapp.sendText(instanceName, phone, safeMsg).catch(() => {});
+      await supabase.rpc("log_ai_message", {
+        p_conversation_id: conversationId,
+        p_sender: "patient",
+        p_content: textContent,
+        p_intent: "blocked_injection",
+      }).catch(() => {});
+      await supabase.rpc("log_ai_message", {
+        p_conversation_id: conversationId,
+        p_sender: "ai",
+        p_content: safeMsg,
+        p_intent: "blocked_injection",
+      }).catch(() => {});
+      log.warn("Blocked suspected prompt injection", {
+        patterns: injectionResult.matchedPatterns,
+        phone,
+      });
+      return new Response(
+        JSON.stringify({ status: "blocked", reason: "prompt_injection" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
 
     // ── 15. Build system prompt ──────────────────────────────────────
     log.debug(`Pre-prompt build: ${Date.now() - t0}ms`);

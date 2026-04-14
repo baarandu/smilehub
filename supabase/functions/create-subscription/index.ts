@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts"
 import { extractBearerToken, validateRequired } from "../_shared/validation.ts"
@@ -116,13 +116,15 @@ serve(async (req) => {
 
         // --- 100% discount: activate subscription directly, skip Stripe ---
         if (validatedCoupon && finalAmount <= 0) {
-            // Find user's clinic
-            const { data: clinicUser } = await supabase
+            // Find user's clinic (prefer admin role; limit 1 for users in multiple clinics)
+            const { data: clinicUsers } = await supabase
                 .from('clinic_users')
-                .select('clinic_id')
+                .select('clinic_id, role')
                 .eq('user_id', userId)
-                .single();
+                .order('role', { ascending: true })
+                .limit(1);
 
+            const clinicUser = clinicUsers?.[0];
             if (!clinicUser) throw new Error("Clínica não encontrada para este usuário.");
 
             const clinicId = clinicUser.clinic_id;

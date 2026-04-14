@@ -16,6 +16,7 @@ import { requireSafeInput } from "../_shared/aiSanitizer.ts";
 import { checkAiConsent } from "../_shared/consent.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
+import { requirePlanFeature } from "../_shared/planGuard.ts";
 
 // Convert tools to OpenAI format
 function getOpenAITools() {
@@ -216,6 +217,13 @@ serve(async (req) => {
     ) {
       throw new Error("Unauthorized");
     }
+
+    // Plan gate: requires 'dentista_ia' feature
+    await requirePlanFeature(supabase, {
+      clinicId: clinic_id,
+      userId: user.id,
+      feature: "dentista_ia",
+    });
 
     // Pre-fetch patient context if patient_id provided
     let patientSummary: string | undefined;
