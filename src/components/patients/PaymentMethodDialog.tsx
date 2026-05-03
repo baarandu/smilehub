@@ -8,10 +8,12 @@ import { Switch } from '@/components/ui/switch';
 import { Banknote, CreditCard, Smartphone, ArrowRight, Loader2, Info, User, Building2, AlertCircle, SplitSquareHorizontal } from 'lucide-react';
 import { formatMoney } from '@/utils/budgetUtils';
 import { settingsService } from '@/services/settings';
+import { supabase } from '@/lib/supabase';
 import { CardFeeConfig } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
 import { SplitPaymentBuilder } from './SplitPaymentBuilder';
 import type { SplitPaymentPortion } from '@/types/receivables';
+import { useCardMachines } from '@/hooks/useCardMachines';
 
 export interface FinancialBreakdown {
     grossAmount: number;
@@ -39,8 +41,8 @@ export interface PayerData {
 interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
-    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData) => void;
-    onConfirmSplit?: (portions: SplitPaymentPortion[]) => void;
+    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null) => void;
+    onConfirmSplit?: (portions: SplitPaymentPortion[], cardMachineId?: string | null) => void;
     itemName: string;
     value: number;
     locationRate?: number;
@@ -104,19 +106,35 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [taxRate, setTaxRate] = useState(0);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
 
-    // Build available brands from settings
-    const availableBrands = useMemo(() => {
-        if (cardFees.length === 0) return CARD_BRANDS;
+    // Card Machines
+    const { data: machines = [] } = useCardMachines(false);
+    const [selectedMachineId, setSelectedMachineId] = useState<string>('');
+    const isCardMethod = selectedMethod === 'credit' || selectedMethod === 'debit';
 
-        // Get unique brand names from settings - exactly as entered
-        const uniqueNames = Array.from(new Set(cardFees.map(f => f.brand.trim())));
+    // Filter fees by selected machine (when one is selected)
+    const machineFees = useMemo(() => {
+        if (!selectedMachineId) return cardFees;
+        return cardFees.filter(f => (f as any).card_machine_id === selectedMachineId);
+    }, [cardFees, selectedMachineId]);
+
+    // Build available brands from settings (filtered by machine)
+    const availableBrands = useMemo(() => {
+        if (machineFees.length === 0) return CARD_BRANDS;
+
+        const uniqueNames = Array.from(new Set(machineFees.map(f => f.brand.trim())));
 
         return uniqueNames.map(name => ({
             id: name,
-            // Capitalize first letter of each word/segment (handles "visa/mastercard" -> "Visa/Mastercard")
             label: name.replace(/\b\w/g, l => l.toUpperCase())
         })).sort((a, b) => a.label.localeCompare(b.label));
-    }, [cardFees]);
+    }, [machineFees]);
+
+    // Auto-select machine if only one exists
+    useEffect(() => {
+        if (machines.length === 1 && !selectedMachineId) {
+            setSelectedMachineId(machines[0].id);
+        }
+    }, [machines, selectedMachineId]);
 
     useEffect(() => {
         if (open) {
@@ -126,6 +144,9 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             // Set initial brand to the first available one
             setSelectedBrand('visa');
             setSelectedMethod(null);
+            // Reset machine selection only if more than 1 machine (so dialog forces choice)
+            if (machines.length > 1) setSelectedMachineId('');
+            else if (machines.length === 1) setSelectedMachineId(machines[0].id);
             // Reset payer data
             setPayerIsPatient(true);
             setPayerType('PF');
@@ -157,7 +178,6 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                 totalTax += (settings.tax_rate || 0);
             }
 
-            // Load multiple taxes (ISS, etc)
             const taxes = await settingsService.getTaxes();
             if (taxes && taxes.length > 0) {
                 const taxesTotal = taxes.reduce((sum, tax) => sum + tax.rate, 0);
@@ -165,9 +185,19 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             }
 
             setTaxRate(totalTax);
-            const fees = await settingsService.getCardFees();
-            if (fees) {
-                setCardFees(fees);
+
+            // Load fees for all machines in the clinic (so we have rates ready when machine is picked)
+            const machineIds = machines.map(m => m.id);
+            if (machineIds.length > 0) {
+                const { data } = await supabase
+                    .from('card_fee_config')
+                    .select('*')
+                    .in('card_machine_id', machineIds);
+                setCardFees((data || []) as CardFeeConfig[]);
+            } else {
+                // Legacy fallback (no machines registered yet)
+                const fees = await settingsService.getCardFees();
+                setCardFees(fees || []);
             }
         } catch (error) {
             console.error('Error loading financial settings:', error);
@@ -193,7 +223,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             // Adjust installments for lookup: debit is always 1
             const lookupInstallments = selectedMethod === 'debit' ? 1 : numInstallments;
 
-            let feeConfig = cardFees.find(f =>
+            let feeConfig = machineFees.find(f =>
                 f.brand.toLowerCase() === selectedBrand.toLowerCase() &&
                 f.payment_type === selectedMethod &&
                 f.installments === lookupInstallments
@@ -201,7 +231,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
             // Fallback: try 'others' or 'outras bandeiras' brand if no specific brand config found
             if (!feeConfig) {
-                feeConfig = cardFees.find(f =>
+                feeConfig = machineFees.find(f =>
                     (f.brand.toLowerCase() === 'others' || f.brand.toLowerCase() === 'outras bandeiras' || f.brand.toLowerCase() === 'outros') &&
                     f.payment_type === selectedMethod &&
                     f.installments === lookupInstallments
@@ -254,20 +284,25 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             netAmount,
             isAnticipated: isAnticipatedLogic
         };
-    }, [effectiveValue, discountAmount, taxRate, cardFees, selectedMethod, installments, selectedBrand, anticipate, locationRate]);
+    }, [effectiveValue, discountAmount, taxRate, machineFees, selectedMethod, installments, selectedBrand, anticipate, locationRate]);
 
 
     const handleConfirm = () => {
+        // Validate machine selection for card-based payments
+        const splitHasCard = isSplitMode && splitPortions.some(p => p.method === 'credit' || p.method === 'debit');
+        if (((isCardMethod && !isSplitMode) || splitHasCard) && machines.length > 0 && !selectedMachineId) {
+            return;
+        }
+
         if (isSplitMode) {
             if (!splitValid || !onConfirmSplit) return;
-            onConfirmSplit(splitPortions);
+            onConfirmSplit(splitPortions, splitHasCard ? selectedMachineId || null : null);
             return;
         }
 
         if (!selectedMethod) return;
         const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
 
-        // Build payer data
         const payerData: PayerData = {
             payer_is_patient: payerIsPatient,
             payer_type: payerType,
@@ -276,7 +311,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             pj_source_id: payerType === 'PJ' ? selectedPJSource : null,
         };
 
-        onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown, payerData);
+        const machineToSend = isCardMethod ? (selectedMachineId || null) : null;
+        onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown, payerData, machineToSend);
         setSelectedMethod(null);
         setInstallments('1');
     };
@@ -379,6 +415,28 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                         {/* Credit Card Specifics */}
                         {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
                             <div className="space-y-3 pt-3 border-t animate-in fade-in">
+                                {machines.length === 0 ? (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-start gap-2">
+                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                        <span>Nenhuma maquininha cadastrada. Acesse Configurações Financeiras para cadastrar.</span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-sm">Maquininha</Label>
+                                        <Select value={selectedMachineId} onValueChange={setSelectedMachineId}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecione a maquininha usada" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {machines.map(m => (
+                                                    <SelectItem key={m.id} value={m.id}>
+                                                        {m.name}{m.dentist_name ? ` — ${m.dentist_name}` : ''}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
                                 <div className="flex gap-3">
                                     <div className="flex-1 space-y-1.5">
                                         <Label className="text-sm">Bandeira</Label>
@@ -568,7 +626,14 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                 <div className="p-4 border-t bg-white">
                     <Button
                         className="w-full h-11 bg-[#a03f3d] hover:bg-[#8b3634] text-base"
-                        disabled={isSplitMode ? (!splitValid || loading) : (!selectedMethod || loading || isLoadingSettings)}
+                        disabled={
+                            isSplitMode
+                                ? (!splitValid || loading)
+                                : (
+                                    !selectedMethod || loading || isLoadingSettings ||
+                                    (isCardMethod && machines.length > 0 && !selectedMachineId)
+                                )
+                        }
                         onClick={handleConfirm}
                     >
                         {loading ? (

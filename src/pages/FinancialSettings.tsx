@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { CardMachinesSection } from '@/components/financial/CardMachinesSection';
+import { useCardMachines } from '@/hooks/useCardMachines';
 
 // Helper to format brand names with proper capitalization
 const formatBrandName = (brand: string): string => {
@@ -59,6 +61,14 @@ export default function FinancialSettings() {
     // Card Fee Filters
     const [filterBrand, setFilterBrand] = useState('all');
     const [filterType, setFilterType] = useState<'all' | 'credit' | 'debit'>('all');
+    const [selectedMachineId, setSelectedMachineId] = useState<string>('');
+    const { data: machines = [] } = useCardMachines(false);
+
+    useEffect(() => {
+        if (machines.length > 0 && !selectedMachineId) {
+            setSelectedMachineId(machines[0].id);
+        }
+    }, [machines, selectedMachineId]);
 
     // Search filter
     const [searchQuery, setSearchQuery] = useState('');
@@ -138,6 +148,10 @@ export default function FinancialSettings() {
     };
 
     const handleAddFee = async () => {
+        if (!selectedMachineId) {
+            toast({ variant: "destructive", title: "Erro", description: "Cadastre e selecione uma maquininha antes de configurar taxas." });
+            return;
+        }
         if (!newFee.brand) {
             toast({ variant: "destructive", title: "Erro", description: "Selecione a bandeira do cartão." });
             return;
@@ -148,6 +162,7 @@ export default function FinancialSettings() {
         }
         try {
             await settingsService.saveCardFee({
+                card_machine_id: selectedMachineId,
                 brand: newFee.brand,
                 payment_type: newFee.payment_type,
                 installments: parseInt(newFee.installments),
@@ -221,6 +236,7 @@ export default function FinancialSettings() {
 
     // Filtered card fees
     const filteredCardFees = cardFees.filter(fee => {
+        if (selectedMachineId && (fee as any).card_machine_id !== selectedMachineId) return false;
         if (filterBrand !== 'all' && fee.brand !== filterBrand) return false;
         if (filterType !== 'all' && fee.payment_type !== filterType) return false;
         return true;
@@ -397,6 +413,9 @@ export default function FinancialSettings() {
 
 
 
+                {/* Card Machines Section */}
+                <CardMachinesSection />
+
                 {/* Tax Configuration Section - Multiple Taxes */}
                 <Card className="border-slate-200 shadow-sm">
                     <CardContent className="p-6">
@@ -559,6 +578,30 @@ export default function FinancialSettings() {
                                 Adicionar Regra
                             </Button>
                         </div>
+
+                        {/* Machine Selector */}
+                        {machines.length === 0 ? (
+                            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                Cadastre uma maquininha acima antes de configurar taxas. Cada maquininha tem suas próprias taxas.
+                            </div>
+                        ) : (
+                            <div className="mb-4 space-y-2">
+                                <Label className="text-sm">Maquininha</Label>
+                                <Select value={selectedMachineId} onValueChange={setSelectedMachineId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma maquininha" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {machines.map(m => (
+                                            <SelectItem key={m.id} value={m.id}>
+                                                {m.name}{m.dentist_name ? ` — ${m.dentist_name}` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-slate-500">As regras de taxa abaixo são aplicadas só a esta maquininha.</p>
+                            </div>
+                        )}
 
                         {/* Filters */}
                         <div className="space-y-3 mb-4">

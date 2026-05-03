@@ -171,7 +171,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         setPaymentBatch({ indices, teeth: approvedItems, totalValue });
     };
 
-    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
+    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
         if (!paymentItem || isSubmitting || !patientId) return;
 
         try {
@@ -254,6 +254,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     payer_name: payerData?.payer_name || null,
                     payer_cpf: payerData?.payer_cpf || null,
                     pj_source_id: payerData?.pj_source_id || null,
+                    card_machine_id: cardMachineId || null,
                 } as any);
             }
 
@@ -301,7 +302,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
+    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
         if (!paymentBatch || isSubmitting || !patientId) return;
 
         try {
@@ -388,6 +389,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         payer_name: payerData?.payer_name || null,
                         payer_cpf: payerData?.payer_cpf || null,
                         pj_source_id: payerData?.pj_source_id || null,
+                        card_machine_id: cardMachineId || null,
                     } as any);
                 }
 
@@ -458,7 +460,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[]) => {
+    const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null) => {
         if (!paymentItem || isSubmitting || !patientId) return;
 
         try {
@@ -485,6 +487,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 portions,
                 splitGroupId,
                 budgetLocation,
+                cardMachineId || null,
             );
 
             // Determine tooth status: all immediate = paid, otherwise partially_paid
@@ -541,7 +544,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[]) => {
+    const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null) => {
         if (!paymentBatch || isSubmitting || !patientId) return;
 
         try {
@@ -582,7 +585,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 }));
 
                 const receivables = await receivablesService.createSplitPayment(
-                    budget.id, patientId, idx, toothDescription, scaledPortions, splitGroupId, budgetLocation,
+                    budget.id, patientId, idx, toothDescription, scaledPortions, splitGroupId, budgetLocation, cardMachineId || null,
                 );
 
                 const allImmediate = portions.every(p => p.isImmediate);

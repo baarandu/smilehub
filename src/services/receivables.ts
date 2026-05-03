@@ -14,6 +14,7 @@ export const receivablesService = {
     portions: SplitPaymentPortion[],
     splitGroupId: string,
     budgetLocation?: string | null,
+    cardMachineId?: string | null,
   ): Promise<PaymentReceivable[]> {
     const { clinicId } = await getClinicContext();
     const { data: { user } } = await supabase.auth.getUser();
@@ -23,6 +24,9 @@ export const receivablesService = {
 
     for (let i = 0; i < portions.length; i++) {
       const portion = portions[i];
+
+      const isCard = portion.method === 'credit' || portion.method === 'debit';
+      const machineForPortion = isCard ? (cardMachineId || null) : null;
 
       // Build the receivable row
       const receivable = {
@@ -35,6 +39,7 @@ export const receivablesService = {
         payment_method: portion.method,
         installments: portion.installments,
         brand: portion.brand || null,
+        card_machine_id: machineForPortion,
         due_date: portion.dueDate,
         status: portion.isImmediate ? 'confirmed' : 'pending',
         confirmed_at: portion.isImmediate ? new Date().toISOString() : null,
@@ -74,7 +79,6 @@ export const receivablesService = {
           credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
         };
         const methodLabel = methodLabels[portion.method] || portion.method;
-        const isCard = portion.method === 'credit' || portion.method === 'debit';
         const displayBrand = isCard && portion.brand ? portion.brand : null;
         const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
 
@@ -102,6 +106,7 @@ export const receivablesService = {
           payer_name: portion.payerData?.payer_name || null,
           payer_cpf: portion.payerData?.payer_cpf || null,
           pj_source_id: portion.payerData?.pj_source_id || null,
+          card_machine_id: machineForPortion,
         } as any);
 
         // Update receivable with the transaction ID
@@ -177,6 +182,7 @@ export const receivablesService = {
       payer_name: r.payer_name,
       payer_cpf: r.payer_cpf,
       pj_source_id: r.pj_source_id,
+      card_machine_id: (r as any).card_machine_id || null,
     } as any);
 
     // Update receivable status

@@ -151,7 +151,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   // ... (existing code)
 
-  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData) => {
+  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
     if (!selectedItem || isSubmitting) return;
 
     try {
@@ -271,6 +271,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           payer_name: payerData?.payer_name || null,
           payer_cpf: payerData?.payer_cpf || null,
           pj_source_id: payerData?.pj_source_id || null,
+          card_machine_id: cardMachineId || null,
         } as any);
       }
 

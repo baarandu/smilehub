@@ -57,30 +57,44 @@ export const settingsService = {
             if (error) throw error;
         }
     },
-    async getCardFees(): Promise<CardFeeConfig[]> {
+    async getCardFees(cardMachineId?: string): Promise<CardFeeConfig[]> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('card_fee_config')
-            .select('*')
-            .eq('user_id', user.id);
+            .select('*');
+
+        if (cardMachineId) {
+            query = query.eq('card_machine_id', cardMachineId);
+        } else {
+            query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         return (data || []) as CardFeeConfig[];
     },
 
-    async saveCardFee(fee: Omit<CardFeeConfigInsert, 'user_id'>): Promise<void> {
+    async saveCardFee(fee: Omit<CardFeeConfigInsert, 'user_id'> & { card_machine_id?: string | null }): Promise<void> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const payload = { ...fee, user_id: user.id };
+        const payload = { ...fee, user_id: user.id } as any;
 
-        const { error } = await supabase
-            .from('card_fee_config')
-            .upsert(payload, { onConflict: 'user_id, brand, payment_type, installments' });
-
-        if (error) throw error;
+        if (payload.card_machine_id) {
+            const { error } = await supabase
+                .from('card_fee_config')
+                .upsert(payload, { onConflict: 'card_machine_id,brand,payment_type,installments' });
+            if (error) throw error;
+        } else {
+            // Legacy fallback (sem maquininha) — mantém compatibilidade.
+            const { error } = await supabase
+                .from('card_fee_config')
+                .insert(payload);
+            if (error) throw error;
+        }
     },
 
     async deleteCardFee(id: string): Promise<void> {

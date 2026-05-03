@@ -61,15 +61,17 @@ export const financialService = {
 
         if (error) throw error;
 
-        // Fetch creator names
+        // Fetch creator and dentist names
         const transactions = data || [];
         const creatorIds = [...new Set(transactions.map(t => t.created_by || t.user_id).filter(Boolean))];
+        const dentistIds = [...new Set(transactions.map(t => t.dentist_id).filter(Boolean))];
+        const allUserIds = [...new Set([...creatorIds, ...dentistIds])];
 
-        let creatorNames: Record<string, string> = {};
-        if (creatorIds.length > 0) {
-            const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: creatorIds });
+        let profileNames: Record<string, string> = {};
+        if (allUserIds.length > 0) {
+            const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: allUserIds });
             if (profiles) {
-                creatorNames = profiles.reduce((acc: Record<string, string>, p: any) => {
+                profileNames = profiles.reduce((acc: Record<string, string>, p: any) => {
                     acc[p.id] = p.full_name || p.email;
                     return acc;
                 }, {});
@@ -78,20 +80,63 @@ export const financialService = {
 
         return transactions.map(t => ({
             ...t,
-            created_by_name: creatorNames[t.created_by || t.user_id] || null
+            created_by_name: profileNames[t.created_by || t.user_id] || null,
+            dentist_name: t.dentist_id ? (profileNames[t.dentist_id] || null) : null
         }));
     },
 
     async createTransaction(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
         const { userId, clinicId } = await getClinicContext();
 
+        const cardMachineId = (transaction as any).card_machine_id || null;
+
+        // Determine dentist_id: card machine's dentist > explicit > from budget > current user if dentist
+        let dentistId = (transaction as any).dentist_id || null;
+
+        // Highest priority: if a card machine is provided and it has a dentist atrelada,
+        // attribute the revenue to that dentist (overrides budget/user fallback).
+        if (cardMachineId) {
+            const { data: machine } = await supabase
+                .from('card_machines')
+                .select('dentist_id')
+                .eq('id', cardMachineId)
+                .maybeSingle();
+            if (machine && (machine as any).dentist_id) {
+                dentistId = (machine as any).dentist_id;
+            }
+        }
+
+        if (!dentistId && transaction.type === 'income' && (transaction as any).related_entity_id) {
+            const { data: budget } = await supabase
+                .from('budgets')
+                .select('created_by')
+                .eq('id', (transaction as any).related_entity_id)
+                .maybeSingle();
+            if (budget?.created_by) {
+                dentistId = budget.created_by;
+            }
+        }
+
+        if (!dentistId && transaction.type === 'income') {
+            const { data: cu } = await supabase
+                .from('clinic_users')
+                .select('roles')
+                .eq('clinic_id', clinicId)
+                .eq('user_id', userId)
+                .maybeSingle();
+            if (cu && (cu as any).roles && (cu as any).roles.includes('dentist')) {
+                dentistId = userId;
+            }
+        }
+
         const { data, error } = await supabase
             .from('financial_transactions')
             .insert({
                 ...transaction,
                 clinic_id: clinicId,
-                user_id: userId,  // Track which user created the transaction
-                created_by: userId  // Also store in created_by for consistency
+                user_id: userId,
+                created_by: userId,
+                dentist_id: dentistId,
             })
             .select()
             .single();
