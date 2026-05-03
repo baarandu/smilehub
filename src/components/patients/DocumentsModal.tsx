@@ -58,9 +58,11 @@ const PAPER_SIZES = [
     { label: 'Personalizado', width: 0, height: 0 },
 ];
 
-const DEFAULT_TEMPLATES = [
+const DEFAULT_TEMPLATES: Array<{ name: string; content: string; requires_patient_signature: boolean; requires_dentist_signature: boolean }> = [
     {
         name: 'Termo de Consentimento',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `Eu, {{nome}}, portador(a) do CPF {{cpf}}, nascido(a) em {{data_nascimento}}, declaro que fui devidamente informado(a) sobre o procedimento odontológico a ser realizado, seus riscos, benefícios e alternativas de tratamento.
 
 Declaro ainda que tive a oportunidade de esclarecer todas as minhas dúvidas e que autorizo a realização do procedimento proposto.
@@ -71,6 +73,8 @@ Data: {{data}}`
     },
     {
         name: 'Atestado Odontológico',
+        requires_patient_signature: false,
+        requires_dentist_signature: true,
         content: `ATESTADO ODONTOLÓGICO
 
 Atesto para os devidos fins que o(a) paciente {{nome}}, portador(a) do CPF {{cpf}}, esteve sob meus cuidados profissionais na data de {{data}}, necessitando de afastamento de suas atividades por _____ dia(s) a partir desta data.
@@ -79,12 +83,16 @@ CID: _________`
     },
     {
         name: 'Declaração de Comparecimento',
+        requires_patient_signature: false,
+        requires_dentist_signature: true,
         content: `DECLARAÇÃO DE COMPARECIMENTO
 
 Declaro para os devidos fins que o(a) Sr(a). {{nome}}, portador(a) do CPF {{cpf}}, compareceu a esta clínica odontológica na data de {{data}}, no horário de _____ às _____, para atendimento odontológico.`
     },
     {
         name: 'Receituário',
+        requires_patient_signature: false,
+        requires_dentist_signature: true,
         content: `RECEITUÁRIO
 
 Paciente: {{nome}}
@@ -103,6 +111,8 @@ Observações: _________________________________`
     },
     {
         name: 'Encaminhamento',
+        requires_patient_signature: false,
+        requires_dentist_signature: true,
         content: `ENCAMINHAMENTO
 
 Encaminho o(a) paciente {{nome}}, CPF {{cpf}}, para avaliação e tratamento com especialista em:
@@ -124,6 +134,8 @@ Data: {{data}}`
     },
     {
         name: 'Autorização para Menor',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `AUTORIZAÇÃO PARA TRATAMENTO ODONTOLÓGICO DE MENOR
 
 Eu, _________________________________, portador(a) do CPF ___________________, na qualidade de responsável legal pelo(a) menor {{nome}}, nascido(a) em {{data_nascimento}}, portador(a) do CPF {{cpf}}, AUTORIZO a realização de tratamento odontológico, incluindo os procedimentos necessários para diagnóstico e tratamento.
@@ -134,6 +146,8 @@ Data: {{data}}`
     },
     {
         name: 'TCLE — Implante Dentário',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
 PROCEDIMENTO: IMPLANTE DENTÁRIO
 
@@ -165,6 +179,8 @@ Data: {{data}}`
     },
     {
         name: 'TCLE — Clareamento Dental',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
 PROCEDIMENTO: CLAREAMENTO DENTAL
 
@@ -194,6 +210,8 @@ Data: {{data}}`
     },
     {
         name: 'TCLE — Cirurgia Oral',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
 PROCEDIMENTO: CIRURGIA ORAL (EXODONTIA / CIRURGIA BUCOMAXILOFACIAL)
 
@@ -227,6 +245,8 @@ Data: {{data}}`
     },
     {
         name: 'TCLE — Ortodontia',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
 PROCEDIMENTO: TRATAMENTO ORTODÔNTICO
 
@@ -261,6 +281,8 @@ Data: {{data}}`
     },
     {
         name: 'TCLE — Prótese Dentária',
+        requires_patient_signature: true,
+        requires_dentist_signature: false,
         content: `TERMO DE CONSENTIMENTO LIVRE E ESCLARECIDO
 PROCEDIMENTO: PRÓTESE DENTÁRIA
 
@@ -316,6 +338,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     // Form
     const [formName, setFormName] = useState('');
     const [formContent, setFormContent] = useState('');
+    const [formRequiresPatientSig, setFormRequiresPatientSig] = useState(true);
+    const [formRequiresDentistSig, setFormRequiresDentistSig] = useState(true);
 
     // Generate
     const [patients, setPatients] = useState<Patient[]>([]);
@@ -444,6 +468,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const handleCreate = () => {
         setFormName('');
         setFormContent('');
+        setFormRequiresPatientSig(true);
+        setFormRequiresDentistSig(true);
         setSelectedTemplate(null);
         setView('create');
     };
@@ -451,6 +477,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const handleEdit = (template: DocumentTemplate) => {
         setFormName(template.name);
         setFormContent(template.content);
+        setFormRequiresPatientSig(template.requires_patient_signature ?? true);
+        setFormRequiresDentistSig(template.requires_dentist_signature ?? true);
         setSelectedTemplate(template);
         setView('edit');
     };
@@ -478,13 +506,17 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             if (selectedTemplate) {
                 await documentTemplatesService.update(selectedTemplate.id, {
                     name: formName,
-                    content: formContent
+                    content: formContent,
+                    requires_patient_signature: formRequiresPatientSig,
+                    requires_dentist_signature: formRequiresDentistSig,
                 });
                 toast({ title: 'Modelo atualizado' });
             } else {
                 await documentTemplatesService.create({
                     name: formName,
-                    content: formContent
+                    content: formContent,
+                    requires_patient_signature: formRequiresPatientSig,
+                    requires_dentist_signature: formRequiresDentistSig,
                 });
                 toast({ title: 'Modelo criado' });
             }
@@ -542,10 +574,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         setEditableContent('');
         setUseLetterhead(!!letterheadUrl);
         setDigitalSignEnabled(false);
-        // Default: consent forms need patient signature, prescriptions/certificates don't
-        const nameLower = template.name.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
-        setNeedsPatientSignature(isConsentForm);
+        setNeedsPatientSignature(template.requires_patient_signature ?? false);
         setDeliveryMethod('EMAIL');
         setView('generate');
     };
@@ -565,14 +594,10 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             patient,
             documentDate
         );
-        // Remove signature lines from consent forms — signature is generated automatically at print
-        const nameLower = selectedTemplate.name.toLowerCase();
-        const isConsent = nameLower.includes('termo') || nameLower.includes('consentimento')
-            || nameLower.includes('autoriza') || nameLower.includes('tcle');
-        if (isConsent) {
-            filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
-            filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
-        }
+        // Strip placeholder signature lines — the system draws signature boxes based on template flags
+        filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
+        filled = filled.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
+        filled = filled.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*/g, '');
         setEditableContent(filled);
     }, [selectedPatientId, documentDate, selectedTemplate, patients]);
 
@@ -611,15 +636,16 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const patient = patients.find(p => p.id === selectedPatientId);
         const templateName = selectedTemplate?.name || '';
+        const requiresPatientSig = selectedTemplate?.requires_patient_signature ?? false;
+        const requiresDentistSig = selectedTemplate?.requires_dentist_signature ?? false;
+        // Preserve "Responsável Legal" label for the menor template
         const nameLower = templateName.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
-            || nameLower.includes('autoriza') || nameLower.includes('tcle');
-        const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado')
-            || nameLower.includes('encaminhamento') || nameLower.includes('declaração') || nameLower.includes('declaracao');
+        const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
+        const patientSigLabel = isMinorAuth ? 'Responsável Legal' : (patient?.name || '');
 
         let dentistName = 'Responsável Técnico';
         let dentistCRO = '';
-        if (!isConsentForm) {
+        if (requiresDentistSig) {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
@@ -641,35 +667,28 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             }
         }
 
-        const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
-
         let signatureHtml = '';
-        if (isMinorAuth) {
-            signatureHtml = `
-                <div class="signature">
-                    <div class="signature-line">Responsável Legal</div>
-                </div>`;
-        } else if (isConsentForm) {
-            signatureHtml = `
-                <div class="signature">
-                    <div class="signature-line">${patient?.name}</div>
-                </div>`;
-        } else if (isDentistOnlyDoc) {
-            signatureHtml = `
-                <div class="signature">
-                    <div class="signature-line">${dentistName}</div>
-                    ${dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : ''}
-                </div>`;
-        } else {
+        if (requiresPatientSig && requiresDentistSig) {
             signatureHtml = `
                 <div class="signature-dual">
                     <div class="signature">
-                        <div class="signature-line">${patient?.name}</div>
+                        <div class="signature-line">${patientSigLabel}</div>
                     </div>
                     <div class="signature">
                         <div class="signature-line">${dentistName}</div>
                         ${dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : ''}
                     </div>
+                </div>`;
+        } else if (requiresPatientSig) {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${patientSigLabel}</div>
+                </div>`;
+        } else if (requiresDentistSig) {
+            signatureHtml = `
+                <div class="signature">
+                    <div class="signature-line">${dentistName}</div>
+                    ${dentistCRO ? `<div style="font-size:10pt;color:#666;text-align:center;margin-top:4px;">CRO ${dentistCRO}</div>` : ''}
                 </div>`;
         }
 
@@ -692,13 +711,9 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const documentContent = (() => {
             let content = editableContent;
-            if (isMinorAuth) {
-                content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/, '');
-            }
-            if (isConsentForm) {
-                content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
-                content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
-            }
+            content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
+            content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
+            content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/g, '');
             return content;
         })();
 
@@ -767,7 +782,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         printWindow.document.close();
         printWindow.onload = () => printWindow.print();
         // Fallback for browsers that fire load synchronously or miss the event
-        setTimeout(() => { try { printWindow.print(); } catch (_) {} }, 500);
+        setTimeout(() => { try { printWindow.print(); } catch (e) { console.warn('Print fallback failed:', e); } }, 500);
 
         // Ask dentist if they want to save to patient exams
         if (selectedPatientId && selectedTemplate) {
@@ -783,7 +798,11 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                     selectedPatientId,
                     patientObj?.name || 'Paciente',
                     selectedTemplate.name,
-                    editableContent
+                    editableContent,
+                    {
+                        requiresPatientSignature: selectedTemplate.requires_patient_signature ?? false,
+                        requiresDentistSignature: selectedTemplate.requires_dentist_signature ?? false,
+                    }
                 ).then(() => {
                     toast({ title: 'Documento salvo nos exames do paciente' });
                 }).catch((err) => {
@@ -818,12 +837,10 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         try {
             setIsCreatingSignature(true);
 
-            // Get dentist name and CRO for PDF
+            // Get dentist name and CRO for PDF (only if dentist signs)
             let dentistName: string | undefined;
             let dentistCRO: string | undefined;
-            const nameLower = selectedTemplate.name.toLowerCase();
-            const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento') || nameLower.includes('autoriza') || nameLower.includes('tcle');
-            if (!isConsentForm) {
+            if (selectedTemplate.requires_dentist_signature) {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
                     const { data: profile } = await supabase
@@ -849,7 +866,11 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 dentistName,
                 useLetterhead ? letterheadUrl ?? undefined : undefined,
                 useLetterhead ? { widthMm: paperWidthMm, heightMm: paperHeightMm } : undefined,
-                dentistCRO
+                dentistCRO,
+                {
+                    requiresPatientSignature: selectedTemplate.requires_patient_signature ?? false,
+                    requiresDentistSignature: selectedTemplate.requires_dentist_signature ?? false,
+                }
             );
 
             // Upload PDF to storage first (avoids large base64 in request body)
@@ -1169,6 +1190,37 @@ Nesta data {{data}}, declaro que...`}
                                 className="min-h-[300px] font-mono text-sm"
                             />
                         </div>
+
+                        <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                            <div className="flex items-center gap-2">
+                                <PenTool className="w-4 h-4 text-[#a03f3d]" />
+                                <span className="text-sm font-medium">Assinaturas no documento</span>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                Defina quem precisa assinar este modelo. Aplica-se a todo documento gerado a partir dele.
+                            </p>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="form-patient-sig" className="text-sm cursor-pointer">
+                                    Assinatura do paciente
+                                </Label>
+                                <Switch
+                                    id="form-patient-sig"
+                                    checked={formRequiresPatientSig}
+                                    onCheckedChange={setFormRequiresPatientSig}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="form-dentist-sig" className="text-sm cursor-pointer">
+                                    Assinatura do dentista
+                                </Label>
+                                <Switch
+                                    id="form-dentist-sig"
+                                    checked={formRequiresDentistSig}
+                                    onCheckedChange={setFormRequiresDentistSig}
+                                />
+                            </div>
+                        </div>
+
                         <div className="flex justify-end gap-2">
                             <Button variant="outline" onClick={goBack}>
                                 Cancelar
@@ -1284,6 +1336,25 @@ Nesta data {{data}}, declaro que...`}
                                 </Label>
                             </div>
                         )}
+
+                        {/* Signature config from template (read-only) */}
+                        {selectedPatientId && selectedTemplate && (() => {
+                            const reqPatient = selectedTemplate.requires_patient_signature ?? false;
+                            const reqDentist = selectedTemplate.requires_dentist_signature ?? false;
+                            const label = reqPatient && reqDentist
+                                ? 'Paciente e dentista'
+                                : reqPatient
+                                ? 'Apenas paciente'
+                                : reqDentist
+                                ? 'Apenas dentista'
+                                : 'Sem assinatura';
+                            return (
+                                <div className="text-xs text-gray-600 flex items-center gap-1.5">
+                                    <PenTool className="w-3 h-3 text-[#a03f3d]" />
+                                    Assinaturas configuradas neste modelo: <strong>{label}</strong>
+                                </div>
+                            );
+                        })()}
 
                         {/* Digital Signature Controls */}
                         {selectedPatientId && (

@@ -86,7 +86,7 @@ export const documentTemplatesService = {
         return filled;
     },
 
-    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string, letterheadUrl?: string, paperSize?: { widthMm: number; heightMm: number }, dentistCRO?: string): Promise<Blob> {
+    async generatePdfBlob(patientName: string, templateName: string, content: string, dentistName?: string, letterheadUrl?: string, paperSize?: { widthMm: number; heightMm: number }, dentistCRO?: string, signatureConfig?: { requiresPatientSignature: boolean; requiresDentistSignature: boolean }): Promise<Blob> {
         const { default: jsPDF } = await import('jspdf');
 
         const doc = new jsPDF({
@@ -145,13 +145,31 @@ export const documentTemplatesService = {
             y += 7;
         }
 
-        // Signature
-        const nameLower = templateName.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
-            || nameLower.includes('autoriza');
-        const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado');
+        // Signature — driven by explicit signatureConfig flags. Falls back to name-based
+        // heuristic for backwards compatibility when called without flags.
+        let requiresPatientSig: boolean;
+        let requiresDentistSig: boolean;
+        if (signatureConfig) {
+            requiresPatientSig = signatureConfig.requiresPatientSignature;
+            requiresDentistSig = signatureConfig.requiresDentistSignature;
+        } else {
+            const nameLower = templateName.toLowerCase();
+            const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
+                || nameLower.includes('autoriza');
+            const isDentistOnlyDoc = nameLower.includes('receitu') || nameLower.includes('atestado');
+            requiresPatientSig = isConsentForm || (!isConsentForm && !isDentistOnlyDoc);
+            requiresDentistSig = !isConsentForm;
+        }
 
+        const nameLower = templateName.toLowerCase();
+        const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
+        const patientLabel = isMinorAuth ? 'Responsável Legal' : patientName;
         const signerName = dentistName || 'Responsável Técnico';
+
+        if (!requiresPatientSig && !requiresDentistSig) {
+            const pdfOutput = doc.output('arraybuffer');
+            return new Blob([pdfOutput], { type: 'application/pdf' });
+        }
 
         y += 40;
         if (y > pageHeight - 60) {
@@ -164,11 +182,27 @@ export const documentTemplatesService = {
         doc.setLineWidth(0.5);
         doc.setFontSize(10);
 
-        if (isConsentForm) {
+        if (requiresPatientSig && requiresDentistSig) {
+            const leftCenter = pageWidth / 4;
+            const rightCenter = (pageWidth * 3) / 4;
+            doc.line(leftCenter - 35, y, leftCenter + 35, y);
+            doc.line(rightCenter - 35, y, rightCenter + 35, y);
+            y += 5;
+            doc.text(patientLabel, leftCenter, y, { align: 'center' });
+            doc.text(signerName, rightCenter, y, { align: 'center' });
+            if (dentistCRO) {
+                y += 5;
+                doc.setFontSize(9);
+                doc.setTextColor(100);
+                doc.text(`CRO ${dentistCRO}`, rightCenter, y, { align: 'center' });
+                doc.setTextColor(0);
+                doc.setFontSize(10);
+            }
+        } else if (requiresPatientSig) {
             doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
             y += 5;
-            doc.text(patientName, pageWidth / 2, y, { align: 'center' });
-        } else if (isDentistOnlyDoc) {
+            doc.text(patientLabel, pageWidth / 2, y, { align: 'center' });
+        } else if (requiresDentistSig) {
             doc.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
             y += 5;
             doc.text(signerName, pageWidth / 2, y, { align: 'center' });
@@ -180,40 +214,27 @@ export const documentTemplatesService = {
                 doc.setTextColor(0);
                 doc.setFontSize(10);
             }
-        } else {
-            const leftCenter = pageWidth / 4;
-            const rightCenter = (pageWidth * 3) / 4;
-            doc.line(leftCenter - 35, y, leftCenter + 35, y);
-            doc.line(rightCenter - 35, y, rightCenter + 35, y);
-            y += 5;
-            doc.text(patientName, leftCenter, y, { align: 'center' });
-            doc.text(signerName, rightCenter, y, { align: 'center' });
-            if (dentistCRO) {
-                y += 5;
-                doc.setFontSize(9);
-                doc.setTextColor(100);
-                doc.text(`CRO ${dentistCRO}`, rightCenter, y, { align: 'center' });
-                doc.setTextColor(0);
-                doc.setFontSize(10);
-            }
         }
 
         const pdfOutput = doc.output('arraybuffer');
         return new Blob([pdfOutput], { type: 'application/pdf' });
     },
 
-    async saveAsExam(patientId: string, patientName: string, name: string, content: string): Promise<void> {
+    async saveAsExam(patientId: string, patientName: string, name: string, content: string, signatureConfig?: { requiresPatientSignature: boolean; requiresDentistSignature: boolean }): Promise<void> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Get dentist name and CRO for signature
+        // Resolve signature requirements: explicit config wins; otherwise fall back to name heuristic.
+        const nameLower = name.toLowerCase();
+        const heuristicConsent = nameLower.includes('termo') || nameLower.includes('consentimento')
+            || nameLower.includes('autoriza');
+        const requiresDentistSig = signatureConfig
+            ? signatureConfig.requiresDentistSignature
+            : !heuristicConsent;
+
         let dentistName: string | undefined;
         let dentistCRO: string | undefined;
-        const nameLower = name.toLowerCase();
-        const isConsentForm = nameLower.includes('termo') || nameLower.includes('consentimento')
-            || nameLower.includes('autoriza');
-
-        if (!isConsentForm) {
+        if (requiresDentistSig) {
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('full_name, gender, cro')
@@ -231,7 +252,7 @@ export const documentTemplatesService = {
 
         const { clinicId } = await getClinicContext();
 
-        const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName, undefined, undefined, dentistCRO);
+        const pdfBlob = await this.generatePdfBlob(patientName, name, content, dentistName, undefined, undefined, dentistCRO, signatureConfig);
 
         // Path must start with clinicId/ for RLS policy
         const fileName = `${clinicId}/doc_${patientId}_${Date.now()}.pdf`;
