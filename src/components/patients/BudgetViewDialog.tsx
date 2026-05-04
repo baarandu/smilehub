@@ -121,7 +121,8 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             onUpdate();
             onClose();
         } catch (error) {
-            toast({ variant: "destructive", title: "Erro", description: "Falha ao excluir orçamento" });
+            const detail = (error as any)?.message || (error as any)?.details || "Falha ao excluir orçamento";
+            toast({ variant: "destructive", title: "Erro", description: detail });
         } finally {
             setUpdating(false);
         }

@@ -118,19 +118,23 @@ export const budgetsService = {
 
     async delete(id: string): Promise<void> {
         const { clinicId } = await getClinicContext();
-        // Delete items first (cascade should handle this, but just in case)
+
         await supabase
             .from('budget_items')
             .delete()
             .eq('budget_id', id);
 
-        const { error } = await supabase
+        const { data: deleted, error } = await supabase
             .from('budgets')
             .delete()
             .eq('id', id)
-            .eq('clinic_id', clinicId);
+            .eq('clinic_id', clinicId)
+            .select('id');
 
         if (error) throw error;
+        if (!deleted || deleted.length === 0) {
+            throw new Error('Não foi possível excluir o orçamento. Verifique se você tem permissão.');
+        }
     },
 
     async updateStatus(id: string, status: Budget['status']): Promise<Budget> {
