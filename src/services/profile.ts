@@ -178,12 +178,16 @@ export const profileService = {
             return;
         }
 
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
             .from('clinics')
             .update(data)
-            .eq('id', clinicId);
+            .eq('id', clinicId)
+            .select('id');
 
         if (error) throw error;
+        if (!updated || updated.length === 0) {
+            throw new Error('Você não tem permissão para editar os dados desta clínica. Apenas administradores podem fazer alterações.');
+        }
     },
 
     async getClinicName(): Promise<string> {

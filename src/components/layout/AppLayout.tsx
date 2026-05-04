@@ -216,7 +216,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         <div className="flex items-center gap-3 min-w-0">
           <img src="/logo-login.png" alt="Logo" className="w-10 h-10 rounded-xl object-contain shrink-0" />
           {hasMultipleClinics && clinicId ? (
-            <Select value={clinicId} onValueChange={switchClinic}>
+            <Select
+              key={`${clinicId}-${availableClinics.find(c => c.clinic_id === clinicId)?.clinic_name || ''}`}
+              value={clinicId}
+              onValueChange={switchClinic}
+            >
               <SelectTrigger className="h-8 text-xs border-none bg-transparent shadow-none px-0 max-w-[160px]">
                 <SelectValue />
               </SelectTrigger>
@@ -262,7 +266,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </div>
           {hasMultipleClinics && clinicId && (
-            <Select value={clinicId} onValueChange={switchClinic}>
+            <Select
+              key={`${clinicId}-${availableClinics.find(c => c.clinic_id === clinicId)?.clinic_name || ''}`}
+              value={clinicId}
+              onValueChange={switchClinic}
+            >
               <SelectTrigger className="h-8 text-xs bg-muted/50 border-border/50">
                 <SelectValue placeholder="Selecionar clínica" />
               </SelectTrigger>

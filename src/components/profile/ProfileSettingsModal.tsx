@@ -222,7 +222,8 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
             markStepCompleted('clinic_data');
         } catch (error) {
             console.error('Error updating clinic info:', error);
-            toast.error('Não foi possível atualizar as informações.');
+            const message = error instanceof Error ? error.message : 'Não foi possível atualizar as informações.';
+            toast.error(message);
         } finally {
             setSavingClinicInfo(false);
         }
