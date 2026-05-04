@@ -186,7 +186,9 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
             onClose();
         } catch (error) {
             console.error(error);
-            toast({ variant: "destructive", title: "Erro", description: isEditing ? "Falha ao atualizar orçamento." : "Falha ao criar orçamento." });
+            const fallback = isEditing ? "Falha ao atualizar orçamento." : "Falha ao criar orçamento.";
+            const detail = error instanceof Error && error.message ? error.message : fallback;
+            toast({ variant: "destructive", title: "Erro", description: detail });
         } finally {
             setSaving(false);
         }

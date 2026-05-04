@@ -55,13 +55,11 @@ export const budgetsService = {
     async create(budget: BudgetInsert, items: Omit<BudgetItemInsert, 'budget_id'>[]): Promise<BudgetWithItems> {
         validateBudgetItems(items);
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
+        const { userId, clinicId } = await getClinicContext();
 
-        // Create budget first with created_by
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert({ ...budget, created_by: user?.id })
+            .insert({ ...budget, clinic_id: clinicId, created_by: userId })
             .select()
             .single();
 
