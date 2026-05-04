@@ -289,6 +289,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 open={viewDialogOpen}
                 onClose={() => setViewDialogOpen(false)}
                 onUpdate={loadBudgets}
+                onDelete={(id) => setBudgets(prev => prev.filter(b => b.id !== id))}
                 onEdit={handleEditBudget}
                 patientName={patientName}
                 patientId={patientId}

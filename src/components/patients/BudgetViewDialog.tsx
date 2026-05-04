@@ -25,13 +25,14 @@ interface BudgetViewDialogProps {
     open: boolean;
     onClose: () => void;
     onUpdate: () => void;
+    onDelete?: (budgetId: string) => void;
     onEdit?: (budget: BudgetWithItems) => void;
     patientName?: string;
     patientId?: string;
     onNavigateToPayments?: () => void;
 }
 
-export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, patientName, patientId, onNavigateToPayments }: BudgetViewDialogProps) {
+export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, onEdit, patientName, patientId, onNavigateToPayments }: BudgetViewDialogProps) {
     const { toast } = useToast();
     const { confirm, ConfirmDialog } = useConfirmDialog();
     const [updating, setUpdating] = useState(false);
@@ -118,6 +119,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onEdit, pati
             setUpdating(true);
             await budgetsService.delete(budget.id);
             toast({ title: "Sucesso", description: "Orçamento excluído" });
+            onDelete?.(budget.id);
             onUpdate();
             onClose();
         } catch (error) {
