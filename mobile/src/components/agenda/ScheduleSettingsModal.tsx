@@ -19,6 +19,13 @@ interface DaySlot {
   end_time: string;
   interval_minutes: number;
   is_active: boolean;
+  // Round-trip only — mobile UI doesn't yet expose cycle config, but we
+  // must preserve these so saving on mobile doesn't strip multi-week
+  // schedules a dentist set up on web.
+  week_index?: number;
+  cycle_length?: number;
+  location_id?: string | null;
+  location_ids?: string | null;
 }
 
 export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModalProps) {
@@ -29,6 +36,10 @@ export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModa
   const [slots, setSlots] = useState<DaySlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Mobile UI doesn't yet support multi-week cycles. When the dentist's
+  // schedule already uses a cycle (configured on web), we lock editing
+  // here so a save can't accidentally flatten the alternating weeks.
+  const [isCycleLocked, setIsCycleLocked] = useState(false);
 
   useEffect(() => {
     if (visible && clinicId) {
@@ -60,6 +71,8 @@ export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModa
     try {
       setLoading(true);
       const data = await scheduleSettingsService.getByProfessional(clinicId, selectedDentist);
+      const hasCycle = data.some(s => (s.cycle_length ?? 1) > 1);
+      setIsCycleLocked(hasCycle);
       if (data.length > 0) {
         setSlots(data.map(s => ({
           day_of_week: s.day_of_week,
@@ -67,6 +80,10 @@ export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModa
           end_time: s.end_time,
           interval_minutes: s.interval_minutes,
           is_active: s.is_active,
+          week_index: s.week_index ?? 0,
+          cycle_length: s.cycle_length ?? 1,
+          location_id: s.location_id ?? null,
+          location_ids: s.location_ids ?? null,
         })));
       } else {
         // Default: Mon-Fri 08:00-18:00
@@ -108,6 +125,13 @@ export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModa
 
   const handleSave = async () => {
     if (!clinicId || !selectedDentist) return;
+    if (isCycleLocked) {
+      Alert.alert(
+        'Edição bloqueada',
+        'Este profissional usa horários alternados por semana. Edite no app web para preservar a configuração.',
+      );
+      return;
+    }
     try {
       setSaving(true);
       await scheduleSettingsService.upsert(clinicId, selectedDentist, slots);
@@ -134,14 +158,21 @@ export function ScheduleSettingsModal({ visible, onClose }: ScheduleSettingsModa
           <Text className="text-lg font-bold text-gray-900 flex-1">Configurar Horários</Text>
           <TouchableOpacity
             onPress={handleSave}
-            disabled={saving}
-            className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-300' : 'bg-[#a03f3d]'}`}
+            disabled={saving || isCycleLocked}
+            className={`px-4 py-2 rounded-lg ${(saving || isCycleLocked) ? 'bg-gray-300' : 'bg-[#a03f3d]'}`}
           >
             <Text className="text-white font-medium text-sm">{saving ? 'Salvando...' : 'Salvar'}</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView className="flex-1 p-4">
+          {isCycleLocked && (
+            <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+              <Text className="text-xs text-amber-800">
+                Este profissional usa horários alternados por semana. Para editar, use o app web.
+              </Text>
+            </View>
+          )}
           {/* Dentist Picker */}
           <Text className="text-sm font-semibold text-gray-700 mb-2">Profissional</Text>
           <TouchableOpacity

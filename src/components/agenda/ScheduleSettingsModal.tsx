@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, MapPin, UserPlus } from 'lucide-react';
+import { Plus, Trash2, MapPin, UserPlus, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
+import { scheduleSettingsService, computeWeekIndex, type ScheduleSetting } from '@/services/scheduleSettings';
 import type { Location } from '@/services/locations';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { toast } from 'sonner';
@@ -38,6 +38,8 @@ const DAYS_OF_WEEK = [
   { value: 6, label: 'Sábado' },
   { value: 0, label: 'Domingo' },
 ];
+
+const MAX_CYCLE_LENGTH = 8;
 
 interface TimeSlot {
   id: string;
@@ -53,6 +55,8 @@ interface DayConfig {
   slots: TimeSlot[];
 }
 
+type WeekConfig = DayConfig[]; // 7 entries, one per day_of_week
+
 let slotCounter = 0;
 function newSlotId() {
   return `slot_${++slotCounter}`;
@@ -60,6 +64,27 @@ function newSlotId() {
 
 function createDefaultSlot(): TimeSlot {
   return { id: newSlotId(), start_time: '08:00', end_time: '12:00', interval_minutes: 30, location_ids: [] };
+}
+
+function emptyWeek(): WeekConfig {
+  return DAYS_OF_WEEK.map(({ value }) => ({
+    day_of_week: value,
+    is_active: false,
+    slots: [],
+  }));
+}
+
+function nextMondayISO(from: Date = new Date()): string {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0 = Sunday
+  const offset = day === 1 ? 0 : (8 - day) % 7 || 7;
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 interface ScheduleSettingsModalProps {
@@ -75,7 +100,9 @@ interface ScheduleSettingsModalProps {
 export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, locations, isAdmin = false, onRequestAddDentist }: ScheduleSettingsModalProps) {
   const { markStepCompleted } = useOnboarding();
   const [selectedDentist, setSelectedDentist] = useState<string>('');
-  const [days, setDays] = useState<DayConfig[]>([]);
+  const [cycle, setCycle] = useState<WeekConfig[]>([emptyWeek()]);
+  const [activeWeekTab, setActiveWeekTab] = useState(0);
+  const [cycleStartDate, setCycleStartDate] = useState<string>(nextMondayISO());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [locationMode, setLocationMode] = useState<'single' | 'per-slot'>('single');
@@ -83,6 +110,10 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
 
   const showLocationSection = locations.length > 0;
   const showPerSlotLocation = showLocationSection && locationMode === 'per-slot';
+  const cycleLength = cycle.length;
+  const isAlternating = cycleLength > 1;
+  const activeWeek = cycle[activeWeekTab] || cycle[0];
+  const days = activeWeek;
 
   // Auto-select first dentist
   useEffect(() => {
@@ -100,39 +131,58 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const data = await scheduleSettingsService.getByProfessional(clinicId, selectedDentist);
+      const [data, cycleMeta] = await Promise.all([
+        scheduleSettingsService.getByProfessional(clinicId, selectedDentist),
+        scheduleSettingsService.getCycle(clinicId, selectedDentist),
+      ]);
 
-      const byDay = new Map<number, ScheduleSetting[]>();
-      for (const row of data) {
-        const existing = byDay.get(row.day_of_week) || [];
-        existing.push(row);
-        byDay.set(row.day_of_week, existing);
-      }
+      // Determine cycle length from data (max across rows) or metadata
+      const dataCycleLength = data.reduce(
+        (max, s) => Math.max(max, s.cycle_length ?? 1),
+        1,
+      );
+      const effectiveCycleLength = Math.max(
+        dataCycleLength,
+        cycleMeta?.cycle_length ?? 1,
+        1,
+      );
 
-      const allDays: DayConfig[] = DAYS_OF_WEEK.map(({ value }) => {
-        const daySlots = byDay.get(value);
-        if (daySlots && daySlots.length > 0) {
-          return {
-            day_of_week: value,
-            is_active: true,
-            slots: daySlots.map(s => ({
-              id: newSlotId(),
-              start_time: s.start_time.slice(0, 5),
-              end_time: s.end_time.slice(0, 5),
-              interval_minutes: s.interval_minutes,
-              location_ids: s.location_ids ? s.location_ids.split(',') : s.location_id ? [s.location_id] : [],
-            })),
-          };
+      // Bucket rows by week_index
+      const newCycle: WeekConfig[] = Array.from({ length: effectiveCycleLength }, (_, weekIdx) => {
+        const weekRows = data.filter(s => (s.week_index ?? 0) === weekIdx);
+        const byDay = new Map<number, ScheduleSetting[]>();
+        for (const row of weekRows) {
+          const existing = byDay.get(row.day_of_week) || [];
+          existing.push(row);
+          byDay.set(row.day_of_week, existing);
         }
-        return { day_of_week: value, is_active: false, slots: [] };
+        return DAYS_OF_WEEK.map(({ value }) => {
+          const daySlots = byDay.get(value);
+          if (daySlots && daySlots.length > 0) {
+            return {
+              day_of_week: value,
+              is_active: true,
+              slots: daySlots.map(s => ({
+                id: newSlotId(),
+                start_time: s.start_time.slice(0, 5),
+                end_time: s.end_time.slice(0, 5),
+                interval_minutes: s.interval_minutes,
+                location_ids: s.location_ids ? s.location_ids.split(',') : s.location_id ? [s.location_id] : [],
+              })),
+            };
+          }
+          return { day_of_week: value, is_active: false, slots: [] };
+        });
       });
 
-      setDays(allDays);
+      setCycle(newCycle);
+      setActiveWeekTab(0);
+      setCycleStartDate(cycleMeta?.cycle_start_date || nextMondayISO());
 
-      // Auto-detect location mode
+      // Auto-detect location mode across ALL weeks (single mode iff all match)
       if (locations.length > 0) {
-        const activeSlots = allDays.flatMap(d => d.is_active ? d.slots : []);
-        const slotsWithLocations = activeSlots.filter(s => s.location_ids.length > 0);
+        const allActiveSlots = newCycle.flatMap(w => w.flatMap(d => d.is_active ? d.slots : []));
+        const slotsWithLocations = allActiveSlots.filter(s => s.location_ids.length > 0);
 
         if (slotsWithLocations.length > 0) {
           const firstIds = slotsWithLocations[0].location_ids.slice().sort().join(',');
@@ -160,8 +210,13 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
     }
   };
 
+  // Helpers operate on the currently-active week tab
+  const updateActiveWeek = (updater: (week: WeekConfig) => WeekConfig) => {
+    setCycle(prev => prev.map((w, i) => i === activeWeekTab ? updater(w) : w));
+  };
+
   const toggleDay = (dayOfWeek: number, active: boolean) => {
-    setDays(prev => prev.map(d => {
+    updateActiveWeek(week => week.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
       return {
         ...d,
@@ -172,7 +227,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   };
 
   const addSlot = (dayOfWeek: number) => {
-    setDays(prev => prev.map(d => {
+    updateActiveWeek(week => week.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
       const lastSlot = d.slots[d.slots.length - 1];
       const newSlot: TimeSlot = lastSlot
@@ -183,7 +238,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   };
 
   const removeSlot = (dayOfWeek: number, slotId: string) => {
-    setDays(prev => prev.map(d => {
+    updateActiveWeek(week => week.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
       const newSlots = d.slots.filter(s => s.id !== slotId);
       return { ...d, slots: newSlots, is_active: newSlots.length > 0 };
@@ -191,7 +246,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   };
 
   const toggleSlotLocation = (dayOfWeek: number, slotId: string, locationId: string) => {
-    setDays(prev => prev.map(d => {
+    updateActiveWeek(week => week.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
       return {
         ...d,
@@ -205,7 +260,7 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
   };
 
   const updateSlot = (dayOfWeek: number, slotId: string, field: keyof Omit<TimeSlot, 'id'>, value: string | number) => {
-    setDays(prev => prev.map(d => {
+    updateActiveWeek(week => week.map(d => {
       if (d.day_of_week !== dayOfWeek) return d;
       return {
         ...d,
@@ -216,8 +271,10 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
 
   const handleLocationModeChange = (mode: 'single' | 'per-slot') => {
     if (mode === 'single' && locationMode === 'per-slot') {
-      // Find the most common location across all active slots
-      const allLocationIds = days.flatMap(d => d.is_active ? d.slots.flatMap(s => s.location_ids) : []);
+      // Find the most common location across all weeks' active slots
+      const allLocationIds = cycle.flatMap(w =>
+        w.flatMap(d => d.is_active ? d.slots.flatMap(s => s.location_ids) : []),
+      );
       if (allLocationIds.length > 0) {
         const counts = new Map<string, number>();
         for (const id of allLocationIds) {
@@ -234,29 +291,76 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
     setLocationMode(mode);
   };
 
+  const handleAlternatingToggle = (alternating: boolean) => {
+    if (alternating && cycle.length === 1) {
+      // Promote single week to a 2-week cycle (week B starts empty)
+      setCycle(prev => [...prev, emptyWeek()]);
+      setActiveWeekTab(0);
+    } else if (!alternating && cycle.length > 1) {
+      // Collapse to first week only — warn if other weeks have content
+      const otherWeeksHaveContent = cycle.slice(1).some(w => w.some(d => d.is_active));
+      if (otherWeeksHaveContent) {
+        const ok = window.confirm(
+          'Voltar para semanas iguais vai descartar a configuração das outras semanas. Continuar?',
+        );
+        if (!ok) return;
+      }
+      setCycle(prev => [prev[0]]);
+      setActiveWeekTab(0);
+    }
+  };
+
+  const addWeek = () => {
+    if (cycle.length >= MAX_CYCLE_LENGTH) return;
+    setCycle(prev => [...prev, emptyWeek()]);
+    setActiveWeekTab(cycle.length);
+  };
+
+  const removeWeek = (idx: number) => {
+    if (cycle.length <= 1) return;
+    const week = cycle[idx];
+    const hasContent = week.some(d => d.is_active);
+    if (hasContent) {
+      const label = String.fromCharCode(65 + idx);
+      const ok = window.confirm(`Remover Semana ${label}? A configuração será descartada.`);
+      if (!ok) return;
+    }
+    setCycle(prev => prev.filter((_, i) => i !== idx));
+    setActiveWeekTab(prev => Math.min(prev, cycle.length - 2));
+  };
+
   const handleSave = async () => {
     const allSlots: Omit<ScheduleSetting, 'id' | 'clinic_id' | 'professional_id'>[] = [];
-    for (const day of days) {
-      if (!day.is_active) continue;
-      for (const slot of day.slots) {
-        const effectiveLocationIds = locationMode === 'single' && globalLocationId
-          ? [globalLocationId]
-          : slot.location_ids;
-        allSlots.push({
-          day_of_week: day.day_of_week,
-          start_time: slot.start_time,
-          end_time: slot.end_time,
-          interval_minutes: slot.interval_minutes,
-          location_id: effectiveLocationIds[0] || null,
-          location_ids: effectiveLocationIds.length > 0 ? effectiveLocationIds.join(',') : null,
-          is_active: true,
-        });
+    cycle.forEach((week, weekIdx) => {
+      for (const day of week) {
+        if (!day.is_active) continue;
+        for (const slot of day.slots) {
+          const effectiveLocationIds = locationMode === 'single' && globalLocationId
+            ? [globalLocationId]
+            : slot.location_ids;
+          allSlots.push({
+            day_of_week: day.day_of_week,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            interval_minutes: slot.interval_minutes,
+            location_id: effectiveLocationIds[0] || null,
+            location_ids: effectiveLocationIds.length > 0 ? effectiveLocationIds.join(',') : null,
+            is_active: true,
+            week_index: weekIdx,
+            cycle_length: cycle.length,
+          });
+        }
       }
-    }
+    });
 
     setSaving(true);
     try {
-      await scheduleSettingsService.upsert(clinicId, selectedDentist, allSlots);
+      await scheduleSettingsService.upsertWithCycle(
+        clinicId,
+        selectedDentist,
+        allSlots,
+        { cycle_start_date: cycleStartDate, cycle_length: cycle.length },
+      );
       toast.success('Horários salvos com sucesso!');
       markStepCompleted('schedule');
       onOpenChange(false);
@@ -267,6 +371,13 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
       setSaving(false);
     }
   };
+
+  // Compute today's week-of-cycle for the indicator
+  const currentWeekIndex = isAlternating
+    ? computeWeekIndex(todayISO(), cycleStartDate, cycle.length)
+    : 0;
+  const startDateObj = cycleStartDate ? new Date(`${cycleStartDate}T12:00:00Z`) : null;
+  const startsOnMonday = startDateObj ? startDateObj.getUTCDay() === 1 : true;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -345,6 +456,56 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
             </div>
           )}
 
+          {/* Cycle (week alternation) */}
+          {dentists.length > 0 && !loading && (
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                <Label className="text-sm font-medium">Repetição semanal</Label>
+              </div>
+              <RadioGroup
+                value={isAlternating ? 'alternating' : 'weekly'}
+                onValueChange={(v) => handleAlternatingToggle(v === 'alternating')}
+                className="space-y-2"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="weekly" id="cycle-weekly" />
+                  <Label htmlFor="cycle-weekly" className="text-sm font-normal cursor-pointer">
+                    Repete toda semana
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="alternating" id="cycle-alternating" />
+                  <Label htmlFor="cycle-alternating" className="text-sm font-normal cursor-pointer">
+                    Alterna entre semanas
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {isAlternating && (
+                <div className="space-y-2 pt-1">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Início do ciclo (segunda-feira)</Label>
+                    <Input
+                      type="date"
+                      value={cycleStartDate}
+                      onChange={(e) => setCycleStartDate(e.target.value)}
+                      className="h-8 text-sm mt-1"
+                    />
+                    {!startsOnMonday && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        A data escolhida não cai numa segunda — recomendamos ajustar para evitar confusão.
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground bg-muted/40 rounded px-2 py-1.5">
+                    Hoje está na <strong>Semana {String.fromCharCode(65 + currentWeekIndex)}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Location mode */}
           {showLocationSection && dentists.length > 0 && !loading && (
             <div className="rounded-lg border border-border p-3 space-y-2">
@@ -388,6 +549,53 @@ export function ScheduleSettingsModal({ open, onOpenChange, clinicId, dentists, 
                   </Label>
                 </div>
               </RadioGroup>
+            </div>
+          )}
+
+          {/* Week tabs (only when alternating) */}
+          {isAlternating && !loading && dentists.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto border-b border-border pb-1">
+              {cycle.map((_, idx) => {
+                const label = `Semana ${String.fromCharCode(65 + idx)}`;
+                const isActive = idx === activeWeekTab;
+                const isToday = idx === currentWeekIndex;
+                return (
+                  <div key={idx} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setActiveWeekTab(idx)}
+                      className={`text-xs px-3 py-1.5 rounded-t border-b-2 transition-colors ${
+                        isActive
+                          ? 'border-primary text-primary font-medium'
+                          : 'border-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {label}
+                      {isToday && <span className="ml-1 text-[10px] opacity-70">(hoje)</span>}
+                    </button>
+                    {cycle.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeWeek(idx)}
+                        className="text-muted-foreground hover:text-destructive p-0.5"
+                        title={`Remover Semana ${String.fromCharCode(65 + idx)}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {cycle.length < MAX_CYCLE_LENGTH && (
+                <button
+                  type="button"
+                  onClick={addWeek}
+                  className="text-xs px-2 py-1.5 text-muted-foreground hover:text-foreground"
+                  title="Adicionar semana"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           )}
 

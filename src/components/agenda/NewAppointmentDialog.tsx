@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { scheduleSettingsService, type ScheduleSetting } from '@/services/scheduleSettings';
+import { scheduleSettingsService, computeWeekIndex, type ScheduleSetting, type ProfessionalScheduleCycle } from '@/services/scheduleSettings';
 import { LocationsModal } from '@/components/profile/LocationsModal';
 import type { NewAppointmentDialogProps } from './types';
 
@@ -34,9 +34,12 @@ interface SlotInfo {
 function generateTimeSlots(
   settings: ScheduleSetting[],
   dayOfWeek: number,
+  weekIndex: number,
   bookedTimes: string[],
 ): SlotInfo[] {
-  const daySettings = settings.filter(s => s.day_of_week === dayOfWeek && s.is_active);
+  const daySettings = settings.filter(
+    s => s.day_of_week === dayOfWeek && s.is_active && (s.week_index ?? 0) === weekIndex,
+  );
   if (daySettings.length === 0) return [];
 
   const slotsMap = new Map<string, Set<string>>(); // time -> set of locationIds
@@ -100,6 +103,7 @@ export function NewAppointmentDialog({
   const { data: filteredPatients = [], isFetching: isSearchingPatients } = usePatientSearch(debouncedPatientSearch);
   const [showPatientList, setShowPatientList] = useState(false);
   const [scheduleSettings, setScheduleSettings] = useState<ScheduleSetting[]>([]);
+  const [scheduleCycle, setScheduleCycle] = useState<ProfessionalScheduleCycle | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   useEffect(() => {
@@ -137,18 +141,34 @@ export function NewAppointmentDialog({
     }
   }, [preSelectedPatient]);
 
-  // Load schedule settings when dentist changes
+  // Load schedule settings + cycle metadata when dentist changes
   useEffect(() => {
     const dentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
     if (!dentistId || !clinicId) {
       setScheduleSettings([]);
+      setScheduleCycle(null);
       return;
     }
     setLoadingSlots(true);
-    scheduleSettingsService.getByProfessional(clinicId, dentistId)
-      .then(data => setScheduleSettings(data))
-      .catch(() => setScheduleSettings([]))
-      .finally(() => setLoadingSlots(false));
+    let cancelled = false;
+    Promise.all([
+      scheduleSettingsService.getByProfessional(clinicId, dentistId),
+      scheduleSettingsService.getCycle(clinicId, dentistId),
+    ])
+      .then(([settings, cycle]) => {
+        if (cancelled) return;
+        setScheduleSettings(settings);
+        setScheduleCycle(cycle);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setScheduleSettings([]);
+        setScheduleCycle(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSlots(false);
+      });
+    return () => { cancelled = true; };
   }, [form.dentistId, clinicId, dentists]);
 
   useEffect(() => {
@@ -169,16 +189,29 @@ export function NewAppointmentDialog({
   const dateObj = dateForSlots ? new Date(dateForSlots + 'T00:00:00') : null;
   const dayOfWeek = dateObj ? dateObj.getDay() : -1;
 
+  const cycleLength = scheduleCycle?.cycle_length ?? 1;
+  const cycleStart = scheduleCycle?.cycle_start_date ?? dateForSlots ?? '';
+  const weekIndex = dateForSlots && cycleStart
+    ? computeWeekIndex(dateForSlots, cycleStart, cycleLength)
+    : 0;
+
   const activeDentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
   const bookedTimes = existingAppointments
     .filter(a => (!activeDentistId || !a.dentist_id || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
     .map(a => a.time?.slice(0, 5) || '');
 
   const availableSlots = dayOfWeek >= 0
-    ? generateTimeSlots(scheduleSettings, dayOfWeek, bookedTimes)
+    ? generateTimeSlots(scheduleSettings, dayOfWeek, weekIndex, bookedTimes)
     : [];
 
-  const hasScheduleForDay = scheduleSettings.some(s => s.day_of_week === dayOfWeek && s.is_active);
+  const hasScheduleForDay = scheduleSettings.some(
+    s => s.day_of_week === dayOfWeek && s.is_active && (s.week_index ?? 0) === weekIndex,
+  );
+  // True when the dentist DOES work this weekday in some week of the cycle,
+  // but not in the current week — lets us show a clearer empty-state message.
+  const dayExistsInOtherWeek = cycleLength > 1 && scheduleSettings.some(
+    s => s.day_of_week === dayOfWeek && s.is_active && (s.week_index ?? 0) !== weekIndex,
+  );
 
   // Filter locations based on selected time slot's configured locations
   const selectedSlot = form.time ? availableSlots.find(s => s.time === form.time) : null;
@@ -400,6 +433,8 @@ export function NewAppointmentDialog({
               </Select>
             ) : hasScheduleForDay && availableSlots.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">Todos os horários estão ocupados neste dia.</p>
+            ) : dayExistsInOtherWeek ? (
+              <p className="text-xs text-muted-foreground py-2">Este dia não está incluído na semana atual do ciclo deste dentista.</p>
             ) : activeDentistId && scheduleSettings.length > 0 ? (
               <p className="text-xs text-muted-foreground py-2">Este dentista não atende neste dia da semana.</p>
             ) : activeDentistId ? (
