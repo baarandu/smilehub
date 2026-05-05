@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Calendar, ChevronsUpDown, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,6 +66,13 @@ export function ProcedureForm({
     onCreateBudget,
 }: ProcedureFormProps) {
     const [popoverOpen, setPopoverOpen] = useState(false);
+
+    // Auto-fill location when the clinic has a single location (selector is hidden in that case)
+    useEffect(() => {
+        if (locations.length === 1 && !form.location) {
+            onChange({ location: locations[0].name });
+        }
+    }, [locations]);
 
     const toggleBudgetItem = (key: string) => {
         if (!selectedBudgetKeys || !onBudgetSelectionChange) return;
@@ -169,25 +176,27 @@ export function ProcedureForm({
                     </div>
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="location">Local de Atendimento *</Label>
-                    <Select
-                        value={form.location}
-                        onValueChange={(v) => onChange({ location: v })}
-                        disabled={loading}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Selecione o local" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {locations.map((loc) => (
-                                <SelectItem key={loc.id} value={loc.name}>
-                                    {loc.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+                {locations.length !== 1 && (
+                    <div className="space-y-2">
+                        <Label htmlFor="location">Local de Atendimento *</Label>
+                        <Select
+                            value={form.location}
+                            onValueChange={(v) => onChange({ location: v })}
+                            disabled={loading}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {locations.map((loc) => (
+                                    <SelectItem key={loc.id} value={loc.name}>
+                                        {loc.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
 
                 <div className="col-span-2 space-y-2">
                     <Label htmlFor="status">Status do Procedimento</Label>

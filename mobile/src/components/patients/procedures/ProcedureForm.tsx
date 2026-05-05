@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { ChevronDown, X } from 'lucide-react-native';
 import { ProcedureFormState } from './types';
@@ -23,6 +23,13 @@ export function ProcedureForm({
 }: ProcedureFormProps) {
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [showStatusPicker, setShowStatusPicker] = useState(false);
+
+    // Auto-fill location when the clinic has a single location (selector is hidden in that case)
+    useEffect(() => {
+        if (locations.length === 1 && !form.location) {
+            onChange({ location: locations[0].name });
+        }
+    }, [locations]);
 
     // Helper formatting functions
     const formatCurrency = (value: string) => {
@@ -69,47 +76,49 @@ export function ProcedureForm({
                 />
             </View>
 
-            <View>
-                <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento *</Text>
-                {!showLocationPicker ? (
-                    <TouchableOpacity
-                        onPress={() => setShowLocationPicker(true)}
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex-row items-center justify-between"
-                    >
-                        <Text className={form.location ? 'text-gray-900' : 'text-gray-400'}>
-                            {form.location || 'Selecione o local'}
-                        </Text>
-                        <ChevronDown size={20} color="#6B7280" />
-                    </TouchableOpacity>
-                ) : (
-                    <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                        <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
-                            <Text className="font-medium text-gray-700">Selecione o local</Text>
-                            <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
-                                <X size={20} color="#6B7280" />
-                            </TouchableOpacity>
-                        </View>
+            {locations.length !== 1 && (
+                <View>
+                    <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento *</Text>
+                    {!showLocationPicker ? (
                         <TouchableOpacity
-                            onPress={() => { onChange({ location: '' }); setShowLocationPicker(false); }}
-                            className="p-3 border-b border-gray-100"
+                            onPress={() => setShowLocationPicker(true)}
+                            className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex-row items-center justify-between"
                         >
-                            <Text className="text-gray-500">Nenhum local</Text>
+                            <Text className={form.location ? 'text-gray-900' : 'text-gray-400'}>
+                                {form.location || 'Selecione o local'}
+                            </Text>
+                            <ChevronDown size={20} color="#6B7280" />
                         </TouchableOpacity>
-                        {locations.map((location, index) => (
+                    ) : (
+                        <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                                <Text className="font-medium text-gray-700">Selecione o local</Text>
+                                <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
+                                    <X size={20} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
                             <TouchableOpacity
-                                key={location.id}
-                                onPress={() => {
-                                    onChange({ location: location.name });
-                                    setShowLocationPicker(false);
-                                }}
-                                className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                                onPress={() => { onChange({ location: '' }); setShowLocationPicker(false); }}
+                                className="p-3 border-b border-gray-100"
                             >
-                                <Text className="font-medium text-gray-900">{location.name}</Text>
+                                <Text className="text-gray-500">Nenhum local</Text>
                             </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </View>
+                            {locations.map((location, index) => (
+                                <TouchableOpacity
+                                    key={location.id}
+                                    onPress={() => {
+                                        onChange({ location: location.name });
+                                        setShowLocationPicker(false);
+                                    }}
+                                    className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''}`}
+                                >
+                                    <Text className="font-medium text-gray-900">{location.name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            )}
 
             <View>
                 <Text className="text-sm font-medium text-gray-700 mb-2">Status do Tratamento</Text>

@@ -107,6 +107,13 @@ export function NewAppointmentDialog({
   const [scheduleCycle, setScheduleCycle] = useState<ProfessionalScheduleCycle | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // Auto-fill location when the clinic has a single location (selector is hidden in that case)
+  useEffect(() => {
+    if (locations.length === 1 && !form.location) {
+      setForm(prev => ({ ...prev, location: locations[0].name }));
+    }
+  }, [locations]);
+
   useEffect(() => {
     if (open) {
       if (appointmentToEdit) {
@@ -481,44 +488,46 @@ export function NewAppointmentDialog({
               placeholder="Ex: Limpeza, Exodontia"
             />
           </div>
-          <div className="space-y-2">
-            <Label>Local de Atendimento</Label>
-            {locations.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                <p className="text-sm text-amber-800">Nenhum local de atendimento cadastrado.</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => setShowLocationsModal(true)}
+          {locations.length !== 1 && (
+            <div className="space-y-2">
+              <Label>Local de Atendimento</Label>
+              {locations.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                  <p className="text-sm text-amber-800">Nenhum local de atendimento cadastrado.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => setShowLocationsModal(true)}
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    Cadastrar Local
+                  </Button>
+                </div>
+              ) : selectedSlot && selectedSlot.locationIds.length > 0 && filteredLocations.length === 1 ? (
+                <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg">
+                  <span className="text-sm">{filteredLocations[0].name}</span>
+                </div>
+              ) : (
+                <Select
+                  value={form.location}
+                  onValueChange={(v) => setForm({ ...form, location: v })}
                 >
-                  <MapPin className="w-3.5 h-3.5" />
-                  Cadastrar Local
-                </Button>
-              </div>
-            ) : selectedSlot && selectedSlot.locationIds.length > 0 && filteredLocations.length === 1 ? (
-              <div className="flex items-center gap-2 p-2.5 bg-muted rounded-lg">
-                <span className="text-sm">{filteredLocations[0].name}</span>
-              </div>
-            ) : (
-              <Select
-                value={form.location}
-                onValueChange={(v) => setForm({ ...form, location: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o local" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredLocations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.name}>
-                      {loc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o local" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredLocations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.name}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Observações</Label>
             <Input

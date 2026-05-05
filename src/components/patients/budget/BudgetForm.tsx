@@ -61,6 +61,13 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
 
     const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
 
+    // Auto-fill location when the clinic has a single location (selector is hidden in that case)
+    useEffect(() => {
+        if (locations.length === 1 && !location) {
+            setLocation(locations[0].name);
+        }
+    }, [locations]);
+
     // Load editing item into form
     useEffect(() => {
         if (editingItem) {
@@ -293,39 +300,41 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2">
-                        <Label>Local de Atendimento</Label>
-                        <Select value={location} onValueChange={setLocation}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione o local..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {locations.length === 0 ? (
-                                    <div className="py-4 px-3 text-center">
-                                        <MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-                                        <p className="text-sm font-medium text-muted-foreground mb-1">Nenhum local cadastrado</p>
-                                        <p className="text-xs text-muted-foreground/70 mb-3">Cadastre seus locais de atendimento</p>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            className="w-full gap-1.5"
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                onAddLocation?.();
-                                            }}
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            Cadastrar Local
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    locations.map(loc => (
-                                        <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
-                                    ))
-                                )}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {locations.length !== 1 && (
+                        <div className="space-y-2">
+                            <Label>Local de Atendimento</Label>
+                            <Select value={location} onValueChange={setLocation}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o local..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {locations.length === 0 ? (
+                                        <div className="py-4 px-3 text-center">
+                                            <MapPin className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                                            <p className="text-sm font-medium text-muted-foreground mb-1">Nenhum local cadastrado</p>
+                                            <p className="text-xs text-muted-foreground/70 mb-3">Cadastre seus locais de atendimento</p>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                className="w-full gap-1.5"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    onAddLocation?.();
+                                                }}
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                Cadastrar Local
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        locations.map(loc => (
+                                            <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-2">

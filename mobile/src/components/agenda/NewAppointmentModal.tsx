@@ -71,6 +71,13 @@ export function NewAppointmentModal({
     }
   }, [appointmentToEdit]);
 
+  // Auto-fill location when the clinic has a single location (selector is hidden in that case)
+  React.useEffect(() => {
+    if (locations.length === 1 && !newAppointment.location) {
+      setNewAppointment(prev => ({ ...prev, location: locations[0].name }));
+    }
+  }, [locations]);
+
   // Handle pre-selected patient from patient creation flow
   React.useEffect(() => {
     if (preSelectedPatient) {
@@ -333,51 +340,53 @@ export function NewAppointmentModal({
             />
           </View>
 
-          <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento</Text>
-            {!showLocationPicker ? (
-              <TouchableOpacity
-                onPress={() => setShowLocationPicker(true)}
-                className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-between"
-              >
-                <Text className={newAppointment.location ? 'text-gray-900' : 'text-gray-400'}>
-                  {newAppointment.location || 'Selecione o local'}
-                </Text>
-                <ChevronDown size={20} color="#6B7280" />
-              </TouchableOpacity>
-            ) : (
-              <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
-                  <Text className="font-medium text-gray-700">Selecione o local</Text>
-                  <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
-                    <X size={20} color="#6B7280" />
-                  </TouchableOpacity>
-                </View>
+          {locations.length !== 1 && (
+            <View className="mb-4">
+              <Text className="text-sm font-medium text-gray-700 mb-2">Local de Atendimento</Text>
+              {!showLocationPicker ? (
                 <TouchableOpacity
-                  onPress={() => { setNewAppointment({ ...newAppointment, location: '' }); setShowLocationPicker(false); }}
-                  className="p-3 border-b border-gray-100"
+                  onPress={() => setShowLocationPicker(true)}
+                  className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center justify-between"
                 >
-                  <Text className="text-gray-500">Nenhum local</Text>
+                  <Text className={newAppointment.location ? 'text-gray-900' : 'text-gray-400'}>
+                    {newAppointment.location || 'Selecione o local'}
+                  </Text>
+                  <ChevronDown size={20} color="#6B7280" />
                 </TouchableOpacity>
-                {locations.length === 0 ? (
-                  <View className="p-4 items-center">
-                    <Text className="text-gray-400 text-sm">Nenhum local cadastrado</Text>
-                  </View>
-                ) : (
-                  locations.map((location, index) => (
-                    <TouchableOpacity
-                      key={location.id}
-                      onPress={() => { setNewAppointment({ ...newAppointment, location: location.name }); setShowLocationPicker(false); }}
-                      className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${newAppointment.location === location.name ? 'bg-[#fef2f2]' : ''}`}
-                    >
-                      <Text className={`font-medium ${newAppointment.location === location.name ? 'text-[#8b3634]' : 'text-gray-900'}`}>{location.name}</Text>
-                      {location.address && <Text className="text-gray-500 text-sm">{location.address}</Text>}
+              ) : (
+                <View className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <View className="flex-row items-center justify-between p-3 border-b border-gray-100 bg-gray-50">
+                    <Text className="font-medium text-gray-700">Selecione o local</Text>
+                    <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
+                      <X size={20} color="#6B7280" />
                     </TouchableOpacity>
-                  ))
-                )}
-              </View>
-            )}
-          </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => { setNewAppointment({ ...newAppointment, location: '' }); setShowLocationPicker(false); }}
+                    className="p-3 border-b border-gray-100"
+                  >
+                    <Text className="text-gray-500">Nenhum local</Text>
+                  </TouchableOpacity>
+                  {locations.length === 0 ? (
+                    <View className="p-4 items-center">
+                      <Text className="text-gray-400 text-sm">Nenhum local cadastrado</Text>
+                    </View>
+                  ) : (
+                    locations.map((location, index) => (
+                      <TouchableOpacity
+                        key={location.id}
+                        onPress={() => { setNewAppointment({ ...newAppointment, location: location.name }); setShowLocationPicker(false); }}
+                        className={`p-3 ${index < locations.length - 1 ? 'border-b border-gray-100' : ''} ${newAppointment.location === location.name ? 'bg-[#fef2f2]' : ''}`}
+                      >
+                        <Text className={`font-medium ${newAppointment.location === location.name ? 'text-[#8b3634]' : 'text-gray-900'}`}>{location.name}</Text>
+                        {location.address && <Text className="text-gray-500 text-sm">{location.address}</Text>}
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              )}
+            </View>
+          )}
 
           <View className="mb-6">
             <Text className="text-sm font-medium text-gray-700 mb-2">Observações</Text>
