@@ -542,22 +542,6 @@ export default function Agenda() {
               DayContent: DayContentComponent,
             }}
           />
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-3 mt-5 pt-5 border-t border-border">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Confirmado
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-              Agendado
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              Não compareceu
-            </div>
-          </div>
         </div>
 
         {/* Right Column - Appointments List */}
