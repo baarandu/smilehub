@@ -660,7 +660,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
                                                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                                         <Users className="w-4 h-4 text-primary" />
                                                     </div>
-                                                    <div className="min-w-0">
+                                                    <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium truncate">{member.email}</p>
                                                     </div>
                                                 </div>
