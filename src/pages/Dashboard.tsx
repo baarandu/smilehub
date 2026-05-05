@@ -253,7 +253,7 @@ export default function Dashboard() {
       {((overdueSummary?.total_count ?? 0) > 0 || (receivablesDueToday?.length ?? 0) > 0) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {(overdueSummary?.total_count ?? 0) > 0 && (
-            <div onClick={() => navigate('/financeiro')} className="cursor-pointer">
+            <div onClick={() => navigate('/financeiro', { state: { tab: 'receivables' } })} className="cursor-pointer">
               <StatsCard
                 title="Pagamentos em Atraso"
                 value={`${overdueSummary!.total_count} (R$ ${(overdueSummary!.total_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})`}
@@ -263,7 +263,7 @@ export default function Dashboard() {
             </div>
           )}
           {(receivablesDueToday?.length ?? 0) > 0 && (
-            <div onClick={() => navigate('/financeiro')} className="cursor-pointer">
+            <div onClick={() => navigate('/financeiro', { state: { tab: 'receivables' } })} className="cursor-pointer">
               <StatsCard
                 title="Parcelas do Dia"
                 value={receivablesDueToday!.length}

@@ -34,10 +34,11 @@ export default function Financial() {
   const location = useLocation();
   const navigate = useNavigate();
   const now = new Date();
-  const initialState = location.state as { month?: number; year?: number } | null;
+  const initialState = location.state as { month?: number; year?: number; tab?: string } | null;
   const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState(initialState?.month ?? now.getMonth());
   const [selectedYear, setSelectedYear] = useState(initialState?.year ?? now.getFullYear());
+  const [activeTab, setActiveTab] = useState<string>(initialState?.tab ?? 'income');
 
   // Clear route state after consuming it
   useEffect(() => {
@@ -248,7 +249,7 @@ export default function Financial() {
       </div>
 
       {/* Abas com Ícones */}
-      <Tabs defaultValue="income" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
           <TabsTrigger value="income" className="gap-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200">
             <TrendingUp className="w-4 h-4" />
