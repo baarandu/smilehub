@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
-import { X, CreditCard, Banknote, Wallet, Landmark, ArrowRight, Calendar, PiggyBank, Receipt, Percent, User, Building2, AlertCircle } from 'lucide-react-native';
+import { X, CreditCard, Banknote, Wallet, ArrowRight, Calendar, PiggyBank, Percent, User, Building2, AlertCircle, Clock } from 'lucide-react-native';
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig, FinancialSettings } from '../../types/database';
 import type { PJSource } from '../../types/incomeTax';
@@ -9,6 +9,7 @@ export interface PaymentTransaction {
     date: string; // YYYY-MM-DD
     amount: number;
     method: string;
+    isImmediate?: boolean; // false = fiado (a receber). undefined/true = pago à vista
 }
 
 export interface FinancialBreakdown {
@@ -74,6 +75,9 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     // Anticipation State
     const [isAnticipated, setIsAnticipated] = useState(false);
 
+    // Fiado State (registra em A Receber sem criar receita)
+    const [isFiado, setIsFiado] = useState(false);
+
     // Discount State
     const [discountStr, setDiscountStr] = useState('');
     const discountAmount = parseFloat(discountStr) || 0;
@@ -116,6 +120,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         setInstallmentItems([]);
         setSelectedBrand(null);
         setIsAnticipated(false);
+        setIsFiado(false);
         // Reset payer data
         setPayerIsPatient(true);
         setPayerType('PF');
@@ -252,11 +257,20 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         const startDate = budgetDate ? new Date(budgetDate + 'T12:00:00') : new Date();
         const baseDateStr = isNaN(startDate.getTime()) ? new Date().toISOString().split('T')[0] : startDate.toISOString().split('T')[0];
 
+        // For fiado, default the single-installment due date to next month (not today).
+        const fiadoSingleDueDate = (() => {
+            const d = budgetDate ? new Date(budgetDate + 'T12:00:00') : new Date();
+            const safe = isNaN(d.getTime()) ? new Date() : d;
+            safe.setMonth(safe.getMonth() + 1);
+            return safe.toISOString().split('T')[0];
+        })();
+
         if (effectiveIsAnticipated) {
             transactions = [{
                 method: selectedMethod,
                 amount: effectiveValue,
-                date: baseDateStr
+                date: baseDateStr,
+                isImmediate: !isFiado,
             }];
         } else if (isInstallments) {
             const totalPlanned = getTotalPlanned();
@@ -269,14 +283,16 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                 return {
                     method: selectedMethod,
                     amount: parseFloat(item.amount.replace(',', '.')),
-                    date: `${year}-${month}-${day}`
+                    date: `${year}-${month}-${day}`,
+                    isImmediate: !isFiado,
                 };
             });
         } else {
             transactions = [{
                 method: selectedMethod,
                 amount: effectiveValue,
-                date: baseDateStr
+                date: isFiado ? fiadoSingleDueDate : baseDateStr,
+                isImmediate: !isFiado,
             }];
         }
 
@@ -297,8 +313,6 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'debit', label: 'Débito', icon: CreditCard },
         { id: 'pix', label: 'PIX', icon: Banknote },
         { id: 'cash', label: 'Dinheiro', icon: Wallet },
-        { id: 'transfer', label: 'Transf.', icon: Landmark },
-        { id: 'boleto', label: 'Boleto', icon: Receipt },
     ];
 
     const allBrands = [
@@ -499,6 +513,26 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                                         />
                                     </View>
                                 )}
+
+                                {/* Fiado Toggle - registers in A Receber without booking income */}
+                                <View className="mb-3 bg-amber-50 p-2.5 rounded-lg border border-amber-200 flex-row items-center justify-between">
+                                    <View className="flex-1 mr-3">
+                                        <View className="flex-row items-center gap-1.5">
+                                            <Clock size={14} color="#B45309" />
+                                            <Text className="text-xs font-medium text-amber-900">É fiado?</Text>
+                                        </View>
+                                        <Text className="text-[10px] text-amber-700">Registra em "A Receber". Só vira receita após confirmação.</Text>
+                                    </View>
+                                    <Switch
+                                        value={isFiado}
+                                        onValueChange={(val) => {
+                                            setIsFiado(val);
+                                            if (val) setIsAnticipated(false);
+                                        }}
+                                        trackColor={{ false: '#D1D5DB', true: '#D1D5DB' }}
+                                        thumbColor={isFiado ? '#B45309' : '#9CA3AF'}
+                                    />
+                                </View>
                             </View>
                         )}
 

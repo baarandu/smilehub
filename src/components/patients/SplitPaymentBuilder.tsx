@@ -65,8 +65,7 @@ export function SplitPaymentBuilder({
   })();
 
   const [portions, setPortions] = useState<PortionState[]>([
-    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: availableBrands[0]?.id || 'visa', dueDate: today, isImmediate: true },
-    { id: crypto.randomUUID(), method: 'cash', amount: '', installments: 1, brand: availableBrands[0]?.id || 'visa', dueDate: nextMonth, isImmediate: false },
+    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: availableBrands[0]?.id || 'visa', dueDate: nextMonth, isImmediate: false },
   ]);
 
   const allocatedCents = useMemo(() => {
@@ -153,7 +152,7 @@ export function SplitPaymentBuilder({
   };
 
   const removePortion = (id: string) => {
-    if (portions.length <= 2) return;
+    if (portions.length <= 1) return;
     setPortions(prev => prev.filter(p => p.id !== id));
   };
 
@@ -257,7 +256,7 @@ export function SplitPaymentBuilder({
                     })}
                   />
                 </div>
-                {portions.length > 2 && (
+                {portions.length > 1 && (
                   <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removePortion(portion.id)}>
                     <Trash2 className="w-3.5 h-3.5 text-red-400" />
                   </Button>

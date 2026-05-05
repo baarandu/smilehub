@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import { budgetsService } from '../services/budgets';
 import { financialService } from '../services/financial';
 import { prosthesisService } from '../services/prosthesis';
+import { receivablesService, type FiadoPortion } from '../services/receivables';
 import { supabase } from '../lib/supabase';
 import { type ToothEntry, calculateToothTotal, getToothDisplayName, calculateBudgetStatus } from '../components/patients/budgetUtils';
 import type { BudgetWithItems, Patient } from '../types/database';
@@ -83,6 +84,7 @@ interface Transaction {
     date: string;
     amount: number;
     method: string;
+    isImmediate?: boolean;
 }
 
 interface PayerData {
@@ -217,6 +219,60 @@ export function usePatientPayments(
             const selectedTooth = parsed.teeth[selectedPaymentItem.toothIndex];
             const targetLocationRate = getLocationRate(selectedPaymentItem, breakdown);
             const installmentsCount = transactions ? transactions.length : 1;
+
+            // Detect fully-fiado mode: every transaction marked as not immediate
+            const isAllFiado = !!transactions && transactions.length > 0 && transactions.every(t => t.isImmediate === false);
+
+            if (isAllFiado) {
+                const toothDescription = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)}`;
+                const grossAmount = breakdown?.grossAmount ?? transactions!.reduce((s, t) => s + t.amount, 0);
+
+                const portions: FiadoPortion[] = transactions!.map(t => {
+                    const ratio = grossAmount > 0 ? (t.amount / grossAmount) : (1 / transactions!.length);
+                    const taxAmt = breakdown ? breakdown.taxAmount * ratio : 0;
+                    const cardFeeAmt = breakdown ? breakdown.cardFeeAmount * ratio : 0;
+                    const anticipationAmt = breakdown ? (breakdown.anticipationAmount || 0) * ratio : 0;
+                    const locationAmt = breakdown
+                        ? breakdown.locationAmount * ratio
+                        : (targetLocationRate > 0 ? (t.amount * targetLocationRate) / 100 : 0);
+                    const netAmt = t.amount - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
+
+                    return {
+                        amount: t.amount,
+                        payment_method: t.method,
+                        installments: transactions!.length,
+                        brand: brand || null,
+                        due_date: t.date,
+                        tax_rate: breakdown?.taxRate ?? 0,
+                        tax_amount: taxAmt,
+                        card_fee_rate: breakdown?.cardFeeRate ?? 0,
+                        card_fee_amount: cardFeeAmt,
+                        anticipation_rate: breakdown?.anticipationRate ?? 0,
+                        anticipation_amount: anticipationAmt,
+                        location_rate: targetLocationRate,
+                        location_amount: locationAmt,
+                        net_amount: netAmt,
+                        payer_is_patient: payerData?.payer_is_patient ?? true,
+                        payer_type: (payerData?.payer_type as 'PF' | 'PJ') || 'PF',
+                        payer_name: payerData?.payer_name || null,
+                        payer_cpf: payerData?.payer_cpf || null,
+                        pj_source_id: payerData?.pj_source_id || null,
+                    };
+                });
+
+                await receivablesService.createFiadoReceivables(
+                    selectedPaymentItem.budgetId,
+                    patient!.id,
+                    selectedPaymentItem.toothIndex,
+                    toothDescription,
+                    portions,
+                );
+
+                Alert.alert('Sucesso', `Fiado registrado em A Receber (${portions.length} parcela${portions.length > 1 ? 's' : ''}). Confirme o recebimento quando o paciente pagar.`);
+                loadBudgets();
+                onComplete?.();
+                return;
+            }
 
             parsed.teeth[selectedPaymentItem.toothIndex] = {
                 ...selectedTooth,
@@ -384,6 +440,69 @@ export function usePatientPayments(
             // Taxa do orçamento (global para todos os itens)
             const budgetRate = budget.location_rate;
             const notesRate = parsed.locationRate ?? 0;
+
+            // Detect fully-fiado mode: every transaction marked as not immediate
+            const isAllFiado = !!transactions && transactions.length > 0 && transactions.every(t => t.isImmediate === false);
+
+            if (isAllFiado) {
+                // Create receivables per tooth (each gets its own splitGroupId via createFiadoReceivables)
+                for (const item of selectedItems.items) {
+                    const itemOriginalValue = calculateToothTotal(item.tooth.values);
+                    const ratio = itemOriginalValue / originalTotal;
+                    const itemValue = totalAmount * ratio;
+
+                    const toothRateForTx = item.tooth.locationRate;
+                    const targetLocationRate = (toothRateForTx && toothRateForTx > 0) ? toothRateForTx : (budgetRate && budgetRate > 0) ? budgetRate : notesRate;
+
+                    const toothDescription = `${item.tooth.treatments.join(', ')} - ${getToothDisplayName(item.tooth.tooth)}`;
+
+                    const portions: FiadoPortion[] = transactions!.map(t => {
+                        const txRatio = totalAmount > 0 ? (t.amount / totalAmount) : (1 / transactions!.length);
+                        const itemAmount = itemValue * txRatio;
+                        const taxAmt = breakdown ? breakdown.taxAmount * ratio * txRatio : 0;
+                        const cardFeeAmt = breakdown ? breakdown.cardFeeAmount * ratio * txRatio : 0;
+                        const anticipationAmt = breakdown ? (breakdown.anticipationAmount || 0) * ratio * txRatio : 0;
+                        const baseForLocation = itemAmount - cardFeeAmt;
+                        const locationAmt = targetLocationRate > 0 ? (baseForLocation * targetLocationRate) / 100 : 0;
+                        const netAmt = itemAmount - taxAmt - cardFeeAmt - anticipationAmt - locationAmt;
+
+                        return {
+                            amount: itemAmount,
+                            payment_method: t.method,
+                            installments: transactions!.length,
+                            brand: brand || null,
+                            due_date: t.date,
+                            tax_rate: breakdown?.taxRate ?? 0,
+                            tax_amount: taxAmt,
+                            card_fee_rate: breakdown?.cardFeeRate ?? 0,
+                            card_fee_amount: cardFeeAmt,
+                            anticipation_rate: breakdown?.anticipationRate ?? 0,
+                            anticipation_amount: anticipationAmt,
+                            location_rate: targetLocationRate,
+                            location_amount: locationAmt,
+                            net_amount: netAmt,
+                            payer_is_patient: payerData?.payer_is_patient ?? true,
+                            payer_type: (payerData?.payer_type as 'PF' | 'PJ') || 'PF',
+                            payer_name: payerData?.payer_name || null,
+                            payer_cpf: payerData?.payer_cpf || null,
+                            pj_source_id: payerData?.pj_source_id || null,
+                        };
+                    });
+
+                    await receivablesService.createFiadoReceivables(
+                        selectedItems.budgetId,
+                        patient!.id,
+                        item.index,
+                        toothDescription,
+                        portions,
+                    );
+                }
+
+                Alert.alert('Sucesso', `${selectedItems.items.length} item(ns) registrado(s) em A Receber. Confirme o recebimento quando o paciente pagar.`);
+                loadBudgets();
+                onComplete?.();
+                return;
+            }
 
             // Update all selected items to paid status
             for (const item of selectedItems.items) {

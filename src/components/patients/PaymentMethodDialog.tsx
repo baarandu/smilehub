@@ -355,8 +355,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 <div className="flex items-center gap-2">
                                     <SplitSquareHorizontal className="w-4 h-4 text-violet-600" />
                                     <div>
-                                        <Label className="text-sm text-violet-900 cursor-pointer" htmlFor="split-toggle">Dividir Pagamento</Label>
-                                        <p className="text-xs text-violet-600">Pagar com mais de uma forma ou agendar parcelas</p>
+                                        <Label className="text-sm text-violet-900 cursor-pointer" htmlFor="split-toggle">Parcelar / Fiado</Label>
+                                        <p className="text-xs text-violet-600">Dividir em parcelas, agendar pagamentos futuros ou registrar fiado</p>
                                     </div>
                                 </div>
                                 <Switch

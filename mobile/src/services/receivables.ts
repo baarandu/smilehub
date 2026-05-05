@@ -1,22 +1,104 @@
 import { supabase } from '../lib/supabase';
 import { financialService } from './financial';
 import type { PaymentReceivable, OverdueSummary, ReceivableFilters } from '../types/receivables';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 async function getClinicId(): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
-    const { data: clinicUser } = await supabase
-        .from('clinic_users')
-        .select('clinic_id')
-        .eq('user_id', user.id)
-        .single();
+    const clinicId = await resolveActiveClinicId(user.id);
+    if (!clinicId) throw new Error('Clínica não encontrada');
+    return clinicId;
+}
 
-    if (!clinicUser?.clinic_id) throw new Error('Clínica não encontrada');
-    return (clinicUser as any).clinic_id;
+export interface FiadoPortion {
+    amount: number;
+    payment_method: string;
+    installments: number;
+    brand: string | null;
+    due_date: string;
+    tax_rate: number;
+    tax_amount: number;
+    card_fee_rate: number;
+    card_fee_amount: number;
+    anticipation_rate: number;
+    anticipation_amount: number;
+    location_rate: number;
+    location_amount: number;
+    net_amount: number;
+    payer_is_patient: boolean;
+    payer_type: 'PF' | 'PJ';
+    payer_name: string | null;
+    payer_cpf: string | null;
+    pj_source_id: string | null;
 }
 
 export const receivablesService = {
+    async createFiadoReceivables(
+        budgetId: string,
+        patientId: string,
+        toothIndex: number,
+        toothDescription: string,
+        portions: FiadoPortion[],
+    ): Promise<PaymentReceivable[]> {
+        const clinicId = await getClinicId();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const splitGroupId = (globalThis as any).crypto?.randomUUID?.()
+            || `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+
+        const created: PaymentReceivable[] = [];
+
+        for (let i = 0; i < portions.length; i++) {
+            const p = portions[i];
+
+            const { data, error } = await supabase
+                .from('payment_receivables')
+                .insert({
+                    clinic_id: clinicId,
+                    patient_id: patientId,
+                    budget_id: budgetId,
+                    split_group_id: splitGroupId,
+                    split_index: i,
+                    amount: p.amount,
+                    payment_method: p.payment_method,
+                    installments: p.installments,
+                    brand: p.brand,
+                    due_date: p.due_date,
+                    status: 'pending',
+                    tooth_index: toothIndex,
+                    tooth_description: toothDescription,
+                    tax_rate: p.tax_rate,
+                    tax_amount: p.tax_amount,
+                    card_fee_rate: p.card_fee_rate,
+                    card_fee_amount: p.card_fee_amount,
+                    anticipation_rate: p.anticipation_rate,
+                    anticipation_amount: p.anticipation_amount,
+                    location_rate: p.location_rate,
+                    location_amount: p.location_amount,
+                    net_amount: p.net_amount,
+                    payer_is_patient: p.payer_is_patient,
+                    payer_type: p.payer_type,
+                    payer_name: p.payer_name,
+                    payer_cpf: p.payer_cpf,
+                    pj_source_id: p.pj_source_id,
+                    created_by: user.id,
+                } as any)
+                .select()
+                .single();
+
+            if (error) throw error;
+            created.push(data as PaymentReceivable);
+        }
+
+        // Sync the budget tooth JSON so splitPayments + status reflect the new receivables
+        await this._syncBudgetToothStatus(splitGroupId, budgetId, toothIndex);
+
+        return created;
+    },
+
     async confirmReceivable(
         receivableId: string,
         confirmationDate?: string,
