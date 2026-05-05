@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { getSelectedClinicId, setSelectedClinicId } from '../lib/selectedClinic';
+import { useAuth } from './AuthContext';
 
 type Role = 'admin' | 'dentist' | 'assistant' | 'editor' | 'viewer';
 
@@ -10,6 +12,13 @@ interface ClinicMember {
     role: Role;
     roles: Role[];
     created_at: string;
+}
+
+export interface AvailableClinic {
+    id: string;
+    name: string;
+    role: string;
+    roles: string[];
 }
 
 interface ClinicContextType {
@@ -25,6 +34,8 @@ interface ClinicContextType {
     canEdit: boolean;
     loading: boolean;
     members: ClinicMember[];
+    availableClinics: AvailableClinic[];
+    switchClinic: (clinicId: string) => Promise<void>;
     refetch: () => Promise<void>;
 }
 
@@ -38,6 +49,7 @@ interface ClinicUserRow {
 const ClinicContext = createContext<ClinicContextType | undefined>(undefined);
 
 export function ClinicProvider({ children }: { children: React.ReactNode }) {
+    const { refreshSubscription } = useAuth();
     const [clinicId, setClinicId] = useState<string | undefined>(undefined);
     const [clinicName, setClinicName] = useState<string | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
@@ -46,6 +58,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     const [role, setRole] = useState<Role | null>(null);
     const [roles, setRoles] = useState<Role[]>([]);
     const [members, setMembers] = useState<ClinicMember[]>([]);
+    const [availableClinics, setAvailableClinics] = useState<AvailableClinic[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchClinicData = async () => {
@@ -69,14 +82,6 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
             setUserName(fullName);
             setGender(userGender);
 
-            // Create display name with Dr./Dra. prefix
-            if (fullName) {
-                const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
-                setDisplayName(`${prefix} ${fullName}`);
-            } else {
-                setDisplayName(null);
-            }
-
             // Get user's clinic and role (prioritize admin role if user has multiple clinics)
             const { data: clinicUsers } = await supabase
                 .from('clinic_users')
@@ -89,13 +94,27 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
                 .eq('user_id', user.id)
                 .order('role', { ascending: true }); // 'admin' comes before 'dentist' alphabetically
 
-            // Get the first clinic (preferring admin role)
             const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
+
+            // Expose all clinics user belongs to (for the clinic switcher UI)
+            setAvailableClinics(
+                (clinicUsersList || []).map(cu => ({
+                    id: cu.clinic_id,
+                    name: cu.clinics?.name || 'Clínica sem nome',
+                    role: cu.role,
+                    roles: cu.roles || [cu.role],
+                }))
+            );
+
+            // Selection precedence: AsyncStorage selected_clinic_id → admin role → first row
+            const savedClinicId = await getSelectedClinicId();
             const typedClinicUser = clinicUsersList && clinicUsersList.length > 0
-                ? (clinicUsersList.find(cu => {
-                    const r = cu.roles || [cu.role];
-                    return r.includes('admin');
-                }) || clinicUsersList[0])
+                ? (clinicUsersList.find(cu => savedClinicId && cu.clinic_id === savedClinicId)
+                    || clinicUsersList.find(cu => {
+                        const r = cu.roles || [cu.role];
+                        return r.includes('admin');
+                    })
+                    || clinicUsersList[0])
                 : null;
 
             if (typedClinicUser) {
@@ -104,6 +123,21 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
                 const userRoles = (typedClinicUser.roles || [typedClinicUser.role]) as Role[];
                 setRole(typedClinicUser.role as Role);
                 setRoles(userRoles);
+
+                // Display name: secretária-só (assistant/viewer) sem Dr./Dra.,
+                // demais com prefixo conforme gênero.
+                if (fullName) {
+                    const isSecretaryOnly = userRoles.length > 0
+                        && userRoles.every(r => r === 'assistant' || r === 'viewer');
+                    if (isSecretaryOnly) {
+                        setDisplayName(fullName);
+                    } else {
+                        const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
+                        setDisplayName(`${prefix} ${fullName}`);
+                    }
+                } else {
+                    setDisplayName(null);
+                }
 
                 if (userRoles.includes('admin')) {
                     const { data: membersData } = await supabase
@@ -119,6 +153,8 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
                         })) as ClinicMember[]);
                     }
                 }
+            } else {
+                setDisplayName(fullName);
             }
         } catch (error) {
             console.error('Error fetching clinic data:', error);
@@ -137,6 +173,12 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
+    const switchClinic = async (newClinicId: string) => {
+        if (newClinicId === clinicId) return;
+        await setSelectedClinicId(newClinicId);
+        await Promise.all([fetchClinicData(), refreshSubscription()]);
+    };
+
     const value: ClinicContextType = {
         clinicId,
         clinicName,
@@ -150,6 +192,8 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
         canEdit: roles.some(r => ['admin', 'editor', 'dentist'].includes(r)),
         loading,
         members,
+        availableClinics,
+        switchClinic,
         refetch: fetchClinicData,
     };
 
