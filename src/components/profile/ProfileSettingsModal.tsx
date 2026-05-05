@@ -400,7 +400,7 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md md:max-w-lg">
+            <DialogContent className="sm:max-w-md md:max-w-2xl overflow-hidden">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <div className="w-9 h-9 rounded-xl bg-[#a03f3d]/10 flex items-center justify-center">
