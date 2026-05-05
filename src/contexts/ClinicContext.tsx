@@ -108,14 +108,6 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
             setUserName(fullName);
             setGender(userGender);
 
-            // Create display name with Dr./Dra. prefix
-            if (fullName) {
-                const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
-                setDisplayName(`${prefix} ${fullName}`);
-            } else {
-                setDisplayName(null);
-            }
-
             // Build available clinics list
             const clinicUsersList = clinicUsers as unknown as ClinicUserRow[] | null;
             const clinicOptions: ClinicOption[] = (clinicUsersList || []).map(cu => ({
@@ -148,6 +140,21 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 setRole(typedClinicUser.role as Role);
                 setRoles(userRoles);
 
+                // Display name: secretária-só (assistant/viewer) sem Dr./Dra.,
+                // demais com prefixo conforme gênero.
+                if (fullName) {
+                    const isSecretaryOnly = userRoles.length > 0
+                        && userRoles.every(r => r === 'assistant' || r === 'viewer');
+                    if (isSecretaryOnly) {
+                        setDisplayName(fullName);
+                    } else {
+                        const prefix = userGender === 'female' ? 'Dra.' : 'Dr.';
+                        setDisplayName(`${prefix} ${fullName}`);
+                    }
+                } else {
+                    setDisplayName(null);
+                }
+
                 // If admin or super admin, also fetch all members
                 if (userRoles.includes('admin') || !!(profile as any)?.is_super_admin) {
                     const { data: membersData } = await supabase
@@ -171,6 +178,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
                 setRole(null);
                 setRoles([]);
                 setMembers([]);
+                setDisplayName(fullName);
             }
         } catch (error) {
             console.error('Error fetching clinic data:', error);
