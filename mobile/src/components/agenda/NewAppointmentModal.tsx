@@ -18,6 +18,7 @@ interface NewAppointmentModalProps {
     location: string;
     notes: string;
     procedure?: string;
+    isWalkIn?: boolean;
   }) => Promise<void>;
   appointmentToEdit?: any; // Using any to avoid importing AppointmentWithPatient mismatch issues if not exported
   onUpdate?: (id: string, updates: any) => Promise<void>;
@@ -49,6 +50,7 @@ export function NewAppointmentModal({
     location: '',
     notes: '',
     procedure: '',
+    isWalkIn: false,
   });
 
   React.useEffect(() => {
@@ -60,10 +62,11 @@ export function NewAppointmentModal({
         location: appointmentToEdit.location || '',
         notes: appointmentToEdit.notes || '',
         procedure: appointmentToEdit.procedure_name || '',
+        isWalkIn: !!appointmentToEdit.is_walk_in,
       });
       setPatientSearch(appointmentToEdit.patients?.name || '');
     } else {
-      setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+      setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '', isWalkIn: false });
       setPatientSearch('');
     }
   }, [appointmentToEdit]);
@@ -121,6 +124,7 @@ export function NewAppointmentModal({
           notes: newAppointment.notes,
           procedure_name: newAppointment.procedure,
           date: appointmentToEdit.date, // Preserve date or allow change? Assuming same date for now or passed elsewhere
+          is_walk_in: newAppointment.isWalkIn,
         });
       } else {
         await onCreateAppointment({
@@ -129,12 +133,13 @@ export function NewAppointmentModal({
           location: newAppointment.location,
           notes: newAppointment.notes,
           procedure: newAppointment.procedure,
+          isWalkIn: newAppointment.isWalkIn,
         });
       }
 
       // Reset handled by useEffect on prop change, but safe to clear here
       if (!appointmentToEdit) {
-        setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+        setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '', isWalkIn: false });
         setPatientSearch('');
       }
     } catch (error: any) {
@@ -182,7 +187,7 @@ export function NewAppointmentModal({
 
   const handleClose = () => {
     setPatientSearch('');
-    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '' });
+    setNewAppointment({ patientId: '', patientName: '', time: '', location: '', notes: '', procedure: '', isWalkIn: false });
     onClose();
   };
 
@@ -293,7 +298,16 @@ export function NewAppointmentModal({
           </View>
 
           <View className="mb-4">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Horário *</Text>
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-sm font-medium text-gray-700">Horário *</Text>
+              <TouchableOpacity
+                onPress={() => setNewAppointment({ ...newAppointment, isWalkIn: !newAppointment.isWalkIn })}
+              >
+                <Text className="text-xs text-[#a03f3d]">
+                  {newAppointment.isWalkIn ? '✓ Encaixe (urgência)' : 'Marcar como encaixe'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
               className="bg-white border border-gray-200 rounded-xl p-4 text-gray-900"
               placeholder="HH:MM"
@@ -302,6 +316,11 @@ export function NewAppointmentModal({
               keyboardType="numeric"
               maxLength={5}
             />
+            {newAppointment.isWalkIn && (
+              <Text className="text-xs text-gray-500 mt-1">
+                Horário fora da grade regular. Vale só para esta consulta.
+              </Text>
+            )}
           </View>
 
           <View className="mb-4">

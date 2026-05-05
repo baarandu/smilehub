@@ -97,6 +97,7 @@ export function NewAppointmentDialog({
     notes: '',
     procedure: '',
     dentistId: '',
+    isWalkIn: false,
   });
   const [patientSearch, setPatientSearch] = useState('');
   const debouncedPatientSearch = useDebounce(patientSearch, 300);
@@ -118,10 +119,11 @@ export function NewAppointmentDialog({
           notes: appointmentToEdit.notes || '',
           procedure: appointmentToEdit.procedure_name || '',
           dentistId: appointmentToEdit.dentist_id || '',
+          isWalkIn: !!(appointmentToEdit as any).is_walk_in,
         });
       } else {
         const defaultDentistId = dentists.length === 1 ? dentists[0].id : '';
-        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: defaultDentistId });
+        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: defaultDentistId, isWalkIn: false });
       }
       setPatientSearch('');
       setShowPatientList(false);
@@ -231,7 +233,7 @@ export function NewAppointmentDialog({
     } else {
       onAdd(form);
     }
-    setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: '' });
+    setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: '', isWalkIn: false });
     setPatientSearch('');
   };
 
@@ -390,8 +392,30 @@ export function NewAppointmentDialog({
 
           {/* Time selection */}
           <div className="space-y-2">
-            <Label>Horário *</Label>
-            {loadingSlots ? (
+            <div className="flex items-center justify-between">
+              <Label>Horário *</Label>
+              {activeDentistId && (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, isWalkIn: !form.isWalkIn, time: '' })}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {form.isWalkIn ? 'Usar horário regular' : 'Encaixe (urgência)'}
+                </button>
+              )}
+            </div>
+            {form.isWalkIn ? (
+              <div className="space-y-1.5">
+                <Input
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm({ ...form, time: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Horário fora da grade regular do dentista. Vale só para esta consulta.
+                </p>
+              </div>
+            ) : loadingSlots ? (
               <p className="text-xs text-muted-foreground py-2">Carregando horários...</p>
             ) : !activeDentistId ? (
               <p className="text-xs text-muted-foreground py-2">Selecione um dentista para ver os horários disponíveis.</p>

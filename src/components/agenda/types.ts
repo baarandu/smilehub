@@ -33,6 +33,7 @@ export interface AppointmentFormData {
   notes: string;
   procedure: string;
   dentistId: string;
+  isWalkIn?: boolean;
 }
 
 export interface NewAppointmentDialogProps {

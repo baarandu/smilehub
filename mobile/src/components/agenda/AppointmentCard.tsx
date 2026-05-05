@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { MapPin, Baby } from 'lucide-react-native';
+import { MapPin, Baby, Zap } from 'lucide-react-native';
 import { STATUS_CONFIG } from './constants';
 import type { AppointmentWithPatient } from '../../types/database';
 
@@ -32,6 +32,12 @@ export function AppointmentCard({ appointment, onPress }: AppointmentCardProps) 
           <Text className={`text-2xl font-bold ${isChild ? 'text-sky-600' : 'text-[#a03f3d]'}`}>
             {appointment.time?.slice(0, 5)}
           </Text>
+          {(appointment as any).is_walk_in && (
+            <View className="flex-row items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded-full bg-amber-100">
+              <Zap size={10} color="#b45309" />
+              <Text className="text-[10px] font-medium text-amber-700">Encaixe</Text>
+            </View>
+          )}
         </View>
         <View className="flex-1">
           <View className="flex-row items-center gap-2">

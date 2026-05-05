@@ -142,6 +142,7 @@ export default function Agenda() {
         location: string;
         notes: string;
         procedure?: string;
+        isWalkIn?: boolean;
     }) => {
         // Check for time conflict
         const timeConflict = appointments.find(
@@ -170,7 +171,8 @@ export default function Agenda() {
                 notes: appointment.notes || null,
                 procedure_name: appointment.procedure || null,
                 clinic_id: clinicId,
-            });
+                is_walk_in: !!appointment.isWalkIn,
+            } as any);
 
             console.log('=== AGENDAMENTO CRIADO COM SUCESSO ===');
             console.log('Result:', result);

@@ -175,7 +175,7 @@ export default function Agenda() {
     }
   };
 
-  const handleAddAppointment = async (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string }) => {
+  const handleAddAppointment = async (data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string; isWalkIn?: boolean }) => {
     if (!data.patientId || !data.time) {
       toast.error('Selecione um paciente e horário');
       return;
@@ -202,7 +202,8 @@ export default function Agenda() {
         procedure_name: data.procedure || null,
         dentist_id: data.dentistId || null,
         clinic_id: clinicId,
-      });
+        is_walk_in: !!data.isWalkIn,
+      } as any);
 
       setDialogOpen(false);
       toast.success('Consulta agendada com sucesso!');
@@ -213,7 +214,7 @@ export default function Agenda() {
     }
   };
 
-  const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string }) => {
+  const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string; isWalkIn?: boolean }) => {
     // Check for time conflict per dentist (exclude current appointment, include unassigned)
     const timeConflict = appointments.find(
       apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
@@ -234,7 +235,8 @@ export default function Agenda() {
         notes: data.notes || null,
         procedure_name: data.procedure || null,
         dentist_id: data.dentistId || null,
-      });
+        is_walk_in: !!data.isWalkIn,
+      } as any);
 
       setDialogOpen(false);
       setEditingAppointment(null);

@@ -1,4 +1,4 @@
-import { User, MapPin, Edit3, Trash2, Baby } from 'lucide-react';
+import { User, MapPin, Edit3, Trash2, Baby, Zap } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -38,6 +38,12 @@ export function AppointmentCard({
       <div className="flex items-center gap-4">
         <div className="text-center min-w-[60px]">
           <p className="text-xl font-bold text-primary">{appointment.time?.slice(0, 5)}</p>
+          {(appointment as any).is_walk_in && (
+            <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
+              <Zap className="w-2.5 h-2.5" />
+              Encaixe
+            </span>
+          )}
         </div>
         <div
           className="flex-1 cursor-pointer"
