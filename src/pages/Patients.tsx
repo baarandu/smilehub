@@ -22,7 +22,8 @@ export default function Patients() {
   const [showBudgetsModal, setShowBudgetsModal] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
+  const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen, steps } = useOnboarding();
+  const firstPatientCompleted = steps.find(s => s.id === 'first_patient')?.completed ?? false;
 
   // Infinite Scroll Hook (Pagination)
   const {
@@ -44,6 +45,12 @@ export default function Patients() {
   useEffect(() => {
     loadPendingCount();
   }, []);
+
+  useEffect(() => {
+    if (!isInfiniteLoading && (infiniteData?.pages[0]?.length ?? 0) > 0 && !firstPatientCompleted) {
+      markStepCompleted('first_patient');
+    }
+  }, [isInfiniteLoading, infiniteData, firstPatientCompleted, markStepCompleted]);
 
   const loadPendingCount = async () => {
     try {
@@ -94,7 +101,7 @@ export default function Patients() {
   return (
     <div className="space-y-6">
       {/* Onboarding context banner */}
-      {shouldReturnToOnboarding && (
+      {shouldReturnToOnboarding && !firstPatientCompleted && (
         <div className="flex items-center justify-between gap-3 p-3 bg-[#a03f3d]/5 border border-[#a03f3d]/20 rounded-xl">
           <p className="text-sm text-[#a03f3d]">
             <span className="font-medium">Configuração inicial:</span> Cadastre seu primeiro paciente para continuar
