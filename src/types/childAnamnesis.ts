@@ -68,6 +68,7 @@ export interface ChildAnamnesis {
   used_bottle_details: string | null;
   currently_uses_bottle: boolean;
   uses_pacifier: boolean;
+  uses_pacifier_details: string | null;
   sugar_frequency: string | null;
   sugar_before_bed: boolean;
   sleeps_after_sugar_liquid: boolean;

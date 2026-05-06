@@ -115,7 +115,7 @@ const emptyForm = {
     brushingBy: '', brushingFrequency: '', brushingStartAge: '',
     hygieneInstruction: false, fluorideToothpaste: false, toothpasteBrand: '',
     dentalFloss: false, dentalFlossDetails: '', mouthwash: false, mouthwashDetails: '',
-    wasBreastfed: false, usedBottle: false, usedBottleDetails: '', currentlyUsesBottle: false, usesPacifier: false,
+    wasBreastfed: false, usedBottle: false, usedBottleDetails: '', currentlyUsesBottle: false, usesPacifier: false, usesPacifierDetails: '',
     sugarFrequency: '', sugarBeforeBed: false, sleepsAfterSugarLiquid: false,
     nailBiting: false, objectBiting: false, thumbSucking: false, prolongedPacifier: false,
     teethGrinding: false, teethGrindingDetails: '', mouthBreathing: false,
@@ -203,6 +203,7 @@ export function NewChildAnamneseModal({ visible, patientId, onClose, onSuccess, 
                     usedBottleDetails: anamnesis.used_bottle_details || '',
                     currentlyUsesBottle: anamnesis.currently_uses_bottle || false,
                     usesPacifier: anamnesis.uses_pacifier || false,
+                    usesPacifierDetails: anamnesis.uses_pacifier_details || '',
                     sugarFrequency: anamnesis.sugar_frequency || '',
                     sugarBeforeBed: anamnesis.sugar_before_bed || false,
                     sleepsAfterSugarLiquid: anamnesis.sleeps_after_sugar_liquid || false,
@@ -302,6 +303,7 @@ export function NewChildAnamneseModal({ visible, patientId, onClose, onSuccess, 
                 was_breastfed: form.wasBreastfed, used_bottle: form.usedBottle,
                 used_bottle_details: form.usedBottle ? form.usedBottleDetails || null : null,
                 currently_uses_bottle: form.currentlyUsesBottle, uses_pacifier: form.usesPacifier,
+                uses_pacifier_details: form.usesPacifier ? form.usesPacifierDetails || null : null,
                 sugar_frequency: form.sugarFrequency || null,
                 sugar_before_bed: form.sugarBeforeBed, sleeps_after_sugar_liquid: form.sleepsAfterSugarLiquid,
                 nail_biting: form.nailBiting, object_biting: form.objectBiting,
@@ -458,7 +460,7 @@ export function NewChildAnamneseModal({ visible, patientId, onClose, onSuccess, 
                         <QuestionField label="Foi amamentado?" value={form.wasBreastfed} onValueChange={v => setForm({ ...form, wasBreastfed: v })} showDetails={false} />
                         <QuestionField label="Usou mamadeira?" value={form.usedBottle} onValueChange={v => setForm({ ...form, usedBottle: v })} details={form.usedBottleDetails} onDetailsChange={t => setForm({ ...form, usedBottleDetails: t })} detailsPlaceholder="Até que idade?" />
                         <QuestionField label="Usa mamadeira atualmente?" value={form.currentlyUsesBottle} onValueChange={v => setForm({ ...form, currentlyUsesBottle: v })} showDetails={false} />
-                        <QuestionField label="Usa chupeta?" value={form.usesPacifier} onValueChange={v => setForm({ ...form, usesPacifier: v })} showDetails={false} />
+                        <QuestionField label="Usa chupeta?" value={form.usesPacifier} onValueChange={v => setForm({ ...form, usesPacifier: v })} details={form.usesPacifierDetails} onDetailsChange={t => setForm({ ...form, usesPacifierDetails: t })} detailsPlaceholder="Por quanto tempo?" />
                         <SelectField label="Frequência de açúcar" value={form.sugarFrequency} options={[{ value: 'raramente', label: 'Raramente' }, { value: '1x_dia', label: '1x ao dia' }, { value: '2_3x_dia', label: '2-3x ao dia' }, { value: 'varias_vezes', label: 'Várias vezes' }]} onChange={v => setForm({ ...form, sugarFrequency: v })} />
                         <QuestionField label="Açúcar antes de dormir?" value={form.sugarBeforeBed} onValueChange={v => setForm({ ...form, sugarBeforeBed: v })} showDetails={false} />
                         <QuestionField label="Dorme após líquido açucarado?" value={form.sleepsAfterSugarLiquid} onValueChange={v => setForm({ ...form, sleepsAfterSugarLiquid: v })} showDetails={false} />

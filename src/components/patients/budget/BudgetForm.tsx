@@ -21,6 +21,7 @@ import {
 } from '@/utils/budgetUtils';
 import { PROSTHESIS_MATERIAL_LABELS } from '@/types/prosthesis';
 import { PROSTHETIC_TREATMENTS } from '@/utils/prosthesis';
+import { useClinicCustomTreatments } from '@/hooks/useClinicCustomTreatments';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Odontogram } from './odontogram';
@@ -57,7 +58,12 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
     const [itemLocationRate, setItemLocationRate] = useState<string>('');
     const [treatmentsOpen, setTreatmentsOpen] = useState(false);
 
-    const sortedTreatments = useMemo(() => [...TREATMENTS].sort((a, b) => a.localeCompare(b, 'pt-BR')), []);
+    const { data: customTreatments = [] } = useClinicCustomTreatments();
+    const sortedTreatments = useMemo(() => {
+        const customNames = customTreatments.map(t => t.name);
+        const merged = Array.from(new Set([...TREATMENTS, ...customNames]));
+        return merged.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    }, [customTreatments]);
 
     const isEditing = editingItem !== null && editingIndex !== null && editingIndex !== undefined;
 

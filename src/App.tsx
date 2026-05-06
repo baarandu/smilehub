@@ -40,6 +40,7 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const TrialExpired = lazy(() => import("./pages/TrialExpired"));
 const Support = lazy(() => import("./pages/Support"));
 const Settings = lazy(() => import("./pages/Settings"));
+const CustomTreatmentsSettings = lazy(() => import("./pages/CustomTreatmentsSettings"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const DPA = lazy(() => import("./pages/DPA"));
@@ -122,6 +123,7 @@ const AppContent = () => (
         <Route path="/inicio" element={<AppLayout><Index /></AppLayout>} />
         <Route path="/suporte" element={<AppLayout><Support /></AppLayout>} />
         <Route path="/configuracoes" element={<AppLayout><Settings /></AppLayout>} />
+        <Route path="/configuracoes/tratamentos" element={<AppLayout><CustomTreatmentsSettings /></AppLayout>} />
         <Route path="/configuracoes/sessoes" element={<AppLayout><SessionManagement /></AppLayout>} />
         <Route path="/pacientes" element={<AppLayout><Patients /></AppLayout>} />
         <Route path="/pacientes/:id" element={<AppLayout><PatientDetail /></AppLayout>} />

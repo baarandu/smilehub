@@ -98,7 +98,7 @@ export function ChildAnamneseSummaryDialog({ open, onOpenChange, anamnesis }: Pr
     { label: 'Foi amamentado', value: a.was_breastfed },
     { label: 'Usou mamadeira', value: a.used_bottle, details: a.used_bottle_details },
     { label: 'Usa mamadeira atualmente', value: a.currently_uses_bottle },
-    { label: 'Usa chupeta', value: a.uses_pacifier },
+    { label: 'Usa chupeta', value: a.uses_pacifier, details: a.uses_pacifier_details },
     { label: 'Açúcar antes de dormir', value: a.sugar_before_bed },
     { label: 'Dorme após líquido açucarado', value: a.sleeps_after_sugar_liquid },
   ];

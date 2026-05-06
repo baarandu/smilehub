@@ -152,6 +152,7 @@ const emptyForm = {
   usedBottleDetails: '',
   currentlyUsesBottle: false,
   usesPacifier: false,
+  usesPacifierDetails: '',
   sugarFrequency: '',
   sugarBeforeBed: false,
   sleepsAfterSugarLiquid: false,
@@ -297,6 +298,7 @@ export function NewChildAnamneseDialog({
           usedBottleDetails: anamnesis.used_bottle_details || '',
           currentlyUsesBottle: anamnesis.currently_uses_bottle || false,
           usesPacifier: anamnesis.uses_pacifier || false,
+          usesPacifierDetails: anamnesis.uses_pacifier_details || '',
           sugarFrequency: anamnesis.sugar_frequency || '',
           sugarBeforeBed: anamnesis.sugar_before_bed || false,
           sleepsAfterSugarLiquid: anamnesis.sleeps_after_sugar_liquid || false,
@@ -599,6 +601,7 @@ export function NewChildAnamneseDialog({
         used_bottle_details: form.usedBottle ? form.usedBottleDetails || null : null,
         currently_uses_bottle: form.currentlyUsesBottle,
         uses_pacifier: form.usesPacifier,
+        uses_pacifier_details: form.usesPacifier ? form.usesPacifierDetails || null : null,
         sugar_frequency: form.sugarFrequency || null,
         sugar_before_bed: form.sugarBeforeBed,
         sleeps_after_sugar_liquid: form.sleepsAfterSugarLiquid,
@@ -940,7 +943,7 @@ export function NewChildAnamneseDialog({
             <QuestionField label="Foi amamentado?" value={form.wasBreastfed} onValueChange={(v) => setForm({ ...form, wasBreastfed: v })} showDetails={false} />
             <QuestionField label="Usou mamadeira?" value={form.usedBottle} onValueChange={(v) => setForm({ ...form, usedBottle: v })} details={form.usedBottleDetails} onDetailsChange={(t) => setForm({ ...form, usedBottleDetails: t })} detailsPlaceholder="Até que idade?" />
             <QuestionField label="Usa mamadeira atualmente?" value={form.currentlyUsesBottle} onValueChange={(v) => setForm({ ...form, currentlyUsesBottle: v })} showDetails={false} />
-            <QuestionField label="Usa chupeta?" value={form.usesPacifier} onValueChange={(v) => setForm({ ...form, usesPacifier: v })} showDetails={false} />
+            <QuestionField label="Usa chupeta?" value={form.usesPacifier} onValueChange={(v) => setForm({ ...form, usesPacifier: v })} details={form.usesPacifierDetails} onDetailsChange={(t) => setForm({ ...form, usesPacifierDetails: t })} detailsPlaceholder="Por quanto tempo?" />
 
             <div className="space-y-2">
               <Label>Frequência de ingestão de açúcar</Label>

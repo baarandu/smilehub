@@ -18,7 +18,8 @@ import {
   Lock,
   AlertTriangle,
   ClipboardCheck,
-  PenLine
+  PenLine,
+  FlaskConical
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
@@ -122,6 +123,14 @@ export default function Settings() {
             description="Assinatura ICP-Brasil de prontuários"
             to="/assinaturas"
           />
+          {isAdmin && (
+            <SettingCard
+              icon={FlaskConical}
+              title="Tratamentos Personalizados"
+              description="Adicione tratamentos da sua clínica"
+              to="/configuracoes/tratamentos"
+            />
+          )}
         </div>
       </div>
 
