@@ -259,7 +259,7 @@ export const analyticsService = {
     const patientsByAge = AGE_RANGES.map(r => ({ range: r.label, count: 0 }));
     for (const p of patients) {
       if (!p.birth_date) continue;
-      const age = diffYears(now, new Date(p.birth_date));
+      const age = diffYears(now, new Date(p.birth_date + 'T00:00:00'));
       const idx = AGE_RANGES.findIndex(r => age >= r.min && age <= r.max);
       if (idx >= 0) patientsByAge[idx].count++;
     }

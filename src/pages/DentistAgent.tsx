@@ -56,7 +56,7 @@ export default function DentistAgent() {
         setPatientName(data.name);
         if (data.birth_date) {
           const today = new Date();
-          const birth = new Date(data.birth_date);
+          const birth = new Date(data.birth_date + 'T00:00:00');
           let age = today.getFullYear() - birth.getFullYear();
           const m = today.getMonth() - birth.getMonth();
           if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;

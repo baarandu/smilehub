@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { DocumentTemplate, Patient } from '../types/database';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export const documentTemplatesService = {
     async getAll(): Promise<DocumentTemplate[]> {
@@ -65,8 +66,8 @@ export const documentTemplatesService = {
         const replacements: Record<string, string> = {
             'nome': patient.name || '',
             'cpf': patient.cpf || '___.___.___-__',
-            'data_nascimento': patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('pt-BR') : '__/__/____',
-            'data': new Date(date).toLocaleDateString('pt-BR')
+            'data_nascimento': patient.birth_date ? new Date(patient.birth_date + 'T00:00:00').toLocaleDateString('pt-BR') : '__/__/____',
+            'data': new Date(date + 'T00:00:00').toLocaleDateString('pt-BR')
         };
 
         for (const [key, value] of Object.entries(replacements)) {
@@ -82,18 +83,8 @@ export const documentTemplatesService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
 
-        // Get clinic_id for storage path and DB insert
-        const { data: clinicUser, error: clinicError } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (clinicError || !(clinicUser as any)?.clinic_id) {
-            throw new Error('Clinic not found');
-        }
-
-        const clinicId = (clinicUser as any).clinic_id as string;
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clinic not found');
 
         // Read file as base64
         const base64Data = await FileSystem.readAsStringAsync(fileUri, {

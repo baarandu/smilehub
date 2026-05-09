@@ -81,16 +81,22 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
       .toUpperCase();
   };
 
-  const calculateAge = (birthDate: string | null) => {
+  const calculateAge = (birthDate: string | null): string | null => {
     if (!birthDate) return null;
     const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
+    const birth = new Date(birthDate + 'T00:00:00');
+    let years = today.getFullYear() - birth.getFullYear();
+    let months = today.getMonth() - birth.getMonth();
+    if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+      years--;
+      months += 12;
     }
-    return age;
+    if (today.getDate() < birth.getDate()) {
+      months--;
+      if (months < 0) months += 12;
+    }
+    if (years < 1) return `${months} ${months === 1 ? 'mês' : 'meses'}`;
+    return `${years} ${years === 1 ? 'ano' : 'anos'}`;
   };
 
   const age = calculateAge(patient.birth_date);
@@ -433,8 +439,8 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <CalendarIcon className="w-4 h-4" />
                   <span className="text-sm">
-                    {new Date(patient.birth_date).toLocaleDateString('pt-BR')}
-                    {age && ` (${age} anos)`}
+                    {new Date(patient.birth_date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {age && ` (${age})`}
                   </span>
                 </div>
               )}

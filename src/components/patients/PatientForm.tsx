@@ -233,7 +233,7 @@ export function PatientForm({
 
   const calculatedAge = useMemo(() => {
     if (!form.birthDate) return '';
-    const birth = new Date(form.birthDate);
+    const birth = new Date(form.birthDate + 'T00:00:00');
     const today = new Date();
     let years = today.getFullYear() - birth.getFullYear();
     let months = today.getMonth() - birth.getMonth();

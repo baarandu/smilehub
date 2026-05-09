@@ -235,14 +235,14 @@ export default function Patients() {
 
     const formatDateDisplay = (dateStr: string | null) => {
         if (!dateStr) return null;
-        const date = new Date(dateStr);
+        const date = new Date(dateStr + 'T00:00:00');
         return date.toLocaleDateString('pt-BR');
     };
 
     const calculateAge = (birthDate: string | null) => {
         if (!birthDate) return null;
         const today = new Date();
-        const birth = new Date(birthDate);
+        const birth = new Date(birthDate + 'T00:00:00');
         let age = today.getFullYear() - birth.getFullYear();
         const monthDiff = today.getMonth() - birth.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
