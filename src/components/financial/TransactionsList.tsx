@@ -69,7 +69,7 @@ function TransactionItem({ transaction, index }: TransactionItemProps) {
           <div>
             <p className="font-medium text-foreground">{transaction.description}</p>
             <p className="text-sm text-muted-foreground">
-              {transaction.category} • {new Date(transaction.date).toLocaleDateString('pt-BR')}
+              {transaction.category} • {new Date(transaction.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}
               {transaction.location && ` • ${transaction.location}`}
             </p>
           </div>

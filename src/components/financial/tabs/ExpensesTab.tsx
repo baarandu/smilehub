@@ -446,7 +446,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                                 : t.description}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        <span className="text-xs text-slate-400">{new Date(t.date).toLocaleDateString()}</span>
+                                        <span className="text-xs text-slate-400">{new Date(t.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                                         {t.category && (
                                             <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-slate-500">
                                                 {t.category}
@@ -498,7 +498,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                             <div className="bg-muted/30 rounded-lg p-4 space-y-3">
                                 <div className="flex items-center gap-3">
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm">{new Date(selectedExpense.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                    <span className="text-sm">{new Date(selectedExpense.date.split('T')[0] + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                                 </div>
                                 {selectedExpense.category && (
                                     <div className="flex items-center gap-3">
