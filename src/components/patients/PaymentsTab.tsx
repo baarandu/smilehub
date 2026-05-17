@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle, Calculator, Clock, Calendar, AlertCircle, Banknote, Smartphone, MoreHorizontal, X } from 'lucide-react';
+import { CreditCard, CheckCircle, Calculator, Clock, Calendar, AlertCircle, Banknote, Smartphone, MoreHorizontal, X, FilePlus2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,9 @@ import type { PJSource } from '@/types/incomeTax';
 import { usePatientReceivables, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
 import { ConfirmReceivableDialog } from './ConfirmReceivableDialog';
 import type { PaymentReceivable } from '@/types/receivables';
+import { useNfseByPatient } from '@/hooks/useNfseDocuments';
+import { NfseUploadDialog } from '@/components/nfse/NfseUploadDialog';
+import { NfseStatusBadge } from '@/components/nfse/NfseStatusBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +56,18 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const confirmReceivable = useConfirmReceivable();
   const cancelReceivable = useCancelReceivable();
   const [confirmingReceivable, setConfirmingReceivable] = useState<PaymentReceivable | null>(null);
+
+  // NFS-e attached to this patient (lookup by budget_id + tooth_index)
+  const { data: nfseDocs = [] } = useNfseByPatient(patientId);
+  const [nfseTarget, setNfseTarget] = useState<ItemToPay | null>(null);
+
+  const findNfseForItem = (item: ItemToPay) =>
+    nfseDocs.find(
+      (n) =>
+        n.budget_id === item.budgetId &&
+        n.tooth_index === item.toothIndex &&
+        n.status !== 'canceled',
+    );
 
   useEffect(() => {
     loadData();
@@ -584,6 +599,25 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                             </>
                           )}
                         </div>
+                        {/* NFS-e: badge if attached, else upload button */}
+                        <div className="mt-1.5">
+                          {(() => {
+                            const nfse = findNfseForItem(item);
+                            return nfse ? (
+                              <NfseStatusBadge status={nfse.status} invoiceNumber={nfse.invoice_number} />
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[10px] px-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
+                                onClick={() => setNfseTarget(item)}
+                              >
+                                <FilePlus2 className="w-3 h-3 mr-1" />
+                                Anexar nota fiscal
+                              </Button>
+                            );
+                          })()}
+                        </div>
                         {isPartial && totalAmount > 0 && (
                           <div className="mt-2 w-48">
                             <div className="flex justify-between text-[10px] text-slate-500 mb-0.5">
@@ -656,6 +690,19 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               toast({ variant: "destructive", title: "Erro", description: "Falha ao confirmar recebimento." });
             }
           }}
+        />
+      )}
+
+      {nfseTarget && (
+        <NfseUploadDialog
+          open={!!nfseTarget}
+          onClose={() => setNfseTarget(null)}
+          defaultPatientId={patientId}
+          defaultBudgetId={nfseTarget.budgetId}
+          defaultToothIndex={nfseTarget.toothIndex}
+          defaultServiceValue={getItemValue(nfseTarget)}
+          defaultDescription={`${nfseTarget.tooth.treatments.join(', ')} - ${getToothDisplayName(nfseTarget.tooth.tooth)}`}
+          contextLabel={`${getToothDisplayName(nfseTarget.tooth.tooth)} — ${nfseTarget.tooth.treatments.join(', ')}`}
         />
       )}
     </div>

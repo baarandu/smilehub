@@ -18,6 +18,7 @@ import { getWhatsAppNumber } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { TaxDeadlinesAlertBanner } from '@/components/tax-deadlines/TaxDeadlinesAlertBanner';
 import { PendingBudgetsDialog } from '@/components/patients/PendingBudgetsDialog';
 import { WeeklyAppointmentsChart } from '@/components/dashboard-preview/WeeklyAppointmentsChart';
 import { ProsthesisStatusChart } from '@/components/dashboard-preview/ProsthesisStatusChart';
@@ -186,6 +187,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Banner de prazos fiscais críticos (renderiza somente se há atrasos / vence hoje) */}
+      <TaxDeadlinesAlertBanner detailsPath="/financeiro" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">

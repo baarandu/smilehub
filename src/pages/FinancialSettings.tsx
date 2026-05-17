@@ -16,6 +16,8 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { CardMachinesSection } from '@/components/financial/CardMachinesSection';
 import { useCardMachines } from '@/hooks/useCardMachines';
+import { ProlaboreManagement } from '@/components/prolabore/ProlaboreManagement';
+import { FatorRCard } from '@/components/prolabore/FatorRCard';
 
 // Helper to format brand names with proper capitalization
 const formatBrandName = (brand: string): string => {
@@ -718,6 +720,12 @@ export default function FinancialSettings() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Pró-labore + Fator R */}
+                <div className="space-y-4 pt-2">
+                    <FatorRCard year={new Date().getFullYear()} month={new Date().getMonth() + 1} />
+                    <ProlaboreManagement />
+                </div>
             </div>
             {ConfirmDialog}
         </div>

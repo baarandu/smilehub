@@ -1,12 +1,17 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X, MessageCircle, User, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X, MessageCircle, User, ChevronDown, ChevronUp, ExternalLink, FileText, ClipboardCheck, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Transaction } from '@/components/financial';
 import { IncomeTab } from '@/components/financial/tabs/IncomeTab';
 import { ExpensesTab } from '@/components/financial/tabs/ExpensesTab';
 import { ClosureTab } from '@/components/financial/tabs/ClosureTab';
+import { NfseTab } from '@/components/financial/tabs/NfseTab';
+import { AccountantChecklistTab } from '@/components/financial/tabs/AccountantChecklistTab';
+import { TaxDeadlinesCalendar } from '@/components/tax-deadlines/TaxDeadlinesCalendar';
+import { TaxDeadlinesAlertBanner } from '@/components/tax-deadlines/TaxDeadlinesAlertBanner';
+import { FatorRAlertBanner } from '@/components/prolabore/FatorRCard';
 import { financialService } from '@/services/financial';
 import { toast } from 'sonner';
 import { useClinicReceivables, useOverdueSummary, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
@@ -248,9 +253,19 @@ export default function Financial() {
         </div>
       </div>
 
+      {/* Fator R compact alert (only when atencao/critico) */}
+      <FatorRAlertBanner
+        year={selectedYear}
+        month={selectedMonth + 1}
+        onConfigure={() => navigate('/financeiro/configuracoes')}
+      />
+
+      {/* Banner de prazos críticos (em atraso / vence hoje) */}
+      <TaxDeadlinesAlertBanner detailsPath="/financeiro" />
+
       {/* Abas com Ícones */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
           <TabsTrigger value="income" className="gap-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200">
             <TrendingUp className="w-4 h-4" />
             <span>Receitas</span>
@@ -267,6 +282,18 @@ export default function Financial() {
                 {overdueSummary!.total_count}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="nfse" className="gap-2 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:border-emerald-200">
+            <FileText className="w-4 h-4" />
+            <span>Notas Fiscais</span>
+          </TabsTrigger>
+          <TabsTrigger value="accountant" className="gap-2 data-[state=active]:bg-violet-50 data-[state=active]:text-violet-700 data-[state=active]:border-violet-200">
+            <ClipboardCheck className="w-4 h-4" />
+            <span>Contador</span>
+          </TabsTrigger>
+          <TabsTrigger value="deadlines" className="gap-2 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700 data-[state=active]:border-rose-200">
+            <CalendarDays className="w-4 h-4" />
+            <span>Prazos</span>
           </TabsTrigger>
           <TabsTrigger value="closure" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200">
             <ClipboardList className="w-4 h-4" />
@@ -588,6 +615,18 @@ export default function Financial() {
               }}
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="nfse">
+          <NfseTab year={selectedYear} month={selectedMonth} />
+        </TabsContent>
+
+        <TabsContent value="accountant">
+          <AccountantChecklistTab year={selectedYear} month={selectedMonth} />
+        </TabsContent>
+
+        <TabsContent value="deadlines">
+          <TaxDeadlinesCalendar />
         </TabsContent>
 
         <TabsContent value="closure">
