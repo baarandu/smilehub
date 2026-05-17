@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, FileCheck2, X, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, FileCheck2, X, Loader2, ChevronsUpDown, User, Link2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useCreateNfse } from '@/hooks/useNfseDocuments';
+import { useCreateNfse, useUnlinkedPaymentsByPatient } from '@/hooks/useNfseDocuments';
+import { usePatients } from '@/hooks/usePatients';
+import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
 
 interface NfseUploadDialogProps {
   open: boolean;
@@ -50,6 +55,20 @@ export function NfseUploadDialog({
   const [xmlFile, setXmlFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
 
+  // Seletores opcionais (só aparecem quando não vem pré-preenchido)
+  const showPickers = !defaultPatientId;
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [patientPickerOpen, setPatientPickerOpen] = useState(false);
+
+  const { data: patients = [] } = usePatients();
+  const { data: unlinkedPayments = [] } = useUnlinkedPaymentsByPatient(showPickers ? selectedPatientId : null);
+
+  const selectedPatient = useMemo(
+    () => patients.find((p) => p.id === selectedPatientId),
+    [patients, selectedPatientId],
+  );
+
   useEffect(() => {
     if (open) {
       setInvoiceNumber('');
@@ -60,9 +79,25 @@ export function NfseUploadDialog({
       setNotes('');
       setXmlFile(null);
       setPdfFile(null);
+      setSelectedPatientId(null);
+      setSelectedTransactionId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Quando o usuário escolhe um pagamento, pré-preenche valor + descrição
+  const handlePickPayment = (txId: string) => {
+    setSelectedTransactionId(txId);
+    const tx = unlinkedPayments.find((p) => p.transaction_id === txId);
+    if (tx) {
+      if (!serviceValue || serviceValue === '0.00') {
+        setServiceValue(Number(tx.amount).toFixed(2));
+      }
+      if (!description) {
+        setDescription(tx.description || '');
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     if (!invoiceNumber.trim()) {
@@ -87,10 +122,10 @@ export function NfseUploadDialog({
         tax_value: taxValue ? parseFloat(taxValue) : 0,
         service_description: description.trim() || undefined,
         notes: notes.trim() || undefined,
-        patient_id: defaultPatientId ?? undefined,
+        patient_id: defaultPatientId ?? selectedPatientId ?? undefined,
         budget_id: defaultBudgetId ?? undefined,
         tooth_index: defaultToothIndex ?? undefined,
-        financial_transaction_id: defaultTransactionId ?? undefined,
+        financial_transaction_id: defaultTransactionId ?? selectedTransactionId ?? undefined,
         dentist_id: defaultDentistId ?? undefined,
         xml_file: xmlFile,
         pdf_file: pdfFile,
@@ -157,6 +192,102 @@ export function NfseUploadDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          {/* Seletor de paciente + pagamento (só aparece quando não vem pré-preenchido) */}
+          {showPickers && (
+            <div className="space-y-2 p-3 bg-slate-50 rounded-md border border-slate-200">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  Paciente (opcional)
+                </Label>
+                <Popover open={patientPickerOpen} onOpenChange={setPatientPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal h-9"
+                    >
+                      <span className={selectedPatient ? '' : 'text-slate-400'}>
+                        {selectedPatient ? selectedPatient.name : 'Selecione (deixe em branco para nota avulsa)'}
+                      </span>
+                      <ChevronsUpDown className="w-3 h-3 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar paciente..." />
+                      <CommandList className="max-h-[200px]">
+                        <CommandEmpty>Nenhum paciente encontrado</CommandEmpty>
+                        {selectedPatientId && (
+                          <CommandGroup>
+                            <CommandItem
+                              onSelect={() => {
+                                setSelectedPatientId(null);
+                                setSelectedTransactionId(null);
+                                setPatientPickerOpen(false);
+                              }}
+                              className="text-slate-500"
+                            >
+                              Limpar seleção
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
+                        <CommandGroup>
+                          {patients.map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={p.name}
+                              onSelect={() => {
+                                setSelectedPatientId(p.id);
+                                setSelectedTransactionId(null);
+                                setPatientPickerOpen(false);
+                              }}
+                            >
+                              {p.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {selectedPatientId && unlinkedPayments.length > 0 && (
+                <div className="space-y-1">
+                  <Label className="text-xs flex items-center gap-1">
+                    <Link2 className="w-3 h-3" />
+                    Vincular a pagamento (opcional)
+                  </Label>
+                  <Select
+                    value={selectedTransactionId || 'none'}
+                    onValueChange={(v) => (v === 'none' ? setSelectedTransactionId(null) : handlePickPayment(v))}
+                  >
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Selecione um pagamento sem nota" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem vínculo específico</SelectItem>
+                      {unlinkedPayments.map((p) => (
+                        <SelectItem key={p.transaction_id} value={p.transaction_id}>
+                          {formatDisplayDate(p.transaction_date)} · R$ {formatMoney(p.amount)} · {p.description.slice(0, 40)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-slate-500">
+                    Selecionar um pagamento preenche o valor e a descrição automaticamente.
+                  </p>
+                </div>
+              )}
+              {selectedPatientId && unlinkedPayments.length === 0 && (
+                <p className="text-[11px] text-slate-500 italic">
+                  Este paciente não tem pagamentos sem nota nos últimos 6 meses.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="invoice-number" className="text-xs">Nº da Nota *</Label>

@@ -24,6 +24,14 @@ export function usePaymentsWithoutNfse(year: number, month: number) {
   });
 }
 
+export function useUnlinkedPaymentsByPatient(patientId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['nfse', 'unlinked-by-patient', patientId],
+    queryFn: () => nfseDocumentsService.getUnlinkedPaymentsByPatient(patientId!),
+    enabled: !!patientId,
+  });
+}
+
 export function useCreateNfse() {
   const qc = useQueryClient();
   return useMutation({

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Download, FileText, AlertCircle, FilePlus2, Trash2, MoreHorizontal,
-  FileCheck2, FileX2, Loader2, ExternalLink, Package, Upload,
+  FileCheck2, FileX2, Loader2, ExternalLink, Package, Upload, User,
 } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -281,11 +281,22 @@ export function NfseTab({ year, month }: NfseTabProps) {
                       <span className="font-medium text-slate-800">#{doc.invoice_number}</span>
                       <NfseStatusBadge status={doc.status} />
                       <span className="text-xs text-slate-500">{formatDisplayDate(doc.issue_date)}</span>
+                      {doc.patient_name ? (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-slate-600">
+                          <User className="w-2.5 h-2.5 mr-0.5" />
+                          {doc.patient_name}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-amber-600 border-amber-200">
+                          Avulsa (sem paciente)
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      {doc.service_description || doc.patient_name || 'Sem descrição'}
-                      {doc.patient_name && doc.service_description ? ` · ${doc.patient_name}` : ''}
-                    </p>
+                    {doc.service_description && (
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        {doc.service_description}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-slate-700">

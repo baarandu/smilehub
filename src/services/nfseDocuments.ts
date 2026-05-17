@@ -123,6 +123,51 @@ export const nfseDocumentsService = {
     return (data || []) as PaymentWithoutNfse[];
   },
 
+  /**
+   * Lists income transactions for a patient that don't have a NFS-e attached yet.
+   * Used to let the user link a manually-uploaded NFS-e to a specific payment.
+   */
+  async getUnlinkedPaymentsByPatient(patientId: string, limitMonths = 6): Promise<PaymentWithoutNfse[]> {
+    const { clinicId } = await getClinicContext();
+    const since = new Date();
+    since.setMonth(since.getMonth() - limitMonths);
+    const sinceStr = since.toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+      .from('financial_transactions')
+      .select('id, date, amount, patient_id, dentist_id, description')
+      .eq('clinic_id', clinicId)
+      .eq('type', 'income')
+      .eq('patient_id', patientId)
+      .gte('date', sinceStr)
+      .order('date', { ascending: false });
+    if (error) throw error;
+
+    if (!data || data.length === 0) return [];
+
+    // Filter out transactions that already have an active NFS-e
+    const txIds = data.map((t) => t.id);
+    const { data: linkedNfse } = await supabase
+      .from('nfse_documents')
+      .select('financial_transaction_id')
+      .eq('clinic_id', clinicId)
+      .in('financial_transaction_id', txIds)
+      .neq('status', 'canceled');
+    const linkedSet = new Set((linkedNfse || []).map((n) => n.financial_transaction_id));
+
+    return data
+      .filter((t) => !linkedSet.has(t.id))
+      .map((t) => ({
+        transaction_id: t.id,
+        transaction_date: t.date,
+        amount: Number(t.amount),
+        patient_id: t.patient_id,
+        patient_name: null, // not needed in this context
+        dentist_id: t.dentist_id,
+        description: t.description,
+      })) as PaymentWithoutNfse[];
+  },
+
   async updateStatus(
     id: string,
     status: NfseStatus,
