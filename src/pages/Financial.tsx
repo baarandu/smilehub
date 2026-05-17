@@ -263,9 +263,9 @@ export default function Financial() {
       {/* Banner de prazos críticos (em atraso / vence hoje) */}
       <TaxDeadlinesAlertBanner detailsPath="/financeiro" />
 
-      {/* Abas com Ícones */}
+      {/* Abas com Ícones — duas linhas: operacional e contábil */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-4 mb-2 h-12">
           <TabsTrigger value="income" className="gap-2 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200">
             <TrendingUp className="w-4 h-4" />
             <span>Receitas</span>
@@ -283,6 +283,13 @@ export default function Financial() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="closure" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200">
+            <ClipboardList className="w-4 h-4" />
+            <span>Fechamento</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
           <TabsTrigger value="nfse" className="gap-2 data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:border-emerald-200">
             <FileText className="w-4 h-4" />
             <span>Notas Fiscais</span>
@@ -294,10 +301,6 @@ export default function Financial() {
           <TabsTrigger value="deadlines" className="gap-2 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700 data-[state=active]:border-rose-200">
             <CalendarDays className="w-4 h-4" />
             <span>Prazos</span>
-          </TabsTrigger>
-          <TabsTrigger value="closure" className="gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200">
-            <ClipboardList className="w-4 h-4" />
-            <span>Fechamento</span>
           </TabsTrigger>
         </TabsList>
 
