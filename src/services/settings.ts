@@ -79,7 +79,8 @@ export const settingsService = {
             throw new Error('Cadastre uma maquininha antes de configurar taxas.');
         }
 
-        const payload = { ...fee, user_id: userId, clinic_id: clinicId } as any;
+        const normalizedBrand = (fee.brand || '').toLowerCase().trim();
+        const payload = { ...fee, brand: normalizedBrand, user_id: userId, clinic_id: clinicId } as any;
 
         const { error } = await supabase
             .from('card_fee_config')

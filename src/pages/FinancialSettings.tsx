@@ -265,10 +265,10 @@ export default function FinancialSettings() {
     // Filtered card fees
     const filteredCardFees = cardFees.filter(fee => {
         if (selectedMachineId && (fee as any).card_machine_id !== selectedMachineId) return false;
-        if (filterBrand !== 'all' && fee.brand !== filterBrand) return false;
+        if (filterBrand !== 'all' && fee.brand.toLowerCase() !== filterBrand.toLowerCase()) return false;
         if (filterType !== 'all' && fee.payment_type !== filterType) return false;
         return true;
-    }).sort((a, b) => a.brand.localeCompare(b.brand) || a.installments - b.installments);
+    }).sort((a, b) => a.brand.toLowerCase().localeCompare(b.brand.toLowerCase()) || a.installments - b.installments);
 
     if (loading) {
         return (
@@ -668,12 +668,12 @@ export default function FinancialSettings() {
                                 >
                                     Todas Bandeiras
                                 </button>
-                                {Array.from(new Set(cardFees.map(f => f.brand))).sort().map(brand => (
+                                {Array.from(new Set(cardFees.map(f => f.brand.toLowerCase()))).sort().map(brand => (
                                     <button
                                         key={brand}
                                         onClick={() => setFilterBrand(brand)}
                                         className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
-                                            filterBrand === brand
+                                            filterBrand.toLowerCase() === brand
                                                 ? 'bg-slate-900 text-white'
                                                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                                         }`}
