@@ -32,7 +32,7 @@ const formatBrandName = (brand: string): string => {
 export default function FinancialSettings() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { isAdmin } = useClinic();
+    const { isAdmin, clinicId } = useClinic();
     const { confirm, ConfirmDialog } = useConfirmDialog();
     const { markStepCompleted, shouldReturnToOnboarding, setShouldReturnToOnboarding, setIsOnboardingOpen } = useOnboarding();
     const [loading, setLoading] = useState(true);
@@ -85,7 +85,11 @@ export default function FinancialSettings() {
     const { data: machines = [] } = useCardMachines(false);
 
     useEffect(() => {
-        if (machines.length > 0 && !selectedMachineId) {
+        if (machines.length === 0) {
+            setSelectedMachineId('');
+            return;
+        }
+        if (!selectedMachineId || !machines.find(m => m.id === selectedMachineId)) {
             setSelectedMachineId(machines[0].id);
         }
     }, [machines, selectedMachineId]);
@@ -94,8 +98,13 @@ export default function FinancialSettings() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (clinicId) {
+            setCardFees([]);
+            setCardBrands([]);
+            setTaxes([]);
+            loadData();
+        }
+    }, [clinicId]);
 
     // Apenas admin pode acessar esta página
     if (!isAdmin) {
