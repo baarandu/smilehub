@@ -87,6 +87,14 @@ export const settingsService = {
         if (error) throw error;
     },
 
+    async updateCardFee(id: string, patch: { rate?: number; anticipation_rate?: number | null }): Promise<void> {
+        const { error } = await supabase
+            .from('card_fee_config')
+            .update(patch)
+            .eq('id', id);
+        if (error) throw error;
+    },
+
     async deleteCardFee(id: string): Promise<void> {
         const { error } = await supabase
             .from('card_fee_config')

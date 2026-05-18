@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { settingsService } from "@/services/settings";
 import { CardFeeConfig } from "@/types/database";
-import { Trash2, Plus, Save, Loader2, Info, X, ArrowLeft, CreditCard, Search, CheckCircle, Tag } from 'lucide-react';
+import { Trash2, Plus, Save, Loader2, Info, X, ArrowLeft, CreditCard, Search, CheckCircle, Tag, Pencil } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -47,6 +47,7 @@ export default function FinancialSettings() {
 
     // New Fee State
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [editingFeeId, setEditingFeeId] = useState<string | null>(null);
     const [newFee, setNewFee] = useState({
         brand: '',
         payment_type: 'credit',
@@ -54,6 +55,23 @@ export default function FinancialSettings() {
         rate: '',
         anticipation_rate: ''
     });
+
+    const resetFeeForm = () => {
+        setEditingFeeId(null);
+        setNewFee({ brand: '', payment_type: 'credit', installments: '1', rate: '', anticipation_rate: '' });
+    };
+
+    const openEditFee = (fee: CardFeeConfig) => {
+        setEditingFeeId(fee.id);
+        setNewFee({
+            brand: fee.brand,
+            payment_type: fee.payment_type,
+            installments: String(fee.installments),
+            rate: String(fee.rate),
+            anticipation_rate: fee.anticipation_rate != null ? String(fee.anticipation_rate) : '',
+        });
+        setIsAddOpen(true);
+    };
 
     // Card Brands State
     const [cardBrands, setCardBrands] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
@@ -150,7 +168,7 @@ export default function FinancialSettings() {
     };
 
     const handleAddFee = async () => {
-        if (!selectedMachineId) {
+        if (!editingFeeId && !selectedMachineId) {
             toast({ variant: "destructive", title: "Erro", description: "Cadastre e selecione uma maquininha antes de configurar taxas." });
             return;
         }
@@ -163,16 +181,24 @@ export default function FinancialSettings() {
             return;
         }
         try {
-            await settingsService.saveCardFee({
-                card_machine_id: selectedMachineId,
-                brand: newFee.brand,
-                payment_type: newFee.payment_type,
-                installments: parseInt(newFee.installments),
-                rate: parseFloat(newFee.rate) || 0,
-                anticipation_rate: newFee.anticipation_rate ? parseFloat(newFee.anticipation_rate) : null
-            });
-            toast({ title: "Sucesso", description: "Regra de taxa adicionada." });
-            setNewFee({ ...newFee, brand: '', rate: '', anticipation_rate: '' });
+            if (editingFeeId) {
+                await settingsService.updateCardFee(editingFeeId, {
+                    rate: parseFloat(newFee.rate) || 0,
+                    anticipation_rate: newFee.anticipation_rate ? parseFloat(newFee.anticipation_rate) : null,
+                });
+                toast({ title: "Sucesso", description: "Regra de taxa atualizada." });
+            } else {
+                await settingsService.saveCardFee({
+                    card_machine_id: selectedMachineId,
+                    brand: newFee.brand,
+                    payment_type: newFee.payment_type,
+                    installments: parseInt(newFee.installments),
+                    rate: parseFloat(newFee.rate) || 0,
+                    anticipation_rate: newFee.anticipation_rate ? parseFloat(newFee.anticipation_rate) : null
+                });
+                toast({ title: "Sucesso", description: "Regra de taxa adicionada." });
+            }
+            resetFeeForm();
             setIsAddOpen(false);
             loadData();
             // Mark onboarding step as completed and return if needed
@@ -318,7 +344,7 @@ export default function FinancialSettings() {
                                 className="pl-9 w-64 bg-white border-slate-200"
                             />
                         </div>
-                        <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                        <Dialog open={isAddOpen} onOpenChange={(open) => { setIsAddOpen(open); if (!open) resetFeeForm(); }}>
                             <DialogTrigger asChild>
                                 <Button className="bg-[#7a3b3b] hover:bg-[#5c2d2d]">
                                     <Plus className="w-4 h-4 mr-2" />
@@ -327,7 +353,7 @@ export default function FinancialSettings() {
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Nova Regra de Taxa</DialogTitle>
+                                    <DialogTitle>{editingFeeId ? 'Editar Regra de Taxa' : 'Nova Regra de Taxa'}</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4 py-4">
                                     <div className="space-y-2">
@@ -337,6 +363,7 @@ export default function FinancialSettings() {
                                             onValueChange={v => {
                                                 setNewFee({ ...newFee, payment_type: v, installments: v === 'debit' ? '1' : '1' });
                                             }}
+                                            disabled={!!editingFeeId}
                                         >
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -347,7 +374,7 @@ export default function FinancialSettings() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Bandeira</Label>
-                                        <Select value={newFee.brand} onValueChange={v => setNewFee({ ...newFee, brand: v })}>
+                                        <Select value={newFee.brand} onValueChange={v => setNewFee({ ...newFee, brand: v })} disabled={!!editingFeeId}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
                                                 {cardBrands.map(b => (
@@ -359,7 +386,7 @@ export default function FinancialSettings() {
                                     {newFee.payment_type === 'credit' && (
                                         <div className="space-y-2">
                                             <Label>Parcelas (1 = À vista)</Label>
-                                            <Select value={newFee.installments} onValueChange={v => setNewFee({ ...newFee, installments: v })}>
+                                            <Select value={newFee.installments} onValueChange={v => setNewFee({ ...newFee, installments: v })} disabled={!!editingFeeId}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     {Array.from({ length: 12 }).map((_, i) => (
@@ -389,7 +416,9 @@ export default function FinancialSettings() {
                                         />
                                         <p className="text-xs text-muted-foreground">Taxa para antecipar o recebimento</p>
                                     </div>
-                                    <Button className="w-full mt-4 bg-[#7a3b3b] hover:bg-[#5c2d2d]" onClick={handleAddFee}>Salvar Regra</Button>
+                                    <Button className="w-full mt-4 bg-[#7a3b3b] hover:bg-[#5c2d2d]" onClick={handleAddFee}>
+                                        {editingFeeId ? 'Salvar Alterações' : 'Salvar Regra'}
+                                    </Button>
                                 </div>
                             </DialogContent>
                         </Dialog>
@@ -691,7 +720,7 @@ export default function FinancialSettings() {
                                             <TableHead className="text-slate-600">Parcelas</TableHead>
                                             <TableHead className="text-slate-600">Taxa Normal</TableHead>
                                             <TableHead className="text-slate-600">Taxa Antecipação</TableHead>
-                                            <TableHead className="w-[50px]"></TableHead>
+                                            <TableHead className="w-[100px]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -703,14 +732,26 @@ export default function FinancialSettings() {
                                                 <TableCell className="font-medium text-[#7a3b3b]">{fee.rate.toLocaleString('pt-BR')}%</TableCell>
                                                 <TableCell className="text-slate-500">{fee.anticipation_rate ? `${fee.anticipation_rate}%` : '–'}</TableCell>
                                                 <TableCell>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDeleteFee(fee.id)}
-                                                        className="hover:bg-red-50"
-                                                    >
-                                                        <Trash2 className="w-4 h-4 text-red-500" />
-                                                    </Button>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => openEditFee(fee)}
+                                                            className="hover:bg-slate-100"
+                                                            title="Editar"
+                                                        >
+                                                            <Pencil className="w-4 h-4 text-slate-600" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleDeleteFee(fee.id)}
+                                                            className="hover:bg-red-50"
+                                                            title="Remover"
+                                                        >
+                                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
