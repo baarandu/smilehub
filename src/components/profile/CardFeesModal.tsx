@@ -152,7 +152,7 @@ export function CardFeesModal({ open, onOpenChange }: CardFeesModalProps) {
                                 >
                                     <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                        {Array.from({ length: 12 }).map((_, i) => (
+                                        {Array.from({ length: 18 }).map((_, i) => (
                                             <SelectItem key={i} value={(i + 1).toString()}>{i + 1}x</SelectItem>
                                         ))}
                                     </SelectContent>
