@@ -1,7 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, Animated, Dimensions, Image, Alert, ScrollView } from 'react-native';
-import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers, Activity, BarChart3 } from 'lucide-react-native';
+import { User, LogOut, Users2, Building2, Bot, X, CreditCard, FileText, ShieldCheck, HelpCircle, Settings, Calculator, Stethoscope, Layers, Activity, BarChart3, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useClinic } from '../../contexts/ClinicContext';
+import { ClinicSwitcherModal } from './ClinicSwitcherModal';
 
 interface ProfileModalProps {
     visible: boolean;
@@ -35,6 +37,9 @@ export function ProfileModal({
 }: ProfileModalProps) {
     const router = useRouter();
     const slideAnim = useRef(new Animated.Value(-Dimensions.get('window').width)).current;
+    const { availableClinics } = useClinic();
+    const [switcherOpen, setSwitcherOpen] = useState(false);
+    const hasMultipleClinics = availableClinics.length > 1;
 
     // AI Secretary access: super admin only (matches web version)
     const hasAISecretaryAccess = isSuperAdmin;
@@ -88,7 +93,18 @@ export function ProfileModal({
                                 </View>
                                 <View className="flex-1">
                                     <Text className="text-white text-lg font-bold" numberOfLines={1}>{displayName || 'Usuário'}</Text>
-                                    <Text className="text-[#fee2e2] text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
+                                    {hasMultipleClinics ? (
+                                        <TouchableOpacity
+                                            onPress={() => setSwitcherOpen(true)}
+                                            className="flex-row items-center gap-1"
+                                            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                                        >
+                                            <Text className="text-[#fee2e2] text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
+                                            <ChevronDown size={14} color="#fee2e2" />
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <Text className="text-[#fee2e2] text-sm" numberOfLines={1}>{clinicName || 'Minha Clínica'}</Text>
+                                    )}
                                 </View>
                             </View>
                         </View>
@@ -312,6 +328,8 @@ export function ProfileModal({
                     </View>
                 </Animated.View>
             </View >
+
+            <ClinicSwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
         </Modal >
     );
 }

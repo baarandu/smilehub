@@ -14,6 +14,8 @@ import {
     CalendarClock,
     Receipt,
     Clock,
+    Users,
+    Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +35,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { locationsService } from '@/services/locations';
 import { settingsService } from '@/services/settings';
+import { cardMachinesService } from '@/services/cardMachines';
 import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -40,6 +43,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Transaction } from '@/components/financial/types';
 import { toast } from 'sonner';
 import { receivablesService } from '@/services/receivables';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 
 interface ClosureTabProps {
     transactions: Transaction[];
@@ -72,6 +76,11 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
     const { data: locations = [] } = useQuery({
         queryKey: ['locations'],
         queryFn: locationsService.getAll
+    });
+
+    const { data: cardMachines = [] } = useQuery({
+        queryKey: ['card_machines', 'all'],
+        queryFn: () => cardMachinesService.list(true),
     });
 
     // Fetch receivables linked to income transactions (to determine origin month)
@@ -254,6 +263,62 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
         acc[cat] = (acc[cat] || 0) + Number(t.amount || 0);
         return acc;
     }, {} as Record<string, number>);
+
+    // Revenue by dentist
+    const revenueByDentist = useMemo(() => {
+        const map: Record<string, { name: string; gross: number; net: number; count: number }> = {};
+        for (const t of income) {
+            const dentistId = (t as any).dentist_id;
+            const dentistName = (t as any).dentist_name;
+            if (!dentistId || !dentistName) continue;
+
+            if (!map[dentistId]) {
+                map[dentistId] = { name: dentistName, gross: 0, net: 0, count: 0 };
+            }
+            map[dentistId].gross += Number(t.amount || 0);
+            map[dentistId].net += Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount);
+            map[dentistId].count += 1;
+        }
+        return Object.values(map).sort((a, b) => b.gross - a.gross);
+    }, [income]);
+
+    const DENTIST_COLORS = ['#a03f3d', '#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#c026d3'];
+
+    const machineNameMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        for (const m of cardMachines) {
+            map[m.id] = m.name;
+        }
+        return map;
+    }, [cardMachines]);
+
+    // Revenue by card machine (only card transactions)
+    const revenueByMachine = useMemo(() => {
+        const map: Record<string, { name: string; gross: number; net: number; fees: number; count: number }> = {};
+        for (const t of income) {
+            const machineId = (t as any).card_machine_id;
+            if (!machineId) continue;
+            const name = machineNameMap[machineId] || 'Maquininha removida';
+
+            if (!map[machineId]) {
+                map[machineId] = { name, gross: 0, net: 0, fees: 0, count: 0 };
+            }
+            const gross = Number(t.amount || 0);
+            const net = Number((t.net_amount !== undefined && t.net_amount !== null) ? t.net_amount : t.amount);
+            const fees = Number(t.card_fee_amount || 0) + Number((t as any).anticipation_amount || 0);
+            map[machineId].gross += gross;
+            map[machineId].net += net;
+            map[machineId].fees += fees;
+            map[machineId].count += 1;
+        }
+        return Object.values(map).sort((a, b) => b.gross - a.gross);
+    }, [income, machineNameMap]);
+
+    const totalMachineGross = revenueByMachine.reduce((s, m) => s + m.gross, 0);
+    const totalMachineFees = revenueByMachine.reduce((s, m) => s + m.fees, 0);
+    const blendedFeeRate = totalMachineGross > 0 ? (totalMachineFees / totalMachineGross) * 100 : 0;
+
+    const MACHINE_COLORS = ['#2563eb', '#a03f3d', '#059669', '#d97706', '#7c3aed', '#0891b2'];
 
     const formatCurrency = (val: number | undefined | null) => {
         const num = Number(val);
@@ -619,6 +684,278 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
                 </Card>
             </div>
 
+
+            {/* Revenue by Dentist */}
+            {revenueByDentist.length > 1 && (
+                <Card className="border-indigo-100 bg-indigo-50/10">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-indigo-100 rounded-lg">
+                                <Users className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base text-indigo-900">Faturamento por Dentista</CardTitle>
+                                <CardDescription className="text-xs">Comparativo de produção no período</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={revenueByDentist.map(d => ({
+                                        name: d.name.split(' ').slice(0, 2).join(' '),
+                                        fullName: d.name,
+                                        bruto: d.gross,
+                                        liquido: d.net,
+                                        count: d.count,
+                                    }))}
+                                    margin={{ top: 20, right: 10, left: 10, bottom: 5 }}
+                                    barCategoryGap="20%"
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                                        tickLine={false}
+                                        axisLine={{ stroke: '#e5e7eb' }}
+                                    />
+                                    <YAxis
+                                        tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        width={60}
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number, name: string) => [
+                                            formatCurrency(value),
+                                            name === 'bruto' ? 'Receita Bruta' : 'Receita Líquida'
+                                        ]}
+                                        labelFormatter={(label, payload) => {
+                                            const item = payload?.[0]?.payload;
+                                            return item ? `Dr(a). ${item.fullName} (${item.count} receita${item.count !== 1 ? 's' : ''})` : label;
+                                        }}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: '1px solid #e5e7eb',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '13px',
+                                        }}
+                                    />
+                                    <Bar dataKey="bruto" name="bruto" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                        {revenueByDentist.map((_, i) => (
+                                            <Cell key={i} fill={DENTIST_COLORS[i % DENTIST_COLORS.length]} fillOpacity={0.85} />
+                                        ))}
+                                        <LabelList
+                                            dataKey="bruto"
+                                            position="top"
+                                            formatter={(v: number) => formatCurrency(v)}
+                                            style={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
+                                        />
+                                    </Bar>
+                                    <Bar dataKey="liquido" name="liquido" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                        {revenueByDentist.map((_, i) => (
+                                            <Cell key={i} fill={DENTIST_COLORS[i % DENTIST_COLORS.length]} fillOpacity={0.4} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-[#a03f3d] opacity-85" />
+                                <span>Receita Bruta</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-[#a03f3d] opacity-40" />
+                                <span>Receita Líquida</span>
+                            </div>
+                        </div>
+
+                        {/* Summary table below chart */}
+                        <div className="mt-4 space-y-2">
+                            {revenueByDentist.map((d, i) => (
+                                <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-100">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className="w-3 h-8 rounded-full"
+                                            style={{ backgroundColor: DENTIST_COLORS[i % DENTIST_COLORS.length] }}
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium">Dr(a). {d.name}</p>
+                                            <p className="text-xs text-muted-foreground">{d.count} receita{d.count !== 1 ? 's' : ''}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold" style={{ color: DENTIST_COLORS[i % DENTIST_COLORS.length] }}>
+                                            {formatCurrency(d.gross)}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Líq. {formatCurrency(d.net)}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Single dentist info (no chart needed) */}
+            {revenueByDentist.length === 1 && (
+                <Card className="border-indigo-100 bg-indigo-50/10">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-indigo-100 rounded-lg">
+                                <Users className="h-4 w-4 text-indigo-600" />
+                            </div>
+                            <CardTitle className="text-base text-indigo-900">Produção do Dentista</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-indigo-100">
+                            <div>
+                                <p className="text-sm font-medium">Dr(a). {revenueByDentist[0].name}</p>
+                                <p className="text-xs text-muted-foreground">{revenueByDentist[0].count} receita{revenueByDentist[0].count !== 1 ? 's' : ''}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-sm font-bold text-[#a03f3d]">{formatCurrency(revenueByDentist[0].gross)}</p>
+                                <p className="text-xs text-muted-foreground">Líq. {formatCurrency(revenueByDentist[0].net)}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Revenue by Card Machine */}
+            {revenueByMachine.length > 1 && (
+                <Card className="border-blue-100 bg-blue-50/10">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-blue-100 rounded-lg">
+                                <Smartphone className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base text-blue-900">Faturamento das Máquinas de Cartão</CardTitle>
+                                <CardDescription className="text-xs">
+                                    Volume processado e taxa efetiva por maquininha · Taxa média {blendedFeeRate.toFixed(2)}%
+                                </CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={revenueByMachine.map(m => ({
+                                        name: m.name.length > 18 ? m.name.slice(0, 16) + '…' : m.name,
+                                        fullName: m.name,
+                                        bruto: m.gross,
+                                        liquido: m.net,
+                                        taxas: m.fees,
+                                        count: m.count,
+                                    }))}
+                                    margin={{ top: 20, right: 10, left: 10, bottom: 5 }}
+                                    barCategoryGap="20%"
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                    <XAxis
+                                        dataKey="name"
+                                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                                        tickLine={false}
+                                        axisLine={{ stroke: '#e5e7eb' }}
+                                    />
+                                    <YAxis
+                                        tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
+                                        tick={{ fontSize: 11, fill: '#9ca3af' }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        width={60}
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number, name: string) => {
+                                            const labelMap: Record<string, string> = {
+                                                bruto: 'Volume Bruto',
+                                                liquido: 'Líquido Recebido',
+                                                taxas: 'Taxas Pagas',
+                                            };
+                                            return [formatCurrency(value), labelMap[name] || name];
+                                        }}
+                                        labelFormatter={(label, payload) => {
+                                            const item = payload?.[0]?.payload;
+                                            return item ? `${item.fullName} (${item.count} transação${item.count !== 1 ? 'ões' : ''})` : label;
+                                        }}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: '1px solid #e5e7eb',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '13px',
+                                        }}
+                                    />
+                                    <Bar dataKey="bruto" name="bruto" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                        {revenueByMachine.map((_, i) => (
+                                            <Cell key={i} fill={MACHINE_COLORS[i % MACHINE_COLORS.length]} fillOpacity={0.85} />
+                                        ))}
+                                        <LabelList
+                                            dataKey="bruto"
+                                            position="top"
+                                            formatter={(v: number) => formatCurrency(v)}
+                                            style={{ fontSize: 11, fill: '#374151', fontWeight: 600 }}
+                                        />
+                                    </Bar>
+                                    <Bar dataKey="liquido" name="liquido" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                                        {revenueByMachine.map((_, i) => (
+                                            <Cell key={i} fill={MACHINE_COLORS[i % MACHINE_COLORS.length]} fillOpacity={0.4} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex items-center justify-center gap-6 mt-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-blue-600 opacity-85" />
+                                <span>Volume Bruto</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 rounded-sm bg-blue-600 opacity-40" />
+                                <span>Líquido Recebido</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                            {revenueByMachine.map((m, i) => {
+                                const feeRate = m.gross > 0 ? (m.fees / m.gross) * 100 : 0;
+                                const share = totalMachineGross > 0 ? (m.gross / totalMachineGross) * 100 : 0;
+                                return (
+                                    <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className="w-3 h-8 rounded-full"
+                                                style={{ backgroundColor: MACHINE_COLORS[i % MACHINE_COLORS.length] }}
+                                            />
+                                            <div>
+                                                <p className="text-sm font-medium">{m.name}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {m.count} transação{m.count !== 1 ? 'ões' : ''} · {share.toFixed(1)}% do volume
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold" style={{ color: MACHINE_COLORS[i % MACHINE_COLORS.length] }}>
+                                                {formatCurrency(m.gross)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Taxa {feeRate.toFixed(2)}% · Líq. {formatCurrency(m.net)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Filter Dialog */}
             <Dialog open={filterOpen} onOpenChange={setFilterOpen}>

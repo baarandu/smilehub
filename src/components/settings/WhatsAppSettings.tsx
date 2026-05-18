@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useClinic } from '@/contexts/ClinicContext';
 import {
   MessageCircle,
   QrCode,
@@ -26,6 +27,7 @@ type UIStatus = ConnectionStatus['status'];
 
 export function WhatsAppSettings() {
   const { toast } = useToast();
+  const { isAdmin } = useClinic();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<UIStatus>('disconnected');
   const [provider, setProvider] = useState<'meta' | 'evolution' | undefined>();
@@ -263,7 +265,7 @@ export function WhatsAppSettings() {
             <p className="text-sm text-red-700">
               O servidor WhatsApp está temporariamente indisponível. Tente novamente em alguns minutos.
             </p>
-            {errorDetail && (
+            {errorDetail && isAdmin && (
               <p className="text-xs text-red-500 mt-1 font-mono bg-red-100 px-2 py-1 rounded">
                 {errorDetail}
               </p>

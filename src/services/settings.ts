@@ -5,22 +5,20 @@ import { CardFeeConfig, CardFeeConfigInsert, FinancialSettings } from '@/types/d
 export const settingsService = {
     // Financial Settings (Tax Rate)
     async getFinancialSettings(): Promise<FinancialSettings | null> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { clinicId } = await getClinicContext();
 
         const { data, error } = await supabase
             .from('financial_settings')
             .select('*')
-            .eq('user_id', user.id)
-            .single();
+            .eq('clinic_id', clinicId)
+            .maybeSingle();
 
         if (error && error.code !== 'PGRST116') throw error;
         return data as FinancialSettings | null;
     },
 
     async updateTaxRate(rate: number): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { userId, clinicId } = await getClinicContext();
 
         const existing = await this.getFinancialSettings();
 
@@ -33,14 +31,13 @@ export const settingsService = {
         } else {
             const { error } = await supabase
                 .from('financial_settings')
-                .insert({ user_id: user.id, tax_rate: rate });
+                .insert({ user_id: userId, clinic_id: clinicId, tax_rate: rate } as any);
             if (error) throw error;
         }
     },
 
     async updateAnticipationRate(rate: number): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { userId, clinicId } = await getClinicContext();
 
         const existing = await this.getFinancialSettings();
 
@@ -53,22 +50,20 @@ export const settingsService = {
         } else {
             const { error } = await supabase
                 .from('financial_settings')
-                .insert({ user_id: user.id, anticipation_rate: rate });
+                .insert({ user_id: userId, clinic_id: clinicId, anticipation_rate: rate } as any);
             if (error) throw error;
         }
     },
     async getCardFees(cardMachineId?: string): Promise<CardFeeConfig[]> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { clinicId } = await getClinicContext();
 
         let query = supabase
             .from('card_fee_config')
-            .select('*');
+            .select('*')
+            .eq('clinic_id', clinicId);
 
         if (cardMachineId) {
             query = query.eq('card_machine_id', cardMachineId);
-        } else {
-            query = query.eq('user_id', user.id);
         }
 
         const { data, error } = await query;
@@ -78,23 +73,18 @@ export const settingsService = {
     },
 
     async saveCardFee(fee: Omit<CardFeeConfigInsert, 'user_id'> & { card_machine_id?: string | null }): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { userId, clinicId } = await getClinicContext();
 
-        const payload = { ...fee, user_id: user.id } as any;
-
-        if (payload.card_machine_id) {
-            const { error } = await supabase
-                .from('card_fee_config')
-                .upsert(payload, { onConflict: 'card_machine_id,brand,payment_type,installments' });
-            if (error) throw error;
-        } else {
-            // Legacy fallback (sem maquininha) — mantém compatibilidade.
-            const { error } = await supabase
-                .from('card_fee_config')
-                .insert(payload);
-            if (error) throw error;
+        if (!fee.card_machine_id) {
+            throw new Error('Cadastre uma maquininha antes de configurar taxas.');
         }
+
+        const payload = { ...fee, user_id: userId, clinic_id: clinicId } as any;
+
+        const { error } = await supabase
+            .from('card_fee_config')
+            .upsert(payload, { onConflict: 'card_machine_id,brand,payment_type,installments' });
+        if (error) throw error;
     },
 
     async deleteCardFee(id: string): Promise<void> {
@@ -166,13 +156,12 @@ export const settingsService = {
 
     // Tax Configuration - Multiple Taxes
     async getTaxes(): Promise<{ id: string; name: string; rate: number }[]> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { clinicId } = await getClinicContext();
 
         const { data, error } = await supabase
             .from('tax_config')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('clinic_id', clinicId)
             .order('name');
 
         if (error && error.code !== 'PGRST116') throw error;
@@ -180,12 +169,11 @@ export const settingsService = {
     },
 
     async saveTax(tax: { name: string; rate: number }): Promise<void> {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+        const { userId, clinicId } = await getClinicContext();
 
         const { error } = await supabase
             .from('tax_config')
-            .insert({ user_id: user.id, name: tax.name, rate: tax.rate });
+            .insert({ user_id: userId, clinic_id: clinicId, name: tax.name, rate: tax.rate } as any);
 
         if (error) throw error;
     },

@@ -149,7 +149,7 @@ export default function DentistAgentScreen() {
                 .select('name, birth_date')
                 .eq('id', patientId)
                 .eq('clinic_id', clinicId)
-                .single();
+                .single() as { data: { name: string; birth_date: string | null } | null };
             if (data) {
                 setPatientName(data.name);
                 setPatientAge(data.birth_date ? calculateAge(data.birth_date) : null);

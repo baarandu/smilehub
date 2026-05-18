@@ -20,6 +20,7 @@ import { incomeTaxService } from '../../src/services/incomeTax';
 import { PatientAiConsent } from '../../src/components/patients/PatientAiConsent';
 import { MinorConsentBadge } from '../../src/components/patients/MinorConsentBadge';
 import { AnonymizePatientDialog } from '../../src/components/patients/AnonymizePatientDialog';
+import { SignaturesPanel } from '../../src/components/patients/SignaturesPanel';
 import * as Linking from 'expo-linking';
 import ImageViewing from 'react-native-image-viewing';
 import { WebView } from 'react-native-webview';
@@ -377,7 +378,14 @@ export default function PatientDetail() {
                 )}
                 {activeTab === 'budgets' && <BudgetsTab budgets={budgets} onAdd={handleAddBudget} onEdit={handleEditBudget} onDelete={handleDeleteBudget} onView={handleViewBudget} />}
                 {activeTab === 'procedures' && <ProceduresTab procedures={procedures} exams={exams} onAdd={handleAddProcedure} onView={handleViewProcedure} onEdit={handleEditProcedure} onDelete={handleDeleteProcedure} onPreviewImage={handlePreviewFile} />}
-                {activeTab === 'exams' && <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} clinicId={ctxClinicId || undefined} patientId={id} patientName={patient.name} patientEmail={patient.email || undefined} onRefresh={loadExams} />}
+                {activeTab === 'exams' && (
+                    <>
+                        <View className="px-4">
+                            <SignaturesPanel patientId={patient.id} />
+                        </View>
+                        <ExamsTab exams={exams} onAdd={() => { setSelectedExam(null); setShowExamModal(true); }} onEdit={handleEditExam} onDelete={handleDeleteExam} onPreviewImage={handlePreviewFile} clinicId={ctxClinicId || undefined} patientId={id} patientName={patient.name} patientEmail={patient.email || undefined} onRefresh={loadExams} />
+                    </>
+                )}
                 {activeTab === 'payments' && <PaymentsTab paymentItems={getAllPaymentItems()} onPaymentClick={handlePaymentClick} />}
 
                 {/* Health Info */}
@@ -414,19 +422,19 @@ export default function PatientDetail() {
             <PaymentMethodModal
                 visible={showPaymentModal}
                 onClose={() => { setShowPaymentModal(false); setSelectedPaymentItem(null); setSelectedPaymentItems(null); }}
-                onConfirm={async (method, transactions, brand, breakdown, payerData) => {
+                onConfirm={async (method, transactions, brand, breakdown, payerData, cardMachineId) => {
                     if (isPaying) return;
                     setIsPaying(true);
                     if (selectedPaymentItem) {
                         await handleConfirmPayment(selectedPaymentItem, method, transactions, brand, breakdown, () => {
                             setShowPaymentModal(false);
                             setSelectedPaymentItem(null);
-                        }, payerData);
+                        }, payerData, cardMachineId);
                     } else if (selectedPaymentItems) {
                         await handleConfirmPaymentMultiple(selectedPaymentItems, method, transactions, brand, breakdown, () => {
                             setShowPaymentModal(false);
                             setSelectedPaymentItems(null);
-                        }, payerData);
+                        }, payerData, cardMachineId);
                     }
                     setIsPaying(false);
                 }}

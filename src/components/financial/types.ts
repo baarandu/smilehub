@@ -21,6 +21,8 @@ export interface Transaction {
   paid_at?: string | null;
   recurrence_id?: string | null;
   created_at?: string;
+  dentist_id?: string | null;
+  dentist_name?: string | null;
 }
 
 export const MONTHS = [

@@ -37,6 +37,16 @@ export const voiceConsultationService = {
     return data as unknown as VoiceConsultationSession;
   },
 
+  async getSession(id: string): Promise<VoiceConsultationSession | null> {
+    const { data, error } = await supabase
+      .from('voice_consultation_sessions')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data as unknown as VoiceConsultationSession;
+  },
+
   async transcribeAudio(
     audioUri: string,
     sessionId: string,

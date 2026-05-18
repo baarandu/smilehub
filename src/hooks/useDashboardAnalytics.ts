@@ -79,7 +79,7 @@ async function fetchDashboardAnalytics(clinicId: string): Promise<DashboardAnaly
     // 4. Budgets with notes (for status parsing)
     supabase
       .from('budgets')
-      .select('id, status, total_amount, notes, patient_id')
+      .select('id, status, total_amount:value, notes, patient_id')
       .eq('clinic_id', clinicId),
 
     // 5. Prosthesis orders - status

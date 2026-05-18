@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { View, ActivityIndicator, Alert } from 'react-native';
 import { subscriptionService } from '../services/subscription';
+import { getSelectedClinicId } from '../lib/selectedClinic';
 
 type AuthContextType = {
     session: Session | null;
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .single() as { data: { is_super_admin: boolean } | null, error: any };
 
             if (profile?.is_super_admin) {
-                setRole('owner'); // Super admin acts as owner
+                setRole('owner');
                 setHasActiveSubscription(true);
                 setIsTrialExpired(false);
                 setTrialDaysLeft(null);
@@ -61,16 +62,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            const { data: clinicUser } = await supabase
+            // Fetch ALL clinic_users rows (user may belong to multiple clinics).
+            // Selection precedence: AsyncStorage selected_clinic_id → admin role → first row.
+            const { data: clinicUsersRaw } = await supabase
                 .from('clinic_users')
-                .select('clinic_id, role')
+                .select('clinic_id, role, roles')
                 .eq('user_id', userId)
-                .single();
+                .order('role', { ascending: true });
+
+            const clinicUsers = (clinicUsersRaw || []) as Array<{ clinic_id: string; role: string; roles?: string[] | null }>;
+            const savedClinicId = await getSelectedClinicId();
+            const clinicUser = clinicUsers.length > 0
+                ? (clinicUsers.find(cu => savedClinicId && cu.clinic_id === savedClinicId)
+                    || clinicUsers.find(cu => (cu.roles || [cu.role]).includes('admin'))
+                    || clinicUsers[0])
+                : null;
 
             if (clinicUser) {
-                setRole((clinicUser as any).role);
-                const subStatus = await subscriptionService.getCurrentSubscription((clinicUser as any).clinic_id);
-                // Consider active if active or trialing (and not expired)
+                setRole(clinicUser.role);
+                const subStatus = await subscriptionService.getCurrentSubscription(clinicUser.clinic_id);
                 const isActive = subStatus.isActive || subStatus.isTrialing;
                 setHasActiveSubscription(isActive);
                 setIsTrialExpired(subStatus.isTrialExpired);

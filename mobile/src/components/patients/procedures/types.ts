@@ -5,6 +5,7 @@ export interface ApprovedItemOption {
     treatment: string;
     tooth: string;
     budgetId: string;
+    status: string;
 }
 
 export interface ProcedureFormState {

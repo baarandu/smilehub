@@ -55,14 +55,11 @@ export const alertsService = {
 
     async getBirthdayAlerts(clinicId?: string): Promise<Alert[]> {
         const today = new Date();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
 
         let query = supabase
             .from('patients_secure')
             .select('id, name, phone, birth_date, patient_type, mother_name, father_name, legal_guardian')
-            .not('birth_date', 'is', null)
-            .like('birth_date', `%-${mm}-${dd}`);
+            .not('birth_date', 'is', null);
 
         if (clinicId) {
             query = query.eq('clinic_id', clinicId);

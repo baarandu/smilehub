@@ -60,7 +60,7 @@ const TABLE_LABELS: Record<string, string> = {
 const TABLES = Object.keys(TABLE_LABELS);
 
 const FUNCTIONS = [
-  "dentist-agent", "accounting-agent", "voice-consultation-transcribe",
+  "dentist-agent", "accounting-agent", "accounting-agent-v2", "voice-consultation-transcribe",
   "voice-consultation-extract", "patient-data-export", "ai-secretary",
   "create-subscription", "update-subscription", "cancel-subscription",
   "get-stripe-metrics", "send-invite",

@@ -79,6 +79,7 @@ export function NewProcedureDialog({
 
   useEffect(() => {
     if (open) {
+      queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
       if (procedure) {
         setForm({
           date: procedure.date,

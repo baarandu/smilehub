@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/database';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export type AuditLog = {
     id: string;
@@ -22,17 +23,11 @@ export const auditService = {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Get clinic_id for the user
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user.id)
-                .single() as { data: { clinic_id: string } | null, error: any };
-
-            if (!clinicUser) return;
+            const clinicId = await resolveActiveClinicId(user.id);
+            if (!clinicId) return;
 
             await (supabase.from('audit_logs') as any).insert({
-                clinic_id: clinicUser.clinic_id,
+                clinic_id: clinicId,
                 user_id: user.id,
                 action,
                 table_name: entity,

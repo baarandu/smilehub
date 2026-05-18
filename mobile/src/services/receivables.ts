@@ -32,6 +32,7 @@ export interface FiadoPortion {
     payer_name: string | null;
     payer_cpf: string | null;
     pj_source_id: string | null;
+    card_machine_id?: string | null;
 }
 
 export const receivablesService = {
@@ -84,6 +85,7 @@ export const receivablesService = {
                     payer_name: p.payer_name,
                     payer_cpf: p.payer_cpf,
                     pj_source_id: p.pj_source_id,
+                    card_machine_id: p.card_machine_id || null,
                     created_by: user.id,
                 } as any)
                 .select()
@@ -153,6 +155,7 @@ export const receivablesService = {
             payer_name: r.payer_name,
             payer_cpf: r.payer_cpf,
             pj_source_id: r.pj_source_id,
+            card_machine_id: (r as any).card_machine_id || null,
         } as any);
 
         const { data: updated, error: updateError } = await supabase

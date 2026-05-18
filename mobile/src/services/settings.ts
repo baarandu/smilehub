@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { CardFeeConfig, CardFeeConfigInsert, FinancialSettings } from '../types/database';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export const settingsService = {
     // Financial Settings (Tax Rate)
@@ -7,13 +8,16 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) return null;
+
         const { data, error } = await supabase
             .from('financial_settings')
             .select('*')
-            .eq('user_id', user.id)
-            .single();
+            .eq('clinic_id', clinicId)
+            .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is code for no rows found
+        if (error && error.code !== 'PGRST116') throw error;
         return data as FinancialSettings | null;
     },
 
@@ -21,7 +25,9 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Check if exists
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clínica não encontrada');
+
         const existing = await this.getFinancialSettings();
 
         if (existing) {
@@ -33,7 +39,7 @@ export const settingsService = {
         } else {
             const { error } = await (supabase
                 .from('financial_settings') as any)
-                .insert({ user_id: user.id, tax_rate: rate });
+                .insert({ user_id: user.id, clinic_id: clinicId, tax_rate: rate });
             if (error) throw error;
         }
     },
@@ -41,6 +47,9 @@ export const settingsService = {
     async updateAnticipationRate(rate: number) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
+
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clínica não encontrada');
 
         const existing = await this.getFinancialSettings();
 
@@ -53,35 +62,48 @@ export const settingsService = {
         } else {
             const { error } = await (supabase
                 .from('financial_settings') as any)
-                .insert({ user_id: user.id, anticipation_rate: rate });
+                .insert({ user_id: user.id, clinic_id: clinicId, anticipation_rate: rate });
             if (error) throw error;
         }
     },
-    async getCardFees() {
+    async getCardFees(cardMachineId?: string) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data, error } = await (supabase
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) return [] as CardFeeConfig[];
+
+        let query = (supabase
             .from('card_fee_config') as any)
             .select('*')
-            .eq('user_id', user.id);
+            .eq('clinic_id', clinicId);
 
+        if (cardMachineId) {
+            query = query.eq('card_machine_id', cardMachineId);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
-        return data as CardFeeConfig[];
+        return (data || []) as CardFeeConfig[];
     },
 
     // Save or Update a Card Fee rule
-    async saveCardFee(fee: Omit<CardFeeConfigInsert, 'user_id'>) {
+    async saveCardFee(fee: Omit<CardFeeConfigInsert, 'user_id'> & { card_machine_id?: string | null }) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const payload = { ...fee, user_id: user.id };
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clínica não encontrada');
 
-        // We use upsert based on the UNIQUE constraint (user_id, brand, payment_type, installments)
-        // Ensure your table has this unique constraint!
+        if (!fee.card_machine_id) {
+            throw new Error('Cadastre uma maquininha antes de configurar taxas.');
+        }
+
+        const payload = { ...fee, user_id: user.id, clinic_id: clinicId };
+
         const { error } = await (supabase
             .from('card_fee_config') as any)
-            .upsert(payload, { onConflict: 'user_id, brand, payment_type, installments' });
+            .upsert(payload, { onConflict: 'card_machine_id,brand,payment_type,installments' });
 
         if (error) throw error;
     },
@@ -100,14 +122,9 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        // Get clinic_id
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
+        const clinicId = await resolveActiveClinicId(user.id);
 
-        if (!clinicUser) {
+        if (!clinicId) {
             // Return default brands if no clinic
             return [
                 { id: 'visa', name: 'Visa', is_default: true },
@@ -122,7 +139,7 @@ export const settingsService = {
         const { data, error } = await (supabase
             .from('card_brands') as any)
             .select('*')
-            .eq('clinic_id', clinicUser.clinic_id)
+            .eq('clinic_id', clinicId)
             .order('name');
 
         if (error) {
@@ -157,17 +174,12 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser) throw new Error('Clinic not found');
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clinic not found');
 
         const { data, error } = await (supabase
             .from('card_brands') as any)
-            .insert({ clinic_id: clinicUser.clinic_id, name, is_default: false })
+            .insert({ clinic_id: clinicId, name, is_default: false })
             .select()
             .single();
 
@@ -189,10 +201,13 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) return [];
+
         const { data, error } = await (supabase
             .from('tax_config') as any)
             .select('*')
-            .eq('user_id', user.id)
+            .eq('clinic_id', clinicId)
             .order('name');
 
         if (error && error.code !== 'PGRST116') throw error;
@@ -203,9 +218,12 @@ export const settingsService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clínica não encontrada');
+
         const { error } = await (supabase
             .from('tax_config') as any)
-            .insert({ user_id: user.id, name: tax.name, rate: tax.rate });
+            .insert({ user_id: user.id, clinic_id: clinicId, name: tax.name, rate: tax.rate });
 
         if (error) throw error;
     },

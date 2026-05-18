@@ -1,16 +1,12 @@
 /**
  * Message Splitter - Breaks long AI responses into natural WhatsApp-sized chunks.
- * Uses GPT-4o-mini to split intelligently, preserving context and lists.
- * Inspired by template v3 workflow 07.
+ * Splits by paragraph boundaries, merging short paragraphs to avoid fragmentation.
  */
 
 import * as evolution from "./evolutionClient.ts";
-import * as meta from "./metaClient.ts";
 
-const USE_META_API = !!Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-const whatsapp = USE_META_API ? meta : evolution;
-
-const OPENAI_API_KEY = () => Deno.env.get("OPENAI_API_KEY") || "";
+// Provider: Evolution API only (Meta path removed to eliminate ambiguity)
+const whatsapp = evolution;
 
 const MIN_SPLIT_LENGTH = 200; // Don't split messages shorter than this
 const MAX_PARTS = 5;
@@ -40,14 +36,8 @@ export async function splitAndSend(
     return;
   }
 
-  // Try to split using GPT-4o-mini
-  let parts: string[];
-  try {
-    parts = await splitWithAI(text);
-  } catch {
-    // Fallback: split by paragraph
-    parts = splitByParagraph(text);
-  }
+  // Split by paragraph boundaries (no extra API call)
+  const parts = splitByParagraph(text);
 
   // Send each part with delay
   for (let i = 0; i < parts.length; i++) {
@@ -66,65 +56,6 @@ export async function splitAndSend(
     }
 
     await whatsapp.sendText(instance, phone, part);
-  }
-}
-
-/**
- * Use GPT-4o-mini to split a message into natural conversational parts.
- */
-async function splitWithAI(text: string): Promise<string[]> {
-  const apiKey = OPENAI_API_KEY();
-  if (!apiKey) return splitByParagraph(text);
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `Você é um assistente que divide mensagens longas em partes menores para WhatsApp.
-
-REGRAS:
-1. Divida em 2-${MAX_PARTS} partes naturais
-2. Cada parte deve fazer sentido sozinha
-3. NUNCA quebre listas, tabelas ou informações estruturadas no meio
-4. Mantenha o tom e formatação original
-5. Não adicione nada novo, apenas divida
-6. Retorne APENAS um JSON array de strings: ["parte1", "parte2", ...]
-7. Se a mensagem já é curta o suficiente, retorne ["mensagem original"]`,
-        },
-        {
-          role: "user",
-          content: `Divida esta mensagem em partes naturais para WhatsApp:\n\n${text}`,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 2000,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Split API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || "";
-
-  // Parse JSON array from response
-  const match = content.match(/\[[\s\S]*\]/);
-  if (!match) return splitByParagraph(text);
-
-  try {
-    const parts = JSON.parse(match[0]) as string[];
-    if (!Array.isArray(parts) || parts.length === 0) return splitByParagraph(text);
-    return parts.slice(0, MAX_PARTS);
-  } catch {
-    return splitByParagraph(text);
   }
 }
 

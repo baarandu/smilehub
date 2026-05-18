@@ -8,7 +8,7 @@ import type {
 
 const EDGE_FUNCTION_URL = `${
   import.meta.env.VITE_SUPABASE_URL
-}/functions/v1/accounting-agent`;
+}/functions/v1/accounting-agent-v2`;
 
 export const accountingAgentService = {
   // Send message to agent

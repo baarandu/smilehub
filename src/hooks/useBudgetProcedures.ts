@@ -16,6 +16,7 @@ export interface BudgetPlanItem {
 }
 
 function getItemValue(tooth: ToothEntry): number {
+  if (!tooth.values || typeof tooth.values !== 'object') return 0;
   return Object.values(tooth.values).reduce(
     (sum, val) => sum + (parseInt(val as string) || 0) / 100,
     0
@@ -42,20 +43,24 @@ export function useBudgetPlanItems(patientId: string) {
         if (!teeth) continue;
 
         teeth.forEach((tooth, index) => {
-          const value = getItemValue(tooth);
-          const toothName = getToothDisplayName(tooth.tooth, false);
-          const treatments = tooth.treatments.join(', ');
+          try {
+            const value = getItemValue(tooth);
+            const toothName = getToothDisplayName(tooth.tooth, false);
+            const treatments = Array.isArray(tooth.treatments) ? tooth.treatments.join(', ') : '';
 
-          result.push({
-            budgetId: budget.id,
-            budgetDate: budget.date,
-            toothIndex: index,
-            tooth,
-            value,
-            status: tooth.status || 'pending',
-            label: `${toothName} - ${treatments} (R$ ${formatMoney(value)}) [${formatDisplayDate(budget.date)}]`,
-            key: `${budget.id}:${index}`,
-          });
+            result.push({
+              budgetId: budget.id,
+              budgetDate: budget.date,
+              toothIndex: index,
+              tooth,
+              value,
+              status: tooth.status || 'pending',
+              label: `${toothName} - ${treatments} (R$ ${formatMoney(value)}) [${formatDisplayDate(budget.date)}]`,
+              key: `${budget.id}:${index}`,
+            });
+          } catch {
+            // skip individual malformed tooth entry
+          }
         });
       } catch {
         // skip invalid JSON

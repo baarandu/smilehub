@@ -124,45 +124,92 @@ export function ScheduleOverview({ clinicId }: ScheduleOverviewProps) {
               ? activeDays.map(d => DAY_NAMES_SHORT[d]).join(', ')
               : 'Sem horários';
 
-            return (
-              <div key={dentist.id}>
-                {/* Professional header */}
-                {dentistSchedules.length > 1 && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm font-semibold">{dentist.name}</span>
-                  </div>
-                )}
-
-                {settings.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic ml-6">Sem horários configurados</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {[1, 2, 3, 4, 5, 6, 0].map(day => {
-                      const slots = byDay[day];
-                      if (!slots || slots.length === 0) return null;
-
-                      return (
-                        <div key={day} className="flex items-center gap-3 bg-muted/40 px-3 py-2 rounded-lg">
-                          <span className="text-xs font-medium text-muted-foreground w-16">{DAY_NAMES_SHORT[day]}</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {slots.map((slot, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs font-normal">
-                                {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                                {slot.interval_minutes !== 30 && (
-                                  <span className="text-muted-foreground ml-1">({slot.interval_minutes}min)</span>
-                                )}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+            // Determine the cycle length from the data (max across rows)
+            // so we can label rows with their week (Semana A/B/...) when > 1.
+            const cycleLength = settings.reduce(
+              (max, s) => Math.max(max, s.cycle_length ?? 1),
+              1,
             );
-          })}
+            const weekLabel = (idx: number) => `Semana ${String.fromCharCode(65 + idx)}`;
+
+              return (
+                <div key={dentist.id}>
+                  {/* Professional header */}
+                  {dentistSchedules.length > 1 && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">{dentist.name}</span>
+                    </div>
+                  )}
+
+                  {settings.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic ml-6">Sem horários configurados</p>
+                  ) : cycleLength === 1 ? (
+                    <div className="space-y-1.5">
+                      {[1, 2, 3, 4, 5, 6, 0].map(day => {
+                        const slots = byDay[day];
+                        if (!slots || slots.length === 0) return null;
+
+                        return (
+                          <div key={day} className="flex items-center gap-3 bg-muted/40 px-3 py-2 rounded-lg">
+                            <span className="text-xs font-medium text-muted-foreground w-16">{DAY_NAMES_SHORT[day]}</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {slots.map((slot, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-xs font-normal">
+                                  {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                                  {slot.interval_minutes !== 30 && (
+                                    <span className="text-muted-foreground ml-1">({slot.interval_minutes}min)</span>
+                                  )}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    // Multi-week cycle: render one section per week
+                    <div className="space-y-3">
+                      {Array.from({ length: cycleLength }, (_, weekIdx) => {
+                        const weekSettings = settings.filter(s => (s.week_index ?? 0) === weekIdx);
+                        if (weekSettings.length === 0) return null;
+                        const weekByDay: Record<number, ScheduleSetting[]> = {};
+                        weekSettings.forEach(s => {
+                          if (!weekByDay[s.day_of_week]) weekByDay[s.day_of_week] = [];
+                          weekByDay[s.day_of_week].push(s);
+                        });
+                        return (
+                          <div key={weekIdx} className="space-y-1.5">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              {weekLabel(weekIdx)}
+                            </div>
+                            {[1, 2, 3, 4, 5, 6, 0].map(day => {
+                              const slots = weekByDay[day];
+                              if (!slots || slots.length === 0) return null;
+                              return (
+                                <div key={day} className="flex items-center gap-3 bg-muted/40 px-3 py-2 rounded-lg">
+                                  <span className="text-xs font-medium text-muted-foreground w-16">{DAY_NAMES_SHORT[day]}</span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {slots.map((slot, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs font-normal">
+                                        {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                                        {slot.interval_minutes !== 30 && (
+                                          <span className="text-muted-foreground ml-1">({slot.interval_minutes}min)</span>
+                                        )}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </CardContent>
     </Card>

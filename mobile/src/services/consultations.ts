@@ -1,9 +1,95 @@
 import { supabase } from '../lib/supabase';
-import type { ReturnAlert } from '../types/database';
+import { toLocalDateString } from '../utils/formatters';
+import type {
+  Consultation,
+  ConsultationInsert,
+  ConsultationUpdate,
+  ConsultationWithPatient,
+  ReturnAlert,
+} from '../types/database';
 
 export const consultationsService = {
+  async getAll(clinicId?: string): Promise<ConsultationWithPatient[]> {
+    let query = supabase
+      .from('consultations')
+      .select(`
+        *,
+        patients!inner (name, clinic_id)
+      `)
+      .is('deleted_at', null)
+      .order('date', { ascending: false });
+
+    if (clinicId) {
+      query = query.eq('patients.clinic_id', clinicId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return (data as unknown as ConsultationWithPatient[]) || [];
+  },
+
+  async getByPatient(patientId: string): Promise<Consultation[]> {
+    const { data, error } = await supabase
+      .from('consultations')
+      .select('*')
+      .eq('patient_id', patientId)
+      .is('deleted_at', null)
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return (data as unknown as Consultation[]) || [];
+  },
+
+  async getById(id: string): Promise<ConsultationWithPatient | null> {
+    const { data, error } = await supabase
+      .from('consultations')
+      .select(`
+        *,
+        patients (name)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data as unknown as ConsultationWithPatient | null;
+  },
+
+  async create(consultation: ConsultationInsert): Promise<Consultation> {
+    const { data, error } = await supabase
+      .from('consultations')
+      .insert(consultation as never)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as unknown as Consultation;
+  },
+
+  async update(id: string, consultation: ConsultationUpdate): Promise<Consultation> {
+    const { data, error } = await supabase
+      .from('consultations')
+      .update(consultation as never)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as unknown as Consultation;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('consultations')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id } as never)
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
   async getReturnAlerts(clinicId?: string): Promise<ReturnAlert[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     let query = supabase
       .from('consultations')
@@ -12,6 +98,7 @@ export const consultationsService = {
         suggested_return_date,
         patients!inner (name, phone, clinic_id)
       `)
+      .is('deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today)
       .order('suggested_return_date');
@@ -35,7 +122,7 @@ export const consultationsService = {
         patient_name: item.patients.name,
         phone: item.patients.phone,
         suggested_return_date: item.suggested_return_date,
-        days_until_return: diffDays
+        days_until_return: diffDays,
       };
     });
 
@@ -43,11 +130,13 @@ export const consultationsService = {
   },
 
   async countPendingReturns(clinicId?: string): Promise<number> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString(new Date());
 
     let query = supabase
       .from('consultations')
       .select('*, patients!inner(clinic_id)', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .is('patients.deleted_at', null)
       .not('suggested_return_date', 'is', null)
       .gte('suggested_return_date', today);
 
@@ -59,5 +148,5 @@ export const consultationsService = {
 
     if (error) throw error;
     return count || 0;
-  }
+  },
 };

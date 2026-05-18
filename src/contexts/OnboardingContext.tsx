@@ -122,7 +122,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
     try {
       const { count } = await supabase
-        .from('taxes')
+        .from('financial_transactions')
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', clinicId);
       if ((count || 0) > 0) detected.push('financial');

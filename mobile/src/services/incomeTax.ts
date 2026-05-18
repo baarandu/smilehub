@@ -10,6 +10,7 @@ import type {
   PayerFormData,
   SupplierFormData,
 } from '../types/incomeTax';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 // Decrypt patient CPFs from PostgREST join (returns encrypted values from patients table)
 async function resolveEncryptedPatientCpfs(transactions: any[]): Promise<void> {
@@ -48,14 +49,7 @@ export const incomeTaxService = {
   async getClinicId(): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-
-    const { data: clinicUser } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
-
-    return (clinicUser as any)?.clinic_id || null;
+    return resolveActiveClinicId(user.id);
   },
 
   // ============ FISCAL PROFILE ============

@@ -206,7 +206,8 @@ export function usePatientPayments(
         brand?: string,
         breakdown?: PaymentBreakdown,
         onComplete?: () => void,
-        payerData?: PayerData
+        payerData?: PayerData,
+        cardMachineId?: string | null,
     ) => {
         try {
             const budget = budgets.find(b => b.id === selectedPaymentItem.budgetId);
@@ -257,6 +258,7 @@ export function usePatientPayments(
                         payer_name: payerData?.payer_name || null,
                         payer_cpf: payerData?.payer_cpf || null,
                         pj_source_id: payerData?.pj_source_id || null,
+                        card_machine_id: cardMachineId || null,
                     };
                 });
 
@@ -350,6 +352,7 @@ export function usePatientPayments(
                         payer_name: payerData?.payer_name || null,
                         payer_cpf: payerData?.payer_cpf || null,
                         pj_source_id: payerData?.pj_source_id || null,
+                        card_machine_id: cardMachineId || null,
                     });
                 }
             } else {
@@ -396,6 +399,7 @@ export function usePatientPayments(
                     payer_name: payerData?.payer_name || null,
                     payer_cpf: payerData?.payer_cpf || null,
                     pj_source_id: payerData?.pj_source_id || null,
+                    card_machine_id: cardMachineId || null,
                 });
             }
 
@@ -420,7 +424,8 @@ export function usePatientPayments(
         brand?: string,
         breakdown?: PaymentBreakdown,
         onComplete?: () => void,
-        payerData?: PayerData
+        payerData?: PayerData,
+        cardMachineId?: string | null,
     ) => {
         try {
             const budget = budgets.find(b => b.id === selectedItems.budgetId);
@@ -486,6 +491,7 @@ export function usePatientPayments(
                             payer_name: payerData?.payer_name || null,
                             payer_cpf: payerData?.payer_cpf || null,
                             pj_source_id: payerData?.pj_source_id || null,
+                            card_machine_id: cardMachineId || null,
                         };
                     });
 
@@ -631,6 +637,7 @@ export function usePatientPayments(
                             payer_name: payerData?.payer_name || null,
                             payer_cpf: payerData?.payer_cpf || null,
                             pj_source_id: payerData?.pj_source_id || null,
+                            card_machine_id: cardMachineId || null,
                         });
                     }
                 } else {
@@ -682,6 +689,7 @@ export function usePatientPayments(
                         payer_name: payerData?.payer_name || null,
                         payer_cpf: payerData?.payer_cpf || null,
                         pj_source_id: payerData?.pj_source_id || null,
+                        card_machine_id: cardMachineId || null,
                     });
                 }
             }

@@ -1,6 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export interface UserProfile {
     id: string;
@@ -74,14 +75,8 @@ export const profileService = {
             };
         }
 
-        // Get clinic_id from clinic_users
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        const clinicId = clinicUser?.clinic_id || null;
+        // Resolve clinic_id (handles multi-clinic users via AsyncStorage selection)
+        const clinicId = await resolveActiveClinicId(user.id);
 
         // Get clinic details directly
         let clinicName: string | null = null;
@@ -170,13 +165,7 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        let clinicId = clinicUser?.clinic_id;
+        const clinicId = await resolveActiveClinicId(user.id);
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
@@ -209,13 +198,7 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-        let clinicId = clinicUser?.clinic_id;
+        const clinicId = await resolveActiveClinicId(user.id);
 
         // If no clinic exists, create one via RPC (bypasses RLS safely)
         if (!clinicId) {
@@ -240,15 +223,9 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clinic not found');
 
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-        const clinicId = clinicUser.clinic_id;
         const fileExt = uri.split('.').pop() || 'jpg';
         const fileName = `${clinicId}/logo.${fileExt}`;
 
@@ -289,15 +266,9 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clinic not found');
 
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-        const clinicId = clinicUser.clinic_id;
         const fileExt = file.name?.split('.').pop() || 'jpg';
         const fileName = `${clinicId}/letterhead.${fileExt}`;
 
@@ -340,15 +311,9 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) throw new Error('Clinic not found');
 
-        if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-        const clinicId = clinicUser.clinic_id;
         const fileName = `${clinicId}/letterhead.${ext}`;
 
         const { error } = await supabase.storage
@@ -397,18 +362,13 @@ export const profileService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
-        const { data: clinicUser } = await (supabase
-            .from('clinic_users') as any)
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (!clinicUser?.clinic_id) return;
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) return;
 
         const { error } = await (supabase
             .from('clinics') as any)
             .update({ logo_url: null })
-            .eq('id', clinicUser.clinic_id);
+            .eq('id', clinicId);
 
         if (error) throw error;
     }

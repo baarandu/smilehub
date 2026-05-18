@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput, ScrollView, Switch, Alert, ActivityIndicator } from 'react-native';
-import { X, CreditCard, Banknote, Wallet, ArrowRight, Calendar, PiggyBank, Percent, User, Building2, AlertCircle, Clock } from 'lucide-react-native';
+import { X, CreditCard, Banknote, Wallet, ArrowRight, Calendar, PiggyBank, Percent, User, Building2, AlertCircle, Clock, ChevronDown, Check } from 'lucide-react-native';
 import { settingsService } from '../../services/settings';
 import { CardFeeConfig, FinancialSettings } from '../../types/database';
 import type { PJSource } from '../../types/incomeTax';
+import { cardMachinesService } from '../../services/cardMachines';
+import { supabase } from '../../lib/supabase';
+import type { CardMachineWithDentist } from '../../types/cardMachine';
 
 export interface PaymentTransaction {
     date: string; // YYYY-MM-DD
@@ -47,7 +50,7 @@ const applyCPFMask = (value: string): string => {
 interface PaymentMethodModalProps {
     visible: boolean;
     onClose: () => void;
-    onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData) => void;
+    onConfirm: (method: string, transactions: PaymentTransaction[], brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null) => void;
     itemName: string;
     value: number;
     locationRate?: number;
@@ -64,6 +67,11 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     // Settings State
     const [filesSettings, setFinancialSettings] = useState<FinancialSettings | null>(null);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+
+    // Card Machines State
+    const [machines, setMachines] = useState<CardMachineWithDentist[]>([]);
+    const [selectedMachineId, setSelectedMachineId] = useState<string>('');
+    const [machinePickerOpen, setMachinePickerOpen] = useState(false);
 
     // Transaction State
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
@@ -100,12 +108,33 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     const loadSettings = async () => {
         setLoadingSettings(true);
         try {
-            const [settings, fees] = await Promise.all([
+            const [settings, list] = await Promise.all([
                 settingsService.getFinancialSettings(),
-                settingsService.getCardFees()
+                cardMachinesService.list(false),
             ]);
             setFinancialSettings(settings);
-            setCardFees(fees || []);
+            setMachines(list);
+
+            // Auto-select if only one machine; force pick if multiple
+            if (list.length === 1) {
+                setSelectedMachineId(list[0].id);
+            } else if (list.length > 1) {
+                setSelectedMachineId('');
+            } else {
+                setSelectedMachineId('');
+            }
+
+            // Load fees for all registered machines (so rates are ready when user picks one).
+            if (list.length > 0) {
+                const machineIds = list.map(m => m.id);
+                const { data: feesData } = await (supabase
+                    .from('card_fee_config') as any)
+                    .select('*')
+                    .in('card_machine_id', machineIds);
+                setCardFees((feesData as CardFeeConfig[]) || []);
+            } else {
+                setCardFees([]);
+            }
         } catch (error) {
             console.error('Error loading settings:', error);
         } finally {
@@ -188,7 +217,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             // For debit, always 1
             effectiveInstallments = (type === 'credit' && isInstallments) ? (parseInt(numInstallments) || 1) : 1;
 
-            const feeConfig = cardFees.find(f =>
+            const feeConfig = machineFees.find(f =>
                 f.brand === selectedBrand &&
                 f.payment_type === type &&
                 f.installments === effectiveInstallments
@@ -241,8 +270,13 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
     const handleConfirm = () => {
         if (!selectedMethod) return;
-        if ((selectedMethod === 'credit' || selectedMethod === 'debit') && !selectedBrand) {
+        const isCardMethod = selectedMethod === 'credit' || selectedMethod === 'debit';
+        if (isCardMethod && !selectedBrand) {
             Alert.alert('Selecione a Bandeira', 'Por favor, selecione a bandeira do cartão.');
+            return;
+        }
+        if (isCardMethod && machines.length > 1 && !selectedMachineId) {
+            Alert.alert('Selecione a Maquininha', 'Por favor, escolha em qual maquininha o pagamento foi feito.');
             return;
         }
 
@@ -305,7 +339,8 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             pj_source_id: payerType === 'PJ' ? selectedPJSource : null,
         };
 
-        onConfirm(selectedMethod, transactions, selectedBrand || undefined, breakdown, payerData);
+        const cardMachineId = isCardMethod ? (selectedMachineId || null) : null;
+        onConfirm(selectedMethod, transactions, selectedBrand || undefined, breakdown, payerData, cardMachineId);
     };
 
     const methods = [
@@ -324,18 +359,24 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         { id: 'others', label: 'Outros' }
     ];
 
+    // Filter fees by selected machine (when one is selected)
+    const machineFees = React.useMemo(() => {
+        if (!selectedMachineId) return cardFees;
+        return cardFees.filter(f => (f as any).card_machine_id === selectedMachineId);
+    }, [cardFees, selectedMachineId]);
+
     const availableBrands = React.useMemo(() => {
-        if (cardFees.length === 0) return allBrands;
+        if (machineFees.length === 0) return allBrands;
 
         // Get unique brand names from settings - exactly as entered
-        const uniqueNames = Array.from(new Set(cardFees.map(f => f.brand.trim())));
+        const uniqueNames = Array.from(new Set(machineFees.map(f => f.brand.trim())));
 
         return uniqueNames.map(name => ({
             id: name,
             // Capitalize first letter of each word/segment (handles "visa/mastercard" -> "Visa/Mastercard")
             label: name.replace(/\b\w/g, l => l.toUpperCase())
         })).sort((a, b) => a.label.localeCompare(b.label));
-    }, [cardFees]);
+    }, [machineFees]);
 
 
     useEffect(() => {
@@ -402,6 +443,24 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
 
                         {selectedMethod && (
                             <View>
+                                {/* Card Machine Selection */}
+                                {(selectedMethod === 'credit' || selectedMethod === 'debit') && machines.length > 0 && (
+                                    <View className="mb-3">
+                                        <Text className="text-xs font-medium text-gray-700 mb-2">Maquininha</Text>
+                                        <TouchableOpacity
+                                            onPress={() => setMachinePickerOpen(true)}
+                                            className="border border-gray-300 rounded-lg px-3 py-2.5 flex-row items-center justify-between bg-white"
+                                        >
+                                            <Text className={selectedMachineId ? 'text-gray-900 text-sm' : 'text-gray-400 text-sm'}>
+                                                {selectedMachineId
+                                                    ? (machines.find(m => m.id === selectedMachineId)?.name || 'Maquininha')
+                                                    : 'Selecione a maquininha'}
+                                            </Text>
+                                            <ChevronDown size={16} color="#6B7280" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
                                 {/* Brand Selection - Compact */}
                                 {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
                                     <View className="mb-3">
@@ -688,6 +747,38 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
                     </View>
                 </View>
             </View>
+
+            {/* Card Machine Picker */}
+            <Modal visible={machinePickerOpen} transparent animationType="fade" onRequestClose={() => setMachinePickerOpen(false)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setMachinePickerOpen(false)}
+                    className="flex-1 bg-black/50 items-center justify-center p-6"
+                >
+                    <View className="bg-white rounded-2xl w-full max-w-md max-h-[60%]">
+                        <View className="px-5 py-3 border-b border-gray-100">
+                            <Text className="text-base font-semibold text-gray-900">Selecione a maquininha</Text>
+                        </View>
+                        <ScrollView>
+                            {machines.map(m => (
+                                <TouchableOpacity
+                                    key={m.id}
+                                    onPress={() => { setSelectedMachineId(m.id); setMachinePickerOpen(false); }}
+                                    className="flex-row items-center justify-between px-5 py-3 border-b border-gray-100"
+                                >
+                                    <View className="flex-1 pr-2">
+                                        <Text className="text-gray-900" numberOfLines={1}>{m.name}</Text>
+                                        {m.dentist_name && (
+                                            <Text className="text-xs text-gray-500" numberOfLines={1}>{m.dentist_name}</Text>
+                                        )}
+                                    </View>
+                                    {selectedMachineId === m.id && <Check size={16} color="#b94a48" />}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </Modal>
     );
 }

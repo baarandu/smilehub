@@ -12,6 +12,22 @@ interface ApprovedBudgetListProps {
     onToggleFinalize: (id: string) => void;
 }
 
+function getStatusBadge(status: string): { label: string; bg: string; fg: string } | null {
+    switch (status) {
+        case 'paid':
+        case 'completed':
+            return { label: 'Pago', bg: '#DBEAFE', fg: '#1E40AF' };
+        case 'partially_paid':
+            return { label: 'Pago parcial', bg: '#DBEAFE', fg: '#1E40AF' };
+        case 'approved':
+            return { label: 'Confirmado', bg: '#DCFCE7', fg: '#166534' };
+        case 'pending':
+            return { label: 'Pendente', bg: '#F3F4F6', fg: '#6B7280' };
+        default:
+            return null;
+    }
+}
+
 export function ApprovedBudgetList({
     items,
     selectedIds,
@@ -23,14 +39,14 @@ export function ApprovedBudgetList({
     return (
         <View className="bg-white border border-gray-200 rounded-xl p-4">
             <View className="flex-row items-center justify-between mb-3">
-                <Text className="font-semibold text-[#6b2a28]">Procedimentos Pagos</Text>
+                <Text className="font-semibold text-[#6b2a28]">Itens do Orçamento</Text>
                 {loading && <ActivityIndicator size="small" color="#b94a48" />}
             </View>
 
             {items.length === 0 && !loading ? (
                 <View className="flex-row items-center gap-2 py-2">
                     <Info size={16} color="#9CA3AF" />
-                    <Text className="text-gray-400 italic">Nenhum item pago disponível.</Text>
+                    <Text className="text-gray-400 italic">Nenhum item disponível no orçamento.</Text>
                 </View>
             ) : (
                 <View className="max-h-48">
@@ -38,6 +54,7 @@ export function ApprovedBudgetList({
                         {items.map((item) => {
                             const isSelected = selectedIds.includes(item.id);
                             const isFinalized = finalizedIds.includes(item.id);
+                            const badge = getStatusBadge(item.status);
                             return (
                                 <View key={item.id} className="border-b border-gray-50 last:border-0">
                                     <TouchableOpacity
@@ -54,9 +71,16 @@ export function ApprovedBudgetList({
                                             )}
                                         </View>
                                         <View className="flex-1">
-                                            <Text className={`text-sm ${isSelected ? 'text-[#5a2322] font-medium' : 'text-gray-700'}`}>
-                                                {item.label}
-                                            </Text>
+                                            <View className="flex-row items-center gap-2 flex-wrap">
+                                                <Text className={`text-sm ${isSelected ? 'text-[#5a2322] font-medium' : 'text-gray-700'}`}>
+                                                    {item.label}
+                                                </Text>
+                                                {badge && (
+                                                    <View style={{ backgroundColor: badge.bg, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                                        <Text style={{ color: badge.fg, fontSize: 10, fontWeight: '600' }}>{badge.label}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                             <Text className="text-xs text-gray-500 mt-0.5">
                                                 R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                             </Text>

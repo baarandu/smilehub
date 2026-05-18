@@ -7,6 +7,8 @@ const PRODUCTION_ORIGINS = [
   'https://organizaodonto.vercel.app',
   'https://organizaodonto.app',
   'https://www.organizaodonto.app',
+  'https://organizaodonto.com.br',
+  'https://www.organizaodonto.com.br',
 ];
 
 const DEV_ORIGINS = [

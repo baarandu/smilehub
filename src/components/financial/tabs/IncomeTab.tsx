@@ -438,7 +438,13 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                                             {t.location}
                                                         </p>
                                                     )}
-                                                    {(t as any).created_by_name && (
+                                                    {(t as any).dentist_name && (
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <User className="h-3 w-3" />
+                                                            Dr(a). {(t as any).dentist_name}
+                                                        </p>
+                                                    )}
+                                                    {!(t as any).dentist_name && (t as any).created_by_name && (
                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <User className="h-3 w-3" />
                                                             {(t as any).created_by_name}
@@ -675,6 +681,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                     <span className="text-muted-foreground">Descrição</span>
                                     <span className="font-medium text-right max-w-[250px]">{selectedTransaction.description}</span>
                                 </div>
+                                {(selectedTransaction as any).dentist_name && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Dentista Responsável</span>
+                                        <span className="font-medium">Dr(a). {(selectedTransaction as any).dentist_name}</span>
+                                    </div>
+                                )}
                                 {selectedTransaction.location && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Local</span>

@@ -6,6 +6,7 @@ import { CardFeeConfig } from '../../types/database';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TaxSection } from './TaxSection';
 import { CardBrandSection } from './CardBrandSection';
+import { CardMachinesSection } from './CardMachinesSection';
 import { CardFeeModal } from './CardFeeModal';
 import { FeeDetailModal } from './FeeDetailModal';
 
@@ -67,6 +68,7 @@ export default function FinancialSettingsScreen({ onBack }: Props) {
             ) : (
                 <ScrollView className="flex-1 p-4">
                     <TaxSection taxes={taxes} onRefresh={loadSettings} />
+                    <CardMachinesSection />
                     <CardBrandSection brands={cardBrands} onRefresh={loadSettings} />
 
                     {/* Card Fees Section */}

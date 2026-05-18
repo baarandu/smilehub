@@ -17,6 +17,8 @@ import { ApprovedBudgetList } from './procedures/ApprovedBudgetList';
 import { AttachmentManager } from './procedures/AttachmentManager';
 import { ProcedureFooter } from './procedures/ProcedureFooter';
 import type { ApprovedItemOption, ProcedureFormState, Attachment } from './procedures/types';
+import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
+import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewProcedureModalProps {
   visible: boolean;
@@ -95,6 +97,41 @@ export function NewProcedureModal({
     }
   }, [visible, procedure?.id]);
 
+  const handleVoiceResult = (result: ExtractionResult) => {
+    const parts: string[] = [];
+
+    if (result.procedures && result.procedures.length > 0) {
+      for (const p of result.procedures) {
+        const desc = [
+          p.treatment,
+          p.tooth && `Dente ${p.tooth}`,
+          p.material && `Material: ${p.material}`,
+          p.description,
+        ].filter(Boolean).join(' - ');
+        if (desc) parts.push(desc);
+      }
+
+      const first = result.procedures[0];
+      if (first.status) setForm(prev => ({ ...prev, status: first.status as ProcedureFormState['status'] }));
+      if (first.location) {
+        const loc = locations.find(l => l.name.toLowerCase() === first.location!.toLowerCase());
+        if (loc) setForm(prev => ({ ...prev, location: loc.name }));
+      }
+    }
+
+    if (result.consultation) {
+      const c = result.consultation;
+      if (c.procedures && !parts.some(p => p === c.procedures)) parts.push(c.procedures);
+      if (c.chiefComplaint && !parts.some(p => p === c.chiefComplaint)) parts.push(c.chiefComplaint);
+      if (c.treatmentPlan && !parts.some(p => p === c.treatmentPlan)) parts.push(c.treatmentPlan);
+      if (c.notes && !parts.some(p => p === c.notes)) parts.push(c.notes);
+    }
+
+    if (parts.length > 0) {
+      setObservations(parts.join('\n'));
+    }
+  };
+
   const loadLocations = async () => {
     try {
       const data = await locationsService.getAll();
@@ -166,23 +203,22 @@ export function NewProcedureModal({
             const teeth: ToothEntry[] = notesData.teeth;
 
             teeth.forEach((toothEntry, toothIndex) => {
-              if (toothEntry.status === 'paid' || toothEntry.status === 'completed') {
-                toothEntry.treatments.forEach((treatment, treatmentIndex) => {
-                  const valStr = toothEntry.values[treatment] || '0';
-                  const val = parseInt(valStr) / 100;
+              toothEntry.treatments.forEach((treatment, treatmentIndex) => {
+                const valStr = toothEntry.values[treatment] || '0';
+                const val = parseInt(valStr) / 100;
 
-                  const uniqueId = `${budget.id}_${toothIndex}_${treatmentIndex}`;
+                const uniqueId = `${budget.id}_${toothIndex}_${treatmentIndex}`;
 
-                  options.push({
-                    id: uniqueId,
-                    label: `${treatment} - ${getToothDisplayName(toothEntry.tooth)}`,
-                    value: val,
-                    treatment: treatment,
-                    tooth: toothEntry.tooth,
-                    budgetId: budget.id
-                  });
+                options.push({
+                  id: uniqueId,
+                  label: `${treatment} - ${getToothDisplayName(toothEntry.tooth)}`,
+                  value: val,
+                  treatment: treatment,
+                  tooth: toothEntry.tooth,
+                  budgetId: budget.id,
+                  status: toothEntry.status || 'pending',
                 });
-              }
+              });
             });
           }
         } catch (e) {
@@ -446,6 +482,14 @@ export function NewProcedureModal({
               onChange={(updates) => setForm(prev => ({ ...prev, ...updates }))}
               locations={locations}
             />
+
+            {!procedure && (
+              <InlineVoiceRecorder
+                patientId={patientId}
+                onResult={handleVoiceResult}
+                extractionType="adult"
+              />
+            )}
 
             {!procedure && (
               <View className="mt-6 mb-6">

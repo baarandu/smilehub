@@ -12,3 +12,13 @@ verify_jwt = false
 
 [functions.supersign-webhook]
 verify_jwt = false
+
+# DIAGNOSTIC ONLY (2026-04-24): isolating whether the 401 comes from
+# gateway JWT verification. The function code itself still validates
+# the token via supabase.auth.getUser(). Revert this block after the
+# Supabase support investigation concludes.
+[functions.accounting-agent]
+verify_jwt = false
+
+[functions.accounting-agent-v2]
+verify_jwt = false

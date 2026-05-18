@@ -29,7 +29,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useClinic } from '../src/contexts/ClinicContext';
 import { supabase } from '../src/lib/supabase';
 
-const EDGE_FUNCTION_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/accounting-agent`;
+const EDGE_FUNCTION_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/accounting-agent-v2`;
 
 interface Message {
     id: string;

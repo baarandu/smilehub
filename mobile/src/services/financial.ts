@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { FinancialTransaction, FinancialTransactionInsert, FinancialTransactionUpdate, FinancialTransactionWithPatient } from '../types/database';
+import { resolveActiveClinicId, getSelectedClinicId } from '../lib/selectedClinic';
 
 export const financialService = {
     /**
@@ -15,24 +16,31 @@ export const financialService = {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return null;
 
-        const { data: clinicUser } = await supabase
+        // Fetch all clinic_users rows (user may belong to multiple clinics)
+        const { data: rows } = await supabase
             .from('clinic_users')
-            .select('clinic_id, role')
+            .select('clinic_id, role, roles')
             .eq('user_id', user.id)
-            .single();
+            .order('role', { ascending: true });
 
-        if (!clinicUser) return null;
+        const list = (rows || []) as Array<{ clinic_id: string; role: string; roles?: string[] | null }>;
+        if (list.length === 0) return null;
 
-        const role = (clinicUser as any).role;
+        const savedId = await getSelectedClinicId();
+        const match = list.find(r => savedId && r.clinic_id === savedId)
+            || list.find(r => (r.roles || [r.role]).includes('admin'))
+            || list[0];
+
+        const role = match.role;
         // Owners, admins, and managers can see all financials
         // Dentists and other roles only see their own transactions
         const canSeeAllFinancials = ['owner', 'admin', 'manager'].includes(role);
 
         return {
             userId: user.id,
-            clinicId: (clinicUser as any).clinic_id,
+            clinicId: match.clinic_id,
             role,
-            canSeeAllFinancials
+            canSeeAllFinancials,
         };
     },
 
@@ -79,7 +87,7 @@ export const financialService = {
         return data || [];
     },
 
-    async create(transaction: FinancialTransactionInsert): Promise<FinancialTransaction> {
+    async create(transaction: FinancialTransactionInsert & { card_machine_id?: string | null }): Promise<FinancialTransaction> {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
@@ -87,13 +95,8 @@ export const financialService = {
             throw new Error('Usuário não autenticado');
         }
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single() as { data: { clinic_id: string } | null, error: any };
-
-        if (!clinicUser?.clinic_id) {
+        const clinicId = await resolveActiveClinicId(user.id);
+        if (!clinicId) {
             console.error('[FinancialService] Clinic not found for user.');
             throw new Error('Clínica não encontrada');
         }
@@ -102,7 +105,7 @@ export const financialService = {
         const payload: FinancialTransactionInsert = {
             ...transaction,
             user_id: user.id,
-            clinic_id: clinicUser.clinic_id as string
+            clinic_id: clinicId
         } as any;
 
         // Casting to any to avoid "Argument of type ... is not assignable to never"

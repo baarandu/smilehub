@@ -5,6 +5,9 @@ import { X, Calendar } from 'lucide-react-native';
 import { anamnesesService } from '../../services/anamneses';
 import type { AnamneseInsert, Anamnese } from '../../types/database';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { InlineVoiceRecorder } from '../voice-consultation/InlineVoiceRecorder';
+import { extractedToFormState } from '../voice-consultation/extractionHelpers';
+import type { ExtractionResult } from '../../types/voiceConsultation';
 
 interface NewAnamneseModalProps {
     visible: boolean;
@@ -248,6 +251,14 @@ export function NewAnamneseModal({
         }
     }, [visible, anamnese?.id]);
 
+    const handleVoiceResult = (result: ExtractionResult) => {
+        const mapped = extractedToFormState(result.anamnesis);
+        setForm(prev => ({ ...prev, ...mapped }));
+        if (result.consultation?.chiefComplaint) {
+            setForm(prev => ({ ...prev, notes: result.consultation.chiefComplaint || '' }));
+        }
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -376,6 +387,13 @@ export function NewAnamneseModal({
                                 setForm({ ...form, date: `${year}-${month}-${day}` });
                             }}
                         />
+                        {/* ── Preencher por Voz ── */}
+                        <InlineVoiceRecorder
+                            patientId={patientId}
+                            onResult={handleVoiceResult}
+                            extractionType="adult"
+                        />
+
                         {/* ── Saúde Geral e Tratamentos ── */}
                         <View className="mb-2 mt-2">
                             <Text className="text-sm font-semibold text-[#b94a48] mb-2">Saúde Geral e Tratamentos</Text>

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '../types/database';
 import { calculateBudgetStatus } from '../components/patients/budgetUtils';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export const budgetsService = {
     async getByPatient(patientId: string): Promise<BudgetWithItems[]> {
@@ -37,20 +38,15 @@ export const budgetsService = {
     },
 
     async create(budget: BudgetInsert, items: Omit<BudgetItemInsert, 'budget_id'>[]): Promise<BudgetWithItems> {
-        // Get current user and clinic
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Usuário não autenticado');
 
-        const { data: clinicUser } = await supabase
-            .from('clinic_users')
-            .select('clinic_id')
-            .eq('user_id', user.id)
-            .single() as any;
+        const clinicId = await resolveActiveClinicId(user.id);
 
         // Create budget first with created_by and clinic_id
         const { data: budgetData, error: budgetError } = await supabase
             .from('budgets')
-            .insert({ ...budget, created_by: user.id, clinic_id: clinicUser?.clinic_id } as any)
+            .insert({ ...budget, created_by: user.id, clinic_id: clinicId } as any)
             .select()
             .single();
 

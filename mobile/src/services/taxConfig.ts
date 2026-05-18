@@ -7,19 +7,13 @@ import type {
   TaxRegime,
   TaxType,
 } from '../types/taxCalculations';
+import { resolveActiveClinicId } from '../lib/selectedClinic';
 
 export const taxConfigService = {
   async getClinicId(): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-
-    const { data: clinicUser } = await supabase
-      .from('clinic_users')
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
-
-    return (clinicUser as any)?.clinic_id || null;
+    return resolveActiveClinicId(user.id);
   },
 
   async getTaxConfigurations(): Promise<TaxRateConfiguration[]> {
