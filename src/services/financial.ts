@@ -152,6 +152,7 @@ export const financialService = {
         date: string;
         location?: string | null;
         related_entity_id?: string | null;
+        receipt_attachment_url?: string | null;
     }): Promise<FinancialTransaction> {
         const { userId, clinicId } = await getClinicContext();
 
@@ -165,6 +166,7 @@ export const financialService = {
                 date: expense.date,
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
+                receipt_attachment_url: expense.receipt_attachment_url || null,
                 clinic_id: clinicId,
                 user_id: userId,  // Track which user created the expense
                 created_by: userId  // Also store in created_by for consistency
@@ -174,6 +176,35 @@ export const financialService = {
 
         if (error) throw error;
         return data;
+    },
+
+    /**
+     * Upload a receipt file for an expense to the expense-receipts bucket.
+     * Returns the storage path, which should be stored in receipt_attachment_url.
+     */
+    async uploadExpenseReceipt(file: File): Promise<string> {
+        const { clinicId } = await getClinicContext();
+        const ext = file.name.split('.').pop() || 'bin';
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${clinicId}/${Date.now()}_${safe}`;
+
+        const { error } = await supabase.storage
+            .from('expense-receipts')
+            .upload(path, file, { upsert: false, contentType: file.type });
+        if (error) throw error;
+        return path;
+    },
+
+    async getReceiptSignedUrl(path: string, expiresIn = 300): Promise<string> {
+        const { data, error } = await supabase.storage
+            .from('expense-receipts')
+            .createSignedUrl(path, expiresIn);
+        if (error) throw error;
+        return data.signedUrl;
+    },
+
+    async deleteReceipt(path: string): Promise<void> {
+        await supabase.storage.from('expense-receipts').remove([path]);
     },
 
     async confirmExpense(id: string, date?: string): Promise<void> {

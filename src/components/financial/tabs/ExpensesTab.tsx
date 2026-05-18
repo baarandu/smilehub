@@ -18,7 +18,9 @@ import {
     Eye,
     User,
     CheckCircle,
-    Clock
+    Clock,
+    Paperclip,
+    FileCheck2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +61,29 @@ interface ExpensesTabProps {
     transactions: Transaction[];
     loading: boolean;
     onRefresh?: () => void;
+}
+
+function ReceiptIndicator({ url }: { url?: string | null }) {
+    if (!url) return null;
+    return (
+        <button
+            type="button"
+            onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                    const signed = await financialService.getReceiptSignedUrl(url);
+                    window.open(signed, '_blank');
+                } catch {
+                    toast.error('Não foi possível abrir o recibo');
+                }
+            }}
+            className="inline-flex items-center gap-1 px-1.5 h-5 rounded bg-emerald-100 text-emerald-700 text-[10px] hover:bg-emerald-200 transition-colors"
+            title="Ver recibo anexado"
+        >
+            <FileCheck2 className="w-3 h-3" />
+            Recibo
+        </button>
+    );
 }
 
 export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabProps) {
@@ -366,6 +391,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                                     <Badge className="text-[10px] h-5 px-1.5 bg-amber-100 text-amber-700 hover:bg-amber-100">
                                                         Pendente
                                                     </Badge>
+                                                    <ReceiptIndicator url={(t as any).receipt_attachment_url} />
                                                 </div>
                                             </div>
                                         </div>
@@ -458,6 +484,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                                 {(t as any).created_by_name}
                                             </span>
                                         )}
+                                        <ReceiptIndicator url={(t as any).receipt_attachment_url} />
                                     </div>
                                 </div>
                             </div>

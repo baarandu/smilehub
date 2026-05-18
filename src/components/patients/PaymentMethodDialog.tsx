@@ -30,7 +30,10 @@ export interface FinancialBreakdown {
     isAnticipated: boolean;
 }
 
+export type RevenueType = 'individual' | 'clinic';
+
 export interface PayerData {
+    revenue_type?: RevenueType;
     payer_is_patient: boolean;
     payer_type: 'PF' | 'PJ';
     payer_name: string | null;
@@ -91,6 +94,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
     // Payer Data
     const [payerIsPatient, setPayerIsPatient] = useState(true);
+    const [isClinicRevenue, setIsClinicRevenue] = useState(false);
     const [payerType, setPayerType] = useState<'PF' | 'PJ'>('PF');
     const [payerName, setPayerName] = useState('');
     const [payerCpf, setPayerCpf] = useState('');
@@ -195,9 +199,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                     .in('card_machine_id', machineIds);
                 setCardFees((data || []) as CardFeeConfig[]);
             } else {
-                // Legacy fallback (no machines registered yet)
-                const fees = await settingsService.getCardFees();
-                setCardFees(fees || []);
+                setCardFees([]);
             }
         } catch (error) {
             console.error('Error loading financial settings:', error);
@@ -304,6 +306,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
 
         const payerData: PayerData = {
+            revenue_type: isClinicRevenue ? 'clinic' : 'individual',
             payer_is_patient: payerIsPatient,
             payer_type: payerType,
             payer_name: payerIsPatient ? null : (payerType === 'PF' ? payerName : null),
@@ -580,6 +583,23 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                     }
                                 }}
                                 className="font-semibold"
+                            />
+                        </div>
+
+                        {/* Revenue Type Toggle (for production report) */}
+                        <div className="flex items-start justify-between gap-3 p-3 bg-purple-50/50 rounded-lg border border-purple-100">
+                            <div className="flex items-start gap-2">
+                                <Building2 className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <span className="text-sm font-medium text-purple-800">Receita compartilhada da clínica</span>
+                                    <p className="text-[11px] text-purple-600/80 leading-tight">
+                                        Ative quando não for produção técnica de um dentista (ex: venda de produto, taxa de estrutura).
+                                    </p>
+                                </div>
+                            </div>
+                            <Switch
+                                checked={isClinicRevenue}
+                                onCheckedChange={setIsClinicRevenue}
                             />
                         </div>
 

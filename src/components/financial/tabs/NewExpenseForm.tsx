@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat, Paperclip, FileCheck2, X } from 'lucide-react';
 import { financialService } from '@/services/financial';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
@@ -60,6 +60,10 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
     const [numMonthsStr, setNumMonthsStr] = useState('12');
     const [fixedExpenseList, setFixedExpenseList] = useState<InstallmentItem[]>([]);
 
+    // Receipt attachment (Feature D)
+    const [receiptFile, setReceiptFile] = useState<File | null>(null);
+    const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
+
     // Edit Mode State
     const [updateAllRecurring, setUpdateAllRecurring] = useState(false);
 
@@ -76,6 +80,8 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             setIsInstallment(false);
             setIsFixedExpense(false);
             setUpdateAllRecurring(false);
+            setExistingReceiptUrl(transactionToEdit.receipt_attachment_url || null);
+            setReceiptFile(null);
         } else {
             resetForm();
         }
@@ -183,23 +189,40 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                             return financialService.updateTransaction(t.id, { description: newFullDesc, amount: getNumericValue(value), category });
                         }));
                     } else {
+                        // Upload novo recibo se anexado
+                        let receiptUrl = existingReceiptUrl;
+                        if (receiptFile) {
+                            // Remove o antigo se existir
+                            if (existingReceiptUrl) {
+                                await financialService.deleteReceipt(existingReceiptUrl).catch(() => {});
+                            }
+                            receiptUrl = await financialService.uploadExpenseReceipt(receiptFile);
+                        }
+
                         await financialService.updateTransaction(transactionToEdit.id, {
                             description: finalDesc + (observations ? ` - ${observations}` : ''),
                             amount: getNumericValue(value),
                             date: dbDate,
                             category,
-                            payment_method: paymentMethod
-                        });
+                            payment_method: paymentMethod,
+                            receipt_attachment_url: receiptUrl,
+                        } as any);
                     }
                     toast.success('Despesa atualizada!');
                     onSuccess();
                 }
             } else {
+                // Upload receipt first (if attached) — same URL is used for all installments/fixed
+                let receiptUrl: string | null = existingReceiptUrl;
+                if (receiptFile) {
+                    receiptUrl = await financialService.uploadExpenseReceipt(receiptFile);
+                }
+
                 // Create Logic
                 if (isFixedExpense) {
-                    await createFixedExpenses();
+                    await createFixedExpenses(receiptUrl);
                 } else if (isInstallment) {
-                    await createInstallments();
+                    await createInstallments(receiptUrl);
                 } else {
                     const dbDate = dateToDbFormat(date);
                     const finalDesc = `${description} (${paymentMethod})` + (observations ? ` - ${observations}` : '');
@@ -208,7 +231,8 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                         description: finalDesc,
                         category,
                         date: dbDate,
-                        location: null
+                        location: null,
+                        receipt_attachment_url: receiptUrl,
                         // clinic_id is handled in service now
                     });
                 }
@@ -223,7 +247,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         }
     };
 
-    const createInstallments = async () => {
+    const createInstallments = async (receiptUrl: string | null = null) => {
         const recurrenceId = generateUUID();
         const numInstallments = parseInt(numInstallmentsStr);
         await Promise.all(installmentList.map((item, i) => {
@@ -239,12 +263,13 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 location: null,
                 recurrence_id: recurrenceId,
                 payment_method: paymentMethod,
-                payment_status: 'pending'
+                payment_status: 'pending',
+                receipt_attachment_url: receiptUrl,
             } as any);
         }));
     };
 
-    const createFixedExpenses = async () => {
+    const createFixedExpenses = async (receiptUrl: string | null = null) => {
         const recurrenceId = generateUUID();
         const numMonths = parseInt(numMonthsStr);
         await Promise.all(fixedExpenseList.map((item, i) => {
@@ -260,7 +285,8 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                 location: null,
                 recurrence_id: recurrenceId,
                 payment_method: paymentMethod,
-                payment_status: 'pending'
+                payment_status: 'pending',
+                receipt_attachment_url: receiptUrl,
             } as any);
         }));
     };
@@ -499,6 +525,58 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     </div>
                 </div>
             )}
+
+            {/* Receipt Attachment */}
+            <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5" />
+                    Recibo / Nota da despesa
+                </Label>
+                {receiptFile ? (
+                    <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
+                        <FileCheck2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="flex-1 truncate text-emerald-700">{receiptFile.name}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReceiptFile(null)}>
+                            <X className="w-3 h-3" />
+                        </Button>
+                    </div>
+                ) : existingReceiptUrl ? (
+                    <div className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded text-xs">
+                        <FileCheck2 className="w-4 h-4 text-slate-500 shrink-0" />
+                        <span className="flex-1 text-slate-600">Recibo já anexado</span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs"
+                            onClick={async () => {
+                                try {
+                                    const url = await financialService.getReceiptSignedUrl(existingReceiptUrl);
+                                    window.open(url, '_blank');
+                                } catch {
+                                    toast.error('Não foi possível abrir o recibo');
+                                }
+                            }}
+                        >
+                            Ver
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => setExistingReceiptUrl(null)}>
+                            <X className="w-3 h-3" />
+                        </Button>
+                    </div>
+                ) : (
+                    <label className="flex items-center gap-2 p-3 border-2 border-dashed border-slate-200 rounded text-xs text-slate-500 hover:bg-slate-50 cursor-pointer">
+                        <Paperclip className="w-4 h-4" />
+                        <span>Anexar PDF, imagem ou XML</span>
+                        <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png,.heic,.webp,.xml,application/pdf,image/*,application/xml,text/xml"
+                            className="hidden"
+                            onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                        />
+                    </label>
+                )}
+            </div>
 
             {/* Observations */}
             <div className="space-y-2">

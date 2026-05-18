@@ -26,6 +26,7 @@ import { formatMoney } from '@/utils/budgetUtils';
 import type {
   ChecklistData, ChecklistItemStatus, SubmissionFile, SubmissionFileType,
 } from '@/types/accountantChecklist';
+import { ProductionReportCard } from '@/components/production-report/ProductionReportCard';
 
 interface Props {
   year: number;
@@ -207,6 +208,9 @@ export function AccountantChecklistTab({ year, month }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* Relatório de Produção por Sócio */}
+      <ProductionReportCard year={year} month={m} />
 
       {/* Lista de itens */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

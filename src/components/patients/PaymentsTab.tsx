@@ -281,6 +281,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           location_rate: targetLocationRate,
           location_amount: locationAmountPerTx,
           // Payer data
+          revenue_type: payerData?.revenue_type || 'individual',
           payer_is_patient: payerData?.payer_is_patient ?? true,
           payer_type: payerData?.payer_type || 'PF',
           payer_name: payerData?.payer_name || null,

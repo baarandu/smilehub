@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
 import { nfseDocumentsService } from './nfseDocuments';
+import { productionReportService } from './productionReport';
 import type {
   ChecklistData,
   SubmissionFile,
@@ -195,7 +196,16 @@ export const accountantChecklistService = {
       }
     }
 
-    // 3) Resumo do checklist
+    // 3) Relatório de Produção por Sócio (CSV)
+    try {
+      const report = await productionReportService.getMonthly(year, month);
+      const csv = productionReportService.toCsv(report, year, month);
+      folder.file(`Producao_por_Socio_${year}_${String(month).padStart(2, '0')}.csv`, csv);
+    } catch {
+      // sem dados — segue
+    }
+
+    // 4) Resumo do checklist
     const checklist = await this.getChecklist(year, month);
     const summary = [
       `Resumo Mensal — ${year}/${String(month).padStart(2, '0')}`,
