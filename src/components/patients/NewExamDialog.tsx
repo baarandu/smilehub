@@ -23,6 +23,7 @@ import {
 import { useCreateExam, useUpdateExam, useDeleteExam } from '@/hooks/useExams';
 import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { supabase } from '@/lib/supabase';
+import { getClinicContext } from '@/services/clinicContext';
 import { toast } from 'sonner';
 import type { Exam } from '@/types/database';
 
@@ -113,19 +114,7 @@ export function NewExamDialog({
   };
 
   const uploadFile = async (file: File): Promise<string> => {
-    // Get user's clinic_id for storage path
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
-
-    const { data: clinicUser } = await (supabase
-      .from('clinic_users') as any)
-      .select('clinic_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!clinicUser?.clinic_id) throw new Error('Clinic not found');
-
-    const clinicId = clinicUser.clinic_id as string;
+    const { clinicId } = await getClinicContext();
     const fileExt = file.name.split('.').pop();
     const fileName = `${clinicId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
