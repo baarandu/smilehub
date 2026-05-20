@@ -64,8 +64,14 @@ export function SplitPaymentBuilder({
     return formatLocalDate(d);
   })();
 
+  const defaultBrand = (
+    availableBrands.find(b => b.id.toLowerCase() === 'visa') ||
+    availableBrands.find(b => b.id.toLowerCase() === 'mastercard') ||
+    availableBrands[0]
+  )?.id || 'visa';
+
   const [portions, setPortions] = useState<PortionState[]>([
-    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: availableBrands[0]?.id || 'visa', dueDate: nextMonth, isImmediate: false },
+    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: defaultBrand, dueDate: nextMonth, isImmediate: false },
   ]);
 
   const allocatedCents = useMemo(() => {
@@ -168,7 +174,7 @@ export function SplitPaymentBuilder({
       method: 'cash',
       amount: '',
       installments: 1,
-      brand: availableBrands[0]?.id || 'visa',
+      brand: defaultBrand,
       dueDate: nextDueDate,
       isImmediate: false,
     }]);

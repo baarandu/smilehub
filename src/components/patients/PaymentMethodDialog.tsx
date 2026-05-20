@@ -168,9 +168,13 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
     // Update initial brand when availableBrands changes
     useEffect(() => {
-        if (availableBrands.length > 0 && !availableBrands.find(b => b.id === selectedBrand)) {
-            setSelectedBrand(availableBrands[0].id);
-        }
+        if (availableBrands.length === 0) return;
+        if (availableBrands.find(b => b.id.toLowerCase() === selectedBrand.toLowerCase())) return;
+        const preferred =
+            availableBrands.find(b => b.id.toLowerCase() === 'visa') ||
+            availableBrands.find(b => b.id.toLowerCase() === 'mastercard') ||
+            availableBrands[0];
+        setSelectedBrand(preferred.id);
     }, [availableBrands, selectedBrand]);
 
     const loadSettings = async () => {
