@@ -109,6 +109,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
     const [taxRate, setTaxRate] = useState(0);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+    const [clinicBrands, setClinicBrands] = useState<{ id: string; name: string }[]>([]);
 
     // Card Machines
     const { data: machines = [] } = useCardMachines(false);
@@ -121,17 +122,15 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         return cardFees.filter(f => (f as any).card_machine_id === selectedMachineId);
     }, [cardFees, selectedMachineId]);
 
-    // Build available brands from settings (filtered by machine)
+    // Build available brands from the clinic's configured card_brands list
+    // (same source as the chips in Configurações Financeiras → Bandeiras de Cartão)
     const availableBrands = useMemo(() => {
-        if (machineFees.length === 0) return CARD_BRANDS;
-
-        const uniqueNames = Array.from(new Set(machineFees.map(f => f.brand.trim())));
-
-        return uniqueNames.map(name => ({
-            id: name,
-            label: name.replace(/\b\w/g, l => l.toUpperCase())
-        })).sort((a, b) => a.label.localeCompare(b.label));
-    }, [machineFees]);
+        if (clinicBrands.length === 0) return CARD_BRANDS;
+        return clinicBrands.map(b => ({
+            id: b.name.trim().toLowerCase(),
+            label: b.name.trim()
+        }));
+    }, [clinicBrands]);
 
     // Auto-select machine if only one exists
     useEffect(() => {
@@ -166,13 +165,19 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         }
     }, [open]);
 
-    // Update initial brand when availableBrands changes
+    // Update initial brand when availableBrands changes.
+    // Prefer Visa, then Mastercard, then a combined "Visa / Mastercard" brand,
+    // then anything containing "visa" or "mastercard", then the first available.
     useEffect(() => {
         if (availableBrands.length === 0) return;
         if (availableBrands.find(b => b.id.toLowerCase() === selectedBrand.toLowerCase())) return;
+        const lower = (s: string) => s.toLowerCase();
         const preferred =
-            availableBrands.find(b => b.id.toLowerCase() === 'visa') ||
-            availableBrands.find(b => b.id.toLowerCase() === 'mastercard') ||
+            availableBrands.find(b => lower(b.id) === 'visa') ||
+            availableBrands.find(b => lower(b.id) === 'mastercard') ||
+            availableBrands.find(b => lower(b.label).includes('visa') && lower(b.label).includes('mastercard')) ||
+            availableBrands.find(b => lower(b.label).includes('visa')) ||
+            availableBrands.find(b => lower(b.label).includes('mastercard')) ||
             availableBrands[0];
         setSelectedBrand(preferred.id);
     }, [availableBrands, selectedBrand]);
@@ -193,6 +198,14 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             }
 
             setTaxRate(totalTax);
+
+            // Load clinic's configured card brands (source of truth for the brand dropdown)
+            try {
+                const brands = await settingsService.getCardBrands();
+                setClinicBrands(brands || []);
+            } catch {
+                setClinicBrands([]);
+            }
 
             // Load fees for all machines in the clinic (so we have rates ready when machine is picked)
             const machineIds = machines.map(m => m.id);
