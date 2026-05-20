@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ArrowRight, X, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getClinicContextSafe } from '@/services/clinicContext';
 import { cn } from '@/lib/utils';
 
 export function TrialBanner() {
@@ -32,14 +33,9 @@ export function TrialBanner() {
                     return;
                 }
 
-                // Get clinic
-                const { data: clinicUser } = await supabase
-                    .from('clinic_users')
-                    .select('clinic_id')
-                    .eq('user_id', user.id)
-                    .single<{ clinic_id: string }>();
-
-                if (!clinicUser) {
+                // Get clinic (respects the clinic selected in the sidebar)
+                const ctx = await getClinicContextSafe();
+                if (!ctx) {
                     setLoading(false);
                     return;
                 }
@@ -48,7 +44,7 @@ export function TrialBanner() {
                 const { data: subscriptions } = await supabase
                     .from('subscriptions')
                     .select('status, current_period_end')
-                    .eq('clinic_id', clinicUser.clinic_id)
+                    .eq('clinic_id', ctx.clinicId)
                     .in('status', ['active', 'trialing'])
                     .order('created_at', { ascending: false })
                     .limit(1)

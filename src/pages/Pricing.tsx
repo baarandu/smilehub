@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getClinicContextSafe } from '@/services/clinicContext';
 import { Database } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import {
@@ -132,17 +133,11 @@ export default function Pricing() {
             setUserId(user.id);
             setUserEmail(user.email ?? '');
 
-            const { data: clinicUsers } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user.id)
-                .order('role', { ascending: true })
-                .limit(1);
-            const clinicUser = clinicUsers?.[0] as { clinic_id: string } | undefined ?? null;
+            const ctx = await getClinicContextSafe();
 
-            if (clinicUser) {
-                setClinicId(clinicUser.clinic_id);
-                const subStatus = await subscriptionService.getCurrentSubscription(clinicUser.clinic_id);
+            if (ctx) {
+                setClinicId(ctx.clinicId);
+                const subStatus = await subscriptionService.getCurrentSubscription(ctx.clinicId);
 
                 if (subStatus.isActive || subStatus.isTrialing) {
                     setCurrentPlanId(subStatus.plan?.id || null);

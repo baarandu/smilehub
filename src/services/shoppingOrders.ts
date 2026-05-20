@@ -1,19 +1,10 @@
 import { supabase } from '@/lib/supabase';
 import type { ShoppingItem, ShoppingOrder } from '@/types/materials';
 import { migrateItems } from '@/utils/materials';
+import { getClinicContextSafe } from '@/services/clinicContext';
 
 async function getClinicId(): Promise<{ userId: string; clinicId: string } | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: clinicUser } = await supabase
-    .from('clinic_users')
-    .select('clinic_id')
-    .eq('user_id', user.id)
-    .single();
-
-  if (!clinicUser) return null;
-  return { userId: user.id, clinicId: (clinicUser as any).clinic_id };
+  return getClinicContextSafe();
 }
 
 export async function fetchOrders(): Promise<{

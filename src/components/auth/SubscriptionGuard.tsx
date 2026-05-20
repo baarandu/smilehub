@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { subscriptionService } from '../../services/subscription';
-import { supabase } from '../../lib/supabase';
+import { getClinicContextSafe } from '../../services/clinicContext';
 
 interface SubscriptionGuardProps {
     children: React.ReactNode;
@@ -24,21 +24,13 @@ export function SubscriptionGuard({ children, fallback, feature, currentUsage }:
                 return;
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user.id)
-                .single<{ clinic_id: string }>();
-
-            if (!clinicUser) {
+            const ctx = await getClinicContextSafe();
+            if (!ctx) {
                 setAllowed(false);
                 return;
             }
 
-            const result = await subscriptionService.checkLimit(clinicUser.clinic_id, feature, currentUsage || 0);
+            const result = await subscriptionService.checkLimit(ctx.clinicId, feature, currentUsage || 0);
             setAllowed(result.allowed);
 
         } catch (error) {

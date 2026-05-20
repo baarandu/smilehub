@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileText, Calendar, Search, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getClinicContextSafe } from '@/services/clinicContext';
 import { useQuery } from '@tanstack/react-query';
 import { useProcedures } from '@/hooks/useProcedures';
 import { useExams } from '@/hooks/useExams';
@@ -109,15 +110,8 @@ export function ReportGenerationModal({
         const { data: { user } } = await supabase.auth.getUser();
         const metadata = user?.user_metadata || {};
 
-        let clinicId: string | null = null;
-        if (user) {
-            const { data: clinicUser } = await supabase
-                .from('clinic_users')
-                .select('clinic_id')
-                .eq('user_id', user.id)
-                .single();
-            clinicId = (clinicUser as any)?.clinic_id || null;
-        }
+        const ctx = await getClinicContextSafe();
+        const clinicId: string | null = ctx?.clinicId ?? null;
 
         let dentistCRO: string | undefined;
         if (user) {

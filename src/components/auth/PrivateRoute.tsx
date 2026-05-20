@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { checkTermsAccepted } from '@/services/terms';
+import { getClinicContextSafe } from '@/services/clinicContext';
 import { TermsAcceptanceModal } from './TermsAcceptanceModal';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 
@@ -42,21 +43,16 @@ export function PrivateRoute() {
                 setSession(session);
             }
 
-            // 1. Parallel: Check Super Admin + Clinic User
-            const [{ data: profile }, { data: clinicUsers }] = await Promise.all([
+            // 1. Parallel: Check Super Admin + Clinic User (respects clinic selected in sidebar)
+            const [{ data: profile }, ctx] = await Promise.all([
                 supabase
                     .from('profiles')
                     .select('is_super_admin')
                     .eq('id', session.user.id)
                     .single<{ is_super_admin: boolean | null }>(),
-                supabase
-                    .from('clinic_users')
-                    .select('clinic_id, role')
-                    .eq('user_id', session.user.id)
-                    .order('role', { ascending: true })
-                    .limit(1),
+                getClinicContextSafe(),
             ]);
-            const clinicUser = (clinicUsers as { clinic_id: string; role: string }[] | null)?.[0] ?? null;
+            const clinicUser = ctx ? { clinic_id: ctx.clinicId } : null;
 
             if (profile && profile.is_super_admin) {
                 if (mounted) {
