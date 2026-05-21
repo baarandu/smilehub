@@ -67,6 +67,7 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
     // Settings State
     const [filesSettings, setFinancialSettings] = useState<FinancialSettings | null>(null);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+    const [clinicBrands, setClinicBrands] = useState<{ id: string; name: string }[]>([]);
 
     // Card Machines State
     const [machines, setMachines] = useState<CardMachineWithDentist[]>([]);
@@ -114,6 +115,14 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
             ]);
             setFinancialSettings(settings);
             setMachines(list);
+
+            // Load clinic's configured card brands (same source as Configurações Financeiras)
+            try {
+                const brands = await settingsService.getCardBrands();
+                setClinicBrands((brands as any[]) || []);
+            } catch {
+                setClinicBrands([]);
+            }
 
             // Auto-select if only one machine; force pick if multiple
             if (list.length === 1) {
@@ -365,24 +374,31 @@ export function PaymentMethodModal({ visible, onClose, onConfirm, itemName, valu
         return cardFees.filter(f => (f as any).card_machine_id === selectedMachineId);
     }, [cardFees, selectedMachineId]);
 
+    // Source of truth: the clinic's configured card_brands list
+    // (same as the chips in Configurações Financeiras → Bandeiras de Cartão)
     const availableBrands = React.useMemo(() => {
-        if (machineFees.length === 0) return allBrands;
-
-        // Get unique brand names from settings - exactly as entered
-        const uniqueNames = Array.from(new Set(machineFees.map(f => f.brand.trim())));
-
-        return uniqueNames.map(name => ({
-            id: name,
-            // Capitalize first letter of each word/segment (handles "visa/mastercard" -> "Visa/Mastercard")
-            label: name.replace(/\b\w/g, l => l.toUpperCase())
-        })).sort((a, b) => a.label.localeCompare(b.label));
-    }, [machineFees]);
+        if (clinicBrands.length === 0) return allBrands;
+        return clinicBrands.map(b => ({
+            id: b.name.trim().toLowerCase(),
+            label: b.name.trim()
+        }));
+    }, [clinicBrands]);
 
 
+    // Prefer Visa, then Mastercard, then "Visa / Mastercard" combined,
+    // then anything containing "visa"/"mastercard", then the first available.
     useEffect(() => {
-        if (availableBrands.length > 0 && (!selectedBrand || !availableBrands.find(b => b.id === selectedBrand))) {
-            setSelectedBrand(availableBrands[0].id);
-        }
+        if (availableBrands.length === 0) return;
+        if (selectedBrand && availableBrands.find(b => b.id.toLowerCase() === selectedBrand.toLowerCase())) return;
+        const lower = (s: string) => s.toLowerCase();
+        const preferred =
+            availableBrands.find(b => lower(b.id) === 'visa') ||
+            availableBrands.find(b => lower(b.id) === 'mastercard') ||
+            availableBrands.find(b => lower(b.label).includes('visa') && lower(b.label).includes('mastercard')) ||
+            availableBrands.find(b => lower(b.label).includes('visa')) ||
+            availableBrands.find(b => lower(b.label).includes('mastercard')) ||
+            availableBrands[0];
+        setSelectedBrand(preferred.id);
     }, [availableBrands, selectedBrand]);
 
     if (!visible) return null;
