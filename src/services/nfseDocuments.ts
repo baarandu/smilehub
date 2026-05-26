@@ -5,6 +5,7 @@ import type {
   NfseDocumentWithRelations,
   NfseUploadInput,
   NfseStatus,
+  MarkExternalNfseInput,
   PaymentWithoutNfse,
 } from '@/types/nfseDocument';
 
@@ -42,6 +43,16 @@ export const nfseDocumentsService = {
         buildStoragePath(clinicId, input.invoice_number, 'pdf'),
         input.pdf_file,
       );
+    }
+
+    if (input.budget_id != null && input.tooth_index != null) {
+      await supabase
+        .from('nfse_documents')
+        .delete()
+        .eq('clinic_id', clinicId)
+        .eq('budget_id', input.budget_id)
+        .eq('tooth_index', input.tooth_index)
+        .eq('issued_externally', true);
     }
 
     const { data, error } = await supabase
@@ -182,6 +193,69 @@ export const nfseDocumentsService = {
       payload.substituted_by_id = options.substituted_by_id;
     }
     const { error } = await supabase.from('nfse_documents').update(payload).eq('id', id);
+    if (error) throw error;
+  },
+
+  async markIssuedExternally(input: MarkExternalNfseInput): Promise<NfseDocument> {
+    const { clinicId, userId } = await getClinicContext();
+
+    const { data: existingExternal } = await supabase
+      .from('nfse_documents')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .eq('budget_id', input.budget_id)
+      .eq('tooth_index', input.tooth_index)
+      .eq('issued_externally', true)
+      .neq('status', 'canceled')
+      .maybeSingle();
+    if (existingExternal) return existingExternal as NfseDocument;
+
+    const { data: existingFull } = await supabase
+      .from('nfse_documents')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('budget_id', input.budget_id)
+      .eq('tooth_index', input.tooth_index)
+      .eq('issued_externally', false)
+      .neq('status', 'canceled')
+      .maybeSingle();
+    if (existingFull) {
+      throw new Error('Este pagamento já possui nota fiscal anexada.');
+    }
+
+    const invoiceNumber = `EXT-${input.budget_id.replace(/-/g, '').slice(0, 8)}-${input.tooth_index}`;
+
+    const { data, error } = await supabase
+      .from('nfse_documents')
+      .insert({
+        clinic_id: clinicId,
+        patient_id: input.patient_id,
+        budget_id: input.budget_id,
+        tooth_index: input.tooth_index,
+        invoice_number: invoiceNumber,
+        issue_date: input.issue_date,
+        service_value: input.service_value,
+        tax_value: 0,
+        service_description: input.service_description ?? null,
+        issued_externally: true,
+        created_by: userId,
+      } as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as NfseDocument;
+  },
+
+  async unmarkIssuedExternally(budgetId: string, toothIndex: number): Promise<void> {
+    const { clinicId } = await getClinicContext();
+    const { error } = await supabase
+      .from('nfse_documents')
+      .delete()
+      .eq('clinic_id', clinicId)
+      .eq('budget_id', budgetId)
+      .eq('tooth_index', toothIndex)
+      .eq('issued_externally', true);
     if (error) throw error;
   },
 

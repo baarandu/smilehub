@@ -3,6 +3,8 @@ import { CreditCard, CheckCircle, Calculator, Clock, Calendar, AlertCircle, Bank
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
 import { formatMoney, getToothDisplayName, formatDisplayDate, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
@@ -15,7 +17,7 @@ import type { PJSource } from '@/types/incomeTax';
 import { usePatientReceivables, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
 import { ConfirmReceivableDialog } from './ConfirmReceivableDialog';
 import type { PaymentReceivable } from '@/types/receivables';
-import { useNfseByPatient } from '@/hooks/useNfseDocuments';
+import { useNfseByPatient, useMarkExternalNfse, useUnmarkExternalNfse } from '@/hooks/useNfseDocuments';
 import { NfseUploadDialog } from '@/components/nfse/NfseUploadDialog';
 import { NfseStatusBadge } from '@/components/nfse/NfseStatusBadge';
 import {
@@ -59,14 +61,27 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   // NFS-e attached to this patient (lookup by budget_id + tooth_index)
   const { data: nfseDocs = [] } = useNfseByPatient(patientId);
+  const markExternalNfse = useMarkExternalNfse();
+  const unmarkExternalNfse = useUnmarkExternalNfse();
   const [nfseTarget, setNfseTarget] = useState<ItemToPay | null>(null);
+  const [togglingNfseKey, setTogglingNfseKey] = useState<string | null>(null);
 
-  const findNfseForItem = (item: ItemToPay) =>
+  const findFullNfseForItem = (item: ItemToPay) =>
     nfseDocs.find(
       (n) =>
         n.budget_id === item.budgetId &&
         n.tooth_index === item.toothIndex &&
-        n.status !== 'canceled',
+        n.status !== 'canceled' &&
+        !n.issued_externally,
+    );
+
+  const findExternalNfseForItem = (item: ItemToPay) =>
+    nfseDocs.find(
+      (n) =>
+        n.budget_id === item.budgetId &&
+        n.tooth_index === item.toothIndex &&
+        n.status !== 'canceled' &&
+        n.issued_externally,
     );
 
   useEffect(() => {
@@ -324,6 +339,47 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   const getItemValue = (item: ItemToPay) => {
     return Object.values(item.tooth.values).reduce((a, b) => a + (parseInt(b) || 0) / 100, 0);
+  };
+
+  const normalizeIssueDate = (dateStr: string) => {
+    if (dateStr.includes('/')) {
+      const [d, m, y] = dateStr.split('/');
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return dateStr;
+  };
+
+  const handleToggleExternalNfse = async (item: ItemToPay, checked: boolean) => {
+    const key = `${item.budgetId}-${item.toothIndex}`;
+    setTogglingNfseKey(key);
+    try {
+      if (checked) {
+        await markExternalNfse.mutateAsync({
+          patient_id: patientId,
+          budget_id: item.budgetId,
+          tooth_index: item.toothIndex,
+          service_value: getItemValue(item),
+          issue_date: normalizeIssueDate(item.tooth.paymentDate || item.budgetDate),
+          service_description: `${item.tooth.treatments.join(', ')} - ${getToothDisplayName(item.tooth.tooth)}`,
+        });
+        toast({ title: 'Nota fiscal marcada como emitida' });
+      } else {
+        await unmarkExternalNfse.mutateAsync({
+          budgetId: item.budgetId,
+          toothIndex: item.toothIndex,
+        });
+        toast({ title: 'Marcação removida' });
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro',
+        description: error?.message || 'Erro ao atualizar status da nota fiscal',
+      });
+    } finally {
+      setTogglingNfseKey(null);
+    }
   };
 
   if (loading) {
@@ -600,22 +656,51 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                             </>
                           )}
                         </div>
-                        {/* NFS-e: badge if attached, else upload button */}
-                        <div className="mt-1.5">
+                        {/* NFS-e: badge if attached, else upload + external issued checkbox */}
+                        <div className="mt-1.5 space-y-1">
                           {(() => {
-                            const nfse = findNfseForItem(item);
-                            return nfse ? (
-                              <NfseStatusBadge status={nfse.status} invoiceNumber={nfse.invoice_number} />
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-[10px] px-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
-                                onClick={() => setNfseTarget(item)}
-                              >
-                                <FilePlus2 className="w-3 h-3 mr-1" />
-                                Anexar nota fiscal
-                              </Button>
+                            const fullNfse = findFullNfseForItem(item);
+                            const externalNfse = findExternalNfseForItem(item);
+                            const itemKey = `${item.budgetId}-${item.toothIndex}`;
+                            const checkboxId = `nfse-issued-${itemKey}`;
+
+                            if (fullNfse) {
+                              return (
+                                <NfseStatusBadge
+                                  status={fullNfse.status}
+                                  invoiceNumber={fullNfse.invoice_number}
+                                />
+                              );
+                            }
+
+                            return (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 text-[10px] px-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => setNfseTarget(item)}
+                                >
+                                  <FilePlus2 className="w-3 h-3 mr-1" />
+                                  Anexar nota fiscal
+                                </Button>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={checkboxId}
+                                    checked={!!externalNfse}
+                                    disabled={togglingNfseKey === itemKey}
+                                    onCheckedChange={(checked) =>
+                                      handleToggleExternalNfse(item, checked === true)
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={checkboxId}
+                                    className="text-[10px] text-slate-500 font-normal cursor-pointer"
+                                  >
+                                    Nota fiscal emitida
+                                  </Label>
+                                </div>
+                              </>
                             );
                           })()}
                         </div>

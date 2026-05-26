@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { nfseDocumentsService } from '@/services/nfseDocuments';
-import type { NfseUploadInput, NfseStatus } from '@/types/nfseDocument';
+import type { NfseUploadInput, NfseStatus, MarkExternalNfseInput } from '@/types/nfseDocument';
 
 export function useNfseByPatient(patientId: string | undefined) {
   return useQuery({
@@ -65,6 +65,27 @@ export function useDeleteNfse() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => nfseDocumentsService.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nfse'] });
+    },
+  });
+}
+
+export function useMarkExternalNfse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: MarkExternalNfseInput) => nfseDocumentsService.markIssuedExternally(input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nfse'] });
+    },
+  });
+}
+
+export function useUnmarkExternalNfse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { budgetId: string; toothIndex: number }) =>
+      nfseDocumentsService.unmarkIssuedExternally(params.budgetId, params.toothIndex),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
     },

@@ -711,7 +711,7 @@ export function PatientForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="motherCpf">CPF (para nota fiscal)</Label>
+                  <Label htmlFor="motherCpf">CPF</Label>
                   <Input
                     id="motherCpf"
                     value={form.motherCpf}
@@ -720,7 +720,7 @@ export function PatientForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="motherEmail">E-mail (para nota fiscal)</Label>
+                  <Label htmlFor="motherEmail">E-mail</Label>
                   <Input
                     id="motherEmail"
                     type="email"
@@ -764,7 +764,7 @@ export function PatientForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fatherCpf">CPF (para nota fiscal)</Label>
+                  <Label htmlFor="fatherCpf">CPF</Label>
                   <Input
                     id="fatherCpf"
                     value={form.fatherCpf}
@@ -773,7 +773,7 @@ export function PatientForm({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fatherEmail">E-mail (para nota fiscal)</Label>
+                  <Label htmlFor="fatherEmail">E-mail</Label>
                   <Input
                     id="fatherEmail"
                     type="email"

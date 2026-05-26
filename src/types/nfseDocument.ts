@@ -24,6 +24,7 @@ export interface NfseDocument {
 
   xml_url: string | null;
   pdf_url: string | null;
+  issued_externally: boolean;
 
   notes: string | null;
   created_by: string | null;
@@ -51,6 +52,15 @@ export interface NfseUploadInput {
   notes?: string;
   xml_file?: File | null;
   pdf_file?: File | null;
+}
+
+export interface MarkExternalNfseInput {
+  patient_id: string;
+  budget_id: string;
+  tooth_index: number;
+  service_value: number;
+  issue_date: string;
+  service_description?: string;
 }
 
 export interface PaymentWithoutNfse {
