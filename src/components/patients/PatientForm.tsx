@@ -62,9 +62,13 @@ const emptyForm: PatientFormData = {
   motherName: '',
   motherOccupation: '',
   motherPhone: '',
+  motherCpf: '',
+  motherEmail: '',
   fatherName: '',
   fatherOccupation: '',
   fatherPhone: '',
+  fatherCpf: '',
+  fatherEmail: '',
   legalGuardian: '',
   hasSiblings: false,
   siblingsCount: '',
@@ -678,7 +682,7 @@ export function PatientForm({
             {/* Mother */}
             <div>
               <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide">Mãe</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="motherName">Nome</Label>
                   <Input
@@ -703,7 +707,26 @@ export function PatientForm({
                     id="motherPhone"
                     value={form.motherPhone}
                     onChange={(e) => updateField('motherPhone', formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999 ou +1 555..."
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="motherCpf">CPF (para nota fiscal)</Label>
+                  <Input
+                    id="motherCpf"
+                    value={form.motherCpf}
+                    onChange={(e) => updateField('motherCpf', formatCPF(e.target.value))}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="motherEmail">E-mail (para nota fiscal)</Label>
+                  <Input
+                    id="motherEmail"
+                    type="email"
+                    value={form.motherEmail}
+                    onChange={(e) => updateField('motherEmail', e.target.value)}
+                    placeholder="email@exemplo.com"
                   />
                 </div>
               </div>
@@ -712,7 +735,7 @@ export function PatientForm({
             {/* Father */}
             <div className="border-t pt-4">
               <h4 className="font-medium mb-3 text-sm text-muted-foreground uppercase tracking-wide">Pai</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fatherName">Nome</Label>
                   <Input
@@ -737,7 +760,26 @@ export function PatientForm({
                     id="fatherPhone"
                     value={form.fatherPhone}
                     onChange={(e) => updateField('fatherPhone', formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999 ou +1 555..."
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fatherCpf">CPF (para nota fiscal)</Label>
+                  <Input
+                    id="fatherCpf"
+                    value={form.fatherCpf}
+                    onChange={(e) => updateField('fatherCpf', formatCPF(e.target.value))}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fatherEmail">E-mail (para nota fiscal)</Label>
+                  <Input
+                    id="fatherEmail"
+                    type="email"
+                    value={form.fatherEmail}
+                    onChange={(e) => updateField('fatherEmail', e.target.value)}
+                    placeholder="email@exemplo.com"
                   />
                 </div>
               </div>

@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tijolos Ecológicos - Encomende Já</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&family=Playfair+Display:wght@700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: #0a0a0a;
+    color: #fff;
+    overflow-x: hidden;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a0e08 0%, #2d1810 40%, #0a0a0a 100%);
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(193,108,52,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(76,145,65,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: pulse 8s ease-in-out infinite reverse;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    width: 100%;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .hero-text .eco-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(76,145,65,0.2), rgba(76,145,65,0.05));
+    border: 1px solid rgba(76,145,65,0.4);
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #6abf5e;
+    margin-bottom: 30px;
+    backdrop-filter: blur(10px);
+  }
+
+  .eco-badge .dot {
+    width: 8px;
+    height: 8px;
+    background: #4c9141;
+    border-radius: 50%;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero-text h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 3.8rem;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #fff 0%, #c8a882 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-text h1 span {
+    display: block;
+    background: linear-gradient(135deg, #c16c34 0%, #e8a86d 50%, #c16c34 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-text .subtitle {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.7;
+    margin: 25px 0 35px;
+    max-width: 480px;
+  }
+
+  .hero-text .subtitle strong {
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+  }
+
+  .cta-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #4c9141, #3a7332);
+    color: #fff;
+    padding: 16px 36px;
+    border-radius: 60px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 25px rgba(76,145,65,0.3);
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 35px rgba(76,145,65,0.5);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: #fff;
+    padding: 16px 36px;
+    border-radius: 60px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    border-color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* BRICK VISUAL */
+  .hero-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brick-showcase {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 500px;
+  }
+
+  .brick-showcase .main-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 380px;
+    height: 380px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(193,108,52,0.1), rgba(193,108,52,0.02));
+    border: 1px solid rgba(193,108,52,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brick-icon-large {
+    width: 200px;
+    height: 200px;
+  }
+
+  .brick-3d {
+    width: 200px;
+    height: 200px;
+    position: relative;
+  }
+
+  /* CSS Brick Illustration */
+  .brick-face {
+    position: absolute;
+    width: 160px;
+    height: 90px;
+    background: linear-gradient(145deg, #c97a42, #a85d2e);
+    border-radius: 6px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow:
+      inset 0 2px 8px rgba(255,255,255,0.15),
+      inset 0 -2px 8px rgba(0,0,0,0.2),
+      0 15px 40px rgba(0,0,0,0.4);
+  }
+
+  .brick-hole {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    background: radial-gradient(circle, #1a0e08 60%, #2d1810 100%);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.6);
+  }
+
+  .brick-hole:nth-child(1) { left: 22px; }
+  .brick-hole:nth-child(2) { left: 50%; transform: translate(-50%, -50%); }
+  .brick-hole:nth-child(3) { right: 22px; }
+
+  .brick-face::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px;
+  }
+
+  /* Floating stats */
+  .float-stat {
+    position: absolute;
+    background: rgba(15,15,15,0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 16px 22px;
+    z-index: 3;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .float-stat:nth-child(2) { animation-delay: -1s; }
+  .float-stat:nth-child(3) { animation-delay: -2s; }
+  .float-stat:nth-child(4) { animation-delay: -3s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .float-stat.stat-1 { top: 10%; right: 0; }
+  .float-stat.stat-2 { bottom: 25%; right: -10px; }
+  .float-stat.stat-3 { bottom: 10%; left: 0; }
+  .float-stat.stat-4 { top: 20%; left: -10px; }
+
+  .float-stat .stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #e8a86d;
+    line-height: 1;
+  }
+
+  .float-stat .stat-label {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* FEATURES SECTION */
+  .features {
+    padding: 100px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 70px;
+  }
+
+  .section-header .overline {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #4c9141;
+    margin-bottom: 15px;
+  }
+
+  .section-header h2 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, #c8a882);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+  }
+
+  .feature-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 20px;
+    padding: 40px 30px;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #c16c34, transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(193,108,52,0.2);
+    background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  }
+
+  .feature-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 22px;
+  }
+
+  .feature-icon.green {
+    background: linear-gradient(135deg, rgba(76,145,65,0.2), rgba(76,145,65,0.05));
+    border: 1px solid rgba(76,145,65,0.2);
+  }
+
+  .feature-icon.orange {
+    background: linear-gradient(135deg, rgba(193,108,52,0.2), rgba(193,108,52,0.05));
+    border: 1px solid rgba(193,108,52,0.2);
+  }
+
+  .feature-icon.blue {
+    background: linear-gradient(135deg, rgba(52,145,193,0.2), rgba(52,145,193,0.05));
+    border: 1px solid rgba(52,145,193,0.2);
+  }
+
+  .feature-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+
+  .feature-card p {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* PRICING / CTA SECTION */
+  .pricing {
+    padding: 80px 40px 100px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .pricing-card {
+    background: linear-gradient(145deg, rgba(193,108,52,0.08), rgba(193,108,52,0.02));
+    border: 1px solid rgba(193,108,52,0.15);
+    border-radius: 28px;
+    padding: 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pricing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #4c9141, #c16c34, #4c9141);
+  }
+
+  .pricing-card .tag {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(193,108,52,0.2), rgba(193,108,52,0.05));
+    border: 1px solid rgba(193,108,52,0.3);
+    padding: 6px 18px;
+    border-radius: 50px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #e8a86d;
+    margin-bottom: 25px;
+  }
+
+  .pricing-card h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+  }
+
+  .pricing-card .desc {
+    color: rgba(255,255,255,0.5);
+    font-size: 1rem;
+    max-width: 500px;
+    margin: 0 auto 35px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  .pricing-highlights {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+  }
+
+  .pricing-highlights .item {
+    text-align: center;
+  }
+
+  .pricing-highlights .item .value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #e8a86d;
+  }
+
+  .pricing-highlights .item .label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .whatsapp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #fff;
+    padding: 18px 44px;
+    border-radius: 60px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 25px rgba(37,211,102,0.3);
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  .whatsapp-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 35px rgba(37,211,102,0.5);
+  }
+
+  .whatsapp-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .footer p {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.3);
+    font-weight: 300;
+  }
+
+  .footer .brand {
+    font-weight: 700;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .hero-content {
+      grid-template-columns: 1fr;
+      text-align: center;
+      gap: 40px;
+      padding: 80px 24px 40px;
+    }
+    .hero-text h1 { font-size: 2.6rem; }
+    .hero-text .subtitle { margin: 20px auto 30px; }
+    .cta-group { justify-content: center; }
+    .features-grid { grid-template-columns: 1fr; }
+    .brick-showcase .main-circle { width: 280px; height: 280px; }
+    .brick-face { width: 120px; height: 68px; }
+    .brick-hole { width: 26px; height: 26px; }
+    .brick-hole:nth-child(1) { left: 14px; }
+    .brick-hole:nth-child(3) { right: 14px; }
+    .float-stat { display: none; }
+    .pricing-card { padding: 40px 24px; }
+    .pricing-highlights { gap: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-text">
+      <div class="eco-badge">
+        <span class="dot"></span>
+        Construção Sustentável
+      </div>
+      <h1>
+        Tijolo<br>
+        <span>Ecológico</span>
+      </h1>
+      <p class="subtitle">
+        Construa com <strong>consciência ambiental</strong> e <strong>economia real</strong>.
+        Nossos tijolos de solo-cimento são produzidos sob encomenda com a mais alta qualidade,
+        prontos para transformar seu projeto.
+      </p>
+      <div class="cta-group">
+        <a href="#orcamento" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+          Solicitar Orçamento
+        </a>
+        <a href="#vantagens" class="btn-secondary">
+          Saiba Mais
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="brick-showcase">
+        <div class="main-circle">
+          <div class="brick-3d">
+            <div class="brick-face">
+              <div class="brick-hole"></div>
+              <div class="brick-hole"></div>
+              <div class="brick-hole"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="float-stat stat-1">
+          <div class="stat-value">70%</div>
+          <div class="stat-label">Menos Resíduos</div>
+        </div>
+        <div class="float-stat stat-2">
+          <div class="stat-value">40%</div>
+          <div class="stat-label">Economia na Obra</div>
+        </div>
+        <div class="float-stat stat-3">
+          <div class="stat-value">0%</div>
+          <div class="stat-label">Queima / Forno</div>
+        </div>
+        <div class="float-stat stat-4">
+          <div class="stat-value">2x</div>
+          <div class="stat-label">Mais Rápido</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VANTAGENS -->
+<section class="features" id="vantagens">
+  <div class="section-header">
+    <p class="overline">Por que escolher</p>
+    <h2>Vantagens do Tijolo Ecológico</h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon green">&#127793;</div>
+      <h3>Sustentável</h3>
+      <p>Produzido com solo e cimento, sem queima. Reduz drasticamente a emissão de CO₂ e o desmatamento comparado ao tijolo convencional.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon orange">&#9889;</div>
+      <h3>Obra Mais Rápida</h3>
+      <p>Sistema de encaixe modular que dispensa argamassa nas juntas. Instalação até 2x mais rápida com menos mão de obra especializada.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon blue">&#128176;</div>
+      <h3>Economia Real</h3>
+      <p>Redução de até 40% no custo total da obra. Menos desperdício, menos reboco e passagem hidráulica/elétrica integrada nos furos.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon orange">&#128293;</div>
+      <h3>Conforto Térmico</h3>
+      <p>Excelente isolamento térmico e acústico. Mantém o ambiente fresco no verão e agradável no inverno, reduzindo gastos com energia.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon green">&#128170;</div>
+      <h3>Alta Resistência</h3>
+      <p>Resistência comprovada com até 6 MPa. Estrutura sólida e durável que atende todas as normas técnicas da ABNT.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon blue">&#10004;&#65039;</div>
+      <h3>Acabamento Premium</h3>
+      <p>Superfície lisa e uniforme que pode ficar aparente, dispensando reboco. Estética moderna e sofisticada para seu projeto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA / ORÇAMENTO -->
+<section class="pricing" id="orcamento">
+  <div class="pricing-card">
+    <div class="tag">Venda Sob Encomenda</div>
+    <h2>Faça Seu Orçamento</h2>
+    <p class="desc">
+      Produzimos sob medida para o seu projeto. Atendemos obras residenciais,
+      comerciais e grandes empreendimentos com entrega programada.
+    </p>
+
+    <div class="pricing-highlights">
+      <div class="item">
+        <div class="value">500+</div>
+        <div class="label">Pedido Mínimo</div>
+      </div>
+      <div class="item">
+        <div class="value">15 dias</div>
+        <div class="label">Prazo Médio</div>
+      </div>
+      <div class="item">
+        <div class="value">100%</div>
+        <div class="label">Personalizado</div>
+      </div>
+    </div>
+
+    <a href="https://wa.me/5500000000000?text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20um%20or%C3%A7amento%20de%20tijolos%20ecol%C3%B3gicos." class="whatsapp-btn">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Chamar no WhatsApp
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <p><span class="brand">Tijolos Ecológicos</span> &mdash; Construindo o futuro com respeito ao planeta.</p>
+</footer>
+
+</body>
+</html>

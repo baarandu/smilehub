@@ -2279,6 +2279,16 @@ export type Database = {
           marital_status: string | null
           medical_history: string | null
           medications: string | null
+          mother_name: string | null
+          mother_occupation: string | null
+          mother_phone: string | null
+          mother_cpf: string | null
+          mother_email: string | null
+          father_name: string | null
+          father_occupation: string | null
+          father_phone: string | null
+          father_cpf: string | null
+          father_email: string | null
           name: string
           notes: string | null
           occupation: string | null
@@ -2313,6 +2323,16 @@ export type Database = {
           marital_status?: string | null
           medical_history?: string | null
           medications?: string | null
+          mother_name?: string | null
+          mother_occupation?: string | null
+          mother_phone?: string | null
+          mother_cpf?: string | null
+          mother_email?: string | null
+          father_name?: string | null
+          father_occupation?: string | null
+          father_phone?: string | null
+          father_cpf?: string | null
+          father_email?: string | null
           name: string
           notes?: string | null
           occupation?: string | null
@@ -2347,6 +2367,16 @@ export type Database = {
           marital_status?: string | null
           medical_history?: string | null
           medications?: string | null
+          mother_name?: string | null
+          mother_occupation?: string | null
+          mother_phone?: string | null
+          mother_cpf?: string | null
+          mother_email?: string | null
+          father_name?: string | null
+          father_occupation?: string | null
+          father_phone?: string | null
+          father_cpf?: string | null
+          father_email?: string | null
           name?: string
           notes?: string | null
           occupation?: string | null
@@ -3448,7 +3478,11 @@ export type AppointmentWithPatient = Appointment & {
   patients: Pick<Patient, 'name' | 'phone'> & {
     patient_type?: string | null
     mother_name?: string | null
+    mother_cpf?: string | null
+    mother_email?: string | null
     father_name?: string | null
+    father_cpf?: string | null
+    father_email?: string | null
     legal_guardian?: string | null
   }
 }
@@ -3466,7 +3500,11 @@ export type ReturnAlert = {
   days_until_return: number
   patient_type?: string | null
   mother_name?: string | null
+  mother_cpf?: string | null
+  mother_email?: string | null
   father_name?: string | null
+  father_cpf?: string | null
+  father_email?: string | null
   legal_guardian?: string | null
 }
 
@@ -3505,9 +3543,13 @@ export type PatientFormData = {
   motherName: string
   motherOccupation: string
   motherPhone: string
+  motherCpf: string
+  motherEmail: string
   fatherName: string
   fatherOccupation: string
   fatherPhone: string
+  fatherCpf: string
+  fatherEmail: string
   legalGuardian: string
   hasSiblings: boolean
   siblingsCount: string
