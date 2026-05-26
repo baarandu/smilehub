@@ -306,7 +306,7 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                             </PopoverContent>
                         </Popover>
                     </div>
-                    {locations.length !== 1 && (
+                    {locations.length > 1 && (
                         <div className="space-y-2">
                             <Label>Local de Atendimento</Label>
                             <Select value={location} onValueChange={setLocation}>

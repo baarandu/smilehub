@@ -176,7 +176,7 @@ export function ProcedureForm({
                     </div>
                 </div>
 
-                {locations.length !== 1 && (
+                {locations.length > 1 && (
                     <div className="space-y-2">
                         <Label htmlFor="location">Local de Atendimento *</Label>
                         <Select
