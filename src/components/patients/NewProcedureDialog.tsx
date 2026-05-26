@@ -32,7 +32,7 @@ import type { Procedure } from '@/types/database';
 import type { BudgetLink } from '@/services/procedures';
 
 // Components
-import { ProcedureForm, type ProcedureFormState } from './procedures/ProcedureForm';
+import { ProcedureForm, type ProcedureFormState } from './procedures/ProcedureForm.tsx';
 import { InlineVoiceRecorder } from '@/components/voice-consultation/InlineVoiceRecorder';
 import type { ExtractionResult } from '@/types/voiceConsultation';
 import { useBudgetPlanItems, keysToBudgetLinks, budgetLinksToKeys } from '@/hooks/useBudgetProcedures';
