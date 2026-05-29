@@ -107,6 +107,7 @@ export const receivablesService = {
           payer_cpf: portion.payerData?.payer_cpf || null,
           pj_source_id: portion.payerData?.pj_source_id || null,
           card_machine_id: machineForPortion,
+          tooth_index: toothIndex,
         } as any);
 
         // Update receivable with the transaction ID
@@ -183,6 +184,7 @@ export const receivablesService = {
       payer_cpf: r.payer_cpf,
       pj_source_id: r.pj_source_id,
       card_machine_id: (r as any).card_machine_id || null,
+      tooth_index: r.tooth_index,
     } as any);
 
     // Update receivable status

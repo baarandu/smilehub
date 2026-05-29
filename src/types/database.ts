@@ -1749,6 +1749,7 @@ export type Database = {
           type: string
           updated_at: string
           user_id: string | null
+          tooth_index: number | null
         }
         Insert: {
           amount: number
@@ -1789,6 +1790,7 @@ export type Database = {
           type: string
           updated_at?: string
           user_id?: string | null
+          tooth_index?: number | null
         }
         Update: {
           amount?: number
@@ -1829,6 +1831,7 @@ export type Database = {
           type?: string
           updated_at?: string
           user_id?: string | null
+          tooth_index?: number | null
         }
         Relationships: [
           {

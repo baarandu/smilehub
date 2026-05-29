@@ -303,6 +303,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           payer_cpf: payerData?.payer_cpf || null,
           pj_source_id: payerData?.pj_source_id || null,
           card_machine_id: cardMachineId || null,
+          tooth_index: selectedItem.toothIndex,
         } as any);
       }
 
