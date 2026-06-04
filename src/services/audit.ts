@@ -12,13 +12,12 @@ export const auditService = {
             const ctx = await getClinicContextSafe();
             if (!ctx) return;
 
-            await supabase.from('audit_logs').insert({
-                clinic_id: ctx.clinicId,
-                user_id: ctx.userId,
-                action,
-                table_name: tableName,
-                record_id: recordId,
-                new_data: details || {}
+            await supabase.rpc('log_audit_event', {
+                p_clinic_id: ctx.clinicId,
+                p_action: action,
+                p_table_name: tableName,
+                p_record_id: recordId || null,
+                p_details: details || {}
             });
         } catch (error) {
             logger.error('Failed to log action:', error);
