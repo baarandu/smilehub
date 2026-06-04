@@ -44,6 +44,7 @@ import { Transaction } from '@/components/financial/types';
 import { toast } from 'sonner';
 import { receivablesService } from '@/services/receivables';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { csvBlob } from '@/utils/csv';
 
 interface ClosureTabProps {
     transactions: Transaction[];
@@ -360,8 +361,7 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
             });
         }
 
-        const csvContent = rows.map(row => row.join(';')).join('\n');
-        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = csvBlob(rows, { delimiter: ';' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;

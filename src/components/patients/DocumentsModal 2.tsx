@@ -368,12 +368,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const createSignature = useCreateSignature();
 
     useEffect(() => {
-        if (open) {
+        if (open && clinicId) {
             loadTemplates();
             loadPatients();
             loadLetterhead();
         }
-    }, [open]);
+    }, [open, clinicId]);
 
     const loadLetterhead = async () => {
         try {
@@ -458,7 +458,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
     const loadPatients = async () => {
         try {
-            const data = await getPatients();
+            if (!clinicId) {
+                setPatients([]);
+                return;
+            }
+
+            const data = await getPatients(undefined, undefined, clinicId);
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);

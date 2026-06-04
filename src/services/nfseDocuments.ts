@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
+import { buildCsv } from '@/utils/csv';
 import type {
   NfseDocument,
   NfseDocumentWithRelations,
@@ -17,15 +18,6 @@ function buildStoragePath(clinicId: string, invoiceNumber: string, ext: 'xml' | 
   const safe = invoiceNumber.replace(/[^a-zA-Z0-9-_]/g, '_');
   const ts = Date.now();
   return `${clinicId}/${safe}_${ts}.${ext}`;
-}
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function buildCsv(rows: Array<Array<string | number | null | undefined>>): string {
-  return '\uFEFF' + rows.map((row) => row.map(csvCell).join(',')).join('\n');
 }
 
 async function uploadFile(path: string, file: File): Promise<string> {

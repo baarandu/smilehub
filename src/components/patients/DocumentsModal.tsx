@@ -19,6 +19,7 @@ import { SigningModal } from './SigningModal';
 import type { DeliveryMethod } from '@/types/digitalSignature';
 import { useClinic } from '@/contexts/ClinicContext';
 import { profileService } from '@/services/profile';
+import { sanitizeHtml, sanitizeText } from '@/utils/security';
 async function pdfToImage(file: File): Promise<File> {
     const pdfjsLib = await import('pdfjs-dist');
     pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -368,12 +369,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
     const createSignature = useCreateSignature();
 
     useEffect(() => {
-        if (open) {
+        if (open && clinicId) {
             loadTemplates();
             loadPatients();
             loadLetterhead();
         }
-    }, [open]);
+    }, [open, clinicId]);
 
     const loadLetterhead = async () => {
         try {
@@ -458,7 +459,12 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
     const loadPatients = async () => {
         try {
-            const data = await getPatients();
+            if (!clinicId) {
+                setPatients([]);
+                return;
+            }
+
+            const data = await getPatients(undefined, undefined, clinicId);
             setPatients(data);
         } catch (error) {
             console.error('Error loading patients:', error);
@@ -636,12 +642,13 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
 
         const patient = patients.find(p => p.id === selectedPatientId);
         const templateName = selectedTemplate?.name || '';
+        const safeTemplateName = sanitizeText(templateName);
         const requiresPatientSig = selectedTemplate?.requires_patient_signature ?? false;
         const requiresDentistSig = selectedTemplate?.requires_dentist_signature ?? false;
         // Preserve "Responsável Legal" label for the menor template
         const nameLower = templateName.toLowerCase();
         const isMinorAuth = nameLower.includes('autoriza') && nameLower.includes('menor');
-        const patientSigLabel = isMinorAuth ? 'Responsável Legal' : (patient?.name || '');
+        const patientSigLabel = sanitizeText(isMinorAuth ? 'Responsável Legal' : (patient?.name || ''));
 
         let dentistName = 'Responsável Técnico';
         let dentistCRO = '';
@@ -659,13 +666,14 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                         dentistName = `${prefix} ${profile.full_name}`;
                     }
                     if (profile?.cro) {
-                        dentistCRO = profile.cro;
+                        dentistCRO = sanitizeText(profile.cro);
                     }
                 }
             } catch (e) {
                 console.error('Error fetching dentist profile:', e);
             }
         }
+        dentistName = sanitizeText(dentistName);
 
         let signatureHtml = '';
         if (requiresPatientSig && requiresDentistSig) {
@@ -714,7 +722,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Paciente\s*/g, '');
             content = content.replace(/\n*_+\s*\n*Assinatura do\(a\) Profissional[^\n]*/g, '');
             content = content.replace(/\n*_+\s*\n*Assinatura do Responsável Legal\s*$/g, '');
-            return content;
+            return sanitizeHtml(content);
         })();
 
         const html = `
@@ -722,7 +730,8 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>${templateName}</title>
+                <meta http-equiv="Content-Security-Policy" content="script-src 'none'; object-src 'none'; base-uri 'none'">
+                <title>${safeTemplateName}</title>
                 <style>
                     @page { size: ${useLetterhead ? `${paperWidthMm}mm ${paperHeightMm}mm` : 'A4'}; margin: 20mm; }
                     body {
@@ -769,7 +778,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 </style>
             </head>
             <body>
-                <h1>${templateName}</h1>
+                <h1>${safeTemplateName}</h1>
                 <div class="content">${documentContent}</div>
                 ${signatureHtml}
             </body>

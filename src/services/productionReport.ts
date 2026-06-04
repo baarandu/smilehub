@@ -1,16 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
+import { csvBlob } from '@/utils/csv';
 import type { ProductionReport } from '@/types/productionReport';
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function buildCsv(rows: Array<Array<string | number | null | undefined>>): Blob {
-  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
-  return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-}
 
 export const productionReportService = {
   async getMonthly(year: number, month: number): Promise<ProductionReport> {
@@ -50,7 +41,7 @@ export const productionReportService = {
       ]);
     }
 
-    return buildCsv(rows);
+    return csvBlob(rows);
   },
 };
 

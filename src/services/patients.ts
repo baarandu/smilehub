@@ -14,14 +14,17 @@ function normalizeName(name: string): string {
 }
 
 export async function getPatients(page?: number, limit?: number, clinicId?: string): Promise<Patient[]> {
+  const effectiveClinicId = clinicId || (await getClinicContextSafe())?.clinicId;
+
+  if (!effectiveClinicId) {
+    return [];
+  }
+
   let query = supabase
     .from('patients_secure')
     .select('*')
+    .eq('clinic_id', effectiveClinicId)
     .order('name');
-
-  if (clinicId) {
-    query = query.eq('clinic_id', clinicId);
-  }
 
   if (page !== undefined && limit !== undefined) {
     const from = page * limit;
@@ -274,6 +277,11 @@ export async function deletePatient(id: string): Promise<void> {
 export async function searchPatients(query: string, clinicId?: string): Promise<Patient[]> {
   if (!query || query.trim().length < 2) return [];
 
+  const effectiveClinicId = clinicId || (await getClinicContextSafe())?.clinicId;
+  if (!effectiveClinicId) {
+    return [];
+  }
+
   // Sanitize: escape PostgREST special chars and SQL wildcards
   const sanitized = query
     .trim()
@@ -301,12 +309,9 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
     .from('patients_secure')
     .select('*')
     .or(conditions.join(','))
+    .eq('clinic_id', effectiveClinicId)
     .order('name')
     .limit(20);
-
-  if (clinicId) {
-    q = q.eq('clinic_id', clinicId);
-  }
 
   const { data, error } = await q as { data: Patient[] | null; error: any };
 

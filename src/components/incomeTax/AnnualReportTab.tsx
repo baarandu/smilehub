@@ -19,6 +19,7 @@ import { generateIRPdf } from '@/utils/incomeTaxPdfGenerator';
 import type { IRSummary, IRValidationIssue } from '@/types/incomeTax';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatters';
+import { csvBlob } from '@/utils/csv';
 
 interface AnnualReportTabProps {
   year: number;
@@ -68,19 +69,11 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
     try {
       const data = await incomeTaxService.exportToExcel(year);
 
-      // Create CSV content for incomes
-      const incomeHeaders = Object.keys(data.incomes[0] || {}).join(';');
-      const incomeRows = data.incomes.map((row) => Object.values(row).join(';')).join('\n');
-      const incomeCSV = `${incomeHeaders}\n${incomeRows}`;
-
-      // Create CSV content for expenses
-      const expenseHeaders = Object.keys(data.expenses[0] || {}).join(';');
-      const expenseRows = data.expenses.map((row) => Object.values(row).join(';')).join('\n');
-      const expenseCSV = `${expenseHeaders}\n${expenseRows}`;
-
       // Download incomes CSV
       if (data.incomes.length > 0) {
-        const incomeBlob = new Blob(['\ufeff' + incomeCSV], { type: 'text/csv;charset=utf-8;' });
+        const incomeHeaders = Object.keys(data.incomes[0] || {});
+        const incomeRows = data.incomes.map((row) => incomeHeaders.map((header) => (row as any)[header]));
+        const incomeBlob = csvBlob([incomeHeaders, ...incomeRows], { delimiter: ';' });
         const incomeUrl = URL.createObjectURL(incomeBlob);
         const incomeLink = document.createElement('a');
         incomeLink.href = incomeUrl;
@@ -91,7 +84,9 @@ export function AnnualReportTab({ year, summary, loading, onRefresh }: AnnualRep
 
       // Download expenses CSV
       if (data.expenses.length > 0) {
-        const expenseBlob = new Blob(['\ufeff' + expenseCSV], { type: 'text/csv;charset=utf-8;' });
+        const expenseHeaders = Object.keys(data.expenses[0] || {});
+        const expenseRows = data.expenses.map((row) => expenseHeaders.map((header) => (row as any)[header]));
+        const expenseBlob = csvBlob([expenseHeaders, ...expenseRows], { delimiter: ';' });
         const expenseUrl = URL.createObjectURL(expenseBlob);
         const expenseLink = document.createElement('a');
         expenseLink.href = expenseUrl;

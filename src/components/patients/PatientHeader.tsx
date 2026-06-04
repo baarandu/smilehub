@@ -16,6 +16,7 @@ import { useClinic } from '@/contexts/ClinicContext';
 import { getWhatsAppNumber } from '@/utils/formatters';
 import { usePatientCredits } from '@/hooks/usePatientCredits';
 import { formatMoney } from '@/utils/budgetUtils';
+import { csvCell } from '@/utils/csv';
 import { Coins } from 'lucide-react';
 import {
   AlertDialog,
@@ -181,24 +182,15 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
 
   const collectExportData = () => collectPatientExportData(patient);
 
-  const csvEscape = (value: unknown): string => {
-    if (value === null || value === undefined) return '';
-    const str = typeof value === 'object' ? JSON.stringify(value) : String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return '"' + str.replace(/"/g, '""') + '"';
-    }
-    return str;
-  };
-
   const generateCSV = (data: Record<string, unknown>): string => {
     const sections: string[] = [];
     const meta = data.export_metadata as Record<string, unknown>;
     sections.push('=== METADADOS DA EXPORTAÇÃO ===');
-    sections.push(Object.entries(meta).map(([k, v]) => `${k},${csvEscape(v)}`).join('\n'));
+    sections.push(Object.entries(meta).map(([k, v]) => `${csvCell(k)},${csvCell(v)}`).join('\n'));
 
     const pat = data.patient as Record<string, unknown>;
     sections.push('\n=== DADOS DO PACIENTE ===');
-    sections.push(Object.entries(pat).filter(([, v]) => v !== undefined).map(([k, v]) => `${k},${csvEscape(v)}`).join('\n'));
+    sections.push(Object.entries(pat).filter(([, v]) => v !== undefined).map(([k, v]) => `${csvCell(k)},${csvCell(v)}`).join('\n'));
 
     const arraySections: [string, string][] = [
       ['anamneses', 'ANAMNESES'], ['appointments', 'CONSULTAS AGENDADAS'],
@@ -210,9 +202,9 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
       if (items && items.length > 0) {
         sections.push(`\n=== ${label} ===`);
         const headers = Object.keys(items[0]);
-        sections.push(headers.map(csvEscape).join(','));
+        sections.push(headers.map(csvCell).join(','));
         for (const item of items) {
-          sections.push(headers.map(h => csvEscape(item[h])).join(','));
+          sections.push(headers.map(h => csvCell(item[h])).join(','));
         }
       }
     }
@@ -232,8 +224,7 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
 
       const fileName = `dados-paciente-${patient.name.replace(/\s+/g, '-').toLowerCase()}`;
       if (format === 'csv') {
-        const bom = '\uFEFF';
-        downloadBlob(bom + generateCSV(data), `${fileName}.csv`, 'text/csv;charset=utf-8');
+        downloadBlob(`\uFEFF${generateCSV(data)}`, `${fileName}.csv`, 'text/csv;charset=utf-8');
       } else {
         downloadBlob(JSON.stringify(data, null, 2), `${fileName}.json`, 'application/json;charset=utf-8');
       }
@@ -569,4 +560,3 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
     </>
   );
 }
-

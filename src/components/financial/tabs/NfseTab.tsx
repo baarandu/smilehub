@@ -21,6 +21,7 @@ import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useQuery } from '@tanstack/react-query';
+import { csvBlob } from '@/utils/csv';
 import type { NfseReportByDentist } from '@/types/nfseDocument';
 
 interface NfseTabProps {
@@ -35,11 +36,6 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
 function safeCsvFilePart(value: string): string {
   return value
     .normalize('NFD')
@@ -49,8 +45,7 @@ function safeCsvFilePart(value: string): string {
 }
 
 function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
-  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = csvBlob(rows);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

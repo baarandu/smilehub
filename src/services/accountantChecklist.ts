@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
 import { nfseDocumentsService } from './nfseDocuments';
 import { productionReportService } from './productionReport';
+import { buildCsv } from '@/utils/csv';
 import type {
   ChecklistData,
   SubmissionFile,
@@ -25,15 +26,6 @@ function buildStoragePath(
   const safe = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const ts = Date.now();
   return `${clinicId}/${year}_${String(month).padStart(2, '0')}/${fileType}/${ts}_${safe}`;
-}
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
-
-function buildCsv(rows: Array<Array<string | number | null | undefined>>): string {
-  return '\uFEFF' + rows.map((row) => row.map(csvCell).join(',')).join('\n');
 }
 
 export const accountantChecklistService = {
