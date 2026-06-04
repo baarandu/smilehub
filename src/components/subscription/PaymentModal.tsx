@@ -171,8 +171,6 @@ export function PaymentModal({
                 userEmail,
                 userId,
                 planName,
-                price,
-                undefined,
                 appliedCoupon?.code
             );
 

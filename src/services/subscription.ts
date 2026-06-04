@@ -103,9 +103,9 @@ export const subscriptionService = {
     /**
      * Call Supabase Edge Function to create a Stripe Subscription
      */
-    async createSubscription(priceId: string, email: string, userId: string, planName: string, amount: number, customerId?: string, couponCode?: string) {
+    async createSubscription(priceId: string, email: string, userId: string, planName: string, couponCode?: string) {
         const { data, error } = await supabase.functions.invoke('create-subscription', {
-            body: { priceId, email, userId, planName, amount, customerId, couponCode },
+            body: { priceId, email, userId, planName, couponCode },
         });
 
         if (error) throw error;
@@ -164,4 +164,3 @@ export const subscriptionService = {
         return data;
     }
 };
-
