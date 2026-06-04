@@ -24,6 +24,7 @@ import { usePatientCredits } from '@/hooks/usePatientCredits';
 import { patientCreditsService } from '@/services/patientCredits';
 import { AddCreditDialog } from './AddCreditDialog';
 import { Coins } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +47,7 @@ interface ItemToPay {
 
 export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ approved: 0, paid: 0, total: 0 });
   const [paymentItems, setPaymentItems] = useState<ItemToPay[]>([]); // Approved items logic pending payment
@@ -213,6 +215,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           amount: creditUsed,
           description: `Pagamento do procedimento: ${selectedItem.tooth.treatments.join(', ')}`,
         });
+        queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
       }
 
       // 2. Create Financial Transactions (if a payment method other than just credit was used)
@@ -691,7 +694,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                                 <Badge variant="secondary" className="text-[10px] h-5">
                                   {item.tooth.paymentMethod === 'credit' ? 'Crédito' :
                                     item.tooth.paymentMethod === 'debit' ? 'Débito' :
-                                      item.tooth.paymentMethod === 'pix' ? 'PIX' : 'Dinheiro'}
+                                      item.tooth.paymentMethod === 'pix' ? 'PIX' :
+                                        item.tooth.paymentMethod === 'credit_balance' ? 'Crédito do paciente' : 'Dinheiro'}
                                 </Badge>
                               )}
                               {item.tooth.paymentDate && (
@@ -803,6 +807,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           patientName={patientData?.name}
           patientCpf={patientData?.cpf || undefined}
           pjSources={pjSources}
+          creditBalance={creditBalance}
         />
       )}
 
@@ -849,8 +854,5 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     </div>
   );
 }
-
-
-
 
 

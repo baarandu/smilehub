@@ -19,6 +19,7 @@ import { isProstheticTreatment, hasLabTreatment } from '@/utils/prosthesis';
 import { getStatusLabel, getKanbanColumn } from '@/utils/prosthesis';
 import { useProstheticBudgetItems, type ProstheticBudgetItem } from '@/hooks/useProstheticBudgetItems';
 import { SendToProsthesisDialog } from '@/components/prosthesis/SendToProsthesisDialog';
+import { usePatientCredits } from '@/hooks/usePatientCredits';
 
 interface BudgetViewDialogProps {
     budget: BudgetWithItems | null;
@@ -40,6 +41,10 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
     // Patient and PJ data for payer selection
     const [patientData, setPatientData] = useState<{ name: string; cpf: string | null } | null>(null);
     const [pjSources, setPjSources] = useState<PJSource[]>([]);
+
+    // Patient credits
+    const { data: creditsData } = usePatientCredits(patientId || '');
+    const creditBalance = creditsData?.balance || 0;
 
     // Selection state for multiple items
     const [selectedPendingItems, setSelectedPendingItems] = useState<Set<number>>(new Set());
@@ -517,6 +522,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                     patientName={patientData?.name || patientName}
                     patientCpf={patientData?.cpf || undefined}
                     pjSources={pjSources}
+                    creditBalance={creditBalance}
                 />
             )}
 
@@ -534,6 +540,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                     patientName={patientData?.name || patientName}
                     patientCpf={patientData?.cpf || undefined}
                     pjSources={pjSources}
+                    creditBalance={creditBalance}
                 />
             )}
 

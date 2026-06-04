@@ -7,6 +7,7 @@ import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment
 import { isOrthodonticTreatment, getOrthoTypeFromTreatments } from '@/utils/orthodontics';
 import { orthodonticsService } from '@/services/orthodontics';
 import { receivablesService } from '@/services/receivables';
+import { patientCreditsService } from '@/services/patientCredits';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -171,7 +172,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         setPaymentBatch({ indices, teeth: approvedItems, totalValue });
     };
 
-    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
+    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
         if (!paymentItem || isSubmitting || !patientId) return;
 
         try {
@@ -187,6 +188,16 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             const selectedTooth = currentTeeth[paymentItem.index];
             const originalAmount = getItemValue(selectedTooth);
             const totalAmount = breakdown?.grossAmount ?? originalAmount;
+            const safeCreditUsed = Math.max(0, Math.min(creditUsed, originalAmount));
+
+            if (safeCreditUsed > 0) {
+                await patientCreditsService.addTransaction({
+                    patientId,
+                    type: 'debit',
+                    amount: safeCreditUsed,
+                    description: `Pagamento do procedimento: ${selectedTooth.treatments.join(', ')}`,
+                });
+            }
 
             const isAnticipated = breakdown?.isAnticipated || false;
             const numTransactions = isAnticipated ? 1 : (installments || 1);
@@ -224,47 +235,49 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             const budgetLocation = parsed.location || null;
             const paymentTag = getPaymentTag(method, brand);
 
-            for (let i = 0; i < numTransactions; i++) {
-                const date = new Date(startDate);
-                if (!isAnticipated) {
-                    date.setMonth(date.getMonth() + i);
-                }
+            if (method !== 'credit_balance' && totalAmount > 0) {
+                for (let i = 0; i < numTransactions; i++) {
+                    const date = new Date(startDate);
+                    if (!isAnticipated) {
+                        date.setMonth(date.getMonth() + i);
+                    }
 
-                await financialService.createTransaction({
-                    type: 'income',
-                    amount: txAmount,
-                    description: `${selectedTooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedTooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
-                    category: 'Tratamento',
-                    date: formatLocalDate(date),
-                    patient_id: patientId,
-                    related_entity_id: budget.id,
-                    location: budgetLocation,
-                    payment_method: method,
-                    net_amount: netAmountPerTx,
-                    tax_rate: breakdown?.taxRate,
-                    tax_amount: taxAmountPerTx,
-                    card_fee_rate: breakdown?.cardFeeRate,
-                    card_fee_amount: cardFeeAmountPerTx,
-                    anticipation_rate: breakdown?.anticipationRate,
-                    anticipation_amount: anticipationAmountPerTx,
-                    location_rate: targetLocationRate,
-                    location_amount: locationAmountPerTx,
-                    payer_is_patient: payerData?.payer_is_patient ?? true,
-                    payer_type: payerData?.payer_type || 'PF',
-                    payer_name: payerData?.payer_name || null,
-                    payer_cpf: payerData?.payer_cpf || null,
-                    pj_source_id: payerData?.pj_source_id || null,
-                    card_machine_id: cardMachineId || null,
-                } as any);
+                    await financialService.createTransaction({
+                        type: 'income',
+                        amount: txAmount,
+                        description: `${selectedTooth.treatments.join(', ')} ${paymentTag} - ${getToothDisplayName(selectedTooth.tooth)}${numTransactions > 1 ? ` (${i + 1}/${numTransactions})` : ''}`,
+                        category: 'Tratamento',
+                        date: formatLocalDate(date),
+                        patient_id: patientId,
+                        related_entity_id: budget.id,
+                        location: budgetLocation,
+                        payment_method: method,
+                        net_amount: netAmountPerTx,
+                        tax_rate: breakdown?.taxRate,
+                        tax_amount: taxAmountPerTx,
+                        card_fee_rate: breakdown?.cardFeeRate,
+                        card_fee_amount: cardFeeAmountPerTx,
+                        anticipation_rate: breakdown?.anticipationRate,
+                        anticipation_amount: anticipationAmountPerTx,
+                        location_rate: targetLocationRate,
+                        location_amount: locationAmountPerTx,
+                        payer_is_patient: payerData?.payer_is_patient ?? true,
+                        payer_type: payerData?.payer_type || 'PF',
+                        payer_name: payerData?.payer_name || null,
+                        payer_cpf: payerData?.payer_cpf || null,
+                        pj_source_id: payerData?.pj_source_id || null,
+                        card_machine_id: cardMachineId || null,
+                    } as any);
+                }
             }
 
             currentTeeth[paymentItem.index] = {
                 ...currentTeeth[paymentItem.index],
                 status: 'paid',
-                paymentMethod: method as any,
+                paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                 paymentInstallments: installments,
                 paymentDate: new Date().toISOString().split('T')[0],
-                financialBreakdown: breakdown
+                financialBreakdown: { ...breakdown, creditUsed: safeCreditUsed }
             };
 
             const newBudgetStatus = calculateBudgetStatus(currentTeeth);
@@ -277,6 +290,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             // Invalidate budgets cache so paid items appear in procedures
             queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
 
             // Auto-create prosthesis order if item is prosthetic with lab
             const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
@@ -302,7 +316,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
+    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
         if (!paymentBatch || isSubmitting || !patientId) return;
 
         try {
@@ -317,6 +331,16 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             const { indices } = paymentBatch;
             const totalAmount = breakdown?.grossAmount ?? paymentBatch.totalValue;
+            const safeCreditUsed = Math.max(0, Math.min(creditUsed, paymentBatch.totalValue));
+
+            if (safeCreditUsed > 0) {
+                await patientCreditsService.addTransaction({
+                    patientId,
+                    type: 'debit',
+                    amount: safeCreditUsed,
+                    description: `Pagamento de ${indices.length} item(ns) do orçamento`,
+                });
+            }
 
             const isAnticipated = breakdown?.isAnticipated || false;
             const numInstallments = isAnticipated ? 1 : (installments || 1);
@@ -359,44 +383,46 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
                 const itemDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
 
-                for (let i = 0; i < numInstallments; i++) {
-                    const date = new Date(startDate);
-                    if (!isAnticipated) {
-                        date.setMonth(date.getMonth() + i);
-                    }
+                if (method !== 'credit_balance' && itemValue > 0) {
+                    for (let i = 0; i < numInstallments; i++) {
+                        const date = new Date(startDate);
+                        if (!isAnticipated) {
+                            date.setMonth(date.getMonth() + i);
+                        }
 
-                    await financialService.createTransaction({
-                        type: 'income',
-                        amount: amountPerInstallment,
-                        description: `${itemDescription} ${paymentTag}${numInstallments > 1 ? ` (${i + 1}/${numInstallments})` : ''}`,
-                        category: 'Tratamento',
-                        date: formatLocalDate(date),
-                        patient_id: patientId,
-                        related_entity_id: budget.id,
-                        location: budgetLocation,
-                        payment_method: method,
-                        net_amount: netPerInstallment,
-                        tax_rate: breakdown?.taxRate,
-                        tax_amount: taxPerInstallment,
-                        card_fee_rate: breakdown?.cardFeeRate,
-                        card_fee_amount: cardFeePerInstallment,
-                        anticipation_rate: breakdown?.anticipationRate,
-                        anticipation_amount: anticipationPerInstallment,
-                        location_rate: itemLocationRate,
-                        location_amount: locationPerInstallment,
-                        payer_is_patient: payerData?.payer_is_patient ?? true,
-                        payer_type: payerData?.payer_type || 'PF',
-                        payer_name: payerData?.payer_name || null,
-                        payer_cpf: payerData?.payer_cpf || null,
-                        pj_source_id: payerData?.pj_source_id || null,
-                        card_machine_id: cardMachineId || null,
-                    } as any);
+                        await financialService.createTransaction({
+                            type: 'income',
+                            amount: amountPerInstallment,
+                            description: `${itemDescription} ${paymentTag}${numInstallments > 1 ? ` (${i + 1}/${numInstallments})` : ''}`,
+                            category: 'Tratamento',
+                            date: formatLocalDate(date),
+                            patient_id: patientId,
+                            related_entity_id: budget.id,
+                            location: budgetLocation,
+                            payment_method: method,
+                            net_amount: netPerInstallment,
+                            tax_rate: breakdown?.taxRate,
+                            tax_amount: taxPerInstallment,
+                            card_fee_rate: breakdown?.cardFeeRate,
+                            card_fee_amount: cardFeePerInstallment,
+                            anticipation_rate: breakdown?.anticipationRate,
+                            anticipation_amount: anticipationPerInstallment,
+                            location_rate: itemLocationRate,
+                            location_amount: locationPerInstallment,
+                            payer_is_patient: payerData?.payer_is_patient ?? true,
+                            payer_type: payerData?.payer_type || 'PF',
+                            payer_name: payerData?.payer_name || null,
+                            payer_cpf: payerData?.payer_cpf || null,
+                            pj_source_id: payerData?.pj_source_id || null,
+                            card_machine_id: cardMachineId || null,
+                        } as any);
+                    }
                 }
 
                 currentTeeth[idx] = {
                     ...tooth,
                     status: 'paid',
-                    paymentMethod: method as any,
+                    paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                     paymentInstallments: installments,
                     paymentDate: new Date().toISOString().split('T')[0],
                     discountAmount: itemOriginalValue - itemValue,
@@ -411,6 +437,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         anticipationAmount: itemAnticipationAmount,
                         locationRate: itemLocationRate,
                         locationAmount: itemLocationAmount,
+                        creditUsed: safeCreditUsed * ratio,
                     }
                 };
             }
@@ -425,6 +452,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             // Invalidate budgets cache so paid items appear in procedures
             queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+            queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
 
             // Auto-create prosthesis orders for prosthetic items with lab
             let prosthesisCount = 0;
