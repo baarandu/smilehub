@@ -33,6 +33,33 @@ export const nfseDocumentsService = {
 
     let xml_url: string | null = null;
     let pdf_url: string | null = null;
+    let dentistId = input.dentist_id ?? null;
+
+    if (!dentistId && input.financial_transaction_id) {
+      const { data: transaction } = await supabase
+        .from('financial_transactions')
+        .select('dentist_id')
+        .eq('clinic_id', clinicId)
+        .eq('id', input.financial_transaction_id)
+        .maybeSingle();
+      dentistId = transaction?.dentist_id ?? null;
+    }
+
+    if (!dentistId && input.budget_id) {
+      const { data: budget } = await supabase
+        .from('budgets')
+        .select('created_by, notes')
+        .eq('clinic_id', clinicId)
+        .eq('id', input.budget_id)
+        .maybeSingle();
+      let responsibleDentistId: string | null = null;
+      try {
+        responsibleDentistId = JSON.parse((budget as any)?.notes || '{}')?.responsibleDentistId || null;
+      } catch {
+        responsibleDentistId = null;
+      }
+      dentistId = responsibleDentistId || budget?.created_by || null;
+    }
 
     if (input.xml_file) {
       xml_url = await uploadFile(
@@ -65,7 +92,7 @@ export const nfseDocumentsService = {
         budget_id: input.budget_id ?? null,
         financial_transaction_id: input.financial_transaction_id ?? null,
         tooth_index: input.tooth_index ?? null,
-        dentist_id: input.dentist_id ?? null,
+        dentist_id: dentistId,
         invoice_number: input.invoice_number,
         issue_date: input.issue_date,
         service_value: input.service_value,
@@ -227,15 +254,21 @@ export const nfseDocumentsService = {
 
     // Resolve dentist_id:
     // 1. Use explicitly provided dentist_id
-    // 2. Fallback: fetch budget.created_by (always the responsible dentist)
+    // 2. Fallback: fetch budget responsible dentist from notes, then created_by
     let dentistId = input.dentist_id ?? null;
     if (!dentistId) {
       const { data: budget } = await supabase
         .from('budgets')
-        .select('created_by')
+        .select('created_by, notes')
         .eq('id', input.budget_id)
         .maybeSingle();
-      dentistId = budget?.created_by ?? null;
+      let responsibleDentistId: string | null = null;
+      try {
+        responsibleDentistId = JSON.parse((budget as any)?.notes || '{}')?.responsibleDentistId || null;
+      } catch {
+        responsibleDentistId = null;
+      }
+      dentistId = responsibleDentistId || budget?.created_by || null;
     }
 
     const invoiceNumber = `EXT-${input.budget_id.replace(/-/g, '').slice(0, 8)}-${input.tooth_index}`;

@@ -43,6 +43,7 @@ interface ItemToPay {
   budgetDate: string;
   locationRate?: number;
   budgetCreatedBy?: string | null;
+  responsibleDentistId?: string | null;
 }
 
 export function PaymentsTab({ patientId }: PaymentsTabProps) {
@@ -146,6 +147,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               budgetDate: budget.date,
               locationRate: (tooth as any).locationRate ?? (budget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0),
               budgetCreatedBy: budget.created_by,
+              responsibleDentistId: parsed.responsibleDentistId || budget.created_by,
             };
 
             if (tooth.status === 'approved') {
@@ -389,7 +391,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           service_value: getItemValue(item),
           issue_date: normalizeIssueDate(item.tooth.paymentDate || item.budgetDate),
           service_description: `${item.tooth.treatments.join(', ')} - ${getToothDisplayName(item.tooth.tooth)}`,
-          dentist_id: item.budgetCreatedBy,
+          dentist_id: item.responsibleDentistId || item.budgetCreatedBy,
         });
         toast({ title: 'Nota fiscal marcada como emitida' });
       } else {
@@ -838,6 +840,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           defaultPatientId={patientId}
           defaultBudgetId={nfseTarget.budgetId}
           defaultToothIndex={nfseTarget.toothIndex}
+          defaultDentistId={nfseTarget.responsibleDentistId || nfseTarget.budgetCreatedBy}
           defaultServiceValue={getItemValue(nfseTarget)}
           defaultDescription={`${nfseTarget.tooth.treatments.join(', ')} - ${getToothDisplayName(nfseTarget.tooth.tooth)}`}
           contextLabel={`${getToothDisplayName(nfseTarget.tooth.tooth)} — ${nfseTarget.tooth.treatments.join(', ')}`}
@@ -854,5 +857,3 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     </div>
   );
 }
-
-

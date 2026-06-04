@@ -262,10 +262,10 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                             <Banknote className="w-4 h-4" />
                                             <span className="text-lg">R$ {formatMoney(budget.value)}</span>
                                         </div>
-                                        {budget.created_by_name && (
+                                        {((budget as any).responsible_dentist_name || budget.created_by_name) && (
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <User className="w-4 h-4" />
-                                                <span className="text-sm">{budget.created_by_name}</span>
+                                                <span className="text-sm">{(budget as any).responsible_dentist_name || budget.created_by_name}</span>
                                             </div>
                                         )}
                                         {budget.location && (

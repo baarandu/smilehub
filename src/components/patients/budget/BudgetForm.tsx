@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Check, Calendar as CalendarIcon, Save, MapPin, FlaskConical, ChevronsUpDown, X } from 'lucide-react';
+import { Plus, Check, Calendar as CalendarIcon, Save, MapPin, FlaskConical, ChevronsUpDown, X, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -35,6 +35,9 @@ interface BudgetFormProps {
     location: string;
     setLocation: (location: string) => void;
     locations: { id: string; name: string }[];
+    responsibleDentistId: string;
+    setResponsibleDentistId: (dentistId: string) => void;
+    dentists: { id: string; name: string }[];
     onAddItem: (item: ToothEntry) => void;
     onUpdateItem?: (item: ToothEntry, index: number) => void;
     editingItem?: ToothEntry | null;
@@ -44,7 +47,7 @@ interface BudgetFormProps {
     onAddLocation?: () => void;
 }
 
-export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit, toothEntries, onAddLocation }: BudgetFormProps) {
+export function BudgetForm({ date, setDate, locationRate, setLocationRate, location, setLocation, locations, responsibleDentistId, setResponsibleDentistId, dentists, onAddItem, onUpdateItem, editingItem, editingIndex, onCancelEdit, toothEntries, onAddLocation }: BudgetFormProps) {
     const { toast } = useToast();
 
     // Current Item State
@@ -342,6 +345,30 @@ export function BudgetForm({ date, setDate, locationRate, setLocationRate, locat
                         </div>
                     )}
                 </div>
+
+                {dentists.length > 0 && (
+                    <div className="space-y-2">
+                        <Label>Dentista Responsável</Label>
+                        <Select value={responsibleDentistId} onValueChange={setResponsibleDentistId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione a dentista..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dentists.map(dentist => (
+                                    <SelectItem key={dentist.id} value={dentist.id}>
+                                        <span className="flex items-center gap-2">
+                                            <User className="w-3.5 h-3.5" />
+                                            {dentist.name}
+                                        </span>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                            Usado para produção, financeiro e agrupamento de notas fiscais.
+                        </p>
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <Label>Taxa Clínica (%)</Label>

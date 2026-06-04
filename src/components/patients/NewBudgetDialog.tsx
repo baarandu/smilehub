@@ -10,6 +10,8 @@ import type { BudgetInsert, BudgetWithItems } from '@/types/database';
 import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
 import { LocationsModal } from '@/components/profile/LocationsModal';
+import { useClinic } from '@/contexts/ClinicContext';
+import { supabase } from '@/lib/supabase';
 
 interface NewBudgetDialogProps {
     patientId: string;
@@ -21,6 +23,7 @@ interface NewBudgetDialogProps {
 
 export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }: NewBudgetDialogProps) {
     const { toast } = useToast();
+    const { clinicId } = useClinic();
     const [saving, setSaving] = useState(false);
 
     // Form State
@@ -28,6 +31,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const [locationRate, setLocationRate] = useState('');
     const [location, setLocation] = useState('');
     const [locations, setLocations] = useState<Location[]>([]);
+    const [dentists, setDentists] = useState<{ id: string; name: string }[]>([]);
+    const [responsibleDentistId, setResponsibleDentistId] = useState('');
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
     const [locationsModalOpen, setLocationsModalOpen] = useState(false);
@@ -39,6 +44,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     useEffect(() => {
         if (open) {
             loadLocations();
+            loadDentists();
             if (budget) {
                 // Load existing budget for editing
                 setDate(budget.date);
@@ -54,6 +60,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     if (parsed.location) {
                         setLocation(parsed.location);
                     }
+                    setResponsibleDentistId(parsed.responsibleDentistId || budget.created_by || '');
 
                     // Load locationRate from notes or from budget column
                     const rate = parsed.locationRate || (budget as any).location_rate || 0;
@@ -66,12 +73,14 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     setTeethList([]);
                     setLocationRate('');
                     setLocation('');
+                    setResponsibleDentistId('');
                 }
             } else {
                 // Reset for new budget
                 setDate(new Date().toISOString().split('T')[0]);
                 setLocationRate('');
                 setLocation('');
+                setResponsibleDentistId('');
                 setTeethList([]);
             }
         }
@@ -83,6 +92,59 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
             setLocations(data);
         } catch (error) {
             console.error('Error loading locations:', error);
+        }
+    };
+
+    const loadDentists = async () => {
+        if (!clinicId) return;
+        try {
+            const { data: clinicUsers, error: usersError } = await supabase
+                .from('clinic_users')
+                .select('user_id, role, roles')
+                .eq('clinic_id', clinicId);
+            if (usersError) throw usersError;
+
+            const dentistUsers = (clinicUsers || [])
+                .filter((u: any) => (u.roles || [u.role]).includes('dentist'));
+            const userIds = dentistUsers.map((u: any) => u.user_id);
+            if (userIds.length === 0) {
+                setDentists([]);
+                return;
+            }
+
+            const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: userIds });
+            const names = new Map<string, string>();
+            (profiles || []).forEach((profile: any) => {
+                names.set(profile.id, profile.full_name || profile.email || profile.id);
+            });
+
+            const dentistOptions = dentistUsers.map((u: any) => ({
+                id: u.user_id,
+                name: names.get(u.user_id) || `Usuário ${u.user_id.slice(0, 8)}`,
+            }));
+
+            setDentists(dentistOptions);
+
+            if (budget) {
+                let parsedResponsibleId: string | null = null;
+                try {
+                    parsedResponsibleId = JSON.parse(budget.notes || '{}')?.responsibleDentistId || null;
+                } catch {
+                    parsedResponsibleId = null;
+                }
+                const fallbackId = parsedResponsibleId || budget.created_by || '';
+                setResponsibleDentistId(dentistOptions.some(d => d.id === fallbackId) ? fallbackId : '');
+            } else {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user && dentistOptions.some(d => d.id === user.id)) {
+                    setResponsibleDentistId(user.id);
+                } else if (dentistOptions.length === 1) {
+                    setResponsibleDentistId(dentistOptions[0].id);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading dentists:', error);
+            setDentists([]);
         }
     };
 
@@ -135,16 +197,23 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
             toast({ variant: "destructive", title: "Erro", description: "Adicione pelo menos um item ao orçamento." });
             return;
         }
+        if (dentists.length > 0 && !responsibleDentistId) {
+            toast({ variant: "destructive", title: "Erro", description: "Selecione a dentista responsável pelo orçamento." });
+            return;
+        }
 
         try {
             setSaving(true);
             const total = calculateTotal();
             const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))].join(', ');
+            const responsibleDentistName = dentists.find(d => d.id === responsibleDentistId)?.name || null;
 
             const notesData = JSON.stringify({
                 teeth: teethList,
                 location: location,
-                locationRate: locationRate ? parseFloat(locationRate) : 0
+                locationRate: locationRate ? parseFloat(locationRate) : 0,
+                responsibleDentistId: responsibleDentistId || null,
+                responsibleDentistName,
             });
 
             // Create budget items for relation
@@ -211,6 +280,9 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                         location={location}
                         setLocation={setLocation}
                         locations={locations}
+                        responsibleDentistId={responsibleDentistId}
+                        setResponsibleDentistId={setResponsibleDentistId}
+                        dentists={dentists}
                         onAddItem={handleAddItem}
                         onUpdateItem={handleUpdateItem}
                         editingItem={editingItem}

@@ -38,6 +38,7 @@ export function useCreateNfse() {
     mutationFn: (input: NfseUploadInput) => nfseDocumentsService.create(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
+      qc.invalidateQueries({ queryKey: ['nfse-report-by-dentist'] });
     },
   });
 }
@@ -57,6 +58,7 @@ export function useUpdateNfseStatus() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
+      qc.invalidateQueries({ queryKey: ['nfse-report-by-dentist'] });
     },
   });
 }
@@ -67,6 +69,7 @@ export function useDeleteNfse() {
     mutationFn: (id: string) => nfseDocumentsService.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
+      qc.invalidateQueries({ queryKey: ['nfse-report-by-dentist'] });
     },
   });
 }
@@ -77,6 +80,7 @@ export function useMarkExternalNfse() {
     mutationFn: (input: MarkExternalNfseInput) => nfseDocumentsService.markIssuedExternally(input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
+      qc.invalidateQueries({ queryKey: ['nfse-report-by-dentist'] });
     },
   });
 }
@@ -88,6 +92,7 @@ export function useUnmarkExternalNfse() {
       nfseDocumentsService.unmarkIssuedExternally(params.budgetId, params.toothIndex),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nfse'] });
+      qc.invalidateQueries({ queryKey: ['nfse-report-by-dentist'] });
     },
   });
 }

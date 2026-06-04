@@ -33,7 +33,14 @@ export const budgetsService = {
 
         // Fetch creator names for budgets with created_by
         const budgets = data || [];
-        const creatorIds = [...new Set(budgets.map(b => b.created_by).filter(Boolean))];
+        const responsibleIds = budgets.map((b: any) => {
+            try {
+                return JSON.parse(b.notes || '{}')?.responsibleDentistId || null;
+            } catch {
+                return null;
+            }
+        });
+        const creatorIds = [...new Set([...budgets.map(b => b.created_by), ...responsibleIds].filter(Boolean))];
 
         let creatorNames: Record<string, string> = {};
         if (creatorIds.length > 0) {
@@ -48,7 +55,15 @@ export const budgetsService = {
 
         return budgets.map(b => ({
             ...b,
-            created_by_name: b.created_by ? creatorNames[b.created_by] || null : null
+            created_by_name: b.created_by ? creatorNames[b.created_by] || null : null,
+            responsible_dentist_name: (() => {
+                try {
+                    const parsed = JSON.parse((b as any).notes || '{}');
+                    return parsed.responsibleDentistName || (parsed.responsibleDentistId ? creatorNames[parsed.responsibleDentistId] : null);
+                } catch {
+                    return null;
+                }
+            })(),
         })) as BudgetWithItems[];
     },
 

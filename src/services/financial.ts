@@ -109,11 +109,17 @@ export const financialService = {
         if (!dentistId && transaction.type === 'income' && (transaction as any).related_entity_id) {
             const { data: budget } = await supabase
                 .from('budgets')
-                .select('created_by')
+                .select('created_by, notes')
                 .eq('id', (transaction as any).related_entity_id)
                 .maybeSingle();
-            if (budget?.created_by) {
-                dentistId = budget.created_by;
+            if (budget) {
+                let responsibleDentistId: string | null = null;
+                try {
+                    responsibleDentistId = JSON.parse((budget as any).notes || '{}')?.responsibleDentistId || null;
+                } catch {
+                    responsibleDentistId = null;
+                }
+                dentistId = responsibleDentistId || budget.created_by || null;
             }
         }
 

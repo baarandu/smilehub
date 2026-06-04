@@ -126,7 +126,7 @@ export function NfseUploadDialog({
         budget_id: defaultBudgetId ?? undefined,
         tooth_index: defaultToothIndex ?? undefined,
         financial_transaction_id: defaultTransactionId ?? selectedTransactionId ?? undefined,
-        dentist_id: defaultDentistId ?? undefined,
+        dentist_id: defaultDentistId ?? unlinkedPayments.find((p) => p.transaction_id === selectedTransactionId)?.dentist_id ?? undefined,
         xml_file: xmlFile,
         pdf_file: pdfFile,
       });
