@@ -89,13 +89,14 @@ export const financialService = {
         const { userId, clinicId } = await getClinicContext();
 
         const cardMachineId = (transaction as any).card_machine_id || null;
+        const revenueType = (transaction as any).revenue_type || 'individual';
 
         // Determine dentist_id: card machine's dentist > explicit > from budget > current user if dentist
         let dentistId = (transaction as any).dentist_id || null;
 
         // Highest priority: if a card machine is provided and it has a dentist atrelada,
         // attribute the revenue to that dentist (overrides budget/user fallback).
-        if (cardMachineId) {
+        if (revenueType !== 'clinic' && cardMachineId) {
             const { data: machine } = await supabase
                 .from('card_machines')
                 .select('dentist_id')
@@ -106,7 +107,7 @@ export const financialService = {
             }
         }
 
-        if (!dentistId && transaction.type === 'income' && (transaction as any).related_entity_id) {
+        if (!dentistId && revenueType !== 'clinic' && transaction.type === 'income' && (transaction as any).related_entity_id) {
             const { data: budget } = await supabase
                 .from('budgets')
                 .select('created_by, notes')
@@ -123,7 +124,7 @@ export const financialService = {
             }
         }
 
-        if (!dentistId && transaction.type === 'income') {
+        if (!dentistId && revenueType !== 'clinic' && transaction.type === 'income') {
             const { data: cu } = await supabase
                 .from('clinic_users')
                 .select('roles')
@@ -142,13 +143,40 @@ export const financialService = {
                 clinic_id: clinicId,
                 user_id: userId,
                 created_by: userId,
-                dentist_id: dentistId,
-            })
+                dentist_id: revenueType === 'clinic' ? null : dentistId,
+            } as any)
             .select()
             .single();
 
         if (error) throw error;
         return data;
+    },
+
+    async listDentists(): Promise<Array<{ id: string; name: string }>> {
+        const { clinicId } = await getClinicContext();
+        const { data, error } = await supabase
+            .from('clinic_users')
+            .select('user_id, role, roles')
+            .eq('clinic_id', clinicId);
+        if (error) throw error;
+
+        const dentistIds = [...new Set((data || [])
+            .filter((u: any) => {
+                const roles = Array.isArray(u.roles) ? u.roles : [u.role].filter(Boolean);
+                return roles.some((role: string) => ['dentist', 'owner', 'admin'].includes(role));
+            })
+            .map((u: any) => u.user_id)
+            .filter(Boolean))] as string[];
+
+        if (dentistIds.length === 0) return [];
+
+        const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: dentistIds });
+        const names = ((profiles || []) as any[]).reduce((acc, p) => {
+            acc[p.id] = p.full_name || p.email || 'Sem nome';
+            return acc;
+        }, {} as Record<string, string>);
+
+        return dentistIds.map((id) => ({ id, name: names[id] || 'Sem nome' }));
     },
 
     async createExpense(expense: {

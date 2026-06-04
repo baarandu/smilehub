@@ -11,7 +11,9 @@ import {
     EyeOff,
     Trash2,
     Loader2,
-    User
+    User,
+    Plus,
+    Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +45,15 @@ import { Transaction } from '@/components/financial/types';
 import { financialService } from '@/services/financial';
 import { locationsService, Location } from '@/services/locations';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+    PAYMENT_METHODS,
+    PaymentMethod,
+    applyDateMask,
+    dateToDbFormat,
+    formatCurrency as formatCurrencyInput,
+    getNumericValue,
+} from '@/utils/expense';
 
 interface IncomeTabProps {
     transactions: Transaction[];
@@ -51,6 +62,7 @@ interface IncomeTabProps {
 }
 
 type IncomeSubTab = 'gross' | 'net';
+type RevenueType = 'clinic' | 'individual';
 
 export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
@@ -69,6 +81,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     const [deleting, setDeleting] = useState(false);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [orthoAction, setOrthoAction] = useState<'delete' | 'pause' | 'keep'>('pause');
+    const [newIncomeOpen, setNewIncomeOpen] = useState(false);
 
     // Card visibility state
     const [hiddenCards, setHiddenCards] = useState<Set<string>>(new Set());
@@ -88,6 +101,11 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     const { data: locations = [] } = useQuery({
         queryKey: ['locations'],
         queryFn: locationsService.getAll
+    });
+
+    const { data: dentists = [] } = useQuery({
+        queryKey: ['financial-dentists'],
+        queryFn: financialService.listDentists
     });
 
     // Calculate Methods
@@ -119,7 +137,8 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
             // Patient Name
             if (patientFilter) {
                 const pName = t.patients?.name?.toLowerCase() || '';
-                if (!pName.includes(patientFilter.toLowerCase())) return false;
+                const description = t.description?.toLowerCase() || '';
+                if (!pName.includes(patientFilter.toLowerCase()) && !description.includes(patientFilter.toLowerCase())) return false;
             }
 
             // Method
@@ -257,10 +276,18 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                        size="sm"
+                        onClick={() => setNewIncomeOpen(true)}
+                        className="h-9 gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span className="hidden sm:inline">Nova receita</span>
+                    </Button>
                     <div className="relative flex-1 sm:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Buscar paciente..."
+                            placeholder="Buscar receita ou paciente..."
                             value={patientFilter}
                             onChange={(e) => setPatientFilter(e.target.value)}
                             className="pl-9 h-9"
@@ -391,7 +418,11 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         <ArrowUpRight className="h-5 w-5 text-green-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-foreground">{t.patients?.name || 'Não identificado'}</p>
+                                        <p className="font-medium text-foreground">
+                                            {(t as any).revenue_type === 'clinic'
+                                                ? 'Receita da clínica'
+                                                : t.patients?.name || 'Não identificado'}
+                                        </p>
                                         {(() => {
                                             // Parse procedure from description
                                             const installmentMatch = t.description.match(/\((\d+\/\d+)\)/);
@@ -442,6 +473,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <User className="h-3 w-3" />
                                                             Dr(a). {(t as any).dentist_name}
+                                                        </p>
+                                                    )}
+                                                    {(t as any).revenue_type === 'clinic' && (
+                                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <Building2 className="h-3 w-3" />
+                                                            Receita da estrutura da clínica
                                                         </p>
                                                     )}
                                                     {!(t as any).dentist_name && (t as any).created_by_name && (
@@ -565,6 +602,17 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                 </div>
             </div>
 
+            {/* Nova receita */}
+            <NewIncomeDialog
+                open={newIncomeOpen}
+                onOpenChange={setNewIncomeOpen}
+                dentists={dentists}
+                onSaved={() => {
+                    setNewIncomeOpen(false);
+                    onRefresh?.();
+                }}
+            />
+
             {/* Filter Sheet/Dialog */}
             <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
                 <DialogContent className="sm:max-w-[425px]">
@@ -655,8 +703,14 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                         <div className="space-y-4 py-4">
                             {/* Patient Info */}
                             <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                                <p className="text-sm text-muted-foreground">Paciente</p>
-                                <p className="text-lg font-bold text-foreground">{selectedTransaction.patients?.name || 'Não identificado'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {(selectedTransaction as any).revenue_type === 'clinic' ? 'Tipo' : 'Paciente'}
+                                </p>
+                                <p className="text-lg font-bold text-foreground">
+                                    {(selectedTransaction as any).revenue_type === 'clinic'
+                                        ? 'Receita da clínica'
+                                        : selectedTransaction.patients?.name || 'Não identificado'}
+                                </p>
                             </div>
 
                             {/* Amount Info */}
@@ -685,6 +739,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Dentista Responsável</span>
                                         <span className="font-medium">Dr(a). {(selectedTransaction as any).dentist_name}</span>
+                                    </div>
+                                )}
+                                {(selectedTransaction as any).revenue_type === 'clinic' && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Classificação</span>
+                                        <span className="font-medium">Receita da clínica</span>
                                     </div>
                                 )}
                                 {selectedTransaction.location && (
@@ -868,4 +928,207 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
             </Dialog>
         </div>
     );
+}
+
+function NewIncomeDialog({
+    open,
+    onOpenChange,
+    dentists,
+    onSaved,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    dentists: Array<{ id: string; name: string }>;
+    onSaved: () => void;
+}) {
+    const [description, setDescription] = useState('');
+    const [amount, setAmount] = useState('');
+    const [date, setDate] = useState(getTodayDisplayDate());
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Pix');
+    const [revenueType, setRevenueType] = useState<RevenueType>('clinic');
+    const [dentistId, setDentistId] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const reset = () => {
+        setDescription('');
+        setAmount('');
+        setDate(getTodayDisplayDate());
+        setPaymentMethod('Pix');
+        setRevenueType('clinic');
+        setDentistId('');
+    };
+
+    const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const rawValue = event.target.value.replace(/\D/g, '');
+        const numberValue = Number(rawValue) / 100;
+        setAmount(formatCurrencyInput(numberValue));
+    };
+
+    const handleSubmit = async (event: React.FormEvent) => {
+        event.preventDefault();
+
+        const value = getNumericValue(amount);
+        if (!description.trim()) { toast.error('Informe a descrição da receita.'); return; }
+        if (!value || value <= 0) { toast.error('Informe um valor válido.'); return; }
+        if (!date || date.length !== 10) { toast.error('Informe uma data válida.'); return; }
+        if (revenueType === 'individual' && !dentistId) {
+            toast.error('Selecione a dentista responsável pela produção.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await financialService.createTransaction({
+                type: 'income',
+                amount: value,
+                net_amount: value,
+                description: `${description.trim()} (${paymentMethod})`,
+                category: revenueType === 'clinic' ? 'Receita da Clínica' : 'Receita Manual',
+                date: dateToDbFormat(date),
+                location: null,
+                payment_method: paymentMethod,
+                revenue_type: revenueType,
+                dentist_id: revenueType === 'individual' ? dentistId : null,
+                payment_status: 'paid',
+                paid_at: new Date().toISOString(),
+            } as any);
+
+            toast.success('Receita lançada com sucesso!');
+            reset();
+            onSaved();
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao lançar receita.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(nextOpen) => {
+                onOpenChange(nextOpen);
+                if (!nextOpen) reset();
+            }}
+        >
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Nova receita</DialogTitle>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setRevenueType('clinic')}
+                            className={`rounded-lg border p-3 text-left transition-colors ${
+                                revenueType === 'clinic'
+                                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                                    : 'border-slate-200 hover:bg-slate-50'
+                            }`}
+                        >
+                            <Building2 className="w-4 h-4 mb-2" />
+                            <span className="block text-sm font-semibold">Receita da clínica</span>
+                            <span className="block text-xs text-slate-500 mt-0.5">Ex: aluguel de sala</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRevenueType('individual')}
+                            className={`rounded-lg border p-3 text-left transition-colors ${
+                                revenueType === 'individual'
+                                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                                    : 'border-slate-200 hover:bg-slate-50'
+                            }`}
+                        >
+                            <User className="w-4 h-4 mb-2" />
+                            <span className="block text-sm font-semibold">Produção de dentista</span>
+                            <span className="block text-xs text-slate-500 mt-0.5">Receita manual atribuída</span>
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="income-description">Descrição</Label>
+                        <Input
+                            id="income-description"
+                            value={description}
+                            onChange={(event) => setDescription(event.target.value)}
+                            placeholder={revenueType === 'clinic' ? 'Ex: Aluguel da sala' : 'Ex: Procedimento avulso'}
+                            required
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="income-amount">Valor</Label>
+                            <Input
+                                id="income-amount"
+                                value={amount}
+                                onChange={handleAmountChange}
+                                placeholder="0,00"
+                                className="font-semibold"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="income-date">Data</Label>
+                            <Input
+                                id="income-date"
+                                value={date}
+                                onChange={(event) => setDate(applyDateMask(event.target.value))}
+                                maxLength={10}
+                                placeholder="DD/MM/AAAA"
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Forma de pagamento</Label>
+                        <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PAYMENT_METHODS.map((method) => (
+                                    <SelectItem key={method} value={method}>{method}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {revenueType === 'individual' && (
+                        <div className="space-y-2">
+                            <Label>Dentista responsável</Label>
+                            <Select value={dentistId} onValueChange={setDentistId}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione a dentista" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dentists.map((dentist) => (
+                                        <SelectItem key={dentist.id} value={dentist.id}>{dentist.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+                            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                            Lançar receita
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function getTodayDisplayDate(): string {
+    const today = new Date();
+    return `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 }
