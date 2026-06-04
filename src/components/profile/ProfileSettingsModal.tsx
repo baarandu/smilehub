@@ -344,8 +344,19 @@ export function ProfileSettingsModal({ open, onOpenChange, initialTab }: Profile
     const handleRemoveMember = async (id: string) => {
         if (!await confirm({ description: 'Remover membro da equipe? O usuário perderá o acesso.', variant: 'destructive', confirmLabel: 'Remover' })) return;
         try {
-            await supabase.from('clinic_users').delete().eq('id', id);
-            toast.success('Membro removido');
+            const { data, error } = await (supabase as any).rpc('remove_clinic_member', {
+                p_clinic_user_id: id,
+            });
+
+            if (error) throw error;
+
+            const result = data as { success: boolean; error?: string; message?: string };
+            if (!result.success) {
+                toast.error(result.error || 'Erro ao remover membro');
+                return;
+            }
+
+            toast.success(result.message || 'Membro removido');
             loadTeamData();
         } catch (error) {
             toast.error('Erro ao remover membro');
