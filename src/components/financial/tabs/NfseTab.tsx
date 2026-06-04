@@ -35,6 +35,48 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function safeCsvFilePart(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'Dentista';
+}
+
+function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function nfseCsvRowsForDentists(dentists: NfseReportByDentist[]) {
+  const rows: Array<Array<string | number | null | undefined>> = [
+    ['Dentista', 'Paciente', 'Data', 'Valor (R$)', 'Descrição'],
+  ];
+  for (const dentist of dentists) {
+    for (const note of dentist.notes) {
+      rows.push([
+        dentist.dentist_name,
+        note.patient_name || 'Avulso',
+        formatDisplayDate(note.issue_date),
+        Number(note.service_value).toFixed(2),
+        note.description || '',
+      ]);
+    }
+  }
+  return rows;
+}
+
 function NfseDentistReport({ year, month }: { year: number; month: number }) {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
@@ -55,28 +97,24 @@ function NfseDentistReport({ year, month }: { year: number; month: number }) {
   const handleExportCsv = () => {
     if (report.length === 0) { toast({ title: 'Nenhum dado para exportar' }); return; }
 
-    const rows: string[] = [
-      'Dentista,Paciente,Data,Valor (R$),Descrição',
-    ];
-    for (const dentist of report) {
-      for (const note of dentist.notes) {
-        const desc = (note.description || '').replace(/,/g, ';');
-        const patient = (note.patient_name || 'Avulso').replace(/,/g, ';');
-        rows.push(
-          `"${dentist.dentist_name}","${patient}","${formatDisplayDate(note.issue_date)}","${note.service_value.toFixed(2)}","${desc}"`,
-        );
-      }
-    }
+    downloadCsv(
+      `NFS-e_Por_Dentista_${year}${viewMode === 'month' ? `_${String(month + 1).padStart(2, '0')}` : ''}.csv`,
+      nfseCsvRowsForDentists(report),
+    );
+    toast({ title: 'CSV geral exportado com sucesso!' });
+  };
 
-    const csv = rows.join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `NFS-e_Por_Dentista_${year}${viewMode === 'month' ? `_${String(month + 1).padStart(2, '0')}` : ''}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: 'CSV exportado com sucesso!' });
+  const handleExportDentistCsv = (dentist: NfseReportByDentist) => {
+    if (dentist.notes.length === 0) { toast({ title: 'Nenhum dado para exportar' }); return; }
+
+    const suffix = viewMode === 'month'
+      ? `${year}_${String(month + 1).padStart(2, '0')}`
+      : `${year}`;
+    downloadCsv(
+      `NFS-e_${safeCsvFilePart(dentist.dentist_name)}_${suffix}.csv`,
+      nfseCsvRowsForDentists([dentist]),
+    );
+    toast({ title: `CSV de ${dentist.dentist_name} exportado com sucesso!` });
   };
 
   return (
@@ -110,7 +148,7 @@ function NfseDentistReport({ year, month }: { year: number; month: number }) {
           className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
         >
           <Download className="w-4 h-4" />
-          Exportar CSV
+          Exportar geral
         </Button>
       </div>
 
@@ -170,19 +208,33 @@ function NfseDentistReport({ year, month }: { year: number; month: number }) {
 
                 {/* Expanded note list */}
                 {isExpanded && (
-                  <div className="border-t divide-y animate-in fade-in slide-in-from-top-1 duration-150">
-                    {dentist.notes.map((note) => (
-                      <div key={note.id} className="px-4 py-2.5 flex items-center justify-between text-sm bg-slate-50/50">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-800 truncate">{note.patient_name}</p>
-                          <p className="text-xs text-slate-500 truncate">{note.description || '—'}</p>
+                  <div className="border-t animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-4 py-2.5 bg-slate-50 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExportDentistCsv(dentist)}
+                        className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      >
+                        <Download className="w-4 h-4" />
+                        Exportar desta dentista
+                      </Button>
+                    </div>
+                    <div className="divide-y">
+                      {dentist.notes.map((note) => (
+                        <div key={note.id} className="px-4 py-2.5 flex items-center justify-between text-sm bg-slate-50/50">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-800 truncate">{note.patient_name}</p>
+                            <p className="text-xs text-slate-500 truncate">{note.description || '—'}</p>
+                          </div>
+                          <div className="text-right ml-4 flex-shrink-0">
+                            <p className="font-semibold text-slate-700">R$ {formatMoney(note.service_value)}</p>
+                            <p className="text-xs text-slate-400">{formatDisplayDate(note.issue_date)}</p>
+                          </div>
                         </div>
-                        <div className="text-right ml-4 flex-shrink-0">
-                          <p className="font-semibold text-slate-700">R$ {formatMoney(note.service_value)}</p>
-                          <p className="text-xs text-slate-400">{formatDisplayDate(note.issue_date)}</p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </Card>
@@ -247,6 +299,26 @@ function NfseMonthList({ year, month }: { year: number; month: number }) {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const handleExportMonthCsv = () => {
+    const activeDocs = docs.filter((doc) => doc.status !== 'canceled');
+    if (activeDocs.length === 0) { toast({ title: 'Nenhum dado para exportar' }); return; }
+
+    downloadCsv(
+      `NFS-e_Notas_do_Mes_${year}_${String(m).padStart(2, '0')}.csv`,
+      [
+        ['Dentista', 'Paciente', 'Data', 'Valor (R$)', 'Descrição'],
+        ...activeDocs.map((doc) => [
+          doc.dentist_name || 'Sem dentista',
+          doc.patient_name || 'Avulso',
+          formatDisplayDate(doc.issue_date),
+          Number(doc.service_value).toFixed(2),
+          doc.service_description || '',
+        ]),
+      ],
+    );
+    toast({ title: 'Planilha do mês exportada com sucesso!' });
   };
 
   const handleBatchUpload = async (files: FileList | null) => {
@@ -364,6 +436,15 @@ function NfseMonthList({ year, month }: { year: number; month: number }) {
           <Button onClick={() => setUploadOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
             <FilePlus2 className="w-4 h-4 mr-2" />
             Anexar nota
+          </Button>
+          <Button
+            onClick={handleExportMonthCsv}
+            disabled={docs.length === 0}
+            variant="outline"
+            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Exportar planilha do mês
           </Button>
           <Button
             onClick={handleDownloadBundle}

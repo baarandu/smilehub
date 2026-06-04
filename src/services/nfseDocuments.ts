@@ -146,9 +146,24 @@ export const nfseDocumentsService = {
       .order('issue_date', { ascending: false });
     if (error) throw error;
 
-    return (data || []).map((row: any) => ({
+    const docs = data || [];
+    const dentistIds = [...new Set(docs.map((row: any) => row.dentist_id).filter(Boolean))] as string[];
+
+    let dentistNames: Record<string, string> = {};
+    if (dentistIds.length > 0) {
+      const { data: profiles } = await supabase.rpc('get_profiles_for_users', { user_ids: dentistIds });
+      if (profiles) {
+        dentistNames = (profiles as any[]).reduce((acc, p) => {
+          acc[p.id] = p.full_name || p.email;
+          return acc;
+        }, {} as Record<string, string>);
+      }
+    }
+
+    return docs.map((row: any) => ({
       ...row,
       patient_name: row.patient?.name ?? null,
+      dentist_name: row.dentist_id ? (dentistNames[row.dentist_id] || null) : null,
     })) as NfseDocumentWithRelations[];
   },
 
