@@ -27,6 +27,15 @@ function buildStoragePath(
   return `${clinicId}/${year}_${String(month).padStart(2, '0')}/${fileType}/${ts}_${safe}`;
 }
 
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(rows: Array<Array<string | number | null | undefined>>): string {
+  return '\uFEFF' + rows.map((row) => row.map(csvCell).join(',')).join('\n');
+}
+
 export const accountantChecklistService = {
   async getChecklist(year: number, month: number): Promise<ChecklistData> {
     const { clinicId } = await getClinicContext();
@@ -163,6 +172,24 @@ export const accountantChecklistService = {
 
     // 1) NFS-e
     try {
+      const nfseDocs = await nfseDocumentsService.listByMonth(year, month);
+      const activeNfseDocs = nfseDocs.filter((doc) => doc.status !== 'canceled');
+      folder.file(
+        `Notas_Fiscais_NFSe_${year}_${String(month).padStart(2, '0')}.csv`,
+        buildCsv([
+          ['Numero', 'Dentista', 'Paciente', 'Data', 'Valor (R$)', 'Status', 'Descricao'],
+          ...activeNfseDocs.map((doc) => [
+            doc.invoice_number,
+            doc.dentist_name || 'Sem dentista',
+            doc.patient_name || 'Avulso',
+            doc.issue_date,
+            Number(doc.service_value).toFixed(2),
+            doc.status,
+            doc.service_description || '',
+          ]),
+        ]),
+      );
+
       const nfseBundle = await nfseDocumentsService.downloadMonthlyBundle(year, month);
       folder.file(`NFSe_${year}_${String(month).padStart(2, '0')}.zip`, nfseBundle);
     } catch {

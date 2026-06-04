@@ -19,6 +19,15 @@ function buildStoragePath(clinicId: string, invoiceNumber: string, ext: 'xml' | 
   return `${clinicId}/${safe}_${ts}.${ext}`;
 }
 
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(rows: Array<Array<string | number | null | undefined>>): string {
+  return '\uFEFF' + rows.map((row) => row.map(csvCell).join(',')).join('\n');
+}
+
 async function uploadFile(path: string, file: File): Promise<string> {
   const { error } = await supabase.storage
     .from(BUCKET)
@@ -396,15 +405,36 @@ export const nfseDocumentsService = {
       }
     }
 
-    // Resumo em texto
-    const summary = docs
-      .map(
-        (d) =>
-          `${d.invoice_number} | ${d.issue_date} | R$ ${d.service_value.toFixed(2)} | ${d.status}` +
-          (d.patient_name ? ` | ${d.patient_name}` : ''),
-      )
-      .join('\n');
-    folder.file('_resumo.txt', `Total: ${docs.length} nota(s)\n\n${summary}`);
+    const activeDocs = docs.filter((d) => d.status !== 'canceled');
+    folder.file(
+      `_notas_fiscais_${year}_${String(month).padStart(2, '0')}.csv`,
+      buildCsv([
+        ['Numero', 'Dentista', 'Paciente', 'Data', 'Valor (R$)', 'Status', 'Descricao'],
+        ...activeDocs.map((d) => [
+          d.invoice_number,
+          d.dentist_name || 'Sem dentista',
+          d.patient_name || 'Avulso',
+          d.issue_date,
+          Number(d.service_value).toFixed(2),
+          d.status,
+          d.service_description || '',
+        ]),
+      ]),
+    );
+
+    const totalIssued = activeDocs.reduce((sum, d) => sum + Number(d.service_value), 0);
+    const summary = [
+      `Resumo NFS-e - ${year}/${String(month).padStart(2, '0')}`,
+      ``,
+      `Total de notas no periodo: ${docs.length}`,
+      `Notas ativas: ${activeDocs.length}`,
+      `Notas canceladas: ${docs.filter((d) => d.status === 'canceled').length}`,
+      `Valor total ativo: R$ ${totalIssued.toFixed(2)}`,
+      ``,
+      `A planilha _notas_fiscais_${year}_${String(month).padStart(2, '0')}.csv contem as notas em formato tabular.`,
+      `Arquivos XML/PDF anexados permanecem neste pacote quando disponiveis.`,
+    ].join('\n');
+    folder.file('_resumo.txt', summary);
 
     if (added === 0 && docs.length === 0) {
       throw new Error('Nenhuma nota encontrada para o período');

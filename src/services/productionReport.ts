@@ -2,6 +2,16 @@ import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
 import type { ProductionReport } from '@/types/productionReport';
 
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildCsv(rows: Array<Array<string | number | null | undefined>>): Blob {
+  const csv = rows.map((row) => row.map(csvCell).join(',')).join('\n');
+  return new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+}
+
 export const productionReportService = {
   async getMonthly(year: number, month: number): Promise<ProductionReport> {
     const { clinicId } = await getClinicContext();
@@ -15,38 +25,36 @@ export const productionReportService = {
   },
 
   /**
-   * Builds a CSV (semicolon-delimited, BR locale) summary of the production report.
+   * Builds a spreadsheet-friendly CSV summary of the production report.
    * Returned as a Blob ready for download / inclusion in ZIP bundle.
    */
   toCsv(report: ProductionReport, year: number, month: number): Blob {
-    const lines: string[] = [];
     const monthLabel = `${String(month).padStart(2, '0')}/${year}`;
-    lines.push(`Relatorio de Producao - ${monthLabel}`);
-    lines.push('');
-    lines.push('Receita Total;Individual (Socios);Clinica (Compartilhada);Sem Atribuicao');
-    lines.push(
-      [
-        report.total_revenue,
-        report.individual_revenue,
-        report.clinic_revenue,
-        report.unassigned_individual_revenue,
-      ]
-        .map((v) => v.toFixed(2).replace('.', ','))
-        .join(';'),
-    );
-    lines.push('');
-    lines.push('Producao por Socio');
-    lines.push('Dentista;Receita;Atendimentos;Ticket Medio');
+    const rows: Array<Array<string | number | null | undefined>> = [
+      ['Periodo', 'Categoria', 'Nome', 'Receita (R$)', 'Atendimentos', 'Ticket Medio (R$)', 'Percentual do Total'],
+      [monthLabel, 'Resumo', 'Receita total', report.total_revenue.toFixed(2), '', '', '100.00'],
+      [monthLabel, 'Resumo', 'Individual (socios)', report.individual_revenue.toFixed(2), '', '', percentage(report.individual_revenue, report.total_revenue)],
+      [monthLabel, 'Resumo', 'Clinica (compartilhada)', report.clinic_revenue.toFixed(2), '', '', percentage(report.clinic_revenue, report.total_revenue)],
+      [monthLabel, 'Resumo', 'Sem atribuicao', report.unassigned_individual_revenue.toFixed(2), '', '', percentage(report.unassigned_individual_revenue, report.total_revenue)],
+    ];
+
     for (const d of report.dentists) {
-      lines.push(
-        [
-          d.dentist_name,
-          d.revenue.toFixed(2).replace('.', ','),
-          d.transaction_count,
-          d.avg_ticket.toFixed(2).replace('.', ','),
-        ].join(';'),
-      );
+      rows.push([
+        monthLabel,
+        'Dentista',
+        d.dentist_name,
+        d.revenue.toFixed(2),
+        d.transaction_count,
+        d.avg_ticket.toFixed(2),
+        percentage(d.revenue, report.total_revenue),
+      ]);
     }
-    return new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+
+    return buildCsv(rows);
   },
 };
+
+function percentage(value: number, total: number): string {
+  if (!total) return '0.00';
+  return ((value / total) * 100).toFixed(2);
+}
