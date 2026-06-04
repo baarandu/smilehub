@@ -82,7 +82,7 @@ const CARD_BRANDS = [
     { id: 'hipercard', label: 'Hipercard' },
 ];
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [] }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0 }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
