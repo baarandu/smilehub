@@ -44,7 +44,7 @@ export interface PayerData {
 interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
-    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null) => void;
+    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null, creditUsed?: number) => void;
     onConfirmSplit?: (portions: SplitPaymentPortion[], cardMachineId?: string | null) => void;
     itemName: string;
     value: number;
@@ -53,6 +53,7 @@ interface PaymentMethodDialogProps {
     patientName?: string;
     patientCpf?: string;
     pjSources?: PJSource[];
+    creditBalance?: number;
 }
 
 // CPF mask
@@ -100,10 +101,16 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [payerCpf, setPayerCpf] = useState('');
     const [selectedPJSource, setSelectedPJSource] = useState('');
 
-    // Discount
+    // Discount & Credits
     const [discountStr, setDiscountStr] = useState('');
     const discountAmount = parseFloat(discountStr) || 0;
-    const effectiveValue = Math.max(value - discountAmount, 0);
+    
+    const [creditUsedStr, setCreditUsedStr] = useState('');
+    const creditUsedAmount = parseFloat(creditUsedStr) || 0;
+
+    const baseValueForPayment = Math.max(value - discountAmount, 0);
+    // The portion passed to the chosen payment method (e.g. credit card)
+    const effectiveValue = Math.max(baseValueForPayment - creditUsedAmount, 0);
 
     // Financial Settings
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
@@ -156,8 +163,9 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             setPayerName('');
             setPayerCpf('');
             setSelectedPJSource('');
-            // Reset discount
+            // Reset discount and credits
             setDiscountStr('');
+            setCreditUsedStr('');
             // Reset split mode
             setIsSplitMode(false);
             setSplitPortions([]);
@@ -319,8 +327,10 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             return;
         }
 
-        if (!selectedMethod) return;
-        const numInstallments = selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
+        // If paying entirely with credit balance, we don't need a selected method
+        if (effectiveValue > 0 && !selectedMethod) return;
+        
+        const numInstallments = selectedMethod && selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
 
         const payerData: PayerData = {
             revenue_type: isClinicRevenue ? 'clinic' : 'individual',
@@ -332,7 +342,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         };
 
         const machineToSend = isCardMethod ? (selectedMachineId || null) : null;
-        onConfirm(selectedMethod, numInstallments, selectedBrand, breakdown, payerData, machineToSend);
+        onConfirm(selectedMethod || 'credit_balance', numInstallments, selectedBrand, breakdown, payerData, machineToSend, creditUsedAmount);
         setSelectedMethod(null);
         setInstallments('1');
     };
@@ -404,33 +414,39 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                             />
                         ) : (<>
                         {/* Payment Method Selection */}
-                        <div className="space-y-2">
-                            <Label className="text-sm font-medium">Forma de Pagamento</Label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {PAYMENT_METHODS.map(method => {
-                                    const Icon = method.icon;
-                                    const isSelected = selectedMethod === method.id;
-                                    return (
-                                        <div
-                                            key={method.id}
-                                            onClick={() => {
-                                                setSelectedMethod(method.id);
-                                                if (method.id !== 'credit') {
-                                                    setInstallments('1');
-                                                    setAnticipate(false);
-                                                }
-                                            }}
-                                            className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center gap-1.5 transition-all ${isSelected ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
-                                        >
-                                            <Icon className={`w-5 h-5 ${isSelected ? 'text-[#a03f3d]' : method.color}`} />
-                                            <span className={`text-xs font-medium ${isSelected ? 'text-[#8b3634]' : 'text-slate-600'}`}>
-                                                {method.label}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+                        {effectiveValue > 0 ? (
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">Forma de Pagamento (Restante)</Label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {PAYMENT_METHODS.map(method => {
+                                        const Icon = method.icon;
+                                        const isSelected = selectedMethod === method.id;
+                                        return (
+                                            <div
+                                                key={method.id}
+                                                onClick={() => {
+                                                    setSelectedMethod(method.id);
+                                                    if (method.id !== 'credit') {
+                                                        setInstallments('1');
+                                                        setAnticipate(false);
+                                                    }
+                                                }}
+                                                className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center gap-1.5 transition-all ${isSelected ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                                            >
+                                                <Icon className={`w-5 h-5 ${isSelected ? 'text-[#a03f3d]' : method.color}`} />
+                                                <span className={`text-xs font-medium ${isSelected ? 'text-[#8b3634]' : 'text-slate-600'}`}>
+                                                    {method.label}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm font-medium text-center">
+                                Valor coberto integralmente com o crédito do paciente.
+                            </div>
+                        )}
 
                         {/* Credit Card Specifics */}
                         {(selectedMethod === 'credit' || selectedMethod === 'debit') && (
@@ -584,23 +600,52 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                         </div>
 
                         {/* Discount */}
-                        <div className="space-y-1.5">
-                            <Label className="text-sm font-medium">Desconto (R$)</Label>
-                            <Input
-                                type="number"
-                                min={0}
-                                max={value}
-                                step="0.01"
-                                placeholder="0,00"
-                                value={discountStr}
-                                onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    if (e.target.value === '' || (val >= 0 && val <= value)) {
-                                        setDiscountStr(e.target.value);
-                                    }
-                                }}
-                                className="font-semibold"
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-sm font-medium">Desconto (R$)</Label>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    max={value}
+                                    step="0.01"
+                                    placeholder="0,00"
+                                    value={discountStr}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        if (e.target.value === '' || (val >= 0 && val <= value)) {
+                                            setDiscountStr(e.target.value);
+                                            // Reset credit if it exceeds new base
+                                            if (creditUsedAmount > Math.max(value - val, 0)) {
+                                                setCreditUsedStr('');
+                                            }
+                                        }
+                                    }}
+                                    className="font-semibold"
+                                />
+                            </div>
+
+                            {/* Usar Crédito */}
+                            {(creditBalance || 0) > 0 && (
+                                <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium text-emerald-700">Usar Crédito (Max: R$ {formatMoney(Math.min(creditBalance || 0, baseValueForPayment))})</Label>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        max={Math.min(creditBalance || 0, baseValueForPayment)}
+                                        step="0.01"
+                                        placeholder="0,00"
+                                        value={creditUsedStr}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            const maxAllowed = Math.min(creditBalance || 0, baseValueForPayment);
+                                            if (e.target.value === '' || (val >= 0 && val <= maxAllowed)) {
+                                                setCreditUsedStr(e.target.value);
+                                            }
+                                        }}
+                                        className="font-semibold border-emerald-300 focus-visible:ring-emerald-500"
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Revenue Type Toggle (for production report) */}
@@ -630,6 +675,12 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 <div className="flex justify-between text-emerald-600">
                                     <span>Desconto</span>
                                     <span>- R$ {formatMoney(discountAmount)}</span>
+                                </div>
+                            )}
+                            {creditUsedAmount > 0 && (
+                                <div className="flex justify-between text-emerald-600 font-medium">
+                                    <span>Crédito Utilizado</span>
+                                    <span>- R$ {formatMoney(creditUsedAmount)}</span>
                                 </div>
                             )}
                             {breakdown.taxAmount > 0 && (
@@ -667,7 +718,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                             isSplitMode
                                 ? (!splitValid || loading)
                                 : (
-                                    !selectedMethod || loading || isLoadingSettings ||
+                                    (effectiveValue > 0 && !selectedMethod) || loading || isLoadingSettings ||
                                     (isCardMethod && machines.length > 0 && !selectedMachineId)
                                 )
                         }

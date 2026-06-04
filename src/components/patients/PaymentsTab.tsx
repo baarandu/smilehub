@@ -20,6 +20,10 @@ import type { PaymentReceivable } from '@/types/receivables';
 import { useNfseByPatient, useMarkExternalNfse, useUnmarkExternalNfse } from '@/hooks/useNfseDocuments';
 import { NfseUploadDialog } from '@/components/nfse/NfseUploadDialog';
 import { NfseStatusBadge } from '@/components/nfse/NfseStatusBadge';
+import { usePatientCredits } from '@/hooks/usePatientCredits';
+import { patientCreditsService } from '@/services/patientCredits';
+import { AddCreditDialog } from './AddCreditDialog';
+import { Coins } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +41,7 @@ interface ItemToPay {
   tooth: ToothEntry;
   budgetDate: string;
   locationRate?: number;
+  budgetCreatedBy?: string | null;
 }
 
 export function PaymentsTab({ patientId }: PaymentsTabProps) {
@@ -83,6 +88,11 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         n.status !== 'canceled' &&
         n.issued_externally,
     );
+
+  // Crédito do Paciente
+  const [showAddCredit, setShowAddCredit] = useState(false);
+  const { data: creditsData } = usePatientCredits(patientId);
+  const creditBalance = creditsData?.balance || 0;
 
   useEffect(() => {
     loadData();
@@ -132,7 +142,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               toothIndex: index,
               tooth,
               budgetDate: budget.date,
-              locationRate: (tooth as any).locationRate ?? (budget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0)
+              locationRate: (tooth as any).locationRate ?? (budget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0),
+              budgetCreatedBy: budget.created_by,
             };
 
             if (tooth.status === 'approved') {
@@ -181,7 +192,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   // ... (existing code)
 
-  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null) => {
+  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
     if (!selectedItem || isSubmitting) return;
 
     try {
@@ -194,14 +205,26 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       if (!teeth) return;
 
-      // 1. Create Financial Transactions
-      const totalAmount = getItemValue(selectedItem);
+      // 1. Log Credit Usage (if any)
+      if (creditUsed > 0) {
+        await patientCreditsService.addTransaction({
+          patientId: patientId,
+          type: 'debit',
+          amount: creditUsed,
+          description: `Pagamento do procedimento: ${selectedItem.tooth.treatments.join(', ')}`,
+        });
+      }
 
-      // When anticipated, register as single transaction even if payment is installment-based
-      // The installment count is still used to calculate the correct fee rate
-      const isAnticipated = breakdown?.isAnticipated || false;
-      const numTransactions = isAnticipated ? 1 : (installments || 1);
-      const txAmount = totalAmount / numTransactions;
+      // 2. Create Financial Transactions (if a payment method other than just credit was used)
+      if (method !== 'credit_balance') {
+        const discountAmount = breakdown?.discountAmount || 0;
+        const totalAmount = getItemValue(selectedItem) - discountAmount - creditUsed;
+
+        // When anticipated, register as single transaction even if payment is installment-based
+        // The installment count is still used to calculate the correct fee rate
+        const isAnticipated = breakdown?.isAnticipated || false;
+        const numTransactions = isAnticipated ? 1 : (installments || 1);
+        const txAmount = totalAmount / numTransactions;
 
       // Calculate Deductions (Per Transaction)
       let netAmountPerTx = txAmount;
@@ -306,15 +329,16 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           tooth_index: selectedItem.toothIndex,
         } as any);
       }
+      } // End of method !== 'credit_balance'
 
       // Update item status
       teeth[selectedItem.toothIndex] = {
         ...teeth[selectedItem.toothIndex],
         status: 'paid',
-        paymentMethod: method as any,
+        paymentMethod: (creditUsed > 0 && method === 'credit_balance') ? 'credit_balance' : method as any,
         paymentInstallments: installments, // Keep original installments for record
         paymentDate: new Date().toISOString().split('T')[0],
-        financialBreakdown: breakdown // Save breakdown in notes for history
+        financialBreakdown: { ...breakdown, creditUsed } // Save breakdown and credit used in notes for history
       };
 
       // Check overall status
@@ -362,6 +386,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           service_value: getItemValue(item),
           issue_date: normalizeIssueDate(item.tooth.paymentDate || item.budgetDate),
           service_description: `${item.tooth.treatments.join(', ')} - ${getToothDisplayName(item.tooth.tooth)}`,
+          dentist_id: item.budgetCreatedBy,
         });
         toast({ title: 'Nota fiscal marcada como emitida' });
       } else {
@@ -389,6 +414,27 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Saldo de Crédito */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl p-4 gap-4">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+            <Coins className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-emerald-800 mb-0.5">Saldo de Crédito Disponível</p>
+            <h3 className="text-2xl font-bold text-emerald-700">R$ {formatMoney(creditBalance)}</h3>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+          onClick={() => setShowAddCredit(true)}
+        >
+          <FilePlus2 className="w-4 h-4 mr-2" />
+          Adicionar Crédito
+        </Button>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -790,6 +836,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           defaultServiceValue={getItemValue(nfseTarget)}
           defaultDescription={`${nfseTarget.tooth.treatments.join(', ')} - ${getToothDisplayName(nfseTarget.tooth.tooth)}`}
           contextLabel={`${getToothDisplayName(nfseTarget.tooth.tooth)} — ${nfseTarget.tooth.treatments.join(', ')}`}
+        />
+      )}
+
+      {showAddCredit && (
+        <AddCreditDialog
+          open={showAddCredit}
+          onClose={() => setShowAddCredit(false)}
+          patientId={patientId}
         />
       )}
     </div>

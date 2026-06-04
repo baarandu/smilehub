@@ -7,6 +7,8 @@ import type {
   NfseStatus,
   MarkExternalNfseInput,
   PaymentWithoutNfse,
+  NfseReportByDentist,
+  NfseReportNote,
 } from '@/types/nfseDocument';
 
 const BUCKET = 'nfse-documents';
@@ -223,6 +225,19 @@ export const nfseDocumentsService = {
       throw new Error('Este pagamento já possui nota fiscal anexada.');
     }
 
+    // Resolve dentist_id:
+    // 1. Use explicitly provided dentist_id
+    // 2. Fallback: fetch budget.created_by (always the responsible dentist)
+    let dentistId = input.dentist_id ?? null;
+    if (!dentistId) {
+      const { data: budget } = await supabase
+        .from('budgets')
+        .select('created_by')
+        .eq('id', input.budget_id)
+        .maybeSingle();
+      dentistId = budget?.created_by ?? null;
+    }
+
     const invoiceNumber = `EXT-${input.budget_id.replace(/-/g, '').slice(0, 8)}-${input.tooth_index}`;
 
     const { data, error } = await supabase
@@ -232,6 +247,7 @@ export const nfseDocumentsService = {
         patient_id: input.patient_id,
         budget_id: input.budget_id,
         tooth_index: input.tooth_index,
+        dentist_id: dentistId,
         invoice_number: invoiceNumber,
         issue_date: input.issue_date,
         service_value: input.service_value,
@@ -281,6 +297,28 @@ export const nfseDocumentsService = {
       .createSignedUrl(path, expiresIn);
     if (error) throw error;
     return data.signedUrl;
+  },
+
+  /**
+   * Relatório de NFS-e agrupado por dentista.
+   * Usado na sub-aba "Por Dentista" da aba Notas Fiscais.
+   * p_month = undefined → relatório do ano inteiro
+   */
+  async getReportByDentist(year: number, month?: number): Promise<NfseReportByDentist[]> {
+    const { clinicId } = await getClinicContext();
+    const { data, error } = await supabase.rpc('get_nfse_report_by_dentist', {
+      p_clinic_id: clinicId,
+      p_year: year,
+      p_month: month ?? null,
+    });
+    if (error) throw error;
+    return ((data as any[]) || []).map((row: any) => ({
+      dentist_id: row.dentist_id,
+      dentist_name: row.dentist_name,
+      note_count: Number(row.note_count),
+      total_service_value: Number(row.total_service_value),
+      notes: (row.notes as NfseReportNote[]) || [],
+    }));
   },
 
   /**

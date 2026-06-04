@@ -14,6 +14,9 @@ import { PatientAiConsent } from './PatientAiConsent';
 import { MinorConsentBadge } from './MinorConsentBadge';
 import { useClinic } from '@/contexts/ClinicContext';
 import { getWhatsAppNumber } from '@/utils/formatters';
+import { usePatientCredits } from '@/hooks/usePatientCredits';
+import { formatMoney } from '@/utils/budgetUtils';
+import { Coins } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,6 +109,9 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
 
   const { data: receivables = [] } = usePatientReceivables(patient.id);
   const overdueReceivables = receivables.filter(r => r.status === 'overdue');
+
+  const { data: creditsData } = usePatientCredits(patient.id);
+  const creditBalance = creditsData?.balance || 0;
 
   const getBadges = () => {
     if (!latestAnamnese) return [];
@@ -279,6 +285,12 @@ export function PatientHeader({ patient, onEdit, onDelete, onRefresh }: PatientH
                     <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs font-medium">
                       <AlertTriangle className="w-3 h-3" />
                       {overdueReceivables.length} pagamento{overdueReceivables.length !== 1 ? 's' : ''} em atraso
+                    </span>
+                  )}
+                  {creditBalance > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-sm font-semibold border border-emerald-200 shadow-sm ml-2">
+                      <Coins className="w-4 h-4 fill-emerald-100" />
+                      Crédito: R$ {formatMoney(creditBalance)}
                     </span>
                   )}
                 </h1>

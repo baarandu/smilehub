@@ -61,6 +61,7 @@ export interface MarkExternalNfseInput {
   service_value: number;
   issue_date: string;
   service_description?: string;
+  dentist_id?: string | null;  // budget.created_by — dentista responsável pelo tratamento
 }
 
 export interface PaymentWithoutNfse {
@@ -71,4 +72,22 @@ export interface PaymentWithoutNfse {
   patient_name: string | null;
   dentist_id: string | null;
   description: string;
+}
+
+// ---- Relatório NFS-e por Dentista ----
+
+export interface NfseReportNote {
+  id: string;
+  patient_name: string;
+  issue_date: string;
+  service_value: number;
+  description: string | null;
+}
+
+export interface NfseReportByDentist {
+  dentist_id: string;
+  dentist_name: string;
+  note_count: number;
+  total_service_value: number;
+  notes: NfseReportNote[];
 }

@@ -12,7 +12,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat, Paperclip, FileCheck2, X } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, CreditCard, Layers, Repeat, Paperclip, FileCheck2, X, CheckCircle, Clock } from 'lucide-react';
 import { financialService } from '@/services/financial';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
@@ -60,7 +60,10 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
     const [numMonthsStr, setNumMonthsStr] = useState('12');
     const [fixedExpenseList, setFixedExpenseList] = useState<InstallmentItem[]>([]);
 
-    // Receipt attachment (Feature D)
+    // Payment Status (for simple non-recurring expenses)
+    const [isPaid, setIsPaid] = useState(true);
+
+    // Receipt attachment
     const [receiptFile, setReceiptFile] = useState<File | null>(null);
     const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
 
@@ -111,6 +114,18 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         setFixedExpenseList(items);
     }, [isFixedExpense, numMonthsStr, value, date]);
 
+    // Auto-detect payment status based on date for simple expenses
+    useEffect(() => {
+        if (isInstallment || isFixedExpense) return; // they handle pending themselves
+        if (!date || date.length !== 10) return;
+        const dbDate = dateToDbFormat(date);
+        if (!dbDate) return;
+        const expenseDate = new Date(dbDate + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        setIsPaid(expenseDate <= today);
+    }, [date, isInstallment, isFixedExpense]);
+
     const resetForm = () => {
         setDescription('');
         const today = new Date();
@@ -127,6 +142,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         setCategory('Outros');
         setPaymentMethod('Pix');
         setUpdateAllRecurring(false);
+        setIsPaid(true); // today is the default date, so default to paid
     };
 
     const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,7 +249,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                         date: dbDate,
                         location: null,
                         receipt_attachment_url: receiptUrl,
-                        // clinic_id is handled in service now
+                        payment_status: isPaid ? 'paid' : 'pending',
                     });
                 }
                 toast.success('Despesa salva com sucesso!');
@@ -378,6 +394,40 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     </SelectContent>
                 </Select>
             </div>
+
+            {/* Payment Status Toggle — only for simple (non-recurring, non-installment) expenses */}
+            {!isInstallment && !isFixedExpense && (
+                <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                    isPaid
+                        ? 'border-emerald-200 bg-emerald-50'
+                        : 'border-amber-200 bg-amber-50'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        {isPaid
+                            ? <CheckCircle className="h-5 w-5 text-emerald-600" />
+                            : <Clock className="h-5 w-5 text-amber-600" />
+                        }
+                        <div>
+                            <span className={`font-medium text-sm ${
+                                isPaid ? 'text-emerald-700' : 'text-amber-700'
+                            }`}>
+                                {isPaid ? 'Despesa já paga' : 'A pagar (despesa futura)'}
+                            </span>
+                            <p className={`text-xs ${
+                                isPaid ? 'text-emerald-600' : 'text-amber-600'
+                            }`}>
+                                {isPaid
+                                    ? 'Será lançada como paga agora'
+                                    : 'Ficará pendente até você confirmar o pagamento'}
+                            </p>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={isPaid}
+                        onCheckedChange={setIsPaid}
+                    />
+                </div>
+            )}
 
             {/* Fixed Expense Toggle */}
             <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50">

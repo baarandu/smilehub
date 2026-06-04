@@ -153,8 +153,20 @@ export const financialService = {
         location?: string | null;
         related_entity_id?: string | null;
         receipt_attachment_url?: string | null;
+        payment_status?: 'paid' | 'pending';
     }): Promise<FinancialTransaction> {
         const { userId, clinicId } = await getClinicContext();
+
+        // Determine payment_status:
+        // If explicitly provided, use it. Otherwise, auto-detect by date:
+        // future date → 'pending', today or past → 'paid'
+        let paymentStatus = expense.payment_status;
+        if (!paymentStatus) {
+            const expenseDate = new Date(expense.date + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            paymentStatus = expenseDate > today ? 'pending' : 'paid';
+        }
 
         const { data, error } = await supabase
             .from('financial_transactions')
@@ -167,9 +179,11 @@ export const financialService = {
                 location: expense.location || null,
                 related_entity_id: expense.related_entity_id || null,
                 receipt_attachment_url: expense.receipt_attachment_url || null,
+                payment_status: paymentStatus,
+                paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null,
                 clinic_id: clinicId,
-                user_id: userId,  // Track which user created the expense
-                created_by: userId  // Also store in created_by for consistency
+                user_id: userId,
+                created_by: userId
             })
             .select()
             .single();
