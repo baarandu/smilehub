@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext, getClinicContextSafe } from './clinicContext';
 import { logger } from '@/utils/logger';
+import { getAccessibleUrl } from '@/lib/utils';
 
 export interface UserProfile {
     id: string;
@@ -86,7 +87,7 @@ export const profileService = {
 
             if (clinic) {
                 clinicName = clinic.name;
-                logoUrl = clinic.logo_url;
+                logoUrl = await getAccessibleUrl(clinic.logo_url, 'clinic-logos');
                 address = clinic.address || null;
                 city = clinic.city || null;
                 state = clinic.state || null;
@@ -131,7 +132,7 @@ export const profileService = {
                 .select('letterhead_url, letterhead_width_mm, letterhead_height_mm')
                 .eq('user_id', userId)
                 .maybeSingle();
-            letterheadUrl = settings?.letterhead_url || null;
+            letterheadUrl = await getAccessibleUrl(settings?.letterhead_url || null, 'clinic-logos');
             if (settings?.letterhead_width_mm) letterheadWidthMm = Number(settings.letterhead_width_mm);
             if (settings?.letterhead_height_mm) letterheadHeightMm = Number(settings.letterhead_height_mm);
         } catch {
@@ -207,16 +208,9 @@ export const profileService = {
 
         if (error) throw error;
 
-        // Get public URL
-        const { data: urlData } = supabase.storage
-            .from('clinic-logos')
-            .getPublicUrl(fileName);
-
-        const logoUrl = urlData.publicUrl;
-
         const { error: updateError } = await supabase
             .from('clinics')
-            .update({ logo_url: logoUrl })
+            .update({ logo_url: fileName })
             .eq('id', clinicId);
 
         if (updateError) {
@@ -224,7 +218,7 @@ export const profileService = {
             throw updateError;
         }
 
-        return logoUrl;
+        return getAccessibleUrl(fileName, 'clinic-logos');
     },
 
     async removeLogo(): Promise<void> {
@@ -272,19 +266,13 @@ export const profileService = {
 
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
-            .from('clinic-logos')
-            .getPublicUrl(fileName);
-
-        const letterheadUrl = urlData.publicUrl;
-
         // Upsert into clinic_settings
         const { error: upsertError } = await supabase
             .from('clinic_settings')
             .upsert(
                 {
                     user_id: userId,
-                    letterhead_url: letterheadUrl,
+                    letterhead_url: fileName,
                     letterhead_width_mm: widthMm,
                     letterhead_height_mm: heightMm,
                 },
@@ -296,7 +284,7 @@ export const profileService = {
             throw upsertError;
         }
 
-        return letterheadUrl;
+        return getAccessibleUrl(fileName, 'clinic-logos');
     },
 
     async updateLetterheadPaperSize(widthMm: number, heightMm: number): Promise<void> {

@@ -20,6 +20,10 @@ import type { DeliveryMethod } from '@/types/digitalSignature';
 import { useClinic } from '@/contexts/ClinicContext';
 import { profileService } from '@/services/profile';
 import { sanitizeHtml, sanitizeText } from '@/utils/security';
+
+const isPdfFile = (file: File) =>
+    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
 async function pdfToImage(file: File): Promise<File> {
     const pdfjsLib = await import('pdfjs-dist');
     pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -398,7 +402,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
         try {
             setUploadingLetterhead(true);
             let uploadFile = file;
-            if (file.type === 'application/pdf') {
+            if (isPdfFile(file)) {
                 uploadFile = await pdfToImage(file);
             }
             const url = await profileService.uploadLetterhead(uploadFile, paperWidthMm, paperHeightMm);
