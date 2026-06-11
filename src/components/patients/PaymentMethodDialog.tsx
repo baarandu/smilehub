@@ -14,6 +14,7 @@ import type { PJSource } from '@/types/incomeTax';
 import { SplitPaymentBuilder } from './SplitPaymentBuilder';
 import type { SplitPaymentPortion } from '@/types/receivables';
 import { useCardMachines } from '@/hooks/useCardMachines';
+import { toLocalDateString } from '@/utils/formatters';
 
 export interface FinancialBreakdown {
     grossAmount: number;
@@ -44,7 +45,7 @@ export interface PayerData {
 interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
-    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null, creditUsed?: number) => void;
+    onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null, creditUsed?: number, paymentDate?: string) => void;
     onConfirmSplit?: (portions: SplitPaymentPortion[], cardMachineId?: string | null) => void;
     itemName: string;
     value: number;
@@ -87,6 +88,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
     const [anticipate, setAnticipate] = useState(false);
+    const [paymentDate, setPaymentDate] = useState(toLocalDateString(new Date()));
 
     // Split Payment Mode
     const [isSplitMode, setIsSplitMode] = useState(false);
@@ -329,6 +331,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
         // If paying entirely with credit balance, we don't need a selected method
         if (effectiveValue > 0 && !selectedMethod) return;
+        if (!paymentDate) return;
         
         const numInstallments = selectedMethod && selectedMethod !== 'debit' ? parseInt(installments) || 1 : 1;
 
@@ -342,9 +345,10 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         };
 
         const machineToSend = isCardMethod ? (selectedMachineId || null) : null;
-        onConfirm(selectedMethod || 'credit_balance', numInstallments, selectedBrand, breakdown, payerData, machineToSend, creditUsedAmount);
+        onConfirm(selectedMethod || 'credit_balance', numInstallments, selectedBrand, breakdown, payerData, machineToSend, creditUsedAmount, paymentDate);
         setSelectedMethod(null);
         setInstallments('1');
+        setPaymentDate(toLocalDateString(new Date()));
     };
 
     const installmentValue = selectedMethod === 'credit' && parseInt(installments) > 1
@@ -447,6 +451,17 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 Valor coberto integralmente com o crédito do paciente.
                             </div>
                         )}
+
+                        <div className="space-y-1.5">
+                            <Label htmlFor="payment-date" className="text-sm">Data do recebimento</Label>
+                            <Input
+                                id="payment-date"
+                                type="date"
+                                value={paymentDate}
+                                onChange={(event) => setPaymentDate(event.target.value)}
+                                required
+                            />
+                        </div>
 
                         {/* Credit Card Specifics */}
                         {(selectedMethod === 'credit' || selectedMethod === 'debit') && (

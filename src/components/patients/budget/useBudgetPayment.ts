@@ -173,7 +173,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         setPaymentBatch({ indices, teeth: approvedItems, totalValue });
     };
 
-    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
+    const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
         if (!paymentItem || isSubmitting || !patientId) return;
 
         try {
@@ -232,7 +232,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 }
             }
 
-            const startDate = parseBudgetDate(refreshedBudget.date);
+            const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
+            const startDate = parseBudgetDate(effectivePaymentDate);
             const budgetLocation = parsed.location || null;
             const paymentTag = getPaymentTag(method, brand);
 
@@ -277,7 +278,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 status: 'paid',
                 paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                 paymentInstallments: installments,
-                paymentDate: toLocalDateString(new Date()),
+                paymentDate: effectivePaymentDate,
                 financialBreakdown: { ...breakdown, creditUsed: safeCreditUsed }
             };
 
@@ -317,7 +318,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
+    const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
         if (!paymentBatch || isSubmitting || !patientId) return;
 
         try {
@@ -346,7 +347,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             const isAnticipated = breakdown?.isAnticipated || false;
             const numInstallments = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
 
-            const startDate = parseBudgetDate(refreshedBudget.date);
+            const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
+            const startDate = parseBudgetDate(effectivePaymentDate);
             const budgetLocation = parsed.location || null;
             const paymentTag = getPaymentTag(method, brand);
 
@@ -425,7 +427,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     status: 'paid',
                     paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                     paymentInstallments: installments,
-                    paymentDate: toLocalDateString(new Date()),
+                    paymentDate: effectivePaymentDate,
                     discountAmount: itemOriginalValue - itemValue,
                     financialBreakdown: {
                         grossAmount: itemValue,

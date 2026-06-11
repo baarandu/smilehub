@@ -197,7 +197,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   // ... (existing code)
 
-  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0) => {
+  const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
     if (!selectedItem || isSubmitting) return;
 
     try {
@@ -264,16 +264,18 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         }
       }
 
-      // Ensure budgetDate is valid YYYY-MM-DD
-      let budgetDateStr = selectedItem.budgetDate;
+      const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
+
+      // Ensure selected payment date is valid YYYY-MM-DD
+      let paymentDateStr = effectivePaymentDate;
       // Handle potential DD/MM/YYYY format just in case
-      if (budgetDateStr && budgetDateStr.includes('/')) {
-        const [d, m, y] = budgetDateStr.split('/');
-        budgetDateStr = `${y}-${m}-${d}`;
+      if (paymentDateStr && paymentDateStr.includes('/')) {
+        const [d, m, y] = paymentDateStr.split('/');
+        paymentDateStr = `${y}-${m}-${d}`;
       }
 
-      const budgetDate = new Date(budgetDateStr + 'T12:00:00');
-      const startDate = isNaN(budgetDate.getTime()) ? new Date() : budgetDate;
+      const paymentDateObj = new Date(paymentDateStr + 'T12:00:00');
+      const startDate = isNaN(paymentDateObj.getTime()) ? new Date() : paymentDateObj;
 
       // Helper to format date as local YYYY-MM-DD
       const formatLocalDate = (d: Date) => {
@@ -342,7 +344,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         status: 'paid',
         paymentMethod: (creditUsed > 0 && method === 'credit_balance') ? 'credit_balance' : method as any,
         paymentInstallments: installments, // Keep original installments for record
-        paymentDate: toLocalDateString(new Date()),
+        paymentDate: effectivePaymentDate,
         financialBreakdown: { ...breakdown, creditUsed } // Save breakdown and credit used in notes for history
       };
 
