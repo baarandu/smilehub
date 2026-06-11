@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { BudgetWithItems } from '@/types/database';
 import type { PayerData } from '../PaymentMethodDialog';
 import type { SplitPaymentPortion } from '@/types/receivables';
+import { toLocalDateString } from '@/utils/formatters';
 
 interface UseBudgetPaymentProps {
     budget: BudgetWithItems;
@@ -200,7 +201,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             }
 
             const isAnticipated = breakdown?.isAnticipated || false;
-            const numTransactions = isAnticipated ? 1 : (installments || 1);
+            const numTransactions = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
             const txAmount = totalAmount / numTransactions;
 
             const targetLocationRate = (selectedTooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
@@ -238,7 +239,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (method !== 'credit_balance' && totalAmount > 0) {
                 for (let i = 0; i < numTransactions; i++) {
                     const date = new Date(startDate);
-                    if (!isAnticipated) {
+                    if (!isAnticipated && method !== 'credit') {
                         date.setMonth(date.getMonth() + i);
                     }
 
@@ -276,7 +277,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 status: 'paid',
                 paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                 paymentInstallments: installments,
-                paymentDate: new Date().toISOString().split('T')[0],
+                paymentDate: toLocalDateString(new Date()),
                 financialBreakdown: { ...breakdown, creditUsed: safeCreditUsed }
             };
 
@@ -343,7 +344,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             }
 
             const isAnticipated = breakdown?.isAnticipated || false;
-            const numInstallments = isAnticipated ? 1 : (installments || 1);
+            const numInstallments = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
 
             const startDate = parseBudgetDate(refreshedBudget.date);
             const budgetLocation = parsed.location || null;
@@ -386,7 +387,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 if (method !== 'credit_balance' && itemValue > 0) {
                     for (let i = 0; i < numInstallments; i++) {
                         const date = new Date(startDate);
-                        if (!isAnticipated) {
+                        if (!isAnticipated && method !== 'credit') {
                             date.setMonth(date.getMonth() + i);
                         }
 
@@ -424,7 +425,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     status: 'paid',
                     paymentMethod: (safeCreditUsed > 0 && method === 'credit_balance') ? 'credit_balance' as any : method as any,
                     paymentInstallments: installments,
-                    paymentDate: new Date().toISOString().split('T')[0],
+                    paymentDate: toLocalDateString(new Date()),
                     discountAmount: itemOriginalValue - itemValue,
                     financialBreakdown: {
                         grossAmount: itemValue,
@@ -525,7 +526,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             currentTeeth[paymentItem.index] = {
                 ...currentTeeth[paymentItem.index],
                 status: newStatus,
-                paymentDate: new Date().toISOString().split('T')[0],
+                paymentDate: toLocalDateString(new Date()),
                 splitGroupId,
                 splitPayments: receivables.map(r => ({
                     receivableId: r.id,
@@ -620,7 +621,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 currentTeeth[idx] = {
                     ...tooth,
                     status: allImmediate ? 'paid' : 'partially_paid',
-                    paymentDate: new Date().toISOString().split('T')[0],
+                    paymentDate: toLocalDateString(new Date()),
                     splitGroupId,
                     splitPayments: receivables.map(r => ({
                         receivableId: r.id,

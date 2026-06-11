@@ -4,6 +4,7 @@ import { financialService } from './financial';
 import { calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import { getClinicContext } from './clinicContext';
 import { logger } from '@/utils/logger';
+import { toLocalDateString } from '@/utils/formatters';
 
 export const receivablesService = {
   async createSplitPayment(
@@ -148,7 +149,7 @@ export const receivablesService = {
     if (r.status === 'confirmed') throw new Error('Parcela já confirmada');
     if (r.status === 'cancelled') throw new Error('Parcela cancelada');
 
-    const date = confirmationDate || new Date().toISOString().split('T')[0];
+    const date = confirmationDate || toLocalDateString(new Date());
 
     // Create financial transaction
     const methodLabels: Record<string, string> = {
@@ -414,7 +415,7 @@ export const receivablesService = {
 
     if (allConfirmed) {
       teeth[toothIndex].status = 'paid';
-      teeth[toothIndex].paymentDate = new Date().toISOString().split('T')[0];
+      teeth[toothIndex].paymentDate = toLocalDateString(new Date());
     } else if (anyPending) {
       teeth[toothIndex].status = 'partially_paid';
     }

@@ -23,7 +23,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
-import { getWhatsAppNumber } from '@/utils/formatters';
+import { getWhatsAppNumber, toLocalDateString } from '@/utils/formatters';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -160,12 +160,7 @@ export default function Financial() {
 
     setLoading(true);
     try {
-      const startDate = new Date(start);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(end);
-      endDate.setHours(23, 59, 59, 999);
-
-      const data = await financialService.getTransactions(startDate, endDate);
+      const data = await financialService.getTransactions(start, end);
       setTransactions(data);
     } catch (error) {
       console.error('Error loading financial data:', error);
@@ -638,8 +633,8 @@ export default function Financial() {
           <ClosureTab
             transactions={transactions}
             loading={loading}
-            periodStart={getDateRange().start.toISOString().split('T')[0]}
-            periodEnd={getDateRange().end.toISOString().split('T')[0]}
+            periodStart={toLocalDateString(getDateRange().start)}
+            periodEnd={toLocalDateString(getDateRange().end)}
           />
         </TabsContent>
       </Tabs>

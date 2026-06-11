@@ -25,6 +25,7 @@ import { patientCreditsService } from '@/services/patientCredits';
 import { AddCreditDialog } from './AddCreditDialog';
 import { Coins } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toLocalDateString } from '@/utils/formatters';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -225,10 +226,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         const discountAmount = breakdown?.discountAmount || 0;
         const totalAmount = getItemValue(selectedItem) - discountAmount - creditUsed;
 
-        // When anticipated, register as single transaction even if payment is installment-based
-        // The installment count is still used to calculate the correct fee rate
+        // Credit card installments define the machine fee, not future revenue entries.
         const isAnticipated = breakdown?.isAnticipated || false;
-        const numTransactions = isAnticipated ? 1 : (installments || 1);
+        const numTransactions = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
         const txAmount = totalAmount / numTransactions;
 
       // Calculate Deductions (Per Transaction)
@@ -299,7 +299,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       for (let i = 0; i < numTransactions; i++) {
         const date = new Date(startDate);
-        if (!isAnticipated) {
+        if (!isAnticipated && method !== 'credit') {
           date.setMonth(date.getMonth() + i);
         }
 
@@ -342,7 +342,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         status: 'paid',
         paymentMethod: (creditUsed > 0 && method === 'credit_balance') ? 'credit_balance' : method as any,
         paymentInstallments: installments, // Keep original installments for record
-        paymentDate: new Date().toISOString().split('T')[0],
+        paymentDate: toLocalDateString(new Date()),
         financialBreakdown: { ...breakdown, creditUsed } // Save breakdown and credit used in notes for history
       };
 

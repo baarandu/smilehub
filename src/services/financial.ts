@@ -3,6 +3,7 @@ import { getClinicContext, getClinicContextWithRole } from './clinicContext';
 import type { FinancialTransaction, FinancialTransactionInsert } from '@/types/database';
 import { getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
 import { logger } from '@/utils/logger';
+import { toLocalDateString } from '@/utils/formatters';
 
 export const financialService = {
     /**
@@ -42,8 +43,8 @@ export const financialService = {
             .from('financial_transactions')
             .select('*, patients(name)')
             .eq('clinic_id', context.clinicId)
-            .gte('date', start.toISOString())
-            .lte('date', end.toISOString())
+            .gte('date', toLocalDateString(start))
+            .lte('date', toLocalDateString(end))
             .order('date', { ascending: false })
             .order('created_at', { ascending: false });
 

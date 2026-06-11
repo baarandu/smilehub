@@ -161,15 +161,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
             // Date Range Filter
             if (startDateFilter || endDateFilter) {
-                const tDate = new Date(t.date);
+                const transactionDate = String(t.date).slice(0, 10);
                 if (startDateFilter) {
-                    const start = new Date(startDateFilter);
-                    if (tDate < start) return false;
+                    if (transactionDate < startDateFilter) return false;
                 }
                 if (endDateFilter) {
-                    const end = new Date(endDateFilter);
-                    end.setHours(23, 59, 59, 999);
-                    if (tDate > end) return false;
+                    if (transactionDate > endDateFilter) return false;
                 }
             }
 
@@ -426,7 +423,6 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         {(() => {
                                             // Parse procedure from description
                                             const installmentMatch = t.description.match(/\((\d+\/\d+)\)/);
-                                            const installmentInfo = installmentMatch ? installmentMatch[1] : null;
                                             let workingDesc = t.description;
                                             if (installmentMatch) workingDesc = workingDesc.replace(installmentMatch[0], '');
                                             const methodMatch = workingDesc.match(/\((.*?)\)/);
@@ -456,11 +452,6 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                                 <>
                                                     <p className="text-sm text-[#8b3634] font-medium line-clamp-1" title={procedure}>
                                                         {procedure}
-                                                        {installmentInfo && (
-                                                            <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">
-                                                                {installmentInfo}
-                                                            </span>
-                                                        )}
                                                     </p>
                                                     <p className="text-xs text-muted-foreground">Forma de Pagamento: {displayMethod}</p>
                                                     {t.location && (
