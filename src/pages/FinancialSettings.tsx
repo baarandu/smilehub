@@ -74,7 +74,7 @@ export default function FinancialSettings() {
     };
 
     // Card Brands State
-    const [cardBrands, setCardBrands] = useState<{ id: string; name: string; is_default: boolean }[]>([]);
+    const [cardBrands, setCardBrands] = useState<{ id: string; name: string; is_default: boolean; card_machine_id?: string | null }[]>([]);
     const [newBrandName, setNewBrandName] = useState('');
     const [showBrandForm, setShowBrandForm] = useState(false);
 
@@ -93,6 +93,16 @@ export default function FinancialSettings() {
             setSelectedMachineId(machines[0].id);
         }
     }, [machines, selectedMachineId]);
+
+    useEffect(() => {
+        if (selectedMachineId) {
+            loadCardBrands(selectedMachineId);
+            setFilterBrand('all');
+            setNewFee(prev => ({ ...prev, brand: '' }));
+        } else {
+            setCardBrands([]);
+        }
+    }, [selectedMachineId]);
 
     // Search filter
     const [searchQuery, setSearchQuery] = useState('');
@@ -117,10 +127,6 @@ export default function FinancialSettings() {
             const fees = await settingsService.getCardFees();
             setCardFees(fees || []);
 
-            // Load card brands
-            const brands = await settingsService.getCardBrands();
-            setCardBrands(brands || []);
-
             // Load taxes
             const loadedTaxes = await settingsService.getTaxes();
             setTaxes(loadedTaxes || []);
@@ -131,6 +137,16 @@ export default function FinancialSettings() {
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as configurações." });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadCardBrands = async (machineId: string) => {
+        try {
+            const brands = await settingsService.getCardBrands(machineId);
+            setCardBrands(brands || []);
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as bandeiras desta maquininha." });
         }
     };
 
@@ -240,12 +256,16 @@ export default function FinancialSettings() {
             toast({ variant: "destructive", title: "Erro", description: "Informe o nome da bandeira." });
             return;
         }
+        if (!selectedMachineId) {
+            toast({ variant: "destructive", title: "Erro", description: "Selecione uma maquininha antes de adicionar a bandeira." });
+            return;
+        }
         try {
-            await settingsService.addCardBrand(newBrandName.trim());
+            await settingsService.addCardBrand(newBrandName.trim(), selectedMachineId);
             toast({ title: "Sucesso", description: "Bandeira adicionada!" });
             setNewBrandName('');
             setShowBrandForm(false);
-            loadData();
+            loadCardBrands(selectedMachineId);
             // Mark onboarding step as completed and return if needed
             markStepCompleted('financial');
             if (shouldReturnToOnboarding) {
@@ -264,7 +284,7 @@ export default function FinancialSettings() {
         try {
             await settingsService.deleteCardBrand(id);
             toast({ title: "Removido", description: "Bandeira removida com sucesso." });
-            loadData();
+            if (selectedMachineId) loadCardBrands(selectedMachineId);
         } catch (error) {
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Erro ao remover bandeira." });
@@ -547,8 +567,8 @@ export default function FinancialSettings() {
                                     <Tag className="w-5 h-5 text-[#7a3b3b]" />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-slate-900">Bandeiras de Cartão</h3>
-                                    <p className="text-sm text-slate-500">Gerencie as bandeiras de cartão aceitas.</p>
+                                    <h3 className="font-semibold text-slate-900">Bandeiras por Maquininha</h3>
+                                    <p className="text-sm text-slate-500">Gerencie as bandeiras aceitas pela maquininha selecionada.</p>
                                 </div>
                             </div>
                             <Button
@@ -560,6 +580,28 @@ export default function FinancialSettings() {
                             </Button>
                         </div>
 
+                        {machines.length === 0 ? (
+                            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                Cadastre uma maquininha antes de configurar bandeiras.
+                            </div>
+                        ) : (
+                            <div className="mb-4 space-y-2">
+                                <Label className="text-sm">Maquininha</Label>
+                                <Select value={selectedMachineId} onValueChange={setSelectedMachineId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione uma maquininha" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {machines.map(m => (
+                                            <SelectItem key={m.id} value={m.id}>
+                                                {m.name}{m.dentist_name ? ` — ${m.dentist_name}` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
                         {showBrandForm && (
                             <div className="flex gap-2 mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
                                 <Input
@@ -568,7 +610,7 @@ export default function FinancialSettings() {
                                     onChange={e => setNewBrandName(e.target.value)}
                                     className="flex-1 bg-white"
                                 />
-                                <Button onClick={handleAddBrand} className="bg-[#7a3b3b] hover:bg-[#5c2d2d]">Adicionar</Button>
+                                <Button onClick={handleAddBrand} disabled={!selectedMachineId} className="bg-[#7a3b3b] hover:bg-[#5c2d2d]">Adicionar</Button>
                                 <Button variant="ghost" onClick={() => { setShowBrandForm(false); setNewBrandName(''); }}>
                                     <X className="w-4 h-4" />
                                 </Button>
@@ -591,7 +633,7 @@ export default function FinancialSettings() {
                                 </div>
                             ))}
                             {cardBrands.length === 0 && (
-                                <p className="text-slate-500 italic">Nenhuma bandeira cadastrada</p>
+                                <p className="text-slate-500 italic">{selectedMachineId ? 'Nenhuma bandeira cadastrada para esta maquininha' : 'Selecione uma maquininha'}</p>
                             )}
                         </div>
                     </CardContent>
@@ -677,7 +719,7 @@ export default function FinancialSettings() {
                                 >
                                     Todas Bandeiras
                                 </button>
-                                {Array.from(new Set(cardFees.map(f => f.brand.toLowerCase()))).sort().map(brand => (
+                                {cardBrands.map(brand => brand.name.toLowerCase()).sort().map(brand => (
                                     <button
                                         key={brand}
                                         onClick={() => setFilterBrand(brand)}

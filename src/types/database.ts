@@ -1182,6 +1182,7 @@ export type Database = {
       }
       card_brands: {
         Row: {
+          card_machine_id: string | null
           clinic_id: string
           created_at: string | null
           id: string
@@ -1189,6 +1190,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          card_machine_id?: string | null
           clinic_id: string
           created_at?: string | null
           id?: string
@@ -1196,6 +1198,7 @@ export type Database = {
           name: string
         }
         Update: {
+          card_machine_id?: string | null
           clinic_id?: string
           created_at?: string | null
           id?: string
@@ -1203,6 +1206,13 @@ export type Database = {
           name?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "card_brands_card_machine_id_fkey"
+            columns: ["card_machine_id"]
+            isOneToOne: false
+            referencedRelation: "card_machines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "card_brands_clinic_id_fkey"
             columns: ["clinic_id"]

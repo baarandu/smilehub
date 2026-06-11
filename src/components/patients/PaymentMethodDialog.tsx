@@ -83,6 +83,55 @@ const CARD_BRANDS = [
     { id: 'hipercard', label: 'Hipercard' },
 ];
 
+const normalizeBrand = (brand?: string | null) =>
+    (brand || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+const brandTokens = (brand?: string | null) =>
+    normalizeBrand(brand)
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean);
+
+const brandMatches = (configuredBrand: string, selectedBrand: string) => {
+    const configured = normalizeBrand(configuredBrand);
+    const selected = normalizeBrand(selectedBrand);
+    if (!configured || !selected) return false;
+    if (configured === selected) return true;
+
+    const configuredTokens = brandTokens(configured);
+    const selectedTokens = brandTokens(selected);
+    return configuredTokens.some(token => selectedTokens.includes(token));
+};
+
+const isFallbackBrand = (brand: string) => {
+    const normalized = normalizeBrand(brand);
+    return ['others', 'outras bandeiras', 'outros', 'outra bandeira'].includes(normalized);
+};
+
+const findCardFeeConfig = (
+    fees: CardFeeConfig[],
+    selectedBrand: string,
+    paymentType: string,
+    installments: number,
+) => {
+    const samePaymentType = fees.filter(f => f.payment_type === paymentType);
+    const sameBrand = samePaymentType.filter(f => brandMatches(f.brand, selectedBrand));
+    const fallbackBrand = samePaymentType.filter(f => isFallbackBrand(f.brand));
+    const candidates = sameBrand.length > 0 ? sameBrand : fallbackBrand;
+
+    return (
+        candidates.find(f => f.installments === installments) ||
+        candidates.find(f => f.installments === 1) ||
+        candidates
+            .filter(f => typeof f.installments === 'number')
+            .sort((a, b) => Math.abs((a.installments || 1) - installments) - Math.abs((b.installments || 1) - installments))[0] ||
+        null
+    );
+};
+
 export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0 }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
@@ -175,6 +224,24 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
         }
     }, [open]);
 
+    useEffect(() => {
+        if (!open || !selectedMachineId) {
+            setClinicBrands([]);
+            return;
+        }
+
+        const loadMachineBrands = async () => {
+            try {
+                const brands = await settingsService.getCardBrands(selectedMachineId);
+                setClinicBrands(brands || []);
+            } catch {
+                setClinicBrands([]);
+            }
+        };
+
+        loadMachineBrands();
+    }, [open, selectedMachineId]);
+
     // Update initial brand when availableBrands changes.
     // Prefer Visa, then Mastercard, then a combined "Visa / Mastercard" brand,
     // then anything containing "visa" or "mastercard", then the first available.
@@ -208,14 +275,6 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             }
 
             setTaxRate(totalTax);
-
-            // Load clinic's configured card brands (source of truth for the brand dropdown)
-            try {
-                const brands = await settingsService.getCardBrands();
-                setClinicBrands(brands || []);
-            } catch {
-                setClinicBrands([]);
-            }
 
             // Load fees for all machines in the clinic (so we have rates ready when machine is picked)
             const machineIds = machines.map(m => m.id);
@@ -252,20 +311,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             // Adjust installments for lookup: debit is always 1
             const lookupInstallments = selectedMethod === 'debit' ? 1 : numInstallments;
 
-            let feeConfig = machineFees.find(f =>
-                f.brand.toLowerCase() === selectedBrand.toLowerCase() &&
-                f.payment_type === selectedMethod &&
-                f.installments === lookupInstallments
-            );
-
-            // Fallback: try 'others' or 'outras bandeiras' brand if no specific brand config found
-            if (!feeConfig) {
-                feeConfig = machineFees.find(f =>
-                    (f.brand.toLowerCase() === 'others' || f.brand.toLowerCase() === 'outras bandeiras' || f.brand.toLowerCase() === 'outros') &&
-                    f.payment_type === selectedMethod &&
-                    f.installments === lookupInstallments
-                );
-            }
+            const feeConfig = findCardFeeConfig(machineFees, selectedBrand, selectedMethod, lookupInstallments);
 
             if (feeConfig) {
                 // If user wants to anticipate and there's an anticipation rate, use it
@@ -526,6 +572,13 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 {selectedMethod === 'credit' && parseInt(installments) > 1 && (
                                     <div className="text-sm text-muted-foreground text-center bg-slate-50 py-2 rounded">
                                         {installments}x de R$ {formatMoney(installmentValue)}
+                                    </div>
+                                )}
+
+                                {breakdown.cardFeeRate === 0 && (
+                                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-start gap-2">
+                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                        <span>Nenhuma taxa encontrada para esta maquininha, bandeira e forma de pagamento.</span>
                                     </div>
                                 )}
 

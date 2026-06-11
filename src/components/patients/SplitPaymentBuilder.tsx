@@ -47,6 +47,55 @@ function formatLocalDate(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const normalizeBrand = (brand?: string | null) =>
+  (brand || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const brandTokens = (brand?: string | null) =>
+  normalizeBrand(brand)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+const brandMatches = (configuredBrand: string, selectedBrand: string) => {
+  const configured = normalizeBrand(configuredBrand);
+  const selected = normalizeBrand(selectedBrand);
+  if (!configured || !selected) return false;
+  if (configured === selected) return true;
+
+  const configuredTokens = brandTokens(configured);
+  const selectedTokens = brandTokens(selected);
+  return configuredTokens.some(token => selectedTokens.includes(token));
+};
+
+const isFallbackBrand = (brand: string) => {
+  const normalized = normalizeBrand(brand);
+  return ['others', 'outras bandeiras', 'outros', 'outra bandeira'].includes(normalized);
+};
+
+const findCardFeeConfig = (
+  fees: CardFeeConfig[],
+  selectedBrand: string,
+  paymentType: string,
+  installments: number,
+) => {
+  const samePaymentType = fees.filter(f => f.payment_type === paymentType);
+  const sameBrand = samePaymentType.filter(f => brandMatches(f.brand, selectedBrand));
+  const fallbackBrand = samePaymentType.filter(f => isFallbackBrand(f.brand));
+  const candidates = sameBrand.length > 0 ? sameBrand : fallbackBrand;
+
+  return (
+    candidates.find(f => f.installments === installments) ||
+    candidates.find(f => f.installments === 1) ||
+    candidates
+      .filter(f => typeof f.installments === 'number')
+      .sort((a, b) => Math.abs((a.installments || 1) - installments) - Math.abs((b.installments || 1) - installments))[0] ||
+    null
+  );
+};
+
 export function SplitPaymentBuilder({
   totalValue,
   locationRate,
@@ -92,18 +141,7 @@ export function SplitPaymentBuilder({
 
     if (portion.method === 'credit' || portion.method === 'debit') {
       const lookupInstallments = portion.method === 'debit' ? 1 : portion.installments;
-      let feeConfig = cardFees.find(f =>
-        f.brand.toLowerCase() === portion.brand.toLowerCase() &&
-        f.payment_type === portion.method &&
-        f.installments === lookupInstallments
-      );
-      if (!feeConfig) {
-        feeConfig = cardFees.find(f =>
-          (f.brand.toLowerCase() === 'others' || f.brand.toLowerCase() === 'outras bandeiras' || f.brand.toLowerCase() === 'outros') &&
-          f.payment_type === portion.method &&
-          f.installments === lookupInstallments
-        );
-      }
+      const feeConfig = findCardFeeConfig(cardFees, portion.brand, portion.method, lookupInstallments);
       if (feeConfig) {
         cardFeeRate = feeConfig.rate;
         cardFeeAmount = (grossAmount * cardFeeRate) / 100;

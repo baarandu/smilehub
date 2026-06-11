@@ -106,7 +106,7 @@ export const settingsService = {
     },
 
     // Card Brands
-    async getCardBrands(): Promise<{ id: string; name: string; is_default: boolean }[]> {
+    async getCardBrands(cardMachineId?: string | null): Promise<{ id: string; name: string; is_default: boolean; card_machine_id?: string | null }[]> {
         const { userId, clinicId } = await getClinicContext();
 
         const defaultBrands = [
@@ -120,6 +120,41 @@ export const settingsService = {
 
         if (!clinicId) {
             return defaultBrands;
+        }
+
+        if (cardMachineId) {
+            const { data: existing, error: existingError } = await supabase
+                .from('card_brands')
+                .select('*')
+                .eq('clinic_id', clinicId)
+                .eq('card_machine_id', cardMachineId)
+                .order('name');
+
+            if (existingError) {
+                return defaultBrands;
+            }
+
+            if (existing && existing.length > 0) {
+                return existing as { id: string; name: string; is_default: boolean; card_machine_id?: string | null }[];
+            }
+
+            const defaultRows = defaultBrands.map(brand => ({
+                clinic_id: clinicId,
+                card_machine_id: cardMachineId,
+                name: brand.name,
+                is_default: true,
+            }));
+
+            const { data: inserted, error: insertError } = await supabase
+                .from('card_brands')
+                .insert(defaultRows)
+                .select('*');
+
+            if (insertError) {
+                return defaultBrands;
+            }
+
+            return (inserted || []) as { id: string; name: string; is_default: boolean; card_machine_id?: string | null }[];
         }
 
         const { data, error } = await supabase
@@ -136,17 +171,18 @@ export const settingsService = {
             return defaultBrands;
         }
 
-        return data as { id: string; name: string; is_default: boolean }[];
+        return data as { id: string; name: string; is_default: boolean; card_machine_id?: string | null }[];
     },
 
-    async addCardBrand(name: string): Promise<{ id: string; name: string; is_default: boolean }> {
+    async addCardBrand(name: string, cardMachineId: string): Promise<{ id: string; name: string; is_default: boolean; card_machine_id?: string | null }> {
         const { userId, clinicId } = await getClinicContext();
 
         if (!clinicId) throw new Error('Clinic not found');
+        if (!cardMachineId) throw new Error('Selecione uma maquininha antes de adicionar a bandeira.');
 
         const { data, error } = await supabase
             .from('card_brands')
-            .insert({ clinic_id: clinicId, name, is_default: false })
+            .insert({ clinic_id: clinicId, card_machine_id: cardMachineId, name, is_default: false })
             .select()
             .single();
 
