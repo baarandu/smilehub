@@ -6,12 +6,15 @@ export interface ChildAnamnesis {
 
   // Histórico Médico Geral
   pregnancy_type: string | null;
+  gestational_age_weeks: string | null;
   birth_type: string | null;
   pregnancy_complications: boolean;
   pregnancy_complications_details: string | null;
   pregnancy_medications: boolean;
   pregnancy_medications_details: string | null;
   birth_weight: string | null;
+  current_weight: string | null;
+  current_height: string | null;
   exclusive_breastfeeding_duration: string | null;
   total_breastfeeding_duration: string | null;
   current_health: string | null;

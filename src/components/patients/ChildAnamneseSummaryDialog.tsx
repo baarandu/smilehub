@@ -168,8 +168,11 @@ export function ChildAnamneseSummaryDialog({ open, onOpenChange, anamnesis }: Pr
             <h3 className="font-semibold">Histórico Médico Geral</h3>
             <div className="grid grid-cols-2 gap-3">
               {renderSelectInfo('Gestação', 'pregnancy_type', a.pregnancy_type)}
+              {renderTextInfo('Semanas de gestação ao nascer', a.gestational_age_weeks)}
               {renderSelectInfo('Tipo de parto', 'birth_type', a.birth_type)}
               {renderTextInfo('Peso ao nascer', a.birth_weight)}
+              {renderTextInfo('Peso atual', a.current_weight)}
+              {renderTextInfo('Altura atual', a.current_height)}
               {renderTextInfo('Amamentação exclusiva', a.exclusive_breastfeeding_duration)}
               {renderTextInfo('Amamentação total', a.total_breastfeeding_duration)}
             </div>

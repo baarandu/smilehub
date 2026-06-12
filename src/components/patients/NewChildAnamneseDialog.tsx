@@ -93,12 +93,15 @@ const emptyForm = {
   date: getToday(),
   // Histórico Médico
   pregnancyType: '',
+  gestationalAgeWeeks: '',
   birthType: '',
   pregnancyComplications: false,
   pregnancyComplicationsDetails: '',
   pregnancyMedications: false,
   pregnancyMedicationsDetails: '',
   birthWeight: '',
+  currentWeight: '',
+  currentHeight: '',
   exclusiveBreastfeedingDuration: '',
   totalBreastfeedingDuration: '',
   currentHealth: '',
@@ -242,12 +245,15 @@ export function NewChildAnamneseDialog({
         setForm({
           date: anamnesis.date,
           pregnancyType: anamnesis.pregnancy_type || '',
+          gestationalAgeWeeks: anamnesis.gestational_age_weeks || '',
           birthType: anamnesis.birth_type || '',
           pregnancyComplications: anamnesis.pregnancy_complications || false,
           pregnancyComplicationsDetails: anamnesis.pregnancy_complications_details || '',
           pregnancyMedications: anamnesis.pregnancy_medications || false,
           pregnancyMedicationsDetails: anamnesis.pregnancy_medications_details || '',
           birthWeight: anamnesis.birth_weight || '',
+          currentWeight: anamnesis.current_weight || '',
+          currentHeight: anamnesis.current_height || '',
           exclusiveBreastfeedingDuration: anamnesis.exclusive_breastfeeding_duration || '',
           totalBreastfeedingDuration: anamnesis.total_breastfeeding_duration || '',
           currentHealth: anamnesis.current_health || '',
@@ -542,12 +548,15 @@ export function NewChildAnamneseDialog({
         date: form.date,
         // Histórico Médico
         pregnancy_type: form.pregnancyType || null,
+        gestational_age_weeks: form.gestationalAgeWeeks || null,
         birth_type: form.birthType || null,
         pregnancy_complications: form.pregnancyComplications,
         pregnancy_complications_details: form.pregnancyComplications ? form.pregnancyComplicationsDetails || null : null,
         pregnancy_medications: form.pregnancyMedications,
         pregnancy_medications_details: form.pregnancyMedications ? form.pregnancyMedicationsDetails || null : null,
         birth_weight: form.birthWeight || null,
+        current_weight: form.currentWeight || null,
+        current_height: form.currentHeight || null,
         exclusive_breastfeeding_duration: form.exclusiveBreastfeedingDuration || null,
         total_breastfeeding_duration: form.totalBreastfeedingDuration || null,
         current_health: form.currentHealth || null,
@@ -742,7 +751,7 @@ export function NewChildAnamneseDialog({
             <Separator />
             <h3 className="font-semibold text-foreground">Histórico Médico Geral</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Gestação</Label>
                 <Select value={form.pregnancyType} onValueChange={(v) => setForm({ ...form, pregnancyType: v })}>
@@ -753,6 +762,10 @@ export function NewChildAnamneseDialog({
                     <SelectItem value="pos_termo">Pós-termo</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Semanas de gestação ao nascer</Label>
+                <Input type="number" min={0} value={form.gestationalAgeWeeks} onChange={(e) => setForm({ ...form, gestationalAgeWeeks: e.target.value })} placeholder="Ex: 38" />
               </div>
               <div className="space-y-2">
                 <Label>Tipo de parto</Label>
@@ -796,6 +809,17 @@ export function NewChildAnamneseDialog({
               <div className="space-y-2">
                 <Label>Amamentação total</Label>
                 <Input value={form.totalBreastfeedingDuration} onChange={(e) => setForm({ ...form, totalBreastfeedingDuration: e.target.value })} placeholder="Ex: 2 anos" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Peso atual</Label>
+                <Input value={form.currentWeight} onChange={(e) => setForm({ ...form, currentWeight: e.target.value })} placeholder="Ex: 15 kg" />
+              </div>
+              <div className="space-y-2">
+                <Label>Altura atual</Label>
+                <Input value={form.currentHeight} onChange={(e) => setForm({ ...form, currentHeight: e.target.value })} placeholder="Ex: 95 cm" />
               </div>
             </div>
 
