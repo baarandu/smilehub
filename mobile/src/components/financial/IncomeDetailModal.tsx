@@ -171,6 +171,19 @@ export const IncomeDetailModal: React.FC<IncomeDetailModalProps> = ({
                             </View>
 
 
+                            {((transaction as any).discount_amount || 0) > 0 && (
+                                <View style={{ backgroundColor: '#ecfdf5', borderRadius: 12, padding: 16, marginTop: 16, borderWidth: 1, borderColor: '#d1fae5' }}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Text style={{ color: '#6b7280', fontSize: 14 }}>Valor Original</Text>
+                                        <Text style={{ color: '#6b7280', fontSize: 14, textDecorationLine: 'line-through' }}>{formatCurrency(transaction.amount + ((transaction as any).discount_amount || 0))}</Text>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                                        <Text style={{ color: '#047857', fontSize: 14 }}>Desconto</Text>
+                                        <Text style={{ color: '#047857', fontSize: 14, fontWeight: '600' }}>- {formatCurrency((transaction as any).discount_amount || 0)}</Text>
+                                    </View>
+                                </View>
+                            )}
+
                             {hasDeductions && (
                                 <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginTop: 16 }}>
                                     <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#111827', marginBottom: 12 }}>Detalhamento Financeiro</Text>

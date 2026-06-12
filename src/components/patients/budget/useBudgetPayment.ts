@@ -263,6 +263,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         anticipation_amount: anticipationAmountPerTx,
                         location_rate: targetLocationRate,
                         location_amount: locationAmountPerTx,
+                        discount_amount: (breakdown?.discountAmount || 0) / numTransactions,
                         payer_is_patient: payerData?.payer_is_patient ?? true,
                         payer_type: payerData?.payer_type || 'PF',
                         payer_name: payerData?.payer_name || null,
@@ -412,6 +413,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                             anticipation_amount: anticipationPerInstallment,
                             location_rate: itemLocationRate,
                             location_amount: locationPerInstallment,
+                            discount_amount: (itemOriginalValue - itemValue) / numInstallments,
                             payer_is_patient: payerData?.payer_is_patient ?? true,
                             payer_type: payerData?.payer_type || 'PF',
                             payer_name: payerData?.payer_name || null,
@@ -432,6 +434,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     financialBreakdown: {
                         grossAmount: itemValue,
                         netAmount: itemNetAmount,
+                        discountAmount: itemOriginalValue - itemValue,
                         taxRate: breakdown?.taxRate || 0,
                         taxAmount: itemTaxAmount,
                         cardFeeRate: breakdown?.cardFeeRate || 0,

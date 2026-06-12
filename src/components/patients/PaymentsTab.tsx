@@ -51,7 +51,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ approved: 0, paid: 0, total: 0 });
+  const [stats, setStats] = useState({ approved: 0, paid: 0, total: 0, discount: 0 });
   const [paymentItems, setPaymentItems] = useState<ItemToPay[]>([]); // Approved items logic pending payment
   const [paidHistory, setPaidHistory] = useState<ItemToPay[]>([]);
 
@@ -133,6 +133,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     const history: ItemToPay[] = [];
     let paidTotal = 0;
     let grandTotal = 0;
+    let discountTotal = 0;
 
     data.forEach(budget => {
       try {
@@ -163,7 +164,16 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
               grandTotal += itemVal;
             } else if (tooth.status === 'paid' || tooth.status === 'completed') {
               history.push(item);
-              paidTotal += itemVal;
+              // "Recebido" must reflect the amount actually charged (net of discount applied at payment).
+              const fb = (tooth as any).financialBreakdown;
+              const paidAmount = fb && typeof fb.grossAmount === 'number'
+                ? fb.grossAmount + (fb.creditUsed || 0)
+                : itemVal;
+              const itemDiscount = (fb && typeof fb.discountAmount === 'number')
+                ? fb.discountAmount
+                : ((tooth as any).discountAmount || 0);
+              paidTotal += paidAmount;
+              discountTotal += itemDiscount;
               grandTotal += itemVal;
             }
           });
@@ -185,7 +195,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     setStats({
       approved: 0,
       paid: paidTotal,
-      total: grandTotal
+      total: grandTotal,
+      discount: discountTotal
     });
   };
 
@@ -325,6 +336,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           anticipation_amount: anticipationAmountPerTx,
           location_rate: targetLocationRate,
           location_amount: locationAmountPerTx,
+          discount_amount: discountAmount / numTransactions,
           // Payer data
           revenue_type: payerData?.revenue_type || 'individual',
           payer_is_patient: payerData?.payer_is_patient ?? true,
@@ -462,6 +474,17 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
             <CreditCard className="w-8 h-8 text-blue-300" />
           </CardContent>
         </Card>
+        {stats.discount > 0 && (
+          <Card className="bg-emerald-50 border-emerald-100">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Desconto</p>
+                <h3 className="text-2xl font-bold text-emerald-700">- R$ {formatMoney(stats.discount)}</h3>
+              </div>
+              <Banknote className="w-8 h-8 text-emerald-300" />
+            </CardContent>
+          </Card>
+        )}
         {receivables.filter(r => r.status === 'pending').length > 0 && (
           <Card className="bg-amber-50 border-amber-100">
             <CardContent className="p-4 flex items-center justify-between">
@@ -786,7 +809,12 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                           </div>
                         ) : (
                           <div className="font-semibold text-slate-600">
-                            R$ {formatMoney(getItemValue(item))}
+                            R$ {formatMoney((() => {
+                              const fb = (item.tooth as any).financialBreakdown;
+                              return fb && typeof fb.grossAmount === 'number'
+                                ? fb.grossAmount + (fb.creditUsed || 0)
+                                : getItemValue(item);
+                            })())}
                           </div>
                         )}
                       </div>

@@ -704,10 +704,28 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                 </p>
                             </div>
 
+                            {/* Discount Info (only when a discount was applied at payment) */}
+                            {((selectedTransaction as any).discount_amount || 0) > 0 && (
+                                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Valor Original</span>
+                                        <span className="font-medium text-muted-foreground line-through">
+                                            {formatCurrency(selectedTransaction.amount + ((selectedTransaction as any).discount_amount || 0))}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-emerald-700">Desconto</span>
+                                        <span className="font-semibold text-emerald-700">
+                                            - {formatCurrency((selectedTransaction as any).discount_amount || 0)}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Amount Info */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-slate-50 p-4 rounded-lg">
-                                    <p className="text-sm text-muted-foreground">Valor Bruto</p>
+                                    <p className="text-sm text-muted-foreground">{((selectedTransaction as any).discount_amount || 0) > 0 ? 'Valor com Desconto' : 'Valor Bruto'}</p>
                                     <p className="text-xl font-bold text-green-600">{formatCurrency(selectedTransaction.amount)}</p>
                                 </div>
                                 <div className="bg-slate-50 p-4 rounded-lg">

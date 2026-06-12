@@ -438,7 +438,12 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                                 </div>
                                 {teeth.map((item, index) => {
                                     if (item.status !== 'paid' && item.status !== 'completed') return null;
-                                    const total = payment.getItemValue(item);
+                                    // Show the amount actually charged (net of any discount applied at payment),
+                                    // falling back to the original item value for legacy/split payments.
+                                    const fb = item.financialBreakdown;
+                                    const total = fb && typeof fb.grossAmount === 'number'
+                                        ? fb.grossAmount + (fb.creditUsed || 0)
+                                        : payment.getItemValue(item);
                                     const isProsthetic = isProstheticTreatment(item.treatments) && hasLabTreatment(item);
                                     const prostheticItem = isProsthetic ? getProstheticItem(index) : undefined;
                                     const hasOrder = prostheticItem?.existingOrderId != null;

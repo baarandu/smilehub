@@ -70,6 +70,7 @@ interface PaymentItem {
 interface PaymentBreakdown {
     grossAmount: number;
     netAmount: number;
+    discountAmount?: number;
     taxRate: number;
     taxAmount: number;
     cardFeeRate: number;
@@ -325,7 +326,8 @@ export function usePatientPayments(
                             anticipation_rate: breakdown.anticipationRate,
                             anticipation_amount: (breakdown.anticipationAmount || 0) * ratio,
                             location_rate: targetLocationRate,
-                            location_amount: locationAmt
+                            location_amount: locationAmt,
+                            discount_amount: (breakdown.discountAmount || 0) * ratio
                         };
                     } else if (targetLocationRate > 0) {
                         const locationAmt = (t.amount * targetLocationRate) / 100;
@@ -534,6 +536,7 @@ export function usePatientPayments(
                     itemBreakdown = {
                         grossAmount: itemValue,
                         netAmount: netAmt,
+                        discountAmount: itemOriginalValue - itemValue,
                         taxRate: breakdown.taxRate,
                         taxAmount: taxAmt,
                         cardFeeRate: breakdown.cardFeeRate,
@@ -611,7 +614,8 @@ export function usePatientPayments(
                                 anticipation_rate: breakdown.anticipationRate,
                                 anticipation_amount: anticipationAmt,
                                 location_rate: targetLocationRate,
-                                location_amount: locationAmt
+                                location_amount: locationAmt,
+                                discount_amount: (itemOriginalValue - itemValue) * txRatio
                             };
                         } else if (targetLocationRate > 0) {
                             const locationAmt = (itemAmount * targetLocationRate) / 100;
@@ -663,7 +667,8 @@ export function usePatientPayments(
                             anticipation_rate: breakdown.anticipationRate,
                             anticipation_amount: anticipationAmt,
                             location_rate: targetLocationRate,
-                            location_amount: locationAmt
+                            location_amount: locationAmt,
+                            discount_amount: itemOriginalValue - itemValue
                         };
                     } else if (targetLocationRate > 0) {
                         const locationAmt = (itemValue * targetLocationRate) / 100;

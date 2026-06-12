@@ -102,6 +102,31 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
         }
     };
 
+    // Sum the discount granted and the amount actually received across paid items of a budget.
+    const getBudgetDiscountInfo = (budget: BudgetWithItems) => {
+        try {
+            const parsed = JSON.parse(budget.notes || '{}');
+            if (!parsed.teeth || !Array.isArray(parsed.teeth)) return { discount: 0, received: 0 };
+            let discount = 0;
+            let received = 0;
+            parsed.teeth.forEach((t: ToothEntry) => {
+                if (t.status !== 'paid' && t.status !== 'completed') return;
+                const fb = (t as any).financialBreakdown;
+                const itemReceived = fb && typeof fb.grossAmount === 'number'
+                    ? fb.grossAmount + (fb.creditUsed || 0)
+                    : Object.values(t.values || {}).reduce((a: number, b: any) => a + (parseInt(b) || 0) / 100, 0);
+                const itemDiscount = (fb && typeof fb.discountAmount === 'number')
+                    ? fb.discountAmount
+                    : ((t as any).discountAmount || 0);
+                received += itemReceived;
+                discount += itemDiscount;
+            });
+            return { discount, received };
+        } catch {
+            return { discount: 0, received: 0 };
+        }
+    };
+
     const renderToothBadges = (budget: BudgetWithItems) => {
         try {
             const parsed = JSON.parse(budget.notes || '{}');
@@ -262,6 +287,20 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                             <Banknote className="w-4 h-4" />
                                             <span className="text-lg">R$ {formatMoney(budget.value)}</span>
                                         </div>
+                                        {(() => {
+                                            const { discount, received } = getBudgetDiscountInfo(budget);
+                                            if (discount <= 0) return null;
+                                            return (
+                                                <>
+                                                    <div className="flex items-center gap-1.5 text-emerald-700">
+                                                        <span className="text-sm font-medium">Desconto: - R$ {formatMoney(discount)}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-blue-700">
+                                                        <span className="text-sm font-semibold">Recebido: R$ {formatMoney(received)}</span>
+                                                    </div>
+                                                </>
+                                            );
+                                        })()}
                                         {((budget as any).responsible_dentist_name || budget.created_by_name) && (
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <User className="w-4 h-4" />
