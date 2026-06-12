@@ -33,6 +33,14 @@ export function PaymentsTab({
 
     const getToothTotal = (tooth: ToothEntry) => calculateToothTotal(tooth.values);
 
+    // Amount actually charged for a paid item (net of discount applied at payment).
+    const getPaidValue = (tooth: ToothEntry) => {
+        const fb = (tooth as any).financialBreakdown;
+        return fb && typeof fb.grossAmount === 'number'
+            ? fb.grossAmount + (fb.creditUsed || 0)
+            : calculateToothTotal(tooth.values);
+    };
+
     const getToothDisplayName = (tooth: string) =>
         tooth.includes('Arcada') ? tooth : `Dente ${tooth}`;
 
@@ -105,7 +113,7 @@ export function PaymentsTab({
                     </View>
                 ) : (
                     paidItems.map((item, idx) => {
-                        const total = getToothTotal(item.tooth);
+                        const total = getPaidValue(item.tooth);
                         return (
                             <View
                                 key={`${item.budgetId}-${item.toothIndex}`}
