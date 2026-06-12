@@ -11,6 +11,7 @@ import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
 import { LocationsModal } from '@/components/profile/LocationsModal';
 import { useClinic } from '@/contexts/ClinicContext';
+import { usePatientTreatmentPlan, computeBudgetDiscount } from '@/hooks/usePatientTreatmentPlan';
 import { supabase } from '@/lib/supabase';
 
 interface NewBudgetDialogProps {
@@ -36,6 +37,10 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
 
     const [locationsModalOpen, setLocationsModalOpen] = useState(false);
+
+    // Active treatment-plan subscription → automatic per-treatment discount
+    const { subscription, usage } = usePatientTreatmentPlan(patientId);
+    const { discountAmount, planName } = computeBudgetDiscount(teethList, subscription, usage);
 
     const isEditing = !!budget;
 
@@ -204,7 +209,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
         try {
             setSaving(true);
-            const total = calculateTotal();
+            const subtotal = calculateTotal();
+            const total = Math.max(subtotal - discountAmount, 0);
             const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))].join(', ');
             const responsibleDentistName = dentists.find(d => d.id === responsibleDentistId)?.name || null;
 
@@ -214,6 +220,9 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                 locationRate: locationRate ? parseFloat(locationRate) : 0,
                 responsibleDentistId: responsibleDentistId || null,
                 responsibleDentistName,
+                treatmentPlan: subscription
+                    ? { id: subscription.id, name: planName, discountAmount: Math.round(discountAmount * 100) / 100 }
+                    : null,
             });
 
             // Create budget items for relation
@@ -295,6 +304,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     {/* Right Column: Summary */}
                     <BudgetSummary
                         items={teethList}
+                        discountAmount={discountAmount}
+                        planName={planName}
                         onRemoveItem={removeTooth}
                         onSelectItem={handleSelectItemForEdit}
                         selectedItemIndex={editingItemIndex}

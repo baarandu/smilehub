@@ -6,6 +6,8 @@ import { getToothDisplayName, formatCurrency, type ToothEntry } from '@/utils/bu
 
 interface BudgetSummaryProps {
     items: ToothEntry[];
+    discountAmount?: number;
+    planName?: string | null;
     onRemoveItem: (index: number) => void;
     onSelectItem?: (item: ToothEntry, index: number) => void;
     selectedItemIndex?: number | null;
@@ -14,7 +16,7 @@ interface BudgetSummaryProps {
     saving: boolean;
 }
 
-export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemIndex, onSave, onCancel, saving }: BudgetSummaryProps) {
+export function BudgetSummary({ items, discountAmount = 0, planName, onRemoveItem, onSelectItem, selectedItemIndex, onSave, onCancel, saving }: BudgetSummaryProps) {
 
     const calculateTotal = () => {
         return items.reduce((acc, item) => {
@@ -22,6 +24,9 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
             return acc + itemTotal;
         }, 0);
     };
+
+    const subtotal = calculateTotal();
+    const finalTotal = Math.max(subtotal - discountAmount, 0);
 
     return (
         <div className="w-[400px] flex flex-col bg-slate-50 border-l">
@@ -96,11 +101,25 @@ export function BudgetSummary({ items, onRemoveItem, onSelectItem, selectedItemI
             </ScrollArea>
 
             <div className="p-6 bg-white border-t space-y-4">
-                <div className="flex justify-between items-end">
-                    <span className="text-slate-500 font-medium">Total Geral</span>
-                    <span className="text-2xl font-bold text-emerald-600">
-                        R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+                <div className="space-y-2">
+                    {discountAmount > 0 && (
+                        <>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-slate-500 font-medium">Subtotal</span>
+                                <span className="font-semibold">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-sm text-emerald-700">
+                                <span className="font-medium">Desconto{planName ? ` (${planName})` : ''}</span>
+                                <span className="font-semibold">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                        </>
+                    )}
+                    <div className="flex justify-between items-end pt-1">
+                        <span className="text-slate-500 font-medium">Total Geral</span>
+                        <span className="text-2xl font-bold text-emerald-600">
+                            R$ {finalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

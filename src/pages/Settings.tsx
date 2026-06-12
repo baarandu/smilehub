@@ -19,13 +19,15 @@ import {
   AlertTriangle,
   ClipboardCheck,
   PenLine,
-  FlaskConical
+  FlaskConical,
+  HeartHandshake
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
 import { useState } from "react";
 import { LocationsModal } from "@/components/profile/LocationsModal";
 import { ProfileSettingsModal } from "@/components/profile/ProfileSettingsModal";
+import { TreatmentPlansModal } from "@/components/patients/budget/TreatmentPlansModal";
 
 interface SettingCardProps {
   icon: React.ElementType;
@@ -61,6 +63,7 @@ function SettingCard({ icon: Icon, title, description, to, onClick }: SettingCar
 export default function Settings() {
   const { role, isAdmin } = useClinic();
   const [showLocationsModal, setShowLocationsModal] = useState(false);
+  const [showTreatmentPlansModal, setShowTreatmentPlansModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
@@ -129,6 +132,14 @@ export default function Settings() {
               title="Tratamentos Personalizados"
               description="Adicione tratamentos da sua clínica"
               to="/configuracoes/tratamentos"
+            />
+          )}
+          {isAdmin && (
+            <SettingCard
+              icon={HeartHandshake}
+              title="Planos de Tratamento"
+              description="Crie planos de assinatura para pacientes"
+              onClick={() => setShowTreatmentPlansModal(true)}
             />
           )}
         </div>
@@ -252,6 +263,10 @@ export default function Settings() {
       <LocationsModal
         open={showLocationsModal}
         onOpenChange={setShowLocationsModal}
+      />
+      <TreatmentPlansModal
+        open={showTreatmentPlansModal}
+        onOpenChange={setShowTreatmentPlansModal}
       />
       <ProfileSettingsModal
         open={showProfileModal}

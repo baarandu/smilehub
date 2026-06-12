@@ -18,6 +18,7 @@ import {
   BudgetsTab
 } from '@/components/patients';
 import { SignaturesPanel } from '@/components/patients/SignaturesPanel';
+import { PatientPlanCard } from '@/components/patients/PatientPlanCard';
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -107,6 +108,9 @@ export default function PatientDetail() {
         onClose={() => setShowEditDialog(false)}
         onSuccess={refetch}
       />
+
+      {/* Treatment plan subscription */}
+      <PatientPlanCard patientId={patient.id} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

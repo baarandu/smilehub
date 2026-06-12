@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, CalendarClock, PenLine, Heart, HeartPulse, PanelRightOpen } from 'lucide-react';
+import { Bell, MessageCircle, Clock, CheckCircle, Gift, Settings, Plus, Trash2, Edit2, Search, X, Calendar, Filter, CalendarClock, PenLine, Heart, HeartPulse, HeartHandshake, PanelRightOpen, ChevronRight } from 'lucide-react';
 import { useClinic } from '@/contexts/ClinicContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +15,7 @@ import { useReturnAlerts } from '@/hooks/useConsultations';
 import { useAppointmentsByDate, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useBirthdayAlerts, useProcedureReminders, useDismissAlert, useProsthesisSchedulingAlerts, useFollowUpAlerts, useImportantReturnAlerts } from '@/hooks/useAlerts';
 import { useUnsignedRecords } from '@/hooks/useClinicalSignatures';
+import { useActiveTreatmentPlanAlerts } from '@/hooks/useTreatmentPlanAlerts';
 import { PROSTHESIS_TYPE_LABELS } from '@/types/prosthesis';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ export default function Alerts() {
   const { data: followUpAlerts, isLoading: loadingFollowUps } = useFollowUpAlerts();
   const { data: importantReturnAlerts, isLoading: loadingImportantReturns } = useImportantReturnAlerts();
   const { data: unsignedRecords, isLoading: loadingUnsigned } = useUnsignedRecords();
+  const { data: treatmentPlanAlerts, isLoading: loadingTreatmentPlans } = useActiveTreatmentPlanAlerts();
   const dismissAlert = useDismissAlert();
 
   // Show batch signing alert on the 1st of each month
@@ -512,6 +514,58 @@ export default function Alerts() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Active Treatment Plans Accordion */}
+          <AlertAccordion
+            open={openAccordions.treatmentPlans ?? false}
+            onToggle={() => toggleAccordion('treatmentPlans')}
+            icon={<HeartHandshake className="w-5 h-5 text-[#a03f3d]" />}
+            title="Planos de assinatura ativos"
+            description="Pacientes com plano e consultas restantes"
+            count={treatmentPlanAlerts?.length || 0}
+            loading={loadingTreatmentPlans}
+            colorScheme="red"
+            emptyMessage="Nenhum paciente com plano ativo"
+          >
+            {treatmentPlanAlerts?.map((alert) => {
+              const snap = alert.subscription.plan_snapshot;
+              const remaining = alert.usage.consultationsRemaining;
+              const included = snap.included_consultations;
+              const exhausted = included > 0 && remaining === 0;
+              const expired = alert.daysToExpiry < 0;
+              return (
+                <div
+                  key={alert.subscription.id}
+                  className="p-4 hover:bg-red-50/30 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/pacientes/${alert.subscription.patient_id}`)}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{alert.patientName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{snap.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {included > 0 && (
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded-full font-medium",
+                            exhausted ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                          )}>
+                            {remaining}/{included} consultas
+                          </span>
+                        )}
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded-full",
+                          expired ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600"
+                        )}>
+                          {expired ? `Expirado há ${Math.abs(alert.daysToExpiry)}d` : `Vence em ${alert.daysToExpiry}d`}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </div>
+                </div>
+              );
+            })}
+          </AlertAccordion>
 
           {/* Birthdays Accordion */}
           <AlertAccordion
