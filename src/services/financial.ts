@@ -455,33 +455,57 @@ export const financialService = {
     async deleteExpenseAndRevertMaterials(transactionId: string): Promise<void> {
         const { clinicId } = await getClinicContext();
 
-        // 1. Try to get the expense to find related_entity_id
+        // 1. Get the expense and, for installments, find the selected and future parcels.
         const { data: transaction } = await supabase
             .from('financial_transactions')
-            .select('category, related_entity_id')
+            .select('id, category, related_entity_id, recurrence_id, date')
             .eq('id', transactionId)
             .eq('clinic_id', clinicId)
             .maybeSingle();
 
-        // 2. If it's a materials expense with a linked shopping order, revert it
-        if (transaction?.category === 'Materiais' && transaction?.related_entity_id) {
-            const shoppingOrderId = transaction.related_entity_id;
+        if (!transaction) return;
 
-            // Revert shopping order to pending status
+        let transactionsToDelete = [transaction];
+
+        if (transaction.recurrence_id && transaction.date) {
+            const { data: futureTransactions, error } = await supabase
+                .from('financial_transactions')
+                .select('id, category, related_entity_id, recurrence_id, date')
+                .eq('clinic_id', clinicId)
+                .eq('recurrence_id', transaction.recurrence_id)
+                .gte('date', transaction.date);
+
+            if (error) throw error;
+            transactionsToDelete = futureTransactions || transactionsToDelete;
+        }
+
+        const shoppingOrderIds = [
+            ...new Set(
+                transactionsToDelete
+                    .filter(t => t.category === 'Materiais' && t.related_entity_id)
+                    .map(t => t.related_entity_id as string)
+            )
+        ];
+
+        // 2. If any deleted expense is linked to shopping orders, revert them.
+        if (shoppingOrderIds.length > 0) {
             await supabase
                 .from('shopping_orders')
                 .update({
                     status: 'pending',
                     completed_at: null
                 })
-                .eq('id', shoppingOrderId);
+                .in('id', shoppingOrderIds);
         }
 
-        // 3. Delete the expense transaction
+        const transactionIds = transactionsToDelete.map(t => t.id).filter(Boolean);
+        if (transactionIds.length === 0) return;
+
+        // 3. Delete the selected expense and future parcels in the same recurrence.
         const { error: deleteError } = await supabase
             .from('financial_transactions')
             .delete()
-            .eq('id', transactionId)
+            .in('id', transactionIds)
             .eq('clinic_id', clinicId);
 
         if (deleteError) throw deleteError;

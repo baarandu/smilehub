@@ -32,11 +32,14 @@ export function ExpenseDetailModal({
     const handleDelete = () => {
         if (!expense) return;
         const isMaterials = expense.category === 'Materiais' && (expense as any).related_entity_id;
+        const isRecurring = Boolean((expense as any).recurrence_id);
 
         Alert.alert(
             'Excluir Despesa',
             isMaterials
                 ? 'A lista de materiais voltará para "Pendente". Deseja continuar?'
+                : isRecurring
+                    ? 'Esta parcela e todas as parcelas posteriores serão excluídas. Deseja continuar?'
                 : 'Tem certeza que deseja excluir esta despesa?',
             [
                 { text: 'Cancelar', style: 'cancel' },
@@ -50,6 +53,8 @@ export function ExpenseDetailModal({
                             onClose();
                             Alert.alert('Sucesso', isMaterials
                                 ? 'Despesa excluída! Lista de materiais revertida para pendente.'
+                                : isRecurring
+                                    ? 'Parcela excluída! As parcelas posteriores também foram removidas.'
                                 : 'Despesa excluída com sucesso!');
                             onRefresh();
                         } catch (error) {

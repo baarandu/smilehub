@@ -117,7 +117,9 @@ export function ExpensesTab({ transactions, loading, onEdit, onRefresh, refreshi
     const handleDeleteExpense = (transaction: FinancialTransaction) => {
         Alert.alert(
             'Excluir Despesa',
-            `Tem certeza que deseja excluir "${transaction.description}"?`,
+            (transaction as any).recurrence_id
+                ? `Deseja excluir "${transaction.description}" e todas as parcelas posteriores?`
+                : `Tem certeza que deseja excluir "${transaction.description}"?`,
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {

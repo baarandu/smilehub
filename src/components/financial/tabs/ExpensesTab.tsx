@@ -241,6 +241,8 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
             toast.success(
                 expense.category === 'Materiais' && (expense as any).related_entity_id
                     ? 'Despesa excluída! Lista de materiais revertida para pendente.'
+                    : (expense as any).recurrence_id
+                        ? 'Parcela excluída! As parcelas posteriores também foram removidas.'
                     : 'Despesa excluída com sucesso!'
             );
             onRefresh?.();
@@ -696,6 +698,12 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                             {selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id && (
                                 <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 text-sm text-orange-700">
                                     <strong>Atenção:</strong> Ao excluir esta despesa, a lista de materiais voltará para "Pendente" podendo ser comprada novamente.
+                                </div>
+                            )}
+
+                            {(selectedExpense as any).recurrence_id && (
+                                <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-sm text-amber-700">
+                                    <strong>Atenção:</strong> Ao excluir esta parcela, todas as parcelas posteriores também serão excluídas.
                                 </div>
                             )}
 
