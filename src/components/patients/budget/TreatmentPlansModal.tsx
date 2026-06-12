@@ -30,6 +30,7 @@ interface FormState {
   name: string;
   subtitle: string;
   duration_months: string;
+  price: string;
   included_consultations: string;
   included_consultation_treatments: string[];
   discount_rules: RuleDraft[];
@@ -40,6 +41,7 @@ const emptyForm: FormState = {
   name: '',
   subtitle: '',
   duration_months: '12',
+  price: '',
   included_consultations: '0',
   included_consultation_treatments: [],
   discount_rules: [],
@@ -148,6 +150,7 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
       name: plan.name,
       subtitle: plan.subtitle || '',
       duration_months: String(plan.duration_months),
+      price: plan.price ? String(plan.price) : '',
       included_consultations: String(plan.included_consultations),
       included_consultation_treatments: plan.included_consultation_treatments,
       discount_rules: plan.discount_rules.map(r => ({
@@ -178,8 +181,11 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
     const duration = Number(form.duration_months);
     const consultations = Number(form.included_consultations);
 
+    const price = Number(String(form.price || '0').replace(',', '.'));
+
     if (!name) return toast.error('Informe o nome do plano');
     if (!Number.isFinite(duration) || duration <= 0) return toast.error('Informe uma duração válida (meses)');
+    if (!Number.isFinite(price) || price < 0) return toast.error('Informe um valor válido');
     if (!Number.isFinite(consultations) || consultations < 0)
       return toast.error('Informe um número de consultas válido');
 
@@ -207,6 +213,7 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
         name,
         subtitle: form.subtitle.trim() || null,
         duration_months: Math.round(duration),
+        price,
         included_consultations: Math.round(consultations),
         included_consultation_treatments: form.included_consultation_treatments,
         discount_rules: rules,
@@ -272,6 +279,21 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label>Valor do plano (R$)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.price}
+                  onChange={e => patch({ price: e.target.value })}
+                  placeholder="Ex: 500,00"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ao ativar o plano para um paciente, é gerado um orçamento com esse valor para aprovação e pagamento.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Duração (meses)</Label>
@@ -293,9 +315,17 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground -mt-2">
-                Cada procedimento registrado para o paciente na vigência do plano consome 1 consulta incluída.
-              </p>
+              <div className="space-y-2">
+                <Label>Tratamentos incluídos (cobertos pelo plano)</Label>
+                <TreatmentPicker
+                  value={form.included_consultation_treatments}
+                  onChange={v => patch({ included_consultation_treatments: v })}
+                  placeholder="Ex: Limpeza, Avaliação, Profilaxia"
+                />
+                <p className="text-xs text-muted-foreground">
+                  No orçamento, esses tratamentos viram R$0 "Coberto pelo plano" (até o limite de consultas incluídas) e baixam o saldo.
+                </p>
+              </div>
 
               {/* Discounts */}
               <div className="space-y-2">
@@ -451,7 +481,10 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
                       </div>
                     </div>
                     <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      <p>{plan.duration_months} meses • {plan.included_consultations} consulta(s) incluída(s)</p>
+                      <p>
+                        {plan.price > 0 && <span className="font-medium text-foreground">R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • </span>}
+                        {plan.duration_months} meses • {plan.included_consultations} consulta(s) incluída(s)
+                      </p>
                       {plan.discount_rules.map(r => (
                         <p key={r.id}>• {r.percent}% em {r.label}{r.max_uses != null ? ` (máx ${r.max_uses})` : ''}</p>
                       ))}

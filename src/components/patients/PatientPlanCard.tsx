@@ -111,10 +111,17 @@ export function PatientPlanCard({ patientId }: PatientPlanCardProps) {
           </div>
         </div>
 
-        {/* Validity */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <CalendarDays className="w-3.5 h-3.5" />
-          Vigência: {formatDisplayDate(subscription.start_date)} a {formatDisplayDate(subscription.end_date)}
+        {/* Validity + price */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <CalendarDays className="w-3.5 h-3.5" />
+            Vigência: {formatDisplayDate(subscription.start_date)} a {formatDisplayDate(subscription.end_date)}
+          </span>
+          {snap.price > 0 && (
+            <span className="font-medium text-foreground">
+              Valor: R$ {snap.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          )}
         </div>
 
         {/* Consultations balance */}

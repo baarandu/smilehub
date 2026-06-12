@@ -44,6 +44,8 @@ export function useBudgetPlanItems(patientId: string) {
 
         teeth.forEach((tooth, index) => {
           try {
+            // Skip the membership-fee pseudo-line (not a real procedure).
+            if (tooth.tooth === 'Plano de Assinatura') return;
             const value = getItemValue(tooth);
             const toothName = getToothDisplayName(tooth.tooth, false);
             const treatments = Array.isArray(tooth.treatments) ? tooth.treatments.join(', ') : '';

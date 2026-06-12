@@ -7,6 +7,8 @@ import { getToothDisplayName, formatCurrency, type ToothEntry } from '@/utils/bu
 interface BudgetSummaryProps {
     items: ToothEntry[];
     discountAmount?: number;
+    coveredAmount?: number;
+    subtotalOverride?: number;
     planName?: string | null;
     onRemoveItem: (index: number) => void;
     onSelectItem?: (item: ToothEntry, index: number) => void;
@@ -16,7 +18,7 @@ interface BudgetSummaryProps {
     saving: boolean;
 }
 
-export function BudgetSummary({ items, discountAmount = 0, planName, onRemoveItem, onSelectItem, selectedItemIndex, onSave, onCancel, saving }: BudgetSummaryProps) {
+export function BudgetSummary({ items, discountAmount = 0, coveredAmount = 0, subtotalOverride, planName, onRemoveItem, onSelectItem, selectedItemIndex, onSave, onCancel, saving }: BudgetSummaryProps) {
 
     const calculateTotal = () => {
         return items.reduce((acc, item) => {
@@ -25,8 +27,9 @@ export function BudgetSummary({ items, discountAmount = 0, planName, onRemoveIte
         }, 0);
     };
 
-    const subtotal = calculateTotal();
-    const finalTotal = Math.max(subtotal - discountAmount, 0);
+    const subtotal = subtotalOverride ?? calculateTotal();
+    const finalTotal = Math.max(subtotal - coveredAmount - discountAmount, 0);
+    const hasAdjustments = coveredAmount > 0 || discountAmount > 0;
 
     return (
         <div className="w-[400px] flex flex-col bg-slate-50 border-l">
@@ -85,14 +88,24 @@ export function BudgetSummary({ items, discountAmount = 0, planName, onRemoveIte
                                 )}
 
                                 <div className="space-y-1">
-                                    {item.treatments.map(t => (
-                                        <div key={t} className="flex justify-between text-sm">
-                                            <span>{t}</span>
-                                            <span className="font-medium">
-                                                R$ {formatCurrency(item.values[t] ? (parseInt(item.values[t]) / 100).toFixed(2) : '0')}
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {item.treatments.map(t => {
+                                        const covered = item.planCovered?.includes(t);
+                                        return (
+                                            <div key={t} className="flex justify-between text-sm gap-2">
+                                                <span className="flex items-center gap-1.5">
+                                                    {t}
+                                                    {covered && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium whitespace-nowrap">
+                                                            Coberto pelo plano
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className={`font-medium ${covered ? 'text-emerald-700' : ''}`}>
+                                                    R$ {formatCurrency(item.values[t] ? (parseInt(item.values[t]) / 100).toFixed(2) : '0')}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         ))}
@@ -102,16 +115,24 @@ export function BudgetSummary({ items, discountAmount = 0, planName, onRemoveIte
 
             <div className="p-6 bg-white border-t space-y-4">
                 <div className="space-y-2">
-                    {discountAmount > 0 && (
+                    {hasAdjustments && (
                         <>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500 font-medium">Subtotal</span>
                                 <span className="font-semibold">R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                             </div>
-                            <div className="flex justify-between text-sm text-emerald-700">
-                                <span className="font-medium">Desconto{planName ? ` (${planName})` : ''}</span>
-                                <span className="font-semibold">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            </div>
+                            {coveredAmount > 0 && (
+                                <div className="flex justify-between text-sm text-emerald-700">
+                                    <span className="font-medium">Coberto pelo plano{planName ? ` (${planName})` : ''}</span>
+                                    <span className="font-semibold">- R$ {coveredAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                            {discountAmount > 0 && (
+                                <div className="flex justify-between text-sm text-emerald-700">
+                                    <span className="font-medium">Desconto{planName ? ` (${planName})` : ''}</span>
+                                    <span className="font-semibold">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
                         </>
                     )}
                     <div className="flex justify-between items-end pt-1">

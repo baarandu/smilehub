@@ -89,6 +89,8 @@ export type ToothEntry = {
     paymentDate?: string;
     location?: string;
     financialBreakdown?: any;
+    /** Treatments on this tooth covered (R$0) by an active treatment plan. */
+    planCovered?: string[];
     faces?: string[];
     materials?: Record<string, string>;
     labTreatments?: Record<string, boolean>;
@@ -171,6 +173,8 @@ export const calculateToothTotal = (values: Record<string, string>): number => {
 
 // Get display name for a tooth (without 'Dente' prefix for Arcada)
 export const getToothDisplayName = (tooth: string, includePrefix = true): string => {
+    // Membership-fee pseudo-item (treatment plan subscription)
+    if (tooth === 'Plano de Assinatura') return 'Plano de Assinatura';
     // Convert short IDs back to full names
     if (tooth === 'ARC_SUP') return 'Arcada Superior';
     if (tooth === 'ARC_INF') return 'Arcada Inferior';

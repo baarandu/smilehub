@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 import { getClinicContext } from './clinicContext';
+import { budgetsService } from './budgets';
+import { getShortToothId } from '@/utils/budgetUtils';
 import type { TreatmentPlan, TreatmentPlanDiscountRule } from './treatmentPlans';
+
+/** Pseudo-tooth label used for the membership-fee budget line. */
+export const PLAN_FEE_TOOTH = 'Plano de Assinatura';
 
 export type PatientTreatmentPlanStatus = 'active' | 'expired' | 'cancelled';
 
@@ -9,6 +14,7 @@ export interface TreatmentPlanSnapshot {
   name: string;
   subtitle: string | null;
   duration_months: number;
+  price: number;
   included_consultations: number;
   included_consultation_treatments: string[];
   discount_rules: TreatmentPlanDiscountRule[];
@@ -34,6 +40,7 @@ export function snapshotFromPlan(plan: TreatmentPlan): TreatmentPlanSnapshot {
     name: plan.name,
     subtitle: plan.subtitle,
     duration_months: plan.duration_months,
+    price: plan.price,
     included_consultations: plan.included_consultations,
     included_consultation_treatments: plan.included_consultation_treatments,
     discount_rules: plan.discount_rules,
@@ -60,6 +67,7 @@ function normalize(row: any): PatientTreatmentPlan {
       name: snap.name ?? '',
       subtitle: snap.subtitle ?? null,
       duration_months: snap.duration_months ?? 12,
+      price: snap.price ?? 0,
       included_consultations: snap.included_consultations ?? 0,
       included_consultation_treatments: Array.isArray(snap.included_consultation_treatments)
         ? snap.included_consultation_treatments
@@ -74,6 +82,42 @@ function normalize(row: any): PatientTreatmentPlan {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+}
+
+/** Create a single-line budget representing the membership fee. */
+async function generatePlanFeeBudget(
+  patientId: string,
+  subscription: PatientTreatmentPlan,
+  price: number,
+  startDate: string
+): Promise<void> {
+  const label = `Plano ${subscription.plan_snapshot.name}`;
+  const priceCents = Math.round(price * 100);
+
+  const tooth = {
+    tooth: PLAN_FEE_TOOTH,
+    faces: [] as string[],
+    treatments: [label],
+    values: { [label]: String(priceCents) },
+    status: 'pending' as const,
+  };
+
+  const notes = JSON.stringify({
+    teeth: [tooth],
+    treatmentPlanFee: { subscriptionId: subscription.id, planName: subscription.plan_snapshot.name },
+  });
+
+  await budgetsService.create(
+    {
+      patient_id: patientId,
+      date: startDate,
+      treatment: label,
+      value: price,
+      notes,
+      status: 'pending',
+    } as any,
+    [{ tooth: getShortToothId(PLAN_FEE_TOOTH), faces: [] }]
+  );
 }
 
 export const patientTreatmentPlansService = {
@@ -141,7 +185,19 @@ export const patientTreatmentPlansService = {
       .single();
 
     if (error) throw error;
-    return normalize(data);
+    const subscription = normalize(data);
+
+    // Generate a budget for the membership fee so it can be approved and paid.
+    if (plan.price > 0) {
+      try {
+        await generatePlanFeeBudget(patientId, subscription, plan.price, start);
+      } catch (e) {
+        // Subscription is already created; surface the budget failure without rolling back.
+        console.error('Failed to generate plan fee budget:', e);
+      }
+    }
+
+    return subscription;
   },
 
   async cancel(id: string): Promise<void> {

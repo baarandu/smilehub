@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { patientTreatmentPlansService, type PatientTreatmentPlan } from '@/services/patientTreatmentPlans';
-import { computeUsage, type TreatmentPlanUsage } from './usePatientTreatmentPlan';
+import { computeUsage, type TreatmentPlanUsage, type UsageItem } from './usePatientTreatmentPlan';
 import type { ToothEntry } from '@/utils/budgetUtils';
 
 export interface TreatmentPlanAlert {
@@ -27,40 +27,27 @@ export function useActiveTreatmentPlanAlerts() {
 
       const patientIds = [...new Set(subscriptions.map(s => s.patient_id))];
 
-      const [{ data: patients }, { data: procedures }, { data: budgets }] = await Promise.all([
+      const [{ data: patients }, { data: budgets }] = await Promise.all([
         supabase.from('patients').select('id, name, phone').in('id', patientIds),
-        (supabase.from('procedures') as any)
-          .select('patient_id, date, budget_links')
-          .in('patient_id', patientIds)
-          .is('deleted_at', null),
-        supabase.from('budgets').select('id, patient_id, notes').in('patient_id', patientIds),
+        supabase.from('budgets').select('id, patient_id, date, notes').in('patient_id', patientIds),
       ]);
 
       const patientMap = new Map((patients || []).map((p: any) => [p.id, p]));
 
-      // Build a global budgetId:toothIndex -> treatments map.
-      const itemTreatments = new Map<string, string[]>();
+      // Build per-patient budget lines for usage computation.
+      const itemsByPatient = new Map<string, UsageItem[]>();
       for (const budget of budgets || []) {
         if (!budget.notes) continue;
+        let teeth: ToothEntry[];
         try {
-          const teeth = JSON.parse(budget.notes).teeth as ToothEntry[];
-          if (!Array.isArray(teeth)) continue;
-          teeth.forEach((tooth, index) => {
-            itemTreatments.set(
-              `${budget.id}:${index}`,
-              Array.isArray(tooth.treatments) ? tooth.treatments : []
-            );
-          });
+          teeth = JSON.parse(budget.notes).teeth;
         } catch {
-          // skip invalid JSON
+          continue;
         }
-      }
-
-      const proceduresByPatient = new Map<string, any[]>();
-      for (const proc of (procedures || []) as any[]) {
-        const list = proceduresByPatient.get(proc.patient_id) || [];
-        list.push(proc);
-        proceduresByPatient.set(proc.patient_id, list);
+        if (!Array.isArray(teeth)) continue;
+        const list = itemsByPatient.get(budget.patient_id) || [];
+        teeth.forEach(tooth => list.push({ budgetId: budget.id, date: budget.date, tooth }));
+        itemsByPatient.set(budget.patient_id, list);
       }
 
       const today = new Date();
@@ -68,11 +55,7 @@ export function useActiveTreatmentPlanAlerts() {
 
       return subscriptions.map(subscription => {
         const patient: any = patientMap.get(subscription.patient_id);
-        const usage = computeUsage(
-          subscription,
-          proceduresByPatient.get(subscription.patient_id) || [],
-          itemTreatments
-        );
+        const usage = computeUsage(subscription, itemsByPatient.get(subscription.patient_id) || []);
         const end = new Date(subscription.end_date + 'T00:00:00');
         const daysToExpiry = Math.ceil((end.getTime() - today.getTime()) / MS_PER_DAY);
         return {

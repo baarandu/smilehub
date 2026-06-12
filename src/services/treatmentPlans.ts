@@ -19,6 +19,8 @@ export interface TreatmentPlan {
   name: string;
   subtitle: string | null;
   duration_months: number;
+  /** Subscription price (membership fee). */
+  price: number;
   /** Number of included consultations (consumable balance). */
   included_consultations: number;
   /** Treatment names that count against the included-consultations balance. */
@@ -34,6 +36,7 @@ export type TreatmentPlanInput = {
   name: string;
   subtitle: string | null;
   duration_months: number;
+  price: number;
   included_consultations: number;
   included_consultation_treatments: string[];
   discount_rules: TreatmentPlanDiscountRule[];
@@ -48,6 +51,7 @@ function normalize(row: any): TreatmentPlan {
     name: row.name,
     subtitle: row.subtitle ?? null,
     duration_months: row.duration_months ?? 12,
+    price: row.price ?? 0,
     included_consultations: row.included_consultations ?? 0,
     included_consultation_treatments: Array.isArray(row.included_consultation_treatments)
       ? row.included_consultation_treatments

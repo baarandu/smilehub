@@ -11,7 +11,7 @@ import { BudgetForm } from './budget/BudgetForm';
 import { BudgetSummary } from './budget/BudgetSummary';
 import { LocationsModal } from '@/components/profile/LocationsModal';
 import { useClinic } from '@/contexts/ClinicContext';
-import { usePatientTreatmentPlan, computeBudgetDiscount } from '@/hooks/usePatientTreatmentPlan';
+import { usePatientTreatmentPlan, computePlanBudget, computeUsage } from '@/hooks/usePatientTreatmentPlan';
 import { supabase } from '@/lib/supabase';
 
 interface NewBudgetDialogProps {
@@ -38,9 +38,11 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
     const [locationsModalOpen, setLocationsModalOpen] = useState(false);
 
-    // Active treatment-plan subscription → automatic per-treatment discount
-    const { subscription, usage } = usePatientTreatmentPlan(patientId);
-    const { discountAmount, planName } = computeBudgetDiscount(teethList, subscription, usage);
+    // Active treatment-plan subscription → covered (R$0) lines + automatic discount.
+    // `prior` is the usage from the patient's OTHER budgets (exclude this one when editing).
+    const { subscription, usageItems } = usePatientTreatmentPlan(patientId);
+    const prior = computeUsage(subscription, usageItems, budget?.id);
+    const planResult = computePlanBudget(teethList, subscription, prior);
 
     const isEditing = !!budget;
 
@@ -209,24 +211,30 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
         try {
             setSaving(true);
-            const subtotal = calculateTotal();
-            const total = Math.max(subtotal - discountAmount, 0);
-            const allTreatments = [...new Set(teethList.flatMap(t => t.treatments))].join(', ');
+            // Persist the plan-adjusted teeth (covered lines zeroed + tagged).
+            const finalTeeth = planResult.teeth;
+            const total = planResult.finalTotal;
+            const allTreatments = [...new Set(finalTeeth.flatMap(t => t.treatments))].join(', ');
             const responsibleDentistName = dentists.find(d => d.id === responsibleDentistId)?.name || null;
 
             const notesData = JSON.stringify({
-                teeth: teethList,
+                teeth: finalTeeth,
                 location: location,
                 locationRate: locationRate ? parseFloat(locationRate) : 0,
                 responsibleDentistId: responsibleDentistId || null,
                 responsibleDentistName,
                 treatmentPlan: subscription
-                    ? { id: subscription.id, name: planName, discountAmount: Math.round(discountAmount * 100) / 100 }
+                    ? {
+                        id: subscription.id,
+                        name: planResult.planName,
+                        coveredAmount: Math.round(planResult.coveredAmount * 100) / 100,
+                        discountAmount: Math.round(planResult.discountAmount * 100) / 100,
+                      }
                     : null,
             });
 
             // Create budget items for relation
-            const budgetItems = teethList.map(t => ({
+            const budgetItems = finalTeeth.map(t => ({
                 tooth: getShortToothId(t.tooth),
                 faces: t.faces,
             }));
@@ -303,9 +311,11 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
                     {/* Right Column: Summary */}
                     <BudgetSummary
-                        items={teethList}
-                        discountAmount={discountAmount}
-                        planName={planName}
+                        items={planResult.teeth}
+                        subtotalOverride={planResult.subtotal}
+                        coveredAmount={planResult.coveredAmount}
+                        discountAmount={planResult.discountAmount}
+                        planName={planResult.planName}
                         onRemoveItem={removeTooth}
                         onSelectItem={handleSelectItemForEdit}
                         selectedItemIndex={editingItemIndex}
