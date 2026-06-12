@@ -66,6 +66,14 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
 
     const getToothTotal = (tooth: ToothEntry) => calculateToothTotal(tooth.values);
 
+    // Amount actually charged for a paid item (net of discount applied at payment).
+    const getPaidValue = (tooth: ToothEntry) => {
+        const fb = (tooth as any).financialBreakdown;
+        return fb && typeof fb.grossAmount === 'number'
+            ? fb.grossAmount + (fb.creditUsed || 0)
+            : calculateToothTotal(tooth.values);
+    };
+
     const confirmToggleStatus = (index: number) => {
         if (!budget) return;
 
@@ -599,7 +607,7 @@ export function BudgetViewModal({ visible, budget, onClose, onUpdate, patientNam
                             </View>
                             {teethList.map((item, index) => {
                                 if (item.status !== 'paid' && item.status !== 'completed') return null;
-                                const total = getToothTotal(item);
+                                const total = getPaidValue(item);
                                 return (
                                     <View
                                         key={index}
