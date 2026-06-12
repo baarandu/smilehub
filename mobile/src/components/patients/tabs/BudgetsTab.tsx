@@ -139,6 +139,30 @@ export function BudgetsTab({ budgets, onAdd, onEdit, onDelete, onView }: Budgets
                                     <Text className="text-lg font-bold text-[#a03f3d]">
                                         R$ {budget.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </Text>
+                                    {(() => {
+                                        let discount = 0; let received = 0;
+                                        try {
+                                            const parsed = JSON.parse(budget.notes || '{}');
+                                            if (parsed.teeth && Array.isArray(parsed.teeth)) {
+                                                parsed.teeth.forEach((t: ToothEntry) => {
+                                                    if (t.status !== 'paid' && t.status !== 'completed') return;
+                                                    const fb = (t as any).financialBreakdown;
+                                                    const itemReceived = fb && typeof fb.grossAmount === 'number'
+                                                        ? fb.grossAmount + (fb.creditUsed || 0)
+                                                        : Object.values(t.values || {}).reduce((a: number, b: any) => a + (parseInt(b) || 0) / 100, 0);
+                                                    const itemDiscount = (fb && typeof fb.discountAmount === 'number') ? fb.discountAmount : ((t as any).discountAmount || 0);
+                                                    received += itemReceived; discount += itemDiscount;
+                                                });
+                                            }
+                                        } catch (e) { }
+                                        if (discount <= 0) return null;
+                                        return (
+                                            <View className="mt-1">
+                                                <Text className="text-sm font-medium text-emerald-700">Desconto: - R$ {discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+                                                <Text className="text-sm font-semibold text-blue-700">Recebido: R$ {received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+                                            </View>
+                                        );
+                                    })()}
                                 </TouchableOpacity>
                                 <View className="flex-row gap-2 mt-3 pt-3 border-t border-gray-100">
                                     <TouchableOpacity onPress={() => onEdit(budget)} className="flex-1 flex-row items-center justify-center gap-2 bg-[#fef2f2] py-2 rounded-lg">
