@@ -82,6 +82,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             if (method) setPaymentMethod(method);
             setIsInstallment(false);
             setIsFixedExpense(false);
+            setIsPaid((transactionToEdit as any).payment_status !== 'pending');
             setUpdateAllRecurring(false);
             setExistingReceiptUrl(transactionToEdit.receipt_attachment_url || null);
             setReceiptFile(null);
@@ -116,6 +117,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
 
     // Auto-detect payment status based on date for simple expenses
     useEffect(() => {
+        if (transactionToEdit) return;
         if (isInstallment || isFixedExpense) return; // they handle pending themselves
         if (!date || date.length !== 10) return;
         const dbDate = dateToDbFormat(date);
@@ -221,6 +223,8 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                             date: dbDate,
                             category,
                             payment_method: paymentMethod,
+                            payment_status: isPaid ? 'paid' : 'pending',
+                            paid_at: isPaid ? ((transactionToEdit as any).paid_at || new Date().toISOString()) : null,
                             receipt_attachment_url: receiptUrl,
                         } as any);
                     }

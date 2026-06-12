@@ -210,6 +210,50 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
+    const openExpenseDetail = async (expense: Transaction) => {
+        setSelectedExpense(expense);
+        setDetailModalOpen(true);
+        if (expense.category === 'Materiais' && (expense as any).related_entity_id) {
+            setLoadingMaterialItems(true);
+            try {
+                const { data: order } = await (supabase
+                    .from('shopping_orders') as any)
+                    .select('items')
+                    .eq('id', (expense as any).related_entity_id)
+                    .single();
+                if (order?.items) {
+                    setMaterialItems(order.items as any[]);
+                }
+            } catch (e) {
+                console.error('Error fetching material items:', e);
+            } finally {
+                setLoadingMaterialItems(false);
+            }
+        } else {
+            setMaterialItems([]);
+        }
+    };
+
+    const handleDeleteExpense = async (expense: Transaction) => {
+        setDeleting(true);
+        try {
+            await financialService.deleteExpenseAndRevertMaterials(expense.id);
+            toast.success(
+                expense.category === 'Materiais' && (expense as any).related_entity_id
+                    ? 'Despesa excluída! Lista de materiais revertida para pendente.'
+                    : 'Despesa excluída com sucesso!'
+            );
+            onRefresh?.();
+            setDetailModalOpen(false);
+            setSelectedExpense(null);
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+            toast.error('Erro ao excluir despesa');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -373,7 +417,8 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                 {pendingExpenses.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((t) => (
                                     <div
                                         key={t.id}
-                                        className="p-4 flex items-center justify-between hover:bg-amber-50 transition-colors"
+                                        className="p-4 flex items-center justify-between hover:bg-amber-50 transition-colors cursor-pointer group"
+                                        onClick={() => openExpenseDetail(t)}
                                     >
                                         <div className="flex items-start gap-4 flex-1 min-w-0">
                                             <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-100">
@@ -400,9 +445,36 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                                 {formatCurrency(t.amount)}
                                             </span>
                                             <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-slate-500 hover:text-slate-700"
+                                                title="Editar despesa"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setEditingTransaction(t);
+                                                    setNewExpenseOpen(true);
+                                                }}
+                                            >
+                                                <Pencil className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                title="Excluir despesa"
+                                                disabled={deleting}
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    await handleDeleteExpense(t);
+                                                }}
+                                            >
+                                                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                            </Button>
+                                            <Button
                                                 size="sm"
                                                 className="bg-emerald-600 hover:bg-emerald-700 h-8 text-xs"
-                                                onClick={async () => {
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
                                                     try {
                                                         await financialService.confirmExpense(t.id);
                                                         toast.success('Despesa confirmada como paga!');
@@ -436,27 +508,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                             key={t.id}
                             className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer group"
                             onClick={async () => {
-                                setSelectedExpense(t);
-                                setDetailModalOpen(true);
-                                if (t.category === 'Materiais' && (t as any).related_entity_id) {
-                                    setLoadingMaterialItems(true);
-                                    try {
-                                        const { data: order } = await (supabase
-                                            .from('shopping_orders') as any)
-                                            .select('items')
-                                            .eq('id', (t as any).related_entity_id)
-                                            .single();
-                                        if (order?.items) {
-                                            setMaterialItems(order.items as any[]);
-                                        }
-                                    } catch (e) {
-                                        console.error('Error fetching material items:', e);
-                                    } finally {
-                                        setLoadingMaterialItems(false);
-                                    }
-                                } else {
-                                    setMaterialItems([]);
-                                }
+                                await openExpenseDetail(t);
                             }}
                         >
                             <div className="flex items-start gap-4">
@@ -667,23 +719,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                                     disabled={deleting}
                                     onClick={async () => {
                                         if (!selectedExpense) return;
-                                        setDeleting(true);
-                                        try {
-                                            await financialService.deleteExpenseAndRevertMaterials(selectedExpense.id);
-                                            toast.success(
-                                                selectedExpense.category === 'Materiais' && (selectedExpense as any).related_entity_id
-                                                    ? 'Despesa excluída! Lista de materiais revertida para pendente.'
-                                                    : 'Despesa excluída com sucesso!'
-                                            );
-                                            onRefresh?.();
-                                            setDetailModalOpen(false);
-                                            setSelectedExpense(null);
-                                        } catch (error) {
-                                            console.error('Error deleting expense:', error);
-                                            toast.error('Erro ao excluir despesa');
-                                        } finally {
-                                            setDeleting(false);
-                                        }
+                                        await handleDeleteExpense(selectedExpense);
                                     }}
                                 >
                                     {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
