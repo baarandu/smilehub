@@ -13,6 +13,13 @@ verify_jwt = false
 [functions.supersign-webhook]
 verify_jwt = false
 
+# Login attempt recorder runs before the user is authenticated (pentest #18).
+# It is reached with the anon key during the login flow, throttles by IP, and
+# writes via the service role. JWT verification must be off so the pre-auth
+# request can reach it.
+[functions.login-attempt]
+verify_jwt = false
+
 # DIAGNOSTIC ONLY (2026-04-24): isolating whether the 401 comes from
 # gateway JWT verification. The function code itself still validates
 # the token via supabase.auth.getUser(). Revert this block after the

@@ -120,6 +120,12 @@ export async function serverCheckLoginLockout(email: string): Promise<LockoutSta
 /**
  * Record the outcome of a login attempt. Returns the resulting lockout state
  * (so the client doesn't need a second round-trip).
+ *
+ * Goes through the `login-attempt` edge function (service role + per-IP
+ * throttle) instead of calling record_login_attempt directly: the RPC is no
+ * longer granted to anon, so an attacker can't poison the lockout table for
+ * arbitrary emails (pentest #18). Same fail-open contract as before — any
+ * error yields a not-locked state so the login flow is never blocked.
  */
 export async function serverRecordLoginAttempt(
     email: string,
@@ -127,16 +133,14 @@ export async function serverRecordLoginAttempt(
 ): Promise<LockoutStatus> {
     if (!email) return { locked: false, minutesRemaining: 0 };
     try {
-        const { data, error } = await supabase.rpc('record_login_attempt', {
-            p_email: email,
-            p_success: success,
+        const { data, error } = await supabase.functions.invoke('login-attempt', {
+            body: { email, success },
         });
         if (error || !data) return { locked: false, minutesRemaining: 0 };
-        const row = Array.isArray(data) ? data[0] : data;
         return {
-            locked: !!row?.locked,
-            minutesRemaining: row?.minutes_remaining ?? 0,
-            remainingAttempts: row?.remaining_attempts ?? undefined,
+            locked: !!data.locked,
+            minutesRemaining: data.minutes_remaining ?? 0,
+            remainingAttempts: data.remaining_attempts ?? undefined,
         };
     } catch {
         return { locked: false, minutesRemaining: 0 };
