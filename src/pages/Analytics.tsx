@@ -709,22 +709,23 @@ export default function Analytics() {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.revenueByDentist} layout="vertical">
+                    <LineChart data={data.revenueByDentistMonthly}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={currencyFormatter} />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        tick={{ fontSize: 11 }}
-                        width={120}
-                        tickFormatter={(v) => v.length > 16 ? v.slice(0, 16) + '...' : v}
-                      />
-                      <Tooltip formatter={(v: number, name: string) => [
-                        name === 'value' ? tooltipCurrency(v) : v,
-                        name === 'value' ? 'Faturamento' : 'Atendimentos'
-                      ]} />
-                      <Bar dataKey="value" fill="#f59e0b" radius={[0, 4, 4, 0]} name="value" />
-                    </BarChart>
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={currencyFormatter} />
+                      <Tooltip formatter={(v: number, name: string) => [tooltipCurrency(v), name]} />
+                      <Legend />
+                      {data.dentistNames.map((name, i) => (
+                        <Line
+                          key={name}
+                          type="monotone"
+                          dataKey={name}
+                          stroke={COLORS[i % COLORS.length]}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                        />
+                      ))}
+                    </LineChart>
                   </ResponsiveContainer>
                 )}
               </div>
