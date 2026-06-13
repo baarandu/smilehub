@@ -94,12 +94,14 @@ async function generatePlanFeeBudget(
   const label = `Plano ${subscription.plan_snapshot.name}`;
   const priceCents = Math.round(price * 100);
 
+  // Approved so it lands directly in the payments queue (revenue to receive),
+  // where the dentist chooses the payment method.
   const tooth = {
     tooth: PLAN_FEE_TOOTH,
     faces: [] as string[],
     treatments: [label],
     values: { [label]: String(priceCents) },
-    status: 'pending' as const,
+    status: 'approved' as const,
   };
 
   const notes = JSON.stringify({
@@ -114,7 +116,7 @@ async function generatePlanFeeBudget(
       treatment: label,
       value: price,
       notes,
-      status: 'pending',
+      status: 'approved',
     } as any,
     [{ tooth: getShortToothId(PLAN_FEE_TOOTH), faces: [] }]
   );
