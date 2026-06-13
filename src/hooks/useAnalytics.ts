@@ -40,6 +40,8 @@ export interface AnalyticsData {
   topProcedures: { name: string; count: number; value: number }[];
   patientsByAge: { range: string; masculino: number; feminino: number; naoInformado: number }[];
   revenueByDentist: { name: string; value: number; count: number }[];
+  revenueByDentistMonthly: Record<string, any>[];
+  dentistNames: string[];
   appointmentsByDayOfWeek: { day: string; total: number; completed: number; cancelled: number }[];
   paymentMethods: { method: string; value: number; count: number }[];
   patientsByReferral: { source: string; count: number }[];
@@ -149,9 +151,8 @@ async function fetchAnalytics(
 
     supabase
       .from('clinic_users')
-      .select('user_id, role, profiles(full_name)')
-      .eq('clinic_id', clinicId)
-      .in('role', ['dentist', 'owner', 'admin']),
+      .select('user_id, role, roles')
+      .eq('clinic_id', clinicId),
   ]);
 
   const transactions = transactionsResult || [];
@@ -162,9 +163,24 @@ async function fetchAnalytics(
   const budgets = (budgetsResult.data || []) as any[];
   const dentists = (dentistsResult.data || []) as any[];
 
+  // Resolve professional names via RPC: clinic_users has no FK to profiles,
+  // so a PostgREST `profiles(full_name)` embed errors out the whole query.
+  const dentistUserIds = [...new Set(
+    dentists
+      .filter((u: any) => {
+        const roles = Array.isArray(u.roles) ? u.roles : [u.role].filter(Boolean);
+        return roles.some((r: string) => ['dentist', 'owner', 'admin'].includes(r));
+      })
+      .map((u: any) => u.user_id)
+      .filter(Boolean)
+  )] as string[];
+
   const dentistNameMap: Record<string, string> = {};
-  for (const d of dentists) {
-    dentistNameMap[d.user_id] = d.profiles?.full_name || 'Sem nome';
+  if (dentistUserIds.length > 0) {
+    const { data: dentistProfiles } = await supabase.rpc('get_profiles_for_users', { user_ids: dentistUserIds });
+    for (const p of (dentistProfiles || []) as any[]) {
+      dentistNameMap[p.id] = p.full_name || p.email || 'Sem nome';
+    }
   }
 
   // --- Monthly buckets for charts ---
@@ -345,7 +361,9 @@ async function fetchAnalytics(
   const dentistRevenueMap = new Map<string, { value: number; count: number }>();
   for (const tx of transactions) {
     if (tx.type !== 'income') continue;
-    const uid = tx.created_by || tx.user_id;
+    // Attribute revenue to the treating dentist (dentist_id), not whoever
+    // recorded the payment (created_by/user_id is often an admin/secretary).
+    const uid = tx.dentist_id || tx.created_by || tx.user_id;
     if (!uid || !dentistNameMap[uid]) continue;
     const existing = dentistRevenueMap.get(uid) || { value: 0, count: 0 };
     existing.value += Math.abs(tx.amount || 0);
@@ -359,6 +377,32 @@ async function fetchAnalytics(
       count: data.count,
     }))
     .sort((a, b) => b.value - a.value);
+
+  // --- Revenue by dentist, per month (one line per professional) ---
+  const dentistNames = revenueByDentist.map(d => d.name);
+  const dentistMonthly = new Map<string, Record<string, number>>();
+  for (const m of months) {
+    dentistMonthly.set(format(m, 'yyyy-MM'), {});
+  }
+  for (const tx of transactions) {
+    if (tx.type !== 'income') continue;
+    const uid = tx.dentist_id || tx.created_by || tx.user_id;
+    const name = uid ? dentistNameMap[uid] : null;
+    if (!name) continue;
+    const txMonth = tx.date?.slice(0, 7);
+    if (!txMonth || !dentistMonthly.has(txMonth)) continue;
+    const row = dentistMonthly.get(txMonth)!;
+    row[name] = (row[name] || 0) + Math.abs(tx.amount || 0);
+  }
+  const revenueByDentistMonthly = Array.from(dentistMonthly.entries()).map(([key, perDentist]) => {
+    const [year, month] = key.split('-');
+    const d = new Date(parseInt(year), parseInt(month) - 1);
+    const out: Record<string, any> = { month: format(d, 'MMM/yy', { locale: ptBR }) };
+    for (const n of dentistNames) {
+      out[n] = Math.round((perDentist[n] || 0) * 100) / 100;
+    }
+    return out;
+  });
 
   // --- Budget metrics ---
   const periodBudgets = budgets.filter(b => {
@@ -458,6 +502,8 @@ async function fetchAnalytics(
     topProcedures,
     patientsByAge,
     revenueByDentist,
+    revenueByDentistMonthly,
+    dentistNames,
     appointmentsByDayOfWeek: dayData,
     paymentMethods,
     patientsByReferral,
