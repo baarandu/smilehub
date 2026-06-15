@@ -173,6 +173,10 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const { data: machines = [] } = useCardMachines(false);
     const [selectedMachineId, setSelectedMachineId] = useState<string>('');
     const isCardMethod = selectedMethod === 'credit' || selectedMethod === 'debit';
+    // A split (pagamento misto) that includes a card portion also needs a maquininha selected.
+    const splitHasCard = isSplitMode && splitPortions.some(p => p.method === 'credit' || p.method === 'debit');
+    // True when a maquininha must be chosen for this payment but none is selected yet.
+    const needsMachineSelection = (isCardMethod || splitHasCard) && machines.length > 0 && !selectedMachineId;
 
     // Filter fees by selected machine (when one is selected)
     const machineFees = useMemo(() => {
@@ -363,9 +367,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
 
     const handleConfirm = () => {
-        // Validate machine selection for card-based payments
-        const splitHasCard = isSplitMode && splitPortions.some(p => p.method === 'credit' || p.method === 'debit');
-        if (((isCardMethod && !isSplitMode) || splitHasCard) && machines.length > 0 && !selectedMachineId) {
+        // Validate machine selection for card-based payments (incl. split with a card portion)
+        if (needsMachineSelection) {
             return;
         }
 
@@ -462,7 +465,35 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                     setSplitValid(valid);
                                 }}
                             />
-                        ) : (<>
+                        ) : null}
+
+                        {/* Maquininha selection for split payments that include a card portion */}
+                        {isSplitMode && splitHasCard && (
+                            machines.length === 0 ? (
+                                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                                    <span>Nenhuma maquininha cadastrada. Acesse Configurações Financeiras para cadastrar.</span>
+                                </div>
+                            ) : (
+                                <div className="mt-3 space-y-1.5">
+                                    <Label className="text-sm">Maquininha</Label>
+                                    <Select value={selectedMachineId} onValueChange={setSelectedMachineId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione a maquininha usada" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {machines.map(m => (
+                                                <SelectItem key={m.id} value={m.id}>
+                                                    {m.name}{m.dentist_name ? ` — ${m.dentist_name}` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )
+                        )}
+
+                        {!isSplitMode && (<>
                         {/* Payment Method Selection */}
                         {effectiveValue > 0 ? (
                             <div className="space-y-2">
@@ -784,10 +815,10 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                         className="w-full h-11 bg-[#a03f3d] hover:bg-[#8b3634] text-base"
                         disabled={
                             isSplitMode
-                                ? (!splitValid || loading)
+                                ? (!splitValid || loading || needsMachineSelection)
                                 : (
                                     (effectiveValue > 0 && !selectedMethod) || loading || isLoadingSettings ||
-                                    (isCardMethod && machines.length > 0 && !selectedMachineId)
+                                    needsMachineSelection
                                 )
                         }
                         onClick={handleConfirm}
