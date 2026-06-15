@@ -29,7 +29,13 @@ DROP VIEW IF EXISTS patients_secure;
 CREATE VIEW patients_secure WITH (security_invoker = on) AS
 SELECT
   id, clinic_id, user_id, name,
-  phone, email, birth_date,
+  phone,
+  -- email é criptografado (Phase 2b / 20260310). decrypt_pii lida com valores
+  -- mistos (enc:... antigos e texto puro novos), retornando o valor como está
+  -- quando não tem prefixo enc:. NÃO listar email cru aqui (mostra ciphertext).
+  decrypt_pii(email) AS email,
+  email_hash,
+  birth_date,
   decrypt_pii(cpf) AS cpf,
   decrypt_pii(rg) AS rg,
   cpf_last4,
