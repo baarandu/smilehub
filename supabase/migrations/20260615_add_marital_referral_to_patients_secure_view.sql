@@ -13,6 +13,9 @@
 -- recria a view incluindo-as. Campos não são criptografados (text/boolean/int),
 -- então entram diretamente, sem decrypt_pii.
 
+-- Resolver objetos em public; pgcrypto (usado por decrypt_pii) vive em extensions.
+SET search_path = public, extensions;
+
 -- 1. Garantir que as colunas existem (no-op se 20260327 já rodou em produção)
 ALTER TABLE patients
   ADD COLUMN IF NOT EXISTS marital_status text,
