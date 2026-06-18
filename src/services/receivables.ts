@@ -26,6 +26,10 @@ export const receivablesService = {
     for (let i = 0; i < portions.length; i++) {
       const portion = portions[i];
 
+      // Skip zero/negative portions: the payment_receivables amount > 0 check
+      // constraint would reject them (can happen with rounding on tiny items).
+      if (!portion.amount || portion.amount <= 0) continue;
+
       const isCard = portion.method === 'credit' || portion.method === 'debit';
       const machineForPortion = isCard ? (cardMachineId || null) : null;
 

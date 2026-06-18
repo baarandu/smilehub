@@ -599,6 +599,19 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             for (const idx of indices) {
                 const tooth = currentTeeth[idx];
                 const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+
+                // Zero-value items produce zero-amount portions which violate the
+                // payment_receivables amount > 0 constraint. Mark as paid without
+                // creating receivables (mirrors the non-split batch flow guard).
+                if (itemValue <= 0) {
+                    currentTeeth[idx] = {
+                        ...tooth,
+                        status: 'paid',
+                        paymentDate: toLocalDateString(new Date()),
+                    };
+                    continue;
+                }
+
                 const ratio = itemValue / totalAmount;
                 const splitGroupId = crypto.randomUUID();
                 const toothDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
