@@ -72,6 +72,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     const [patientFilter, setPatientFilter] = useState('');
     const [methodFilter, setMethodFilter] = useState('all');
     const [locationFilter, setLocationFilter] = useState('all');
+    const [dentistFilter, setDentistFilter] = useState('all');
     const [startDateFilter, setStartDateFilter] = useState('');
     const [endDateFilter, setEndDateFilter] = useState('');
 
@@ -159,6 +160,11 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                 if (t.location !== locationFilter) return false;
             }
 
+            // Dentist
+            if (dentistFilter !== 'all') {
+                if ((t as any).dentist_id !== dentistFilter) return false;
+            }
+
             // Date Range Filter
             if (startDateFilter || endDateFilter) {
                 const transactionDate = String(t.date).slice(0, 10);
@@ -172,7 +178,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
             return true;
         });
-    }, [transactions, patientFilter, methodFilter, locationFilter, startDateFilter, endDateFilter]);
+    }, [transactions, patientFilter, methodFilter, locationFilter, dentistFilter, startDateFilter, endDateFilter]);
 
     // Calculations
     const totalGrossIncome = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -234,11 +240,26 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
         }, {} as Record<string, number>);
 
 
+    // Revenue grouped by dentist (clinic structure revenue grouped apart)
+    const incomeByDentist = filteredTransactions.reduce((acc, t) => {
+        const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
+        let key: string;
+        if ((t as any).revenue_type === 'clinic') {
+            key = 'Receita da clínica';
+        } else {
+            key = (t as any).dentist_name ? `Dr(a). ${(t as any).dentist_name}` : 'Sem dentista atribuído';
+        }
+        if (!acc[key]) acc[key] = { total: 0, count: 0 };
+        acc[key].total += amount;
+        acc[key].count += 1;
+        return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+
     const formatCurrency = (val: number) => {
         return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
-    const activeFilterCount = (patientFilter ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0) + (startDateFilter || endDateFilter ? 1 : 0);
+    const activeFilterCount = (patientFilter ? 1 : 0) + (methodFilter !== 'all' ? 1 : 0) + (locationFilter !== 'all' ? 1 : 0) + (dentistFilter !== 'all' ? 1 : 0) + (startDateFilter || endDateFilter ? 1 : 0);
 
     const handleCardClick = (transaction: Transaction) => {
         setSelectedTransaction(transaction);
@@ -590,6 +611,52 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* Revenue by Dentist */}
+                    {Object.keys(incomeByDentist).length > 0 && (
+                        <Card className={`relative group transition-all ${hiddenCards.has('dentist') ? 'opacity-50' : ''}`}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); toggleCardVisibility('dentist'); }}
+                                className="absolute top-3 right-3 p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-100 transition-all z-10"
+                                title={hiddenCards.has('dentist') ? 'Mostrar' : 'Ocultar'}
+                            >
+                                {hiddenCards.has('dentist') ? <EyeOff className="h-3.5 w-3.5 text-gray-400" /> : <Eye className="h-3.5 w-3.5 text-gray-300" />}
+                            </button>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-medium">Receita por Dentista</CardTitle>
+                            </CardHeader>
+                            <CardContent className={hiddenCards.has('dentist') ? 'blur-md select-none' : ''}>
+                                <div className="space-y-3">
+                                    {Object.entries(incomeByDentist).sort((a, b) => b[1].total - a[1].total).map(([name, info]) => {
+                                        const percentage = displayTotal > 0 ? ((info.total / displayTotal) * 100).toFixed(0) : '0';
+                                        return (
+                                            <div key={name} className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className="p-1 bg-indigo-50 rounded">
+                                                            <User className="h-3 w-3 text-indigo-600" />
+                                                        </div>
+                                                        <span className="text-xs font-medium truncate max-w-[130px]" title={name}>{name}</span>
+                                                        <span className="text-[10px] text-muted-foreground">({info.count})</span>
+                                                    </div>
+                                                    <span className="text-xs font-bold text-green-600">{formatCurrency(info.total)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-indigo-500 rounded-full transition-all"
+                                                            style={{ width: `${percentage}%` }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-[10px] text-muted-foreground w-8 text-right">{percentage}%</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
 
@@ -665,11 +732,30 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                Dentista
+                            </label>
+                            <Select value={dentistFilter} onValueChange={setDentistFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Todos" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos</SelectItem>
+                                    {dentists.map(d => (
+                                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => {
                             setMethodFilter('all');
                             setLocationFilter('all');
+                            setDentistFilter('all');
                             setPatientFilter('');
                             setStartDateFilter('');
                             setEndDateFilter('');
