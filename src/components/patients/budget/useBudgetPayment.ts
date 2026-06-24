@@ -201,7 +201,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             }
 
             const isAnticipated = breakdown?.isAnticipated || false;
-            const numTransactions = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
+            const numTransactions = isAnticipated ? 1 : (installments || 1);
             const txAmount = totalAmount / numTransactions;
 
             const targetLocationRate = (selectedTooth as any).locationRate ?? (refreshedBudget as any).location_rate ?? (parsed.locationRate ? parseFloat(parsed.locationRate) : 0);
@@ -240,7 +240,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (method !== 'credit_balance' && totalAmount > 0) {
                 for (let i = 0; i < numTransactions; i++) {
                     const date = new Date(startDate);
-                    if (!isAnticipated && method !== 'credit') {
+                    if (!isAnticipated) {
                         date.setMonth(date.getMonth() + i);
                     }
 
@@ -346,7 +346,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             }
 
             const isAnticipated = breakdown?.isAnticipated || false;
-            const numInstallments = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
+            const numInstallments = isAnticipated ? 1 : (installments || 1);
 
             const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
             const startDate = parseBudgetDate(effectivePaymentDate);
@@ -390,7 +390,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 if (method !== 'credit_balance' && itemValue > 0) {
                     for (let i = 0; i < numInstallments; i++) {
                         const date = new Date(startDate);
-                        if (!isAnticipated && method !== 'credit') {
+                        if (!isAnticipated) {
                             date.setMonth(date.getMonth() + i);
                         }
 

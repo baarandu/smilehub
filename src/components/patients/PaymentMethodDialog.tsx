@@ -137,6 +137,9 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
     const [anticipate, setAnticipate] = useState(false);
+    // Clinic-wide default: when enabled in Configurações Financeiras, credit-card
+    // payments are anticipated automatically (the toggle below starts on).
+    const [autoAnticipate, setAutoAnticipate] = useState(false);
     const [paymentDate, setPaymentDate] = useState(toLocalDateString(new Date()));
 
     // Split Payment Mode
@@ -271,6 +274,12 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             if (settings) {
                 totalTax += (settings.tax_rate || 0);
             }
+
+            // Apply the clinic-wide "antecipar automaticamente" default so credit
+            // payments start with anticipation enabled when the option is on.
+            const auto = !!(settings as any)?.auto_anticipate;
+            setAutoAnticipate(auto);
+            setAnticipate(auto);
 
             const taxes = await settingsService.getTaxes();
             if (taxes && taxes.length > 0) {
@@ -510,6 +519,9 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                                     if (method.id !== 'credit') {
                                                         setInstallments('1');
                                                         setAnticipate(false);
+                                                    } else {
+                                                        // Honor the clinic-wide "antecipar automaticamente" default
+                                                        setAnticipate(autoAnticipate);
                                                     }
                                                 }}
                                                 className={`cursor-pointer p-3 rounded-lg border-2 flex flex-col items-center gap-1.5 transition-all ${isSelected ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
@@ -616,7 +628,11 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
                                     <div>
                                         <Label className="text-sm text-indigo-900 cursor-pointer" htmlFor="antecipar">Antecipar Recebimento</Label>
-                                        <p className="text-xs text-indigo-600">Receber tudo agora (taxa de antecipação aplicada)</p>
+                                        <p className="text-xs text-indigo-600">
+                                            {anticipate
+                                                ? 'Valor lançado de uma vez no mês do pagamento (taxa de antecipação aplicada)'
+                                                : 'Parcelas distribuídas nos próximos meses conforme o número de parcelas'}
+                                        </p>
                                     </div>
                                     <Switch
                                         id="antecipar"

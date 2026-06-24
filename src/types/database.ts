@@ -1695,6 +1695,7 @@ export type Database = {
       financial_settings: {
         Row: {
           anticipation_rate: number | null
+          auto_anticipate: boolean
           created_at: string
           id: string
           tax_rate: number | null
@@ -1703,6 +1704,7 @@ export type Database = {
         }
         Insert: {
           anticipation_rate?: number | null
+          auto_anticipate?: boolean
           created_at?: string
           id?: string
           tax_rate?: number | null
@@ -1711,6 +1713,7 @@ export type Database = {
         }
         Update: {
           anticipation_rate?: number | null
+          auto_anticipate?: boolean
           created_at?: string
           id?: string
           tax_rate?: number | null

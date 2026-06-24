@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
 import { settingsService } from "@/services/settings";
 import { CardFeeConfig } from "@/types/database";
 import { Trash2, Plus, Save, Loader2, Info, X, ArrowLeft, CreditCard, Search, CheckCircle, Tag, Pencil } from 'lucide-react';
@@ -38,6 +39,10 @@ export default function FinancialSettings() {
     const [loading, setLoading] = useState(true);
     const [savingTax, setSavingTax] = useState(false);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+
+    // Antecipação automática (clinic-wide default)
+    const [autoAnticipate, setAutoAnticipate] = useState(false);
+    const [savingAutoAnticipate, setSavingAutoAnticipate] = useState(false);
 
     // Multiple Taxes State
     const [taxes, setTaxes] = useState<{ id: string; name: string; rate: number }[]>([]);
@@ -131,6 +136,9 @@ export default function FinancialSettings() {
             const loadedTaxes = await settingsService.getTaxes();
             setTaxes(loadedTaxes || []);
 
+            // Load clinic-wide financial settings (auto anticipation)
+            const settings = await settingsService.getFinancialSettings();
+            setAutoAnticipate(!!(settings as any)?.auto_anticipate);
 
         } catch (error) {
             console.error(error);
@@ -151,6 +159,27 @@ export default function FinancialSettings() {
     };
 
 
+
+    const handleToggleAutoAnticipate = async (value: boolean) => {
+        const previous = autoAnticipate;
+        setAutoAnticipate(value); // optimistic
+        setSavingAutoAnticipate(true);
+        try {
+            await settingsService.updateAutoAnticipate(value);
+            toast({
+                title: value ? "Antecipação automática ativada" : "Antecipação automática desativada",
+                description: value
+                    ? "Novos pagamentos no cartão de crédito serão antecipados automaticamente."
+                    : "Novos pagamentos no crédito serão parcelados nos meses seguintes, salvo se você antecipar manualmente.",
+            });
+        } catch (error) {
+            console.error(error);
+            setAutoAnticipate(previous); // revert on failure
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar a configuração." });
+        } finally {
+            setSavingAutoAnticipate(false);
+        }
+    };
 
     const handleAddTax = async () => {
         if (!newTaxName.trim() || !newTaxRate) {
@@ -472,6 +501,41 @@ export default function FinancialSettings() {
                 </Card>
 
 
+
+                {/* Antecipação automática de recebíveis */}
+                <Card className="border-slate-200 shadow-sm">
+                    <CardContent className="p-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-full bg-[#7a3b3b]/10 flex items-center justify-center shrink-0">
+                                    <CreditCard className="w-5 h-5 text-[#7a3b3b]" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-slate-900">Antecipar recebimento automaticamente</p>
+                                    <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+                                        Quando <span className="font-medium text-slate-700">ativado</span>, todo pagamento no
+                                        cartão de crédito é antecipado automaticamente: o valor entra de uma vez no mês do
+                                        registro (aplicando a taxa de antecipação), sem precisar marcar "Antecipar Recebimento"
+                                        a cada pagamento.
+                                    </p>
+                                    <p className="text-sm text-slate-500 mt-2 max-w-2xl">
+                                        Quando <span className="font-medium text-slate-700">desativado</span>, o valor do crédito
+                                        é distribuído nos próximos meses conforme o número de parcelas. Você ainda pode antecipar
+                                        um pagamento específico marcando a opção na hora de registrá-lo.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center shrink-0 pt-1">
+                                {savingAutoAnticipate && <Loader2 className="w-4 h-4 mr-2 animate-spin text-slate-400" />}
+                                <Switch
+                                    checked={autoAnticipate}
+                                    disabled={savingAutoAnticipate}
+                                    onCheckedChange={handleToggleAutoAnticipate}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Card Machines Section */}
                 <CardMachinesSection />

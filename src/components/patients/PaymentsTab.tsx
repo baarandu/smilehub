@@ -237,9 +237,11 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         const discountAmount = breakdown?.discountAmount || 0;
         const totalAmount = getItemValue(selectedItem) - discountAmount - creditUsed;
 
-        // Credit card installments define the machine fee, not future revenue entries.
+        // When anticipated (toggle on, or "antecipar automaticamente" enabled in settings),
+        // the whole payment is a single revenue entry in the registration month.
+        // Otherwise credit installments are split across the following months.
         const isAnticipated = breakdown?.isAnticipated || false;
-        const numTransactions = method === 'credit' ? 1 : (isAnticipated ? 1 : (installments || 1));
+        const numTransactions = isAnticipated ? 1 : (installments || 1);
         const txAmount = totalAmount / numTransactions;
 
       // Calculate Deductions (Per Transaction)
@@ -312,7 +314,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
       for (let i = 0; i < numTransactions; i++) {
         const date = new Date(startDate);
-        if (!isAnticipated && method !== 'credit') {
+        if (!isAnticipated) {
           date.setMonth(date.getMonth() + i);
         }
 

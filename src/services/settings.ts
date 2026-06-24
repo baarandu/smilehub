@@ -54,6 +54,25 @@ export const settingsService = {
             if (error) throw error;
         }
     },
+    async updateAutoAnticipate(value: boolean): Promise<void> {
+        const { userId, clinicId } = await getClinicContext();
+
+        const existing = await this.getFinancialSettings();
+
+        if (existing) {
+            const { error } = await supabase
+                .from('financial_settings')
+                .update({ auto_anticipate: value, updated_at: new Date().toISOString() })
+                .eq('id', existing.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase
+                .from('financial_settings')
+                .insert({ user_id: userId, clinic_id: clinicId, auto_anticipate: value } as any);
+            if (error) throw error;
+        }
+    },
+
     async getCardFees(cardMachineId?: string): Promise<CardFeeConfig[]> {
         const { clinicId } = await getClinicContext();
 
