@@ -797,7 +797,7 @@ export default function FinancialSettings() {
 
                 {/* Pró-labore + Fator R */}
                 <div className="space-y-4 pt-2">
-                    <FatorRCard year={new Date().getFullYear()} month={new Date().getMonth() + 1} />
+                    <FatorRCard year={new Date().getFullYear()} month={new Date().getMonth() + 1} explain />
                     <ProlaboreManagement />
                 </div>
             </div>

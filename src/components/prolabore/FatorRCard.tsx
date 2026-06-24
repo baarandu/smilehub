@@ -10,6 +10,80 @@ interface FatorRCardProps {
   month: number; // 1-based
   compact?: boolean;
   onConfigure?: () => void;
+  /** When true, renders the detailed educational explanation below the card. */
+  explain?: boolean;
+}
+
+/**
+ * Detailed, dentist-friendly explanation of what the Fator R is, how it is
+ * calculated and why it determines whether the clinic is taxed under Anexo III
+ * (cheaper) or Anexo V (more expensive). Rendered only where `explain` is set.
+ */
+function FatorRExplanation({ threshold }: { threshold: string }) {
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-200/70 space-y-4 text-sm text-slate-600">
+      <div>
+        <p className="flex items-center gap-2 font-semibold text-slate-800">
+          <Info className="w-4 h-4 text-[#7a3b3b]" />
+          O que é o Fator R?
+        </p>
+        <p className="mt-1 leading-relaxed">
+          É um cálculo do <strong>Simples Nacional</strong> que define em qual tabela de impostos
+          (anexo) a sua clínica é tributada. Ele mede o quanto você gasta com pessoas em relação
+          ao que fatura. Quanto maior a proporção de folha de pagamento, menor tende a ser o seu imposto.
+        </p>
+      </div>
+
+      <div>
+        <p className="font-semibold text-slate-800">Como é calculado?</p>
+        <div className="mt-2 p-3 bg-white/70 border border-slate-200 rounded-lg">
+          <p className="font-mono text-[13px] text-slate-700 text-center">
+            Fator R = Folha de pagamento (12 meses) ÷ Faturamento (12 meses)
+          </p>
+        </div>
+        <p className="mt-2 leading-relaxed">
+          A <strong>folha</strong> considera os últimos 12 meses e inclui o seu
+          <strong> pró-labore</strong>, os salários dos funcionários e os encargos (INSS, FGTS, 13º e
+          férias). O <strong>faturamento</strong> é a receita bruta dos mesmos 12 meses. Por isso o
+          valor muda mês a mês, conforme a janela de 12 meses avança.
+        </p>
+      </div>
+
+      <div>
+        <p className="font-semibold text-slate-800">Por que o limite de {threshold}% importa?</p>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+            <p className="text-emerald-800 leading-relaxed">
+              <strong>Fator R igual ou acima de {threshold}% → Anexo III.</strong> Alíquotas começam
+              em torno de 6%. É a situação mais vantajosa para a maioria dos consultórios.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+            <p className="text-red-800 leading-relaxed">
+              <strong>Fator R abaixo de {threshold}% → Anexo V.</strong> Alíquotas começam em torno de
+              15,5% — bem mais caro. Acontece quando a folha/pró-labore é baixa demais frente ao
+              faturamento.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-3 bg-[#7a3b3b]/5 border border-[#7a3b3b]/15 rounded-lg">
+        <p className="flex items-center gap-2 font-semibold text-[#7a3b3b]">
+          <TrendingUp className="w-4 h-4" />
+          Na prática
+        </p>
+        <p className="mt-1 leading-relaxed text-slate-600">
+          Muitos dentistas ajustam o próprio <strong>pró-labore</strong> para manter o Fator R em pelo
+          menos {threshold}% e permanecer no Anexo III, pagando menos imposto. Por isso esse indicador
+          fica aqui junto da gestão de pró-labore: pequenas mudanças na folha podem trocar o anexo e
+          alterar bastante o imposto devido. Consulte sempre o seu contador antes de decidir.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 const STATUS_THEME = {
@@ -68,9 +142,12 @@ export function FatorRCard({ year, month, compact, onConfigure }: FatorRCardProp
   if (error || !data) {
     return (
       <Card className="bg-slate-50 border-slate-200">
-        <CardContent className="p-4 flex items-center gap-2 text-sm text-slate-500">
-          <Info className="w-4 h-4" />
-          Configure o regime tributário em Configurações Fiscais para acompanhar o Fator R.
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Info className="w-4 h-4" />
+            Configure o regime tributário em Configurações Fiscais para acompanhar o Fator R.
+          </div>
+          {explain && <FatorRExplanation threshold="28" />}
         </CardContent>
       </Card>
     );
@@ -169,6 +246,8 @@ export function FatorRCard({ year, month, compact, onConfigure }: FatorRCardProp
             Configurar pró-labore e limite
           </button>
         )}
+
+        {explain && <FatorRExplanation threshold={threshold} />}
       </CardContent>
     </Card>
   );
