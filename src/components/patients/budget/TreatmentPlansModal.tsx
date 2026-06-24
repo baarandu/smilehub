@@ -259,12 +259,21 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
             Programa de Fidelidade
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Pacotes de benefícios que o paciente contrata por um período pagando um valor —
-            como um clube de vantagens da clínica. Não é desconto avulso nem fica preso a um orçamento.
+            Planos que o paciente contrata, pagando um valor por um período, e em troca recebe um
+            pacote de vantagens — como um clube de benefícios da clínica.
           </DialogDescription>
-          <div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-2">
+          <div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-3">
             <div>
-              <p className="font-medium text-foreground">Um plano pode incluir:</p>
+              <p className="font-medium text-foreground">📋 O que é e por que existe</p>
+              <p className="mt-1">
+                Serve para <span className="font-medium text-foreground">fidelizar o paciente</span> e
+                organizar pacotes de prevenção: em vez de cobrar consulta por consulta, o paciente
+                paga o plano e já tem consultas e descontos garantidos por um período (ex.: 12 meses).
+                Não é um desconto avulso nem fica preso a um único orçamento.
+              </p>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">🎁 Um plano pode incluir</p>
               <ul className="list-disc pl-4 mt-1 space-y-0.5">
                 <li>Consultas de prevenção/profilaxia já inclusas no valor</li>
                 <li>Descontos automáticos por tipo de tratamento</li>
@@ -272,12 +281,20 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
               </ul>
             </div>
             <div>
-              <p className="font-medium text-foreground">Como usar:</p>
+              <p className="font-medium text-foreground">▶️ Como usar</p>
               <ol className="list-decimal pl-4 mt-1 space-y-0.5">
                 <li>Crie os planos aqui (nome, valor, duração, consultas, descontos e brindes).</li>
                 <li>Na ficha do paciente, ative um plano — gera um orçamento com o valor para pagamento.</li>
                 <li>A partir daí os descontos entram automático nos orçamentos e as consultas inclusas vão sendo abatidas a cada atendimento.</li>
               </ol>
+            </div>
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-amber-800">
+              <p className="font-medium">⚠️ Não confundir com Tratamentos Personalizados</p>
+              <p className="mt-1">
+                Aqui são <span className="font-medium">planos pagos com benefícios</span> para o
+                paciente. A lista de <span className="font-medium">tipos de tratamento</span> da clínica
+                (só os nomes, sem preço) fica em Configurações → Tratamentos Personalizados.
+              </p>
             </div>
           </div>
         </DialogHeader>

@@ -115,24 +115,56 @@ export default function CustomTreatmentsSettings() {
 
       {/* Explicação da função */}
       <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="py-4 text-sm space-y-2">
-          <p className="font-medium text-foreground">O que é esta função?</p>
-          <p className="text-muted-foreground">
-            O sistema já vem com uma lista de tratamentos padrão ({TREATMENTS.length} itens, veja abaixo).
-            Aqui você adiciona <span className="font-medium text-foreground">nomes de tratamentos
-            próprios da sua clínica</span> que não estão nessa lista — por exemplo, um procedimento
-            específico que só você oferece.
-          </p>
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Pra que serve:</span> os tratamentos que você
-            cadastrar aqui passam a aparecer (junto com os padrão) na lista de seleção ao{' '}
-            <span className="font-medium text-foreground">montar um orçamento</span> ou{' '}
-            <span className="font-medium text-foreground">registrar um procedimento</span>.
-          </p>
-          <p className="text-muted-foreground">
-            É apenas um <span className="font-medium text-foreground">catálogo de nomes</span> — o
-            preço você define em cada orçamento, na hora de usar.
-          </p>
+        <CardContent className="py-5 text-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <FlaskConical className="w-5 h-5 text-primary shrink-0" />
+            <p className="font-semibold text-foreground text-base">
+              O que é esta página e por que ela existe
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">📋 O que é</p>
+            <p className="text-muted-foreground">
+              É o <span className="font-medium text-foreground">catálogo de tipos de tratamento</span>{' '}
+              que a sua clínica oferece. O sistema já vem com {TREATMENTS.length} tratamentos padrão
+              (a lista completa aparece mais abaixo). Esta página serve para você{' '}
+              <span className="font-medium text-foreground">acrescentar tratamentos próprios</span> que
+              não estão nesse padrão.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">🎯 Para que serve</p>
+            <p className="text-muted-foreground">
+              Quando você monta um <span className="font-medium text-foreground">orçamento</span> ou
+              registra um <span className="font-medium text-foreground">procedimento</span> na ficha do
+              paciente, aparece uma lista de tratamentos para escolher. Tudo o que você cadastrar aqui
+              entra nessa lista (junto com os padrão), para você não precisar digitar o nome toda vez e
+              manter os nomes padronizados.
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <p className="font-medium text-foreground">🕐 Quando usar</p>
+            <p className="text-muted-foreground">
+              Só quando a clínica oferece algo que <span className="font-medium text-foreground">não
+              está na lista padrão</span> — por exemplo "Microagulhamento facial" ou "Harmonização
+              orofacial". Se os {TREATMENTS.length} padrões já cobrem tudo o que você faz, pode deixar
+              esta página vazia: é normal e não atrapalha nada.
+            </p>
+          </div>
+
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-800">
+            <p className="font-medium">⚠️ Não confundir com o Programa de Fidelidade</p>
+            <p className="mt-1">
+              Aqui você cadastra apenas o <span className="font-medium">nome</span> de um tratamento —
+              sem preço, sem desconto e sem ligação com um paciente. Se o que você quer é criar{' '}
+              <span className="font-medium">planos pagos com benefícios</span> (consultas inclusas,
+              descontos e brindes para o paciente), isso é o{' '}
+              <span className="font-medium">Programa de Fidelidade</span>, em Configurações.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
