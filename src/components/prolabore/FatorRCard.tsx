@@ -123,7 +123,7 @@ export function FatorRAlertBanner({ year, month, onConfigure }: FatorRCardProps)
   return <FatorRCard year={year} month={month} compact onConfigure={onConfigure} />;
 }
 
-export function FatorRCard({ year, month, compact, onConfigure }: FatorRCardProps) {
+export function FatorRCard({ year, month, compact, onConfigure, explain }: FatorRCardProps) {
   const { data, isLoading, error } = useFatorR(year, month);
 
   const theme = useMemo(() => {
