@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Upload, FileSpreadsheet, FileJson, FileText, Users, Stethoscope, DollarSign, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, FileJson, FileText, FileCode, Users, Stethoscope, DollarSign, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -89,7 +89,7 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
         return;
       }
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext === 'csv' || ext === 'xlsx' || ext === 'xls' || ext === 'json') {
+      if (ext === 'csv' || ext === 'xlsx' || ext === 'xls' || ext === 'json' || ext === 'xml') {
         setSelectedFile(file);
       }
     }
@@ -106,6 +106,7 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
     if (ext === 'csv') return <FileText className="w-5 h-5" />;
     if (ext === 'xlsx' || ext === 'xls') return <FileSpreadsheet className="w-5 h-5" />;
     if (ext === 'json') return <FileJson className="w-5 h-5" />;
+    if (ext === 'xml') return <FileCode className="w-5 h-5" />;
     return <FileText className="w-5 h-5" />;
   };
 
@@ -183,7 +184,7 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
             ref={fileInputRef}
             type="file"
             onChange={handleFileSelect}
-            accept=".csv,.xlsx,.xls,.json"
+            accept=".csv,.xlsx,.xls,.json,.xml"
             className="hidden"
           />
 
@@ -240,6 +241,7 @@ export function FileUploadStep({ onUpload, isLoading }: FileUploadStepProps) {
                   <span className="px-2 py-1 text-xs bg-muted rounded">CSV</span>
                   <span className="px-2 py-1 text-xs bg-muted rounded">Excel</span>
                   <span className="px-2 py-1 text-xs bg-muted rounded">JSON</span>
+                  <span className="px-2 py-1 text-xs bg-muted rounded">XML</span>
                 </div>
               </div>
             )}

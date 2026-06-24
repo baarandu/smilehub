@@ -55,7 +55,7 @@ export async function parseExcel(file: File): Promise<ParsedData> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const XLSX = await import('xlsx');
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -158,6 +158,101 @@ export async function parseJSON(file: File): Promise<ParsedData> {
   });
 }
 
+// Parse XML file (ex.: exportações do Simples Dental e outras plataformas)
+// Estratégia genérica: detecta o elemento "registro" que mais se repete e
+// transforma cada um em uma linha (filhos diretos viram colunas).
+export async function parseXML(file: File): Promise<ParsedData> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const doc = new DOMParser().parseFromString(content, 'application/xml');
+
+        const parserError = doc.querySelector('parsererror');
+        if (parserError) {
+          reject(new Error('Arquivo XML inválido ou malformado'));
+          return;
+        }
+
+        // Agrupa elementos por "tag sob o mesmo pai" e escolhe o grupo com
+        // mais irmãos de mesma tag — esses são os registros (ex.: <paciente>).
+        const groups = new Map<string, Element[]>();
+        const allElements = Array.from(doc.getElementsByTagName('*'));
+        for (const el of allElements) {
+          const parent = el.parentElement;
+          if (!parent) continue;
+          const key = `${parent.tagName}>${el.tagName}`;
+          const list = groups.get(key);
+          if (list) list.push(el);
+          else groups.set(key, [el]);
+        }
+
+        let records: Element[] = [];
+        let best = 0;
+        for (const list of groups.values()) {
+          if (list.length > best) {
+            best = list.length;
+            records = list;
+          }
+        }
+
+        if (records.length === 0) {
+          reject(new Error('Nenhum registro encontrado no XML'));
+          return;
+        }
+
+        const headersSet = new Set<string>();
+        const rows: Record<string, any>[] = records.map(record => {
+          const row: Record<string, any> = {};
+
+          // Atributos do próprio registro viram colunas
+          for (const attr of Array.from(record.attributes)) {
+            row[attr.name] = attr.value;
+            headersSet.add(attr.name);
+          }
+
+          // Filhos diretos viram colunas (texto do elemento)
+          for (const child of Array.from(record.children)) {
+            const value = (child.textContent || '').trim();
+            // Se já existe a coluna (tags repetidas), concatena
+            row[child.tagName] = row[child.tagName]
+              ? `${row[child.tagName]}, ${value}`
+              : value;
+            headersSet.add(child.tagName);
+          }
+
+          // Registro sem filhos: usa o próprio texto
+          if (record.children.length === 0) {
+            const value = (record.textContent || '').trim();
+            if (value) {
+              row[record.tagName] = value;
+              headersSet.add(record.tagName);
+            }
+          }
+
+          return row;
+        });
+
+        resolve({
+          headers: Array.from(headersSet),
+          rows,
+          totalRows: rows.length,
+        });
+      } catch (error: any) {
+        reject(new Error(`Erro ao processar XML: ${error.message}`));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Erro ao ler arquivo'));
+    };
+
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
 // Parse file based on extension
 export async function parseFile(file: File): Promise<ParsedData> {
   const extension = file.name.split('.').pop()?.toLowerCase();
@@ -170,6 +265,8 @@ export async function parseFile(file: File): Promise<ParsedData> {
       return parseExcel(file);
     case 'json':
       return parseJSON(file);
+    case 'xml':
+      return parseXML(file);
     default:
       throw new Error(`Tipo de arquivo não suportado: ${extension}`);
   }
@@ -659,6 +756,7 @@ export const migrationService = {
   parseCSV,
   parseExcel,
   parseJSON,
+  parseXML,
   validateData,
   importData,
 };
