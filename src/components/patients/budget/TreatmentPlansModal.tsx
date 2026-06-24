@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronsUpDown, Gift, HeartHandshake, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Gift, HeartHandshake, Info, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -252,8 +252,8 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl p-0 gap-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+      <DialogContent className="sm:max-w-4xl p-0 gap-0 max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="p-6 pb-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <HeartHandshake className="w-5 h-5 text-primary" />
             Programa de Fidelidade
@@ -262,7 +262,11 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
             Planos que o paciente contrata, pagando um valor por um período, e em troca recebe um
             pacote de vantagens — como um clube de benefícios da clínica.
           </DialogDescription>
-          <div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-3">
+          <details className="mt-2">
+            <summary className="cursor-pointer select-none text-sm font-medium text-primary inline-flex items-center gap-1.5 hover:underline">
+              <Info className="w-4 h-4" /> O que é e como usar (clique para ver)
+            </summary>
+            <div className="mt-3 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-3 max-h-[45vh] overflow-y-auto">
             <div>
               <p className="font-medium text-foreground">📋 O que é e por que existe</p>
               <p className="mt-1">
@@ -296,12 +300,13 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
                 (só os nomes, sem preço) fica em Configurações → Tratamentos Personalizados.
               </p>
             </div>
-          </div>
+            </div>
+          </details>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-[1.2fr_1fr] max-h-[75vh]">
+        <div className="grid md:grid-cols-[1.2fr_1fr] flex-1 min-h-0">
           {/* Form */}
-          <ScrollArea className="p-6 border-r">
+          <ScrollArea className="p-6 border-r h-full">
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label>Nome do plano *</Label>
@@ -487,7 +492,7 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
           </ScrollArea>
 
           {/* List */}
-          <ScrollArea className="p-4">
+          <ScrollArea className="p-4 h-full">
             <p className="text-xs font-medium text-muted-foreground px-2 mb-2">
               Planos cadastrados ({plans.length})
             </p>
