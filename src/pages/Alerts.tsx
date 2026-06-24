@@ -520,7 +520,7 @@ export default function Alerts() {
             open={openAccordions.treatmentPlans ?? false}
             onToggle={() => toggleAccordion('treatmentPlans')}
             icon={<HeartHandshake className="w-5 h-5 text-[#a03f3d]" />}
-            title="Planos de assinatura ativos"
+            title="Programas de fidelidade ativos"
             description="Pacientes com plano e consultas restantes"
             count={treatmentPlanAlerts?.length || 0}
             loading={loadingTreatmentPlans}

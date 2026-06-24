@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronsUpDown, Gift, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
+import { Check, ChevronsUpDown, Gift, HeartHandshake, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -254,7 +254,32 @@ export function TreatmentPlansModal({ open, onOpenChange, onChanged }: Treatment
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl p-0 gap-0">
         <DialogHeader className="p-6 pb-4 border-b">
-          <DialogTitle>Planos de tratamento</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <HeartHandshake className="w-5 h-5 text-primary" />
+            Programa de Fidelidade
+          </DialogTitle>
+          <DialogDescription className="text-sm">
+            Pacotes de benefícios que o paciente contrata por um período pagando um valor —
+            como um clube de vantagens da clínica. Não é desconto avulso nem fica preso a um orçamento.
+          </DialogDescription>
+          <div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-2">
+            <div>
+              <p className="font-medium text-foreground">Um plano pode incluir:</p>
+              <ul className="list-disc pl-4 mt-1 space-y-0.5">
+                <li>Consultas de prevenção/profilaxia já inclusas no valor</li>
+                <li>Descontos automáticos por tipo de tratamento</li>
+                <li>Brindes e benefícios (ex.: kit de higiene)</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium text-foreground">Como usar:</p>
+              <ol className="list-decimal pl-4 mt-1 space-y-0.5">
+                <li>Crie os planos aqui (nome, valor, duração, consultas, descontos e brindes).</li>
+                <li>Na ficha do paciente, ative um plano — gera um orçamento com o valor para pagamento.</li>
+                <li>A partir daí os descontos entram automático nos orçamentos e as consultas inclusas vão sendo abatidas a cada atendimento.</li>
+              </ol>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="grid md:grid-cols-[1.2fr_1fr] max-h-[75vh]">

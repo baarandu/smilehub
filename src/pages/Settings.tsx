@@ -137,8 +137,8 @@ export default function Settings() {
           {isAdmin && (
             <SettingCard
               icon={HeartHandshake}
-              title="Planos de Tratamento"
-              description="Crie planos de assinatura para pacientes"
+              title="Programa de Fidelidade"
+              description="Pacotes de benefícios para pacientes: consultas inclusas, descontos e brindes"
               onClick={() => setShowTreatmentPlansModal(true)}
             />
           )}

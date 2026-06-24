@@ -29,10 +29,10 @@ export function PatientPlanCard({ patientId }: PatientPlanCardProps) {
               <HeartHandshake className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-medium text-sm">Sem plano de assinatura ativo</p>
+              <p className="font-medium text-sm">Sem plano de fidelidade ativo</p>
               <p className="text-xs text-muted-foreground">
                 {plans.length === 0
-                  ? 'Cadastre planos em Configurações → Planos de Tratamento.'
+                  ? 'Cadastre planos em Configurações → Programa de Fidelidade.'
                   : 'Ative um plano para aplicar descontos e consultas incluídas.'}
               </p>
             </div>
