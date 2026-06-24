@@ -130,7 +130,7 @@ export default function Settings() {
             <SettingCard
               icon={FlaskConical}
               title="Tratamentos Personalizados"
-              description="Adicione tratamentos da sua clínica"
+              description="Cadastre tipos de tratamento próprios para usar em orçamentos e procedimentos"
               to="/configuracoes/tratamentos"
             />
           )}

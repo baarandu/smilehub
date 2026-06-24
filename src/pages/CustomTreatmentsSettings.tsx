@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -103,7 +104,7 @@ export default function CustomTreatmentsSettings() {
               Tratamentos Personalizados
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Adicione tratamentos específicos da sua clínica para usar nos orçamentos
+              Cadastre tipos de tratamento próprios da sua clínica
             </p>
           </div>
         </div>
@@ -111,6 +112,29 @@ export default function CustomTreatmentsSettings() {
           <Plus className="w-4 h-4" /> Novo
         </Button>
       </div>
+
+      {/* Explicação da função */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="py-4 text-sm space-y-2">
+          <p className="font-medium text-foreground">O que é esta função?</p>
+          <p className="text-muted-foreground">
+            O sistema já vem com uma lista de tratamentos padrão ({TREATMENTS.length} itens, veja abaixo).
+            Aqui você adiciona <span className="font-medium text-foreground">nomes de tratamentos
+            próprios da sua clínica</span> que não estão nessa lista — por exemplo, um procedimento
+            específico que só você oferece.
+          </p>
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">Pra que serve:</span> os tratamentos que você
+            cadastrar aqui passam a aparecer (junto com os padrão) na lista de seleção ao{' '}
+            <span className="font-medium text-foreground">montar um orçamento</span> ou{' '}
+            <span className="font-medium text-foreground">registrar um procedimento</span>.
+          </p>
+          <p className="text-muted-foreground">
+            É apenas um <span className="font-medium text-foreground">catálogo de nomes</span> — o
+            preço você define em cada orçamento, na hora de usar.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
@@ -162,13 +186,20 @@ export default function CustomTreatmentsSettings() {
       </Card>
 
       <Card>
-        <CardContent className="py-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground mb-1">Tratamentos padrão</p>
-          <p>
-            A lista de tratamentos do sistema ({TREATMENTS.length} itens, ex.: Restauração, Canal,
-            Limpeza...) já está sempre disponível em todas as clínicas. Aqui você adiciona apenas
-            os tratamentos específicos da sua clínica.
+        <CardContent className="py-4 text-sm">
+          <p className="font-medium text-foreground mb-1">
+            Tratamentos padrão do sistema ({TREATMENTS.length})
           </p>
+          <p className="text-muted-foreground mb-3">
+            Estes já estão sempre disponíveis em todas as clínicas — você não precisa cadastrá-los.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TREATMENTS.map((t) => (
+              <Badge key={t} variant="secondary" className="font-normal">
+                {t}
+              </Badge>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -185,7 +216,7 @@ export default function CustomTreatmentsSettings() {
               id="treatment-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex.: Plano Semente"
+              placeholder="Ex.: Clareamento a laser"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && name.trim() && !isSaving) handleSubmit();
