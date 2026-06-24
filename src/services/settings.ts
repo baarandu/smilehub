@@ -7,14 +7,18 @@ export const settingsService = {
     async getFinancialSettings(): Promise<FinancialSettings | null> {
         const { clinicId } = await getClinicContext();
 
+        // A clinic can have more than one financial_settings row (one per user
+        // who saved settings). Pick the most recently updated instead of using
+        // maybeSingle(), which throws when multiple rows match.
         const { data, error } = await supabase
             .from('financial_settings')
             .select('*')
             .eq('clinic_id', clinicId)
-            .maybeSingle();
+            .order('updated_at', { ascending: false })
+            .limit(1);
 
         if (error && error.code !== 'PGRST116') throw error;
-        return data as FinancialSettings | null;
+        return (data && data[0] ? data[0] : null) as FinancialSettings | null;
     },
 
     async updateTaxRate(rate: number): Promise<void> {

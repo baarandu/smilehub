@@ -136,9 +136,14 @@ export default function FinancialSettings() {
             const loadedTaxes = await settingsService.getTaxes();
             setTaxes(loadedTaxes || []);
 
-            // Load clinic-wide financial settings (auto anticipation)
-            const settings = await settingsService.getFinancialSettings();
-            setAutoAnticipate(!!(settings as any)?.auto_anticipate);
+            // Load clinic-wide financial settings (auto anticipation).
+            // Isolated so a failure here never blocks the rest of the page.
+            try {
+                const settings = await settingsService.getFinancialSettings();
+                setAutoAnticipate(!!(settings as any)?.auto_anticipate);
+            } catch (settingsError) {
+                console.error('Failed to load financial settings (auto_anticipate):', settingsError);
+            }
 
         } catch (error) {
             console.error(error);
