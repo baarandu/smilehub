@@ -64,6 +64,35 @@ interface IncomeTabProps {
 type IncomeSubTab = 'gross' | 'net';
 type RevenueType = 'clinic' | 'individual';
 
+// Resolve a transaction's payment method to a canonical label.
+// Reads the structured `payment_method` field first (set on patient/budget
+// payments, e.g. 'credit'), and only falls back to parsing the description tag
+// (e.g. "(Crédito - VISA)") when the field is absent. Keeping this in one place
+// ensures the method filter, the dropdown options and the breakdown card all
+// agree on what a transaction's method is.
+function resolvePaymentMethod(t: Transaction): string | null {
+    const pm = (t as any).payment_method as string | null | undefined;
+    if (pm) {
+        const p = pm.toLowerCase();
+        if (p === 'credit' || p === 'crédito') return 'Cartão de Crédito';
+        if (p === 'debit' || p === 'débito') return 'Cartão de Débito';
+        if (p === 'pix') return 'Pix';
+        if (p === 'cash' || p === 'dinheiro') return 'Dinheiro';
+        return pm; // already a label (e.g. 'Cartão de Crédito', 'Boleto', 'Transferência')
+    }
+
+    // Fallback: parse the parenthetical tag from the description.
+    const match = t.description?.match(/\((.*?)\)/);
+    if (!match) return null;
+    const raw = match[1].split(' - ')[0].trim();
+    const r = raw.toLowerCase();
+    if (r === 'crédito' || r === 'credit') return 'Cartão de Crédito';
+    if (r === 'débito' || r === 'debit') return 'Cartão de Débito';
+    if (r === 'pix') return 'Pix';
+    if (r === 'dinheiro' || r === 'cash') return 'Dinheiro';
+    return raw;
+}
+
 export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
@@ -114,17 +143,8 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
         const methods = new Set<string>();
         transactions.forEach(t => {
             if (t.type === 'income') {
-                // Basic extraction logic similar to mobile
-                const match = t.description.match(/\((.*?)\)/);
-                if (match) {
-                    const parts = match[1].split(' - ');
-                    let m = parts[0].trim();
-                    if (m.toLowerCase().match(/^(crédito|credit)$/)) m = 'Cartão de Crédito';
-                    if (m.toLowerCase().match(/^(débito|debit)$/)) m = 'Cartão de Débito';
-                    if (m.toLowerCase().match(/^(pix)$/)) m = 'Pix';
-                    if (m.toLowerCase().match(/^(dinheiro|cash)$/)) m = 'Dinheiro';
-                    methods.add(m);
-                }
+                const m = resolvePaymentMethod(t);
+                if (m) methods.add(m);
             }
         });
         return Array.from(methods).sort();
@@ -144,15 +164,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
             // Method
             if (methodFilter !== 'all') {
-                const match = t.description.match(/\((.*?)\)/);
-                const rawMethod = match ? match[1].split(' - ')[0].trim() : '';
-                let normalized = rawMethod;
-                if (rawMethod.toLowerCase().match(/^(crédito|credit)$/)) normalized = 'Cartão de Crédito';
-                if (rawMethod.toLowerCase().match(/^(débito|debit)$/)) normalized = 'Cartão de Débito';
-                if (rawMethod.toLowerCase().match(/^(pix)$/)) normalized = 'Pix';
-                if (rawMethod.toLowerCase().match(/^(dinheiro|cash)$/)) normalized = 'Dinheiro';
-
-                if (normalized !== methodFilter) return false;
+                if (resolvePaymentMethod(t) !== methodFilter) return false;
             }
 
             // Location
@@ -196,25 +208,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
     // Income by payment method
     const incomeByMethod = filteredTransactions.reduce((acc, t) => {
-        const pm = (t as any).payment_method;
-        let method = 'Outros';
-        if (pm === 'credit') method = 'Cartão de Crédito';
-        else if (pm === 'debit') method = 'Cartão de Débito';
-        else if (pm === 'pix') method = 'Pix';
-        else if (pm === 'cash') method = 'Dinheiro';
-        else if (pm) method = pm;
-        else {
-            // Try to parse from description
-            const match = t.description.match(/\((.*?)\)/);
-            if (match) {
-                const parts = match[1].split(' - ');
-                const m = parts[0].trim().toLowerCase();
-                if (m === 'crédito' || m === 'credit') method = 'Cartão de Crédito';
-                else if (m === 'débito' || m === 'debit') method = 'Cartão de Débito';
-                else if (m === 'pix') method = 'Pix';
-                else if (m === 'dinheiro' || m === 'cash') method = 'Dinheiro';
-            }
-        }
+        const method = resolvePaymentMethod(t) || 'Outros';
         const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
         acc[method] = (acc[method] || 0) + amount;
         return acc;
