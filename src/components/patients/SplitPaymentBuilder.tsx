@@ -304,7 +304,13 @@ export function SplitPaymentBuilder({
                     checked={portion.isImmediate}
                     onCheckedChange={(v) => updatePortion(portion.id, {
                       isImmediate: v,
-                      dueDate: v ? today : nextMonth,
+                      // Preserve a retroactive date the user already typed. Only adjust
+                      // when the current date makes no sense for the new mode:
+                      //  - "Já recebido": a future date -> today (received can be today/past)
+                      //  - "Agendar": a today/past date -> next month (due dates are future)
+                      dueDate: v
+                        ? (portion.dueDate > today ? today : portion.dueDate)
+                        : (portion.dueDate <= today ? nextMonth : portion.dueDate),
                     })}
                   />
                 </div>
