@@ -46,6 +46,9 @@ export interface SplitPaymentPortion {
   isImmediate: boolean;
   breakdown: FinancialBreakdown;
   payerData?: PayerData;
+  // Batch payments only: which budget item (tooth) this portion should be applied to.
+  // null = automatic (fill the selected items in order). Ignored for single-item payments.
+  itemIndex?: number | null;
 }
 
 export interface OverdueSummary {

@@ -18,6 +18,12 @@ const PAYMENT_METHODS = [
   { id: 'cash', label: 'Dinheiro', icon: Banknote },
 ];
 
+export interface SplitBatchItem {
+  index: number;
+  name: string;
+  value: number;
+}
+
 interface SplitPaymentBuilderProps {
   totalValue: number;
   locationRate: number;
@@ -27,6 +33,9 @@ interface SplitPaymentBuilderProps {
   patientName?: string;
   patientCpf?: string;
   pjSources?: PJSource[];
+  // When paying several budget items at once, the items being paid. Enables
+  // assigning each payment method to a specific item (no proportional split).
+  items?: SplitBatchItem[];
   onPortionsChange: (portions: SplitPaymentPortion[], isValid: boolean) => void;
 }
 
@@ -38,6 +47,7 @@ interface PortionState {
   brand: string;
   dueDate: string;
   isImmediate: boolean;
+  itemIndex: number | null; // null = automatic (fill items in order)
 }
 
 function formatLocalDate(d: Date): string {
@@ -104,8 +114,10 @@ export function SplitPaymentBuilder({
   availableBrands,
   patientName,
   patientCpf,
+  items,
   onPortionsChange,
 }: SplitPaymentBuilderProps) {
+  const hasItems = !!items && items.length > 1;
   const today = formatLocalDate(new Date());
   const nextMonth = (() => {
     const d = new Date();
@@ -120,7 +132,7 @@ export function SplitPaymentBuilder({
   )?.id || 'visa';
 
   const [portions, setPortions] = useState<PortionState[]>([
-    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: defaultBrand, dueDate: nextMonth, isImmediate: false },
+    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: defaultBrand, dueDate: today, isImmediate: true, itemIndex: null },
   ]);
 
   const allocatedCents = useMemo(() => {
@@ -176,6 +188,7 @@ export function SplitPaymentBuilder({
       brand: (p.method === 'credit' || p.method === 'debit') ? p.brand : undefined,
       dueDate: p.dueDate,
       isImmediate: p.isImmediate,
+      itemIndex: p.itemIndex,
       breakdown: calculateBreakdown(p),
       payerData: {
         payer_is_patient: true,
@@ -201,20 +214,15 @@ export function SplitPaymentBuilder({
   };
 
   const addPortion = () => {
-    const nextDueDate = (() => {
-      const d = new Date();
-      d.setMonth(d.getMonth() + portions.length);
-      return formatLocalDate(d);
-    })();
-
     setPortions(prev => [...prev, {
       id: crypto.randomUUID(),
       method: 'cash',
       amount: '',
       installments: 1,
       brand: defaultBrand,
-      dueDate: nextDueDate,
-      isImmediate: false,
+      dueDate: today,
+      isImmediate: true,
+      itemIndex: null,
     }]);
   };
 
@@ -271,7 +279,7 @@ export function SplitPaymentBuilder({
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={addPortion} className="gap-1.5 text-xs">
           <Plus className="w-3.5 h-3.5" />
-          Adicionar parcela
+          Adicionar pagamento
         </Button>
       </div>
 
@@ -280,7 +288,7 @@ export function SplitPaymentBuilder({
         {portions.map((portion, idx) => (
           <div key={portion.id} className="border rounded-lg p-3 space-y-3 bg-white">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-700">Parcela {idx + 1}</span>
+              <span className="text-sm font-semibold text-slate-700">Pagamento {idx + 1}</span>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5">
                   {portion.isImmediate ? (
@@ -289,7 +297,7 @@ export function SplitPaymentBuilder({
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
                   )}
                   <Label htmlFor={`imm-${portion.id}`} className="text-xs cursor-pointer">
-                    {portion.isImmediate ? 'Pagar agora' : 'Agendar'}
+                    {portion.isImmediate ? 'Já recebido' : 'Agendar'}
                   </Label>
                   <Switch
                     id={`imm-${portion.id}`}
@@ -351,6 +359,29 @@ export function SplitPaymentBuilder({
               </div>
             </div>
 
+            {/* Item assignment (only when paying several items at once) */}
+            {hasItems && (
+              <div className="space-y-1">
+                <Label className="text-xs">Aplicar no item</Label>
+                <Select
+                  value={portion.itemIndex === null ? 'auto' : String(portion.itemIndex)}
+                  onValueChange={(v) => updatePortion(portion.id, { itemIndex: v === 'auto' ? null : parseInt(v, 10) })}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Em ordem (automático)</SelectItem>
+                    {items!.map(it => (
+                      <SelectItem key={it.index} value={String(it.index)}>
+                        {it.name} — R$ {formatMoney(it.value)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Card-specific fields */}
             {(portion.method === 'credit' || portion.method === 'debit') && (
               <div className="flex gap-3">
@@ -383,21 +414,19 @@ export function SplitPaymentBuilder({
               </div>
             )}
 
-            {/* Due date */}
-            {!portion.isImmediate && (
-              <div className="space-y-1">
-                <Label className="text-xs flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  Data de Vencimento
-                </Label>
-                <Input
-                  type="date"
-                  value={portion.dueDate}
-                  onChange={(e) => updatePortion(portion.id, { dueDate: e.target.value })}
-                  className="h-8 text-xs"
-                />
-              </div>
-            )}
+            {/* Date: received date when immediate (can be retroactive), due date when scheduled */}
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {portion.isImmediate ? 'Data do recebimento' : 'Data de Vencimento'}
+              </Label>
+              <Input
+                type="date"
+                value={portion.dueDate}
+                onChange={(e) => updatePortion(portion.id, { dueDate: e.target.value })}
+                className="h-8 text-xs"
+              />
+            </div>
 
             {/* Mini breakdown */}
             {parseInt(portion.amount || '0', 10) > 0 && (

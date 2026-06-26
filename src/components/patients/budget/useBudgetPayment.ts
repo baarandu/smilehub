@@ -594,53 +594,109 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             const { indices } = paymentBatch;
             const budgetLocation = parsed.location || null;
-            const totalAmount = paymentBatch.totalValue;
 
-            // For batch split, create receivables per tooth proportionally
-            for (const idx of indices) {
+            // Per-item metadata, in the order the items were selected.
+            const itemsMeta = indices.map(idx => {
                 const tooth = currentTeeth[idx];
-                const itemValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const valueCents = Math.round(
+                    Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0) * 100
+                );
+                return { idx, tooth, valueCents };
+            });
 
-                // Zero-value items produce zero-amount portions which violate the
-                // payment_receivables amount > 0 constraint. Mark as paid without
-                // creating receivables (mirrors the non-split batch flow guard).
-                if (itemValue <= 0) {
-                    currentTeeth[idx] = {
-                        ...tooth,
+            // Zero-value items produce zero-amount portions which violate the
+            // payment_receivables amount > 0 constraint. Mark as paid without
+            // creating receivables (mirrors the non-split batch flow guard).
+            for (const m of itemsMeta) {
+                if (m.valueCents <= 0) {
+                    currentTeeth[m.idx] = {
+                        ...m.tooth,
                         status: 'paid',
                         paymentDate: toLocalDateString(new Date()),
                     };
-                    continue;
                 }
+            }
 
-                const ratio = itemValue / totalAmount;
+            // Allocate each payment method to items in whole cents (no proportional
+            // split): start at the item the user assigned (portion.itemIndex), then
+            // fill the remaining items in order. Each item gets the real amounts that
+            // landed on it instead of a prorated fraction.
+            const payable = itemsMeta.filter(m => m.valueCents > 0);
+            const orderIdx = payable.map(m => m.idx);
+            const remaining = new Map<number, number>(payable.map(m => [m.idx, m.valueCents]));
+            const slicesByItem = new Map<number, { portion: SplitPaymentPortion; amountCents: number }[]>(
+                orderIdx.map(idx => [idx, []])
+            );
+
+            const allocatePortion = (portion: SplitPaymentPortion, amountCents: number) => {
+                const start = portion.itemIndex;
+                const order: number[] = [];
+                if (start != null && remaining.has(start)) order.push(start);
+                for (const idx of orderIdx) if (idx !== start) order.push(idx);
+
+                for (const idx of order) {
+                    if (amountCents <= 0) break;
+                    const avail = remaining.get(idx) ?? 0;
+                    if (avail <= 0) continue;
+                    const take = Math.min(avail, amountCents);
+                    slicesByItem.get(idx)!.push({ portion, amountCents: take });
+                    remaining.set(idx, avail - take);
+                    amountCents -= take;
+                }
+                // Leftover (paying more than the items' total) lands on the last item.
+                if (amountCents > 0 && orderIdx.length > 0) {
+                    slicesByItem.get(orderIdx[orderIdx.length - 1])!.push({ portion, amountCents });
+                }
+            };
+
+            for (const portion of portions) {
+                allocatePortion(portion, Math.round(portion.amount * 100));
+            }
+
+            // Create receivables per item from the slices that landed on it.
+            for (const m of payable) {
+                const slices = slicesByItem.get(m.idx) || [];
+                if (slices.length === 0) continue; // nothing was allocated to this item
+
                 const splitGroupId = crypto.randomUUID();
-                const toothDescription = `${tooth.treatments.join(', ')} - ${getToothDisplayName(tooth.tooth)}`;
+                const toothDescription = `${m.tooth.treatments.join(', ')} - ${getToothDisplayName(m.tooth.tooth)}`;
 
-                // Scale portions proportionally for this tooth
-                const scaledPortions: SplitPaymentPortion[] = portions.map(p => ({
-                    ...p,
-                    amount: Math.round(p.amount * ratio * 100) / 100,
-                    breakdown: {
-                        ...p.breakdown,
-                        grossAmount: p.breakdown.grossAmount * ratio,
-                        taxAmount: p.breakdown.taxAmount * ratio,
-                        cardFeeAmount: p.breakdown.cardFeeAmount * ratio,
-                        anticipationAmount: p.breakdown.anticipationAmount * ratio,
-                        locationAmount: p.breakdown.locationAmount * ratio,
-                        netAmount: p.breakdown.netAmount * ratio,
-                    },
-                }));
+                // Scale each portion's financial breakdown to the slice it contributes here.
+                const itemPortions: SplitPaymentPortion[] = slices.map(s => {
+                    const portionCents = Math.round(s.portion.amount * 100);
+                    const fraction = portionCents > 0 ? s.amountCents / portionCents : 1;
+                    return {
+                        ...s.portion,
+                        amount: s.amountCents / 100,
+                        breakdown: {
+                            ...s.portion.breakdown,
+                            grossAmount: s.portion.breakdown.grossAmount * fraction,
+                            taxAmount: s.portion.breakdown.taxAmount * fraction,
+                            cardFeeAmount: s.portion.breakdown.cardFeeAmount * fraction,
+                            anticipationAmount: s.portion.breakdown.anticipationAmount * fraction,
+                            locationAmount: s.portion.breakdown.locationAmount * fraction,
+                            netAmount: s.portion.breakdown.netAmount * fraction,
+                        },
+                    };
+                });
 
                 const receivables = await receivablesService.createSplitPayment(
-                    budget.id, patientId, idx, toothDescription, scaledPortions, splitGroupId, budgetLocation, cardMachineId || null,
+                    budget.id, patientId, m.idx, toothDescription, itemPortions, splitGroupId, budgetLocation, cardMachineId || null,
                 );
 
-                const allImmediate = portions.every(p => p.isImmediate);
-                currentTeeth[idx] = {
-                    ...tooth,
-                    status: allImmediate ? 'paid' : 'partially_paid',
-                    paymentDate: toLocalDateString(new Date()),
+                const allocatedCents = slices.reduce((sum, s) => sum + s.amountCents, 0);
+                const fullyPaid = allocatedCents >= m.valueCents;
+                const allImmediate = slices.every(s => s.portion.isImmediate);
+                const immediateDates = slices
+                    .filter(s => s.portion.isImmediate)
+                    .map(s => s.portion.dueDate)
+                    .sort();
+                const payDate = immediateDates.length ? immediateDates[immediateDates.length - 1] : toLocalDateString(new Date());
+
+                currentTeeth[m.idx] = {
+                    ...m.tooth,
+                    status: (fullyPaid && allImmediate) ? 'paid' : 'partially_paid',
+                    paymentDate: payDate,
                     splitGroupId,
                     splitPayments: receivables.map(r => ({
                         receivableId: r.id,

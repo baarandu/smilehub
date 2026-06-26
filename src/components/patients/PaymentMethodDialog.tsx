@@ -11,7 +11,7 @@ import { settingsService } from '@/services/settings';
 import { supabase } from '@/lib/supabase';
 import { CardFeeConfig } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
-import { SplitPaymentBuilder } from './SplitPaymentBuilder';
+import { SplitPaymentBuilder, type SplitBatchItem } from './SplitPaymentBuilder';
 import type { SplitPaymentPortion } from '@/types/receivables';
 import { useCardMachines } from '@/hooks/useCardMachines';
 import { toLocalDateString } from '@/utils/formatters';
@@ -55,6 +55,8 @@ interface PaymentMethodDialogProps {
     patientCpf?: string;
     pjSources?: PJSource[];
     creditBalance?: number;
+    // Batch payments: the items being paid, enabling per-item method assignment in split mode.
+    batchItems?: SplitBatchItem[];
 }
 
 // CPF mask
@@ -132,7 +134,7 @@ const findCardFeeConfig = (
     );
 };
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0 }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0, batchItems }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
@@ -447,8 +449,8 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 <div className="flex items-center gap-2">
                                     <SplitSquareHorizontal className="w-4 h-4 text-violet-600" />
                                     <div>
-                                        <Label className="text-sm text-violet-900 cursor-pointer" htmlFor="split-toggle">Parcelar / Fiado</Label>
-                                        <p className="text-xs text-violet-600">Dividir em parcelas, agendar pagamentos futuros ou registrar fiado</p>
+                                        <Label className="text-sm text-violet-900 cursor-pointer" htmlFor="split-toggle">Vários meios / Parcelar / Fiado</Label>
+                                        <p className="text-xs text-violet-600">Usar mais de um meio de pagamento, dividir em parcelas, agendar ou registrar fiado</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -469,6 +471,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 patientName={patientName}
                                 patientCpf={patientCpf}
                                 pjSources={pjSources}
+                                items={batchItems}
                                 onPortionsChange={(portions, valid) => {
                                     setSplitPortions(portions);
                                     setSplitValid(valid);
