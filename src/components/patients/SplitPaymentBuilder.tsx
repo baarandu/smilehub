@@ -395,7 +395,6 @@ export function SplitPaymentBuilder({
                   value={portion.dueDate}
                   onChange={(e) => updatePortion(portion.id, { dueDate: e.target.value })}
                   className="h-8 text-xs"
-                  min={today}
                 />
               </div>
             )}
