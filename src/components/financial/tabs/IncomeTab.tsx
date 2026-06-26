@@ -155,11 +155,19 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
         return transactions.filter(t => {
             if (t.type !== 'income') return false;
 
-            // Patient Name
+            // Search: patient name, description or amount (e.g. "585", "585,20", "585.20")
             if (patientFilter) {
-                const pName = t.patients?.name?.toLowerCase() || '';
-                const description = t.description?.toLowerCase() || '';
-                if (!pName.includes(patientFilter.toLowerCase()) && !description.includes(patientFilter.toLowerCase())) return false;
+                const q = patientFilter.toLowerCase().trim();
+                const amount = t.amount ?? 0;
+                const amountFixed = amount.toFixed(2);            // "585.20"
+                const amountComma = amountFixed.replace('.', ','); // "585,20"
+                const haystacks = [
+                    t.patients?.name?.toLowerCase() || '',
+                    t.description?.toLowerCase() || '',
+                    amountFixed,
+                    amountComma,
+                ];
+                if (!haystacks.some(h => h.includes(q))) return false;
             }
 
             // Method
@@ -299,7 +307,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                     <div className="relative flex-1 sm:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Buscar receita ou paciente..."
+                            placeholder="Buscar por paciente, procedimento ou valor..."
                             value={patientFilter}
                             onChange={(e) => setPatientFilter(e.target.value)}
                             className="pl-9 h-9"

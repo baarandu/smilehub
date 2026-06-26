@@ -135,8 +135,16 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
         return transactions.filter(t => {
             if (t.type !== 'expense') return false;
 
+            // Search: description or amount (e.g. "200", "200,00", "200.00")
             if (search) {
-                if (!t.description.toLowerCase().includes(search.toLowerCase())) return false;
+                const q = search.toLowerCase().trim();
+                const amountFixed = (t.amount ?? 0).toFixed(2);
+                const haystacks = [
+                    t.description?.toLowerCase() || '',
+                    amountFixed,
+                    amountFixed.replace('.', ','),
+                ];
+                if (!haystacks.some(h => h.includes(q))) return false;
             }
 
             if (locationFilter !== 'all') {
@@ -262,7 +270,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
                 <div className="relative flex-1 sm:max-w-xs">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Buscar despesa..."
+                        placeholder="Buscar por descrição ou valor..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="pl-9 h-9"
