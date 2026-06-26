@@ -495,7 +495,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null) => {
+    const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null, creditUsed: number = 0) => {
         if (!paymentItem || isSubmitting || !patientId) return;
 
         try {
@@ -525,15 +525,32 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 cardMachineId || null,
             );
 
-            // Determine tooth status: all immediate = paid, otherwise partially_paid
+            // Cover any remaining balance with the patient's credit.
+            const itemValueCents = Math.round(getItemValue(selectedTooth) * 100);
+            const methodCents = portions.reduce((sum, p) => sum + Math.round(p.amount * 100), 0);
+            const creditAppliedCents = Math.max(0, Math.min(Math.round(creditUsed * 100), itemValueCents - methodCents));
+            if (creditAppliedCents > 0) {
+                await patientCreditsService.addTransaction({
+                    patientId,
+                    type: 'debit',
+                    amount: creditAppliedCents / 100,
+                    description: `Pagamento do procedimento: ${selectedTooth.treatments.join(', ')}`,
+                });
+            }
+
+            // Determine tooth status: methods + credit cover the value & all immediate = paid.
             const allImmediate = portions.every(p => p.isImmediate);
-            const newStatus = allImmediate ? 'paid' : 'partially_paid';
+            const fullyPaid = (methodCents + creditAppliedCents) >= itemValueCents;
+            const newStatus = (fullyPaid && allImmediate) ? 'paid' : 'partially_paid';
 
             currentTeeth[paymentItem.index] = {
                 ...currentTeeth[paymentItem.index],
                 status: newStatus,
                 paymentDate: toLocalDateString(new Date()),
                 splitGroupId,
+                ...(creditAppliedCents > 0
+                    ? { financialBreakdown: { ...((selectedTooth as any).financialBreakdown || {}), creditUsed: creditAppliedCents / 100 } }
+                    : {}),
                 splitPayments: receivables.map(r => ({
                     receivableId: r.id,
                     amount: r.amount,
@@ -553,6 +570,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
             queryClient.invalidateQueries({ queryKey: ['receivables'] });
+            queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
 
             // Auto-create prosthesis/ortho orders
             const prosthesisCreated = await autoCreateProsthesisOrder(selectedTooth, paymentItem.index, budget.id);
@@ -579,7 +597,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null) => {
+    const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null, creditUsed: number = 0) => {
         if (!paymentBatch || isSubmitting || !patientId) return;
 
         try {
@@ -653,10 +671,35 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 allocatePortion(portion, Math.round(portion.amount * 100));
             }
 
+            // Cover any remaining balance with the patient's credit (in order). This
+            // settles items whose methods didn't reach the full value (e.g. 320 paid
+            // + 50 credit = 370). One debit transaction is created for the total used.
+            const creditByItem = new Map<number, number>();
+            let creditLeftCents = Math.max(0, Math.round(creditUsed * 100));
+            for (const idx of orderIdx) {
+                if (creditLeftCents <= 0) break;
+                const rem = remaining.get(idx) ?? 0;
+                if (rem <= 0) continue;
+                const take = Math.min(rem, creditLeftCents);
+                creditByItem.set(idx, take);
+                remaining.set(idx, rem - take);
+                creditLeftCents -= take;
+            }
+            const totalCreditAppliedCents = Math.max(0, Math.round(creditUsed * 100)) - creditLeftCents;
+            if (totalCreditAppliedCents > 0) {
+                await patientCreditsService.addTransaction({
+                    patientId,
+                    type: 'debit',
+                    amount: totalCreditAppliedCents / 100,
+                    description: `Pagamento de ${payable.length} item(ns) do orçamento`,
+                });
+            }
+
             // Create receivables per item from the slices that landed on it.
             for (const m of payable) {
                 const slices = slicesByItem.get(m.idx) || [];
-                if (slices.length === 0) continue; // nothing was allocated to this item
+                const creditAppliedCents = creditByItem.get(m.idx) || 0;
+                if (slices.length === 0 && creditAppliedCents === 0) continue; // nothing for this item
 
                 const splitGroupId = crypto.randomUUID();
                 const toothDescription = `${m.tooth.treatments.join(', ')} - ${getToothDisplayName(m.tooth.tooth)}`;
@@ -680,13 +723,16 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     };
                 });
 
-                const receivables = await receivablesService.createSplitPayment(
-                    budget.id, patientId, m.idx, toothDescription, itemPortions, splitGroupId, budgetLocation, cardMachineId || null,
-                );
+                const receivables = slices.length > 0
+                    ? await receivablesService.createSplitPayment(
+                        budget.id, patientId, m.idx, toothDescription, itemPortions, splitGroupId, budgetLocation, cardMachineId || null,
+                    )
+                    : [];
 
-                const allocatedCents = slices.reduce((sum, s) => sum + s.amountCents, 0);
-                const fullyPaid = allocatedCents >= m.valueCents;
-                const allImmediate = slices.every(s => s.portion.isImmediate);
+                const methodCents = slices.reduce((sum, s) => sum + s.amountCents, 0);
+                // Item is settled when methods + applied credit cover its full value.
+                const fullyPaid = (methodCents + creditAppliedCents) >= m.valueCents;
+                const allImmediate = slices.every(s => s.portion.isImmediate); // credit counts as immediate
                 const immediateDates = slices
                     .filter(s => s.portion.isImmediate)
                     .map(s => s.portion.dueDate)
@@ -698,6 +744,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     status: (fullyPaid && allImmediate) ? 'paid' : 'partially_paid',
                     paymentDate: payDate,
                     splitGroupId,
+                    ...(creditAppliedCents > 0
+                        ? { financialBreakdown: { ...((m.tooth as any).financialBreakdown || {}), creditUsed: creditAppliedCents / 100 } }
+                        : {}),
                     splitPayments: receivables.map(r => ({
                         receivableId: r.id,
                         amount: r.amount,
@@ -705,7 +754,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         dueDate: r.due_date,
                         status: r.status,
                     })),
-                };
+                } as ToothEntry;
             }
 
             const newBudgetStatus = calculateBudgetStatus(currentTeeth);
@@ -718,13 +767,15 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
             queryClient.invalidateQueries({ queryKey: ['receivables'] });
+            queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
 
             const immediateCount = portions.filter(p => p.isImmediate).length;
             const scheduledCount = portions.length - immediateCount;
+            const creditNote = totalCreditAppliedCents > 0 ? ` R$ ${(totalCreditAppliedCents / 100).toFixed(2)} cobertos pelo crédito.` : '';
 
             toast({
                 title: "Pagamento Dividido Registrado",
-                description: `${indices.length} item(ns) com ${immediateCount} parcela(s) paga(s)${scheduledCount > 0 ? `, ${scheduledCount} agendada(s)` : ''}.`,
+                description: `${indices.length} item(ns) com ${immediateCount} parcela(s) paga(s)${scheduledCount > 0 ? `, ${scheduledCount} agendada(s)` : ''}.${creditNote}`,
             });
             onSuccess();
         } catch (error) {

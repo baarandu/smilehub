@@ -11,7 +11,7 @@ import { settingsService } from '@/services/settings';
 import { supabase } from '@/lib/supabase';
 import { CardFeeConfig } from '@/types/database';
 import type { PJSource } from '@/types/incomeTax';
-import { SplitPaymentBuilder, type SplitBatchItem } from './SplitPaymentBuilder';
+import { SplitPaymentBuilder } from './SplitPaymentBuilder';
 import type { SplitPaymentPortion } from '@/types/receivables';
 import { useCardMachines } from '@/hooks/useCardMachines';
 import { toLocalDateString } from '@/utils/formatters';
@@ -46,7 +46,7 @@ interface PaymentMethodDialogProps {
     open: boolean;
     onClose: () => void;
     onConfirm: (method: string, installments: number, brand?: string, breakdown?: FinancialBreakdown, payerData?: PayerData, cardMachineId?: string | null, creditUsed?: number, paymentDate?: string) => void;
-    onConfirmSplit?: (portions: SplitPaymentPortion[], cardMachineId?: string | null) => void;
+    onConfirmSplit?: (portions: SplitPaymentPortion[], cardMachineId?: string | null, creditUsed?: number) => void;
     itemName: string;
     value: number;
     locationRate?: number;
@@ -55,8 +55,6 @@ interface PaymentMethodDialogProps {
     patientCpf?: string;
     pjSources?: PJSource[];
     creditBalance?: number;
-    // Batch payments: the items being paid, enabling per-item method assignment in split mode.
-    batchItems?: SplitBatchItem[];
 }
 
 // CPF mask
@@ -134,7 +132,7 @@ const findCardFeeConfig = (
     );
 };
 
-export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0, batchItems }: PaymentMethodDialogProps) {
+export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, itemName, value, locationRate = 0, loading = false, patientName, patientCpf, pjSources = [], creditBalance = 0 }: PaymentMethodDialogProps) {
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
     const [installments, setInstallments] = useState('1');
     const [selectedBrand, setSelectedBrand] = useState<string>('visa');
@@ -148,6 +146,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [isSplitMode, setIsSplitMode] = useState(false);
     const [splitPortions, setSplitPortions] = useState<SplitPaymentPortion[]>([]);
     const [splitValid, setSplitValid] = useState(false);
+    const [splitCreditUsed, setSplitCreditUsed] = useState(0);
 
     // Payer Data
     const [payerIsPatient, setPayerIsPatient] = useState(true);
@@ -385,7 +384,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
 
         if (isSplitMode) {
             if (!splitValid || !onConfirmSplit) return;
-            onConfirmSplit(splitPortions, splitHasCard ? selectedMachineId || null : null);
+            onConfirmSplit(splitPortions, splitHasCard ? selectedMachineId || null : null, splitCreditUsed);
             return;
         }
 
@@ -471,10 +470,11 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 patientName={patientName}
                                 patientCpf={patientCpf}
                                 pjSources={pjSources}
-                                items={batchItems}
-                                onPortionsChange={(portions, valid) => {
+                                creditBalance={creditBalance}
+                                onPortionsChange={(portions, valid, creditUsed) => {
                                     setSplitPortions(portions);
                                     setSplitValid(valid);
+                                    setSplitCreditUsed(creditUsed);
                                 }}
                             />
                         ) : null}

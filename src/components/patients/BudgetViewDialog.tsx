@@ -540,11 +540,6 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                     onConfirmSplit={payment.handleConfirmSplitBatchPayment}
                     itemName={`${payment.paymentBatch.indices.length} itens selecionados`}
                     value={payment.paymentBatch.totalValue}
-                    batchItems={payment.paymentBatch.teeth.map((t, i) => ({
-                        index: payment.paymentBatch!.indices[i],
-                        name: getToothDisplayName(t.tooth),
-                        value: payment.getItemValue(t),
-                    }))}
                     locationRate={parsedNotes.locationRate ? parseFloat(parsedNotes.locationRate) : 0}
                     loading={payment.isSubmitting}
                     patientName={patientData?.name || patientName}

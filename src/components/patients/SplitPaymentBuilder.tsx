@@ -18,12 +18,6 @@ const PAYMENT_METHODS = [
   { id: 'cash', label: 'Dinheiro', icon: Banknote },
 ];
 
-export interface SplitBatchItem {
-  index: number;
-  name: string;
-  value: number;
-}
-
 interface SplitPaymentBuilderProps {
   totalValue: number;
   locationRate: number;
@@ -33,10 +27,10 @@ interface SplitPaymentBuilderProps {
   patientName?: string;
   patientCpf?: string;
   pjSources?: PJSource[];
-  // When paying several budget items at once, the items being paid. Enables
-  // assigning each payment method to a specific item (no proportional split).
-  items?: SplitBatchItem[];
-  onPortionsChange: (portions: SplitPaymentPortion[], isValid: boolean) => void;
+  // Available patient credit. Any amount not covered by the payment methods is
+  // automatically covered by this credit (up to the available balance).
+  creditBalance?: number;
+  onPortionsChange: (portions: SplitPaymentPortion[], isValid: boolean, creditUsed: number) => void;
 }
 
 interface PortionState {
@@ -47,7 +41,6 @@ interface PortionState {
   brand: string;
   dueDate: string;
   isImmediate: boolean;
-  itemIndex: number | null; // null = automatic (fill items in order)
 }
 
 function formatLocalDate(d: Date): string {
@@ -114,10 +107,9 @@ export function SplitPaymentBuilder({
   availableBrands,
   patientName,
   patientCpf,
-  items,
+  creditBalance = 0,
   onPortionsChange,
 }: SplitPaymentBuilderProps) {
-  const hasItems = !!items && items.length > 1;
   const today = formatLocalDate(new Date());
   const nextMonth = (() => {
     const d = new Date();
@@ -132,7 +124,7 @@ export function SplitPaymentBuilder({
   )?.id || 'visa';
 
   const [portions, setPortions] = useState<PortionState[]>([
-    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: defaultBrand, dueDate: today, isImmediate: true, itemIndex: null },
+    { id: crypto.randomUUID(), method: 'pix', amount: '', installments: 1, brand: defaultBrand, dueDate: today, isImmediate: true },
   ]);
 
   const allocatedCents = useMemo(() => {
@@ -141,7 +133,11 @@ export function SplitPaymentBuilder({
 
   const totalCents = Math.round(totalValue * 100);
   const remainingCents = totalCents - allocatedCents;
-  const isFullyAllocated = Math.abs(remainingCents) < 1; // allow rounding
+  // Any positive remainder is automatically covered by the patient's credit (up to balance).
+  const creditAvailableCents = Math.max(0, Math.round(creditBalance * 100));
+  const creditCoverCents = remainingCents > 0 ? Math.min(creditAvailableCents, remainingCents) : 0;
+  const uncoveredCents = remainingCents - creditCoverCents; // >0 missing, <0 over-allocated
+  const isFullyAllocated = uncoveredCents < 1 && remainingCents >= 0; // covered by methods + credit, not over
 
   // Calculate breakdown for each portion
   const calculateBreakdown = (portion: PortionState): FinancialBreakdown => {
@@ -188,7 +184,6 @@ export function SplitPaymentBuilder({
       brand: (p.method === 'credit' || p.method === 'debit') ? p.brand : undefined,
       dueDate: p.dueDate,
       isImmediate: p.isImmediate,
-      itemIndex: p.itemIndex,
       breakdown: calculateBreakdown(p),
       payerData: {
         payer_is_patient: true,
@@ -201,8 +196,8 @@ export function SplitPaymentBuilder({
 
     const allHaveAmount = portions.every(p => parseInt(p.amount || '0', 10) > 0);
     const allHaveMethod = portions.every(p => !!p.method);
-    onPortionsChange(mapped, isFullyAllocated && allHaveAmount && allHaveMethod);
-  }, [portions, isFullyAllocated]);
+    onPortionsChange(mapped, isFullyAllocated && allHaveAmount && allHaveMethod, creditCoverCents / 100);
+  }, [portions, isFullyAllocated, creditCoverCents]);
 
   const updatePortion = (id: string, updates: Partial<PortionState>) => {
     setPortions(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
@@ -222,7 +217,6 @@ export function SplitPaymentBuilder({
       brand: defaultBrand,
       dueDate: today,
       isImmediate: true,
-      itemIndex: null,
     }]);
   };
 
@@ -263,8 +257,13 @@ export function SplitPaymentBuilder({
             style={{ width: `${Math.min(100, (allocatedCents / totalCents) * 100)}%` }}
           />
         </div>
-        {!isFullyAllocated && remainingCents > 0 && (
-          <p className="text-xs text-amber-600">Faltam R$ {formatMoney(remainingCents / 100)}</p>
+        {creditCoverCents > 0 && (
+          <p className="text-xs text-emerald-600">
+            R$ {formatMoney(creditCoverCents / 100)} será coberto pelo crédito do paciente.
+          </p>
+        )}
+        {uncoveredCents >= 1 && remainingCents > 0 && (
+          <p className="text-xs text-amber-600">Faltam R$ {formatMoney(uncoveredCents / 100)}</p>
         )}
         {remainingCents < 0 && (
           <p className="text-xs text-red-600">Excedeu R$ {formatMoney(Math.abs(remainingCents) / 100)}</p>
@@ -364,29 +363,6 @@ export function SplitPaymentBuilder({
                 />
               </div>
             </div>
-
-            {/* Item assignment (only when paying several items at once) */}
-            {hasItems && (
-              <div className="space-y-1">
-                <Label className="text-xs">Aplicar no item</Label>
-                <Select
-                  value={portion.itemIndex === null ? 'auto' : String(portion.itemIndex)}
-                  onValueChange={(v) => updatePortion(portion.id, { itemIndex: v === 'auto' ? null : parseInt(v, 10) })}
-                >
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Em ordem (automático)</SelectItem>
-                    {items!.map(it => (
-                      <SelectItem key={it.index} value={String(it.index)}>
-                        {it.name} — R$ {formatMoney(it.value)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
             {/* Card-specific fields */}
             {(portion.method === 'credit' || portion.method === 'debit') && (
