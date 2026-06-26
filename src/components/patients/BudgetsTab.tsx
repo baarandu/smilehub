@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench, ExternalLink, FileText } from 'lucide-react';
+import { Calculator, Plus, Calendar, Banknote, Clock, CheckCircle2, CreditCard, User, MapPin, Wrench, ExternalLink, FileText, Trash2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { budgetsService } from '@/services/budgets';
 import { getToothDisplayName, formatCurrency, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
@@ -23,6 +25,7 @@ interface BudgetsTabProps {
 
 export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: BudgetsTabProps) {
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirmDialog();
     const navigate = useNavigate();
     const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,6 +34,9 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const [newDialogOpen, setNewDialogOpen] = useState(false);
     const [editingBudget, setEditingBudget] = useState<BudgetWithItems | null>(null);
     const [consolidatedPdfOpen, setConsolidatedPdfOpen] = useState(false);
+    const [trashOpen, setTrashOpen] = useState(false);
+    const [deletedBudgets, setDeletedBudgets] = useState<BudgetWithItems[]>([]);
+    const [trashLoading, setTrashLoading] = useState(false);
 
     const prostheticItems = useProstheticBudgetItems(patientId);
 
@@ -67,6 +73,52 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
             });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadDeleted = async () => {
+        try {
+            setTrashLoading(true);
+            const data = await budgetsService.listDeletedByPatient(patientId);
+            setDeletedBudgets(data);
+        } catch (error) {
+            console.error('Error loading deleted budgets:', error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar a lixeira." });
+        } finally {
+            setTrashLoading(false);
+        }
+    };
+
+    const handleOpenTrash = () => {
+        setTrashOpen(true);
+        loadDeleted();
+    };
+
+    const handleRestore = async (id: string) => {
+        try {
+            await budgetsService.restore(id);
+            setDeletedBudgets(prev => prev.filter(b => b.id !== id));
+            toast({ title: "Restaurado", description: "Orçamento restaurado com sucesso." });
+            loadBudgets();
+        } catch (error) {
+            console.error('Error restoring budget:', error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível restaurar o orçamento." });
+        }
+    };
+
+    const handleHardDelete = async (id: string) => {
+        if (!await confirm({
+            description: 'Excluir definitivamente este orçamento? Esta ação é IRREVERSÍVEL e também apaga as parcelas e recebimentos vinculados. Não há backup para recuperar.',
+            variant: 'destructive',
+            confirmLabel: 'Excluir definitivamente',
+        })) return;
+        try {
+            await budgetsService.hardDelete(id);
+            setDeletedBudgets(prev => prev.filter(b => b.id !== id));
+            toast({ title: "Excluído", description: "Orçamento excluído definitivamente." });
+        } catch (error) {
+            console.error('Error hard-deleting budget:', error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível excluir o orçamento." });
         }
     };
 
@@ -251,6 +303,10 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        <Button onClick={handleOpenTrash} size="sm" variant="outline" className="gap-2" title="Lixeira de orçamentos">
+                            <Trash2 className="w-4 h-4" />
+                            <span className="hidden sm:inline">Lixeira</span>
+                        </Button>
                         {budgets.length >= 2 && (
                             <Button onClick={() => setConsolidatedPdfOpen(true)} size="sm" variant="outline" className="gap-2">
                                 <FileText className="w-4 h-4" />
@@ -350,6 +406,55 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 budgets={sortedBudgets}
                 patientName={patientName || 'Paciente'}
             />
+
+            {/* Lixeira de orçamentos */}
+            <Dialog open={trashOpen} onOpenChange={setTrashOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" /> Lixeira de orçamentos
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        {trashLoading ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
+                        ) : deletedBudgets.length === 0 ? (
+                            <p className="text-sm text-muted-foreground text-center py-8">A lixeira está vazia.</p>
+                        ) : (
+                            deletedBudgets.map(budget => {
+                                const total = (() => {
+                                    try {
+                                        const parsed = JSON.parse(budget.notes || '{}');
+                                        if (Array.isArray(parsed.teeth)) {
+                                            return parsed.teeth.reduce((sum: number, t: ToothEntry) =>
+                                                sum + Object.values(t.values || {}).reduce((a: number, b: any) => a + (parseInt(b) || 0) / 100, 0), 0);
+                                        }
+                                    } catch { /* ignore */ }
+                                    return 0;
+                                })();
+                                return (
+                                    <div key={budget.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-white">
+                                        <div className="min-w-0">
+                                            <p className="font-medium text-sm">{formatDisplayDate(budget.date)}</p>
+                                            <p className="text-sm text-muted-foreground">{formatCurrency(total)}</p>
+                                        </div>
+                                        <div className="flex gap-2 shrink-0">
+                                            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleRestore(budget.id)}>
+                                                <RotateCcw className="w-3.5 h-3.5" /> Restaurar
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleHardDelete(budget.id)} title="Excluir definitivamente">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {ConfirmDialog}
         </>
     );
 }

@@ -119,11 +119,11 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
     const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
     const handleDelete = async () => {
-        if (!await confirm({ description: 'Tem certeza que deseja excluir este orçamento?', variant: 'destructive', confirmLabel: 'Excluir' })) return;
+        if (!await confirm({ description: 'Mover este orçamento para a lixeira? Você poderá restaurá-lo depois.', variant: 'destructive', confirmLabel: 'Excluir' })) return;
         try {
             setUpdating(true);
             await budgetsService.delete(budget.id);
-            toast({ title: "Sucesso", description: "Orçamento excluído" });
+            toast({ title: "Movido para a lixeira", description: "Você pode restaurar pelo botão Lixeira." });
             onDelete?.(budget.id);
             onUpdate();
             onClose();

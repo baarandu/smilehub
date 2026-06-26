@@ -27,6 +27,7 @@ export const budgetsService = {
         budget_items (*)
       `)
             .eq('patient_id', patientId)
+            .is('deleted_at', null)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -131,7 +132,40 @@ export const budgetsService = {
         return data as Budget;
     },
 
+    // Soft-delete: marca deleted_at em vez de apagar. Não dispara o CASCADE de
+    // payment_receivables, então parcelas e recebimentos são preservados e o
+    // orçamento pode ser restaurado. Ver migração 20260626_budgets_soft_delete.
     async delete(id: string): Promise<void> {
+        const { clinicId } = await getClinicContext();
+
+        const { data: deleted, error } = await supabase
+            .from('budgets')
+            .update({ deleted_at: new Date().toISOString() } as any)
+            .eq('id', id)
+            .eq('clinic_id', clinicId)
+            .is('deleted_at', null)
+            .select('id');
+
+        if (error) throw error;
+        if (!deleted || deleted.length === 0) {
+            throw new Error('Não foi possível excluir o orçamento. Verifique se você tem permissão.');
+        }
+    },
+
+    // Restaura um orçamento da lixeira.
+    async restore(id: string): Promise<void> {
+        const { clinicId } = await getClinicContext();
+        const { error } = await supabase
+            .from('budgets')
+            .update({ deleted_at: null } as any)
+            .eq('id', id)
+            .eq('clinic_id', clinicId);
+        if (error) throw error;
+    },
+
+    // Exclusão DEFINITIVA (apaga de vez; dispara o CASCADE das parcelas).
+    // Usada apenas pelo "excluir definitivamente" dentro da lixeira.
+    async hardDelete(id: string): Promise<void> {
         const { clinicId } = await getClinicContext();
 
         await supabase
@@ -150,6 +184,22 @@ export const budgetsService = {
         if (!deleted || deleted.length === 0) {
             throw new Error('Não foi possível excluir o orçamento. Verifique se você tem permissão.');
         }
+    },
+
+    // Orçamentos na lixeira de um paciente (para restaurar / excluir de vez).
+    async listDeletedByPatient(patientId: string): Promise<BudgetWithItems[]> {
+        const { data, error } = await supabase
+            .from('budgets')
+            .select(`
+        *,
+        budget_items (*)
+      `)
+            .eq('patient_id', patientId)
+            .not('deleted_at', 'is', null)
+            .order('deleted_at', { ascending: false });
+
+        if (error) throw error;
+        return (data || []) as unknown as BudgetWithItems[];
     },
 
     async updateStatus(id: string, status: Budget['status']): Promise<Budget> {
