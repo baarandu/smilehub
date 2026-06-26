@@ -96,6 +96,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     const getItemStatusColor = (status: string) => {
         switch (status) {
             case 'approved': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            case 'partially_paid': return 'bg-orange-50 text-orange-700 border-orange-200';
             case 'paid':
             case 'completed': return 'bg-blue-50 text-blue-700 border-blue-200';
             default: return 'bg-amber-50 text-amber-700 border-amber-200';
@@ -134,7 +135,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                 // Group teeth by status
                 const teethByStatus = {
                     pending: parsed.teeth.filter((t: ToothEntry) => !t.status || t.status === 'pending'),
-                    approved: parsed.teeth.filter((t: ToothEntry) => t.status === 'approved'),
+                    approved: parsed.teeth.filter((t: ToothEntry) => t.status === 'approved' || t.status === 'partially_paid'),
                     completed: parsed.teeth.filter((t: ToothEntry) => t.status === 'paid' || t.status === 'completed')
                 };
 
@@ -170,7 +171,7 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
                                             const belongsToGroup = key === 'pending'
                                                 ? (!tooth.status || tooth.status === 'pending')
                                                 : key === 'approved'
-                                                    ? tooth.status === 'approved'
+                                                    ? (tooth.status === 'approved' || tooth.status === 'partially_paid')
                                                     : (tooth.status === 'paid' || tooth.status === 'completed');
                                             if (!belongsToGroup) return null;
 

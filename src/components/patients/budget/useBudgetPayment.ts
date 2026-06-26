@@ -166,8 +166,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
     };
 
     const handlePayAll = (teeth: ToothEntry[]) => {
-        const approvedItems = teeth.filter(t => t.status === 'approved');
-        const indices = teeth.map((t, idx) => t.status === 'approved' ? idx : -1).filter(idx => idx !== -1);
+        const isPayable = (t: ToothEntry) => t.status === 'approved' || t.status === 'partially_paid';
+        const approvedItems = teeth.filter(isPayable);
+        const indices = teeth.map((t, idx) => isPayable(t) ? idx : -1).filter(idx => idx !== -1);
         const totalValue = approvedItems.reduce((sum, t) => sum + getItemValue(t), 0);
 
         setPaymentBatch({ indices, teeth: approvedItems, totalValue });
