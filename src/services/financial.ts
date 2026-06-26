@@ -333,8 +333,33 @@ export const financialService = {
 
         const txn = transaction;
 
+        // 1b. If this income came from a split-payment parcela, revert that parcela to
+        // pending and re-sync the tooth from the receivables. Without this the parcela
+        // stays 'confirmed' and the patient ledger keeps counting money that no longer
+        // exists in Financeiro. This replaces the fragile description-based revert below.
+        const { data: linkedReceivable } = await supabase
+            .from('payment_receivables')
+            .select('id, split_group_id, budget_id, tooth_index')
+            .eq('financial_transaction_id', transactionId)
+            .eq('clinic_id', clinicId)
+            .maybeSingle();
+
+        let handledBySplit = false;
+        if (linkedReceivable) {
+            handledBySplit = true;
+            const lr = linkedReceivable as any;
+            await supabase
+                .from('payment_receivables')
+                .update({ status: 'pending', confirmed_at: null, confirmed_by: null, financial_transaction_id: null })
+                .eq('id', lr.id);
+
+            // Re-sync the tooth's splitPayments + status from the (now reverted) receivables.
+            const { receivablesService } = await import('./receivables');
+            await receivablesService._syncBudgetToothStatus(lr.split_group_id, lr.budget_id, lr.tooth_index);
+        }
+
         // 2. If there's a linked budget (related_entity_id), revert the specific tooth status
-        if (txn.related_entity_id) {
+        if (!handledBySplit && txn.related_entity_id) {
             const budgetId = txn.related_entity_id;
 
             // Get the budget
