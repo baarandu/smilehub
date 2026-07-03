@@ -25,6 +25,8 @@ interface ToothLike {
   values?: Record<string, string>;
   /** Treatment names on this tooth that are covered (R$0) by the plan. */
   planCovered?: string[];
+  /** Percentage-rule discount (in R$) the plan applies to this tooth. */
+  planDiscount?: number;
 }
 
 export interface UsageItem {
@@ -125,6 +127,9 @@ export function computePlanBudget<T extends ToothLike>(
     const treatments = tooth.treatments || [];
     const planCovered: string[] = [];
     const values = { ...(tooth.values || {}) };
+    // Percentage-rule discount for this tooth. Kept OUT of `values` (which stay
+    // gross) so re-running on an already-processed budget stays idempotent.
+    let toothDiscount = 0;
 
     for (const treatment of treatments) {
       const val = itemValue(tooth.values, treatment);
@@ -139,13 +144,23 @@ export function computePlanBudget<T extends ToothLike>(
       }
       const rule = snap.discount_rules.find(r => r.treatments.includes(treatment));
       if (rule && ruleRemaining[rule.id] > 0 && val > 0) {
-        discountAmount += (val * rule.percent) / 100;
+        const d = (val * rule.percent) / 100;
+        discountAmount += d;
+        toothDiscount += d;
         ruleRemaining[rule.id] -= 1;
       }
     }
 
-    if (planCovered.length === 0) return tooth;
-    return { ...tooth, values, planCovered } as T;
+    const roundedDiscount = Math.round(toothDiscount * 100) / 100;
+    // Return a fresh object when anything changed OR when stale plan annotations
+    // must be cleared (e.g. usage limits now consumed by prior budgets).
+    if (planCovered.length === 0 && roundedDiscount === 0 && tooth.planCovered == null && tooth.planDiscount == null) {
+      return tooth;
+    }
+    const next: any = { ...tooth, values };
+    if (planCovered.length > 0) next.planCovered = planCovered; else delete next.planCovered;
+    if (roundedDiscount > 0) next.planDiscount = roundedDiscount; else delete next.planDiscount;
+    return next as T;
   });
 
   return {

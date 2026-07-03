@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { budgetsService } from '@/services/budgets';
 import { financialService } from '@/services/financial';
 import { prosthesisService } from '@/services/prosthesis';
-import { getToothDisplayName, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, calculateBudgetStatus, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment } from '@/utils/prosthesis';
 import { isOrthodonticTreatment, getOrthoTypeFromTreatments } from '@/utils/orthodontics';
 import { orthodonticsService } from '@/services/orthodontics';
@@ -42,7 +42,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             // Use prosthesis type from budget form, fallback to auto-mapping
             const type = tooth.prosthesisType || getProsthesisTypeFromTreatments(tooth.treatments) || 'outro';
-            const value = Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
+            const value = getItemValue(tooth);
 
             let material: string | null = null;
             if (tooth.materials) {
@@ -115,9 +115,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
         }
     };
 
-    const getItemValue = (tooth: ToothEntry) => {
-        return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
-    };
+    // Net of loyalty-plan percentage discounts (stored per-tooth; values stay gross).
+    // Single source of truth for what the patient pays / is lançado no financeiro.
+    const getItemValue = (tooth: ToothEntry) => getToothNetValue(tooth);
 
     const formatLocalDate = (d: Date) => {
         const year = d.getFullYear();
@@ -362,7 +362,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
 
             for (const idx of indices) {
                 const tooth = currentTeeth[idx];
-                const itemOriginalValue = Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0);
+                const itemOriginalValue = getItemValue(tooth);
                 const ratio = itemOriginalValue / originalTotal;
                 const itemValue = totalAmount * ratio;
 
@@ -616,9 +616,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             // Per-item metadata, in the order the items were selected.
             const itemsMeta = indices.map(idx => {
                 const tooth = currentTeeth[idx];
-                const valueCents = Math.round(
-                    Object.values(tooth.values).reduce((a: number, b: string) => a + (parseInt(b) || 0) / 100, 0) * 100
-                );
+                const valueCents = Math.round(getItemValue(tooth) * 100);
                 return { idx, tooth, valueCents };
             });
 

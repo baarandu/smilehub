@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { FileText, Calendar, ChevronRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { budgetsService } from '@/services/budgets';
+import { getToothNetValue } from '@/utils/budgetUtils';
 
 interface PendingItem {
     budgetId: string;
@@ -38,9 +39,6 @@ const getToothDisplayName = (tooth: string): string => {
     return `Dente ${tooth}`;
 };
 
-const calculateToothTotal = (values: Record<string, string>): number => {
-    return Object.values(values).reduce((sum, val) => sum + (parseInt(val || '0', 10) / 100), 0);
-};
 
 export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProps) {
     const navigate = useNavigate();
@@ -148,7 +146,7 @@ export function PendingBudgetsDialog({ open, onClose }: PendingBudgetsDialogProp
                                             {item.tooth.treatments.join(', ')}
                                         </p>
                                         <p className="text-[#a03f3d] font-bold mt-1">
-                                            R$ {calculateToothTotal(item.tooth.values).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                            R$ {getToothNetValue(item.tooth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>

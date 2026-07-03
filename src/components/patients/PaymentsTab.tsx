@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { budgetsService } from '@/services/budgets';
-import { formatMoney, getToothDisplayName, formatDisplayDate, calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
+import { formatMoney, getToothDisplayName, formatDisplayDate, calculateBudgetStatus, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetWithItems } from '@/types/database';
 import { PaymentMethodDialog, type PayerData } from './PaymentMethodDialog';
 import { financialService } from '@/services/financial';
@@ -140,7 +140,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         const parsed = JSON.parse(budget.notes || '{}');
         if (parsed.teeth && Array.isArray(parsed.teeth)) {
           parsed.teeth.forEach((tooth: ToothEntry, index: number) => {
-            const itemVal = Object.values(tooth.values).reduce((a, b) => a + (parseInt(b) || 0) / 100, 0);
+            const itemVal = getToothNetValue(tooth);
 
             const item: ItemToPay = {
               budgetId: budget.id,
@@ -384,7 +384,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   };
 
   const getItemValue = (item: ItemToPay) => {
-    return Object.values(item.tooth.values).reduce((a, b) => a + (parseInt(b) || 0) / 100, 0);
+    return getToothNetValue(item.tooth);
   };
 
   const normalizeIssueDate = (dateStr: string) => {
