@@ -106,6 +106,7 @@ export const TREATMENT_TO_PROSTHESIS_TYPE: Record<string, string> = {
   'Implante': 'implante',
   'Pino': 'pino',
   'Prótese Removível': 'protese_removivel',
+  'Placa miorrelaxante': 'placa',
 };
 
 /** Budget treatments that are prosthetic */
