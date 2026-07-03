@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import type { BudgetWithItems } from '@/types/database';
-import { formatMoney, getToothDisplayName, type ToothEntry } from '@/utils/budgetUtils';
+import { formatMoney, getToothDisplayName, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import { computePdfHash, generateDocumentId } from '@/utils/pdfHash';
 
 export interface PdfResult {
@@ -294,10 +294,7 @@ async function buildPDFDocument(data: BudgetPDFData, documentId?: string): Promi
             toothNumber = 'Ambas Arcadas';
         }
         const treatments = tooth.treatments.join(', ');
-        const itemValue = Object.values(tooth.values).reduce(
-            (sum, val) => sum + (parseFloat(val as string) || 0) / 100,
-            0
-        );
+        const itemValue = getToothNetValue(tooth);
         const status = tooth.status || 'pending';
         const statusLabel = getStatusLabel(status);
 
@@ -565,11 +562,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
         const teeth: ToothEntry[] = parsedNotes.teeth || [];
 
         const budgetDate = new Date(budget.date + 'T00:00:00');
-        const sectionTotal = teeth.reduce((sum, t) => {
-            return sum + Object.values(t.values).reduce(
-                (a, b) => a + (parseInt(b as string) || 0) / 100, 0
-            );
-        }, 0);
+        const sectionTotal = teeth.reduce((sum, t) => sum + getToothNetValue(t), 0);
         grandTotal += sectionTotal;
 
         // Check page space for section header
@@ -635,9 +628,7 @@ export async function generateConsolidatedBudgetPDFPreview(data: {
             toothNumber = 'Ambas Arcadas';
         }
             const treatments = tooth.treatments.join(', ');
-            const itemValue = Object.values(tooth.values).reduce(
-                (sum, val) => sum + (parseFloat(val as string) || 0) / 100, 0
-            );
+            const itemValue = getToothNetValue(tooth);
             const status = tooth.status || 'pending';
             const statusLabel = getStatusLabel(status);
 

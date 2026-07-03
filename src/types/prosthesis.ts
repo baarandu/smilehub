@@ -158,6 +158,7 @@ export const PROSTHESIS_TYPE_LABELS: Record<string, string> = {
   onlay: 'Onlay',
   inlay: 'Inlay',
   pino: 'Pino',
+  placa: 'Placa Miorrelaxante',
   provisorio: 'Provisório',
   nucleo: 'Núcleo',
   outro: 'Outro',

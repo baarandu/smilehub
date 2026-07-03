@@ -412,15 +412,25 @@ export const receivablesService = {
 
     // 4. Determine new tooth status
     const activeReceivables = groupReceivables.filter(r => r.status !== 'cancelled');
-    const allConfirmed = activeReceivables.length > 0 && activeReceivables.every(r => r.status === 'confirmed');
+    const allActiveConfirmed = activeReceivables.length > 0 && activeReceivables.every(r => r.status === 'confirmed');
     const anyPending = activeReceivables.some(r => r.status === 'pending' || r.status === 'overdue');
 
-    const prevStatus = teeth[toothIndex].status;
+    // Only promote to 'paid' when the confirmed parcels (+ any patient credit used)
+    // actually cover the tooth's value. Cancelling a parcel removes it from the
+    // "active" set, so "all active confirmed" alone would wrongly mark a
+    // partially-received tooth as fully paid. Compare in cents to avoid FP drift.
+    const confirmedAmount = groupReceivables
+      .filter(r => r.status === 'confirmed')
+      .reduce((sum, r) => sum + Number(r.amount), 0);
+    const creditUsed = Number((teeth[toothIndex] as any).financialBreakdown?.creditUsed || 0);
+    const toothValue = Object.values(teeth[toothIndex].values || {})
+      .reduce((a: number, b) => a + (parseInt(b as string) || 0) / 100, 0);
+    const fullyCovered = Math.round((confirmedAmount + creditUsed) * 100) >= Math.round(toothValue * 100);
 
-    if (allConfirmed) {
+    if (allActiveConfirmed && fullyCovered) {
       teeth[toothIndex].status = 'paid';
       teeth[toothIndex].paymentDate = toLocalDateString(new Date());
-    } else if (anyPending) {
+    } else if (anyPending || confirmedAmount > 0) {
       teeth[toothIndex].status = 'partially_paid';
     }
 

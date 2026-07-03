@@ -32,7 +32,7 @@ import { StatusTimeline } from './StatusTimeline';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { budgetsService } from '@/services/budgets';
-import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, formatMoney, formatDisplayDate, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import { useClinic } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/supabase';
 
@@ -151,9 +151,7 @@ export function OrderDetailDialog({
       const teeth = parsed.teeth as ToothEntry[];
       if (teeth && teeth[order.budget_tooth_index]) {
         const tooth = teeth[order.budget_tooth_index];
-        const itemValue = Object.values(tooth.values).reduce(
-          (sum, val) => sum + (parseInt(val as string) || 0) / 100, 0
-        );
+        const itemValue = getToothNetValue(tooth);
         linkedBudgetInfo = {
           toothName: getToothDisplayName(tooth.tooth, false),
           treatments: tooth.treatments.join(', '),

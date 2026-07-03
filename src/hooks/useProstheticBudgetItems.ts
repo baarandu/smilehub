@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { budgetsService } from '@/services/budgets';
 import { prosthesisService } from '@/services/prosthesis';
-import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, formatMoney, formatDisplayDate, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import { isProstheticTreatment, getProsthesisTypeFromTreatments, hasLabTreatment } from '@/utils/prosthesis';
 import type { ProsthesisStatus } from '@/types/prosthesis';
 
@@ -21,10 +21,7 @@ export interface ProstheticBudgetItem {
 }
 
 function getItemValue(tooth: ToothEntry): number {
-  return Object.values(tooth.values).reduce(
-    (sum, val) => sum + (parseInt(val as string) || 0) / 100,
-    0
-  );
+  return getToothNetValue(tooth);
 }
 
 export function useProstheticBudgetItems(patientId: string | undefined) {

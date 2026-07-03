@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Eye, Square, CheckSquare, Calendar, Banknote, ChevronDown, ChevronRight } from 'lucide-react';
-import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, formatMoney, formatDisplayDate, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import { PdfPreviewDialog } from '@/components/common/PdfPreviewDialog';
 import { profileService } from '@/services/profile';
 import { generateConsolidatedBudgetPDFPreview, downloadPDFFromBlob } from '@/utils/pdfGenerator';
@@ -61,9 +61,7 @@ export function MultiBudgetPdfDialog({ open, onClose, budgets, patientName }: Mu
         }
     }, [open]);
 
-    const getItemValue = (tooth: ToothEntry) => {
-        return Object.values(tooth.values).reduce((a, b) => a + (parseInt(b as string) || 0) / 100, 0);
-    };
+    const getItemValue = (tooth: ToothEntry) => getToothNetValue(tooth);
 
     const toggleItem = (key: ItemKey) => {
         setSelectedItems(prev => {

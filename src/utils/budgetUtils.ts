@@ -91,6 +91,8 @@ export type ToothEntry = {
     financialBreakdown?: any;
     /** Treatments on this tooth covered (R$0) by an active treatment plan. */
     planCovered?: string[];
+    /** Percentage-rule discount (in R$) the active plan applies to this tooth. */
+    planDiscount?: number;
     faces?: string[];
     materials?: Record<string, string>;
     labTreatments?: Record<string, boolean>;
@@ -169,6 +171,14 @@ export const calculateToothTotal = (values: Record<string, string>): number => {
     return Object.values(values).reduce((sum, val) => {
         return sum + (parseInt(val || '0', 10) / 100);
     }, 0);
+};
+
+// Net value the patient actually pays for a tooth: gross minus the loyalty-plan
+// percentage discount (kept per-tooth in `planDiscount`, values stay gross).
+// This is the single source of truth for what gets charged/lançado no financeiro.
+export const getToothNetValue = (tooth: Pick<ToothEntry, 'values' | 'planDiscount'>): number => {
+    const gross = calculateToothTotal(tooth.values || {});
+    return Math.max(gross - (tooth.planDiscount || 0), 0);
 };
 
 // Get display name for a tooth (without 'Dente' prefix for Arcada)

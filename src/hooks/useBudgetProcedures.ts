@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { budgetsService } from '@/services/budgets';
-import { getToothDisplayName, formatMoney, formatDisplayDate, type ToothEntry } from '@/utils/budgetUtils';
+import { getToothDisplayName, formatMoney, formatDisplayDate, getToothNetValue, type ToothEntry } from '@/utils/budgetUtils';
 import type { BudgetLink } from '@/services/procedures';
 
 export interface BudgetPlanItem {
@@ -17,10 +17,7 @@ export interface BudgetPlanItem {
 
 function getItemValue(tooth: ToothEntry): number {
   if (!tooth.values || typeof tooth.values !== 'object') return 0;
-  return Object.values(tooth.values).reduce(
-    (sum, val) => sum + (parseInt(val as string) || 0) / 100,
-    0
-  );
+  return getToothNetValue(tooth);
 }
 
 export function useBudgetPlanItems(patientId: string) {
