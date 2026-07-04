@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { receivablesService } from '@/services/receivables';
 import { useClinic } from '@/contexts/ClinicContext';
-import type { ReceivableFilters } from '@/types/receivables';
+import type { ReceivableFilters, ConfirmPaymentOverride } from '@/types/receivables';
 
 export function usePatientReceivables(patientId: string | undefined) {
   return useQuery({
@@ -40,13 +40,14 @@ export function useReceivablesDueToday() {
 export function useConfirmReceivable() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate }: {
+    mutationFn: ({ receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate, paymentOverride }: {
       receivableId: string;
       confirmationDate?: string;
       budgetLocation?: string | null;
       receivedAmount?: number;
       remainderDueDate?: string;
-    }) => receivablesService.confirmReceivable(receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate),
+      paymentOverride?: ConfirmPaymentOverride;
+    }) => receivablesService.confirmReceivable(receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate, paymentOverride),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receivables'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });

@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Loader2, Calendar, CreditCard, Banknote, Smartphone } from 'lucide-react';
 import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
-import type { PaymentReceivable } from '@/types/receivables';
+import { computeDeductions } from '@/utils/paymentBreakdown';
+import type { PaymentReceivable, ConfirmPaymentOverride } from '@/types/receivables';
+import { ConfirmMethodPicker, type MethodSelection } from './ConfirmMethodPicker';
 
 interface ConfirmReceivableDialogProps {
   open: boolean;
@@ -17,6 +19,7 @@ interface ConfirmReceivableDialogProps {
     confirmationDate: string,
     receivedAmount: number,
     remainderDueDate?: string,
+    paymentOverride?: ConfirmPaymentOverride,
   ) => Promise<void>;
   loading?: boolean;
 }
@@ -46,18 +49,42 @@ export function ConfirmReceivableDialog({ open, onClose, receivable, onConfirm, 
   const methodLabel = METHOD_LABELS[receivable.payment_method] || receivable.payment_method;
   const isOverdue = receivable.status === 'overdue';
 
+  const [methodSel, setMethodSel] = useState<MethodSelection | null>(null);
+
   const received = parseAmount(receivedStr);
   const remainder = Math.round((receivable.amount - received) * 100) / 100;
   const isPartial = received > 0 && remainder > 0;
   const isValid = received > 0 && received <= receivable.amount;
 
+  // Live net preview for the amount received with the chosen method. Tax and
+  // location rates come from the receivable (they don't change with the method).
+  const previewCardFeeRate = methodSel ? methodSel.cardFeeRate : (receivable.card_fee_rate || 0);
+  const previewNet = computeDeductions({
+    amount: received > 0 ? received : 0,
+    taxRate: receivable.tax_rate || 0,
+    cardFeeRate: previewCardFeeRate,
+    locationRate: receivable.location_rate || 0,
+  }).netAmount;
+  const showNet = received > 0 && previewNet !== received;
+
   const handleConfirm = async () => {
     if (!isValid) return;
+    const paymentOverride: ConfirmPaymentOverride | undefined = methodSel?.changed
+      ? {
+          method: methodSel.method,
+          brand: methodSel.brand,
+          installments: methodSel.installments,
+          cardMachineId: methodSel.cardMachineId,
+          cardFeeRate: methodSel.cardFeeRate,
+          anticipationRate: methodSel.anticipationRate,
+        }
+      : undefined;
     await onConfirm(
       receivable.id,
       confirmDate,
       received,
       isPartial ? remainderDueDate : undefined,
+      paymentOverride,
     );
   };
 
@@ -124,6 +151,17 @@ export function ConfirmReceivableDialog({ open, onClose, receivable, onConfirm, 
               </p>
             )}
           </div>
+
+          {/* Payment method (can differ from what was scheduled) */}
+          <ConfirmMethodPicker receivable={receivable} onChange={setMethodSel} />
+
+          {/* Net preview */}
+          {showNet && (
+            <div className="text-xs text-slate-500 flex justify-between">
+              <span>Líquido a receber</span>
+              <span className="font-medium text-emerald-600">R$ {formatMoney(previewNet)}</span>
+            </div>
+          )}
 
           {/* Partial payment: remainder stays scheduled */}
           {isPartial && (

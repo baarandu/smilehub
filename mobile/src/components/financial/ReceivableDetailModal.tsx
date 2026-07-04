@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, CheckCircle, XCircle, Calendar, CreditCard, User, FileText } from 'lucide-react-native';
-import type { PaymentReceivable } from '../../types/receivables';
+import type { PaymentReceivable, ConfirmPaymentOverride } from '../../types/receivables';
 import { formatCurrency, formatDate } from '../../utils/financial';
+import { computeDeductions } from '../../utils/paymentBreakdown';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { ConfirmMethodPicker, type MethodSelection } from './ConfirmMethodPicker';
 
 interface ReceivableDetailModalProps {
     receivable: PaymentReceivable | null;
@@ -14,6 +16,7 @@ interface ReceivableDetailModalProps {
         confirmationDate: string,
         receivedAmount: number,
         remainderDueDate?: string,
+        paymentOverride?: ConfirmPaymentOverride,
     ) => Promise<void>;
     onCancel: (receivableId: string) => Promise<void>;
 }
@@ -48,6 +51,7 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
     const [confirmDate, setConfirmDate] = useState(new Date().toISOString().split('T')[0]);
     const [receivedStr, setReceivedStr] = useState('');
     const [remainderDueDate, setRemainderDueDate] = useState('');
+    const [methodSel, setMethodSel] = useState<MethodSelection | null>(null);
 
     // Reset editable fields whenever a different parcela is opened.
     React.useEffect(() => {
@@ -71,14 +75,34 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
     const isPartial = received > 0 && remainder > 0;
     const isValid = received > 0 && received <= receivable.amount;
 
+    // Live net preview for the amount received with the chosen method.
+    const previewCardFeeRate = methodSel ? methodSel.cardFeeRate : (receivable.card_fee_rate || 0);
+    const previewNet = computeDeductions({
+        amount: received > 0 ? received : 0,
+        taxRate: receivable.tax_rate || 0,
+        cardFeeRate: previewCardFeeRate,
+        locationRate: receivable.location_rate || 0,
+    }).netAmount;
+    const showNet = received > 0 && previewNet !== received;
+
     const handleConfirm = async () => {
         if (!isValid) {
             Alert.alert('Valor inválido', `Informe um valor entre R$ 0,01 e ${formatCurrency(receivable.amount)}.`);
             return;
         }
+        const paymentOverride: ConfirmPaymentOverride | undefined = methodSel?.changed
+            ? {
+                method: methodSel.method,
+                brand: methodSel.brand,
+                installments: methodSel.installments,
+                cardMachineId: methodSel.cardMachineId,
+                cardFeeRate: methodSel.cardFeeRate,
+                anticipationRate: methodSel.anticipationRate,
+            }
+            : undefined;
         setConfirming(true);
         try {
-            await onConfirm(receivable.id, confirmDate, received, isPartial ? remainderDueDate : undefined);
+            await onConfirm(receivable.id, confirmDate, received, isPartial ? remainderDueDate : undefined, paymentOverride);
             onClose();
         } catch (error: any) {
             Alert.alert('Erro', error?.message || 'Falha ao confirmar parcela');
@@ -234,6 +258,19 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
                                     </TouchableOpacity>
                                 </View>
                             )}
+                        </View>
+                    )}
+
+                    {/* Payment method (can differ from what was scheduled) */}
+                    {isActive && (
+                        <ConfirmMethodPicker receivable={receivable} onChange={setMethodSel} />
+                    )}
+
+                    {/* Net preview */}
+                    {isActive && showNet && (
+                        <View className="bg-white rounded-xl border border-gray-100 p-4 mb-4 flex-row justify-between">
+                            <Text className="text-sm text-gray-500">Líquido a receber</Text>
+                            <Text className="text-sm font-semibold text-green-600">{formatCurrency(previewNet)}</Text>
                         </View>
                     )}
 

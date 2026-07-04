@@ -37,6 +37,17 @@ export interface PaymentReceivable {
     patients?: { name: string; phone: string | null };
 }
 
+// Payment-method override applied when confirming a receivable — used when the
+// patient pays with a different method than originally scheduled.
+export interface ConfirmPaymentOverride {
+    method: string;
+    brand: string | null;
+    installments: number;
+    cardMachineId: string | null;
+    cardFeeRate: number;
+    anticipationRate: number;
+}
+
 export interface OverdueSummary {
     total_count: number;
     total_amount: number;

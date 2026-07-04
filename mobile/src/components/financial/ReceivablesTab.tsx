@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { Clock, AlertTriangle, CheckCircle, CreditCard, Calendar, User, ChevronRight } from 'lucide-react-native';
 import { receivablesService } from '../../services/receivables';
-import type { PaymentReceivable } from '../../types/receivables';
+import type { PaymentReceivable, ConfirmPaymentOverride } from '../../types/receivables';
 import { formatCurrency, formatDate } from '../../utils/financial';
 import { ReceivableDetailModal } from './ReceivableDetailModal';
 
@@ -81,8 +81,9 @@ export function ReceivablesTab({ loading: parentLoading, onRefresh, refreshing }
         confirmationDate: string,
         receivedAmount?: number,
         remainderDueDate?: string,
+        paymentOverride?: ConfirmPaymentOverride,
     ) => {
-        await receivablesService.confirmReceivable(receivableId, confirmationDate, null, receivedAmount, remainderDueDate);
+        await receivablesService.confirmReceivable(receivableId, confirmationDate, null, receivedAmount, remainderDueDate, paymentOverride);
         const isPartial = receivedAmount != null && selectedReceivable != null && receivedAmount < selectedReceivable.amount;
         Alert.alert('Sucesso', isPartial ? 'Valor parcial confirmado. O restante ficou agendado.' : 'Parcela confirmada!');
         handleRefresh();

@@ -1,10 +1,11 @@
 import { supabase } from '@/lib/supabase';
-import type { PaymentReceivable, SplitPaymentPortion, OverdueSummary, ReceivableFilters } from '@/types/receivables';
+import type { PaymentReceivable, SplitPaymentPortion, OverdueSummary, ReceivableFilters, ConfirmPaymentOverride } from '@/types/receivables';
 import { financialService } from './financial';
 import { calculateBudgetStatus, type ToothEntry } from '@/utils/budgetUtils';
 import { getClinicContext } from './clinicContext';
 import { logger } from '@/utils/logger';
 import { toLocalDateString } from '@/utils/formatters';
+import { computeDeductions } from '@/utils/paymentBreakdown';
 
 export const receivablesService = {
   async createSplitPayment(
@@ -136,6 +137,7 @@ export const receivablesService = {
     budgetLocation?: string | null,
     receivedAmount?: number,
     remainderDueDate?: string,
+    paymentOverride?: ConfirmPaymentOverride,
   ): Promise<PaymentReceivable> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
@@ -156,31 +158,48 @@ export const receivablesService = {
     if (r.status === 'cancelled') throw new Error('Parcela cancelada');
 
     const date = confirmationDate || toLocalDateString(new Date());
+    const round2 = (v: number) => Math.round(v * 100) / 100;
 
-    // --- Partial payment support ---
-    // A parcela can be confirmed for less than its full amount (e.g. patient owes
-    // 600 but only pays 200). In that case we confirm what was actually received
-    // and leave the remainder (400) as a new pending parcela in the same split
-    // group. Deduction/net amounts are scaled proportionally.
+    // --- Partial payment + payment-method change support ---
+    // A parcela can be confirmed for less than its full amount (patient owes 600
+    // but pays 200) and/or with a different method than scheduled (said cash, paid
+    // by card). Tax and location rates are method-independent — only the card fee
+    // changes — so deductions are recomputed from rates.
     const fullAmount = Number(r.amount);
-    let received = receivedAmount != null ? Math.round(Number(receivedAmount) * 100) / 100 : fullAmount;
+    let received = receivedAmount != null ? round2(Number(receivedAmount)) : fullAmount;
     if (!Number.isFinite(received) || received <= 0 || received >= fullAmount) {
       received = fullAmount;
     }
     const isPartial = received < fullAmount;
-    const remainder = Math.round((fullAmount - received) * 100) / 100;
-    const ratio = received / fullAmount;
-    const scale = (v: unknown) => Math.round(Number(v || 0) * ratio * 100) / 100;
+    const remainder = round2(fullAmount - received);
 
-    // Deduction/net amounts for the confirmed portion.
-    const usedNet = isPartial ? scale(r.net_amount) : r.net_amount;
-    const usedTax = isPartial ? scale(r.tax_amount) : r.tax_amount;
-    const usedCardFee = isPartial ? scale(r.card_fee_amount) : r.card_fee_amount;
-    const usedAntic = isPartial ? scale(r.anticipation_amount) : r.anticipation_amount;
-    const usedLoc = isPartial ? scale(r.location_amount) : r.location_amount;
+    // Effective payment details for the confirmed portion (override if provided).
+    const hasOverride = !!paymentOverride;
+    const effMethod = paymentOverride?.method || r.payment_method;
+    const effBrand = hasOverride ? (paymentOverride!.brand || null) : (r.brand || null);
+    const effInstallments = hasOverride ? paymentOverride!.installments : r.installments;
+    const effMachineId = hasOverride ? (paymentOverride!.cardMachineId || null) : ((r as any).card_machine_id || null);
+    const effCardFeeRate = hasOverride ? Number(paymentOverride!.cardFeeRate || 0) : Number(r.card_fee_rate || 0);
+    const effAnticipationRate = hasOverride ? Number(paymentOverride!.anticipationRate || 0) : Number(r.anticipation_rate || 0);
+    const taxRate = Number(r.tax_rate || 0);
+    const locationRate = Number(r.location_rate || 0);
 
-    // If partial, create the remainder parcela. It gets the leftover deductions
-    // (original minus the confirmed portion) so the two rows reconcile exactly.
+    // Deductions for the confirmed portion. When nothing changed and it's a full
+    // confirmation, keep the originally stored amounts to avoid rounding drift.
+    let usedTax: number, usedCardFee: number, usedLoc: number, usedNet: number;
+    if (isPartial || hasOverride) {
+      const d = computeDeductions({ amount: received, taxRate, cardFeeRate: effCardFeeRate, locationRate });
+      usedTax = d.taxAmount; usedCardFee = d.cardFeeAmount; usedLoc = d.locationAmount; usedNet = d.netAmount;
+    } else {
+      usedTax = Number(r.tax_amount || 0);
+      usedCardFee = Number(r.card_fee_amount || 0);
+      usedLoc = Number(r.location_amount || 0);
+      usedNet = Number(r.net_amount || 0);
+    }
+
+    // If partial, create the remainder parcela. It keeps the ORIGINAL scheduled
+    // method/rates (it is still just a plan) and its deductions are recomputed from
+    // those rates on the remaining amount.
     if (isPartial) {
       const { data: groupRows } = await supabase
         .from('payment_receivables')
@@ -189,8 +208,12 @@ export const receivablesService = {
       const nextIndex = (groupRows || []).reduce(
         (max: number, g: any) => Math.max(max, Number(g.split_index)), Number(r.split_index),
       ) + 1;
-      const leftover = (orig: unknown, used: number) =>
-        Math.round((Number(orig || 0) - used) * 100) / 100;
+      const remD = computeDeductions({
+        amount: remainder,
+        taxRate,
+        cardFeeRate: Number(r.card_fee_rate || 0),
+        locationRate,
+      });
 
       const { error: remError } = await supabase.from('payment_receivables').insert({
         clinic_id: r.clinic_id,
@@ -208,14 +231,14 @@ export const receivablesService = {
         tooth_index: r.tooth_index,
         tooth_description: r.tooth_description,
         tax_rate: r.tax_rate,
-        tax_amount: leftover(r.tax_amount, usedTax),
+        tax_amount: remD.taxAmount,
         card_fee_rate: r.card_fee_rate,
-        card_fee_amount: leftover(r.card_fee_amount, usedCardFee),
+        card_fee_amount: remD.cardFeeAmount,
         anticipation_rate: r.anticipation_rate,
-        anticipation_amount: leftover(r.anticipation_amount, usedAntic),
+        anticipation_amount: 0,
         location_rate: r.location_rate,
-        location_amount: leftover(r.location_amount, usedLoc),
-        net_amount: leftover(r.net_amount, usedNet),
+        location_amount: remD.locationAmount,
+        net_amount: remD.netAmount,
         payer_is_patient: r.payer_is_patient,
         payer_type: r.payer_type,
         payer_name: r.payer_name,
@@ -226,13 +249,14 @@ export const receivablesService = {
       if (remError) throw remError;
     }
 
-    // Create financial transaction (for the amount actually received)
+    // Create financial transaction (for the amount received, with the effective
+    // — possibly changed — payment method).
     const methodLabels: Record<string, string> = {
       credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
     };
-    const methodLabel = methodLabels[r.payment_method] || r.payment_method;
-    const isCard = r.payment_method === 'credit' || r.payment_method === 'debit';
-    const displayBrand = isCard && r.brand ? r.brand : null;
+    const methodLabel = methodLabels[effMethod] || effMethod;
+    const isCard = effMethod === 'credit' || effMethod === 'debit';
+    const displayBrand = isCard && effBrand ? effBrand : null;
     const paymentTag = displayBrand ? `(${methodLabel} - ${displayBrand.toUpperCase()})` : `(${methodLabel})`;
 
     const tx = await financialService.createTransaction({
@@ -244,39 +268,48 @@ export const receivablesService = {
       patient_id: r.patient_id,
       related_entity_id: r.budget_id,
       location: budgetLocation || null,
-      payment_method: r.payment_method,
+      payment_method: effMethod,
       net_amount: usedNet,
-      tax_rate: r.tax_rate,
+      tax_rate: taxRate,
       tax_amount: usedTax,
-      card_fee_rate: r.card_fee_rate,
+      card_fee_rate: effCardFeeRate,
       card_fee_amount: usedCardFee,
-      anticipation_rate: r.anticipation_rate,
-      anticipation_amount: usedAntic,
-      location_rate: r.location_rate,
+      anticipation_rate: effAnticipationRate,
+      anticipation_amount: 0,
+      location_rate: locationRate,
       location_amount: usedLoc,
       payer_is_patient: r.payer_is_patient,
       payer_type: r.payer_type,
       payer_name: r.payer_name,
       payer_cpf: r.payer_cpf,
       pj_source_id: r.pj_source_id,
-      card_machine_id: (r as any).card_machine_id || null,
+      card_machine_id: effMachineId,
       tooth_index: r.tooth_index,
     } as any);
 
-    // Update receivable status (and shrink it to the received amount if partial)
+    // Update receivable status (shrink to received amount if partial; persist the
+    // effective payment method + recomputed deductions when changed).
     const updatePayload: Record<string, unknown> = {
       status: 'confirmed',
       confirmed_at: new Date().toISOString(),
       confirmed_by: user.id,
       financial_transaction_id: tx.id,
     };
-    if (isPartial) {
-      updatePayload.amount = received;
-      updatePayload.net_amount = usedNet;
+    if (isPartial) updatePayload.amount = received;
+    if (isPartial || hasOverride) {
+      updatePayload.payment_method = effMethod;
+      updatePayload.brand = effBrand;
+      updatePayload.installments = effInstallments;
+      updatePayload.card_machine_id = effMachineId;
+      updatePayload.tax_rate = taxRate;
       updatePayload.tax_amount = usedTax;
+      updatePayload.card_fee_rate = effCardFeeRate;
       updatePayload.card_fee_amount = usedCardFee;
-      updatePayload.anticipation_amount = usedAntic;
+      updatePayload.anticipation_rate = effAnticipationRate;
+      updatePayload.anticipation_amount = 0;
+      updatePayload.location_rate = locationRate;
       updatePayload.location_amount = usedLoc;
+      updatePayload.net_amount = usedNet;
     }
 
     const { data: updated, error: updateError } = await supabase
