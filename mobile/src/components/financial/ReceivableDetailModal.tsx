@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, CheckCircle, XCircle, Calendar, CreditCard, User, FileText } from 'lucide-react-native';
 import type { PaymentReceivable } from '../../types/receivables';
@@ -9,8 +9,21 @@ import { DatePickerModal } from '../common/DatePickerModal';
 interface ReceivableDetailModalProps {
     receivable: PaymentReceivable | null;
     onClose: () => void;
-    onConfirm: (receivableId: string, confirmationDate: string) => Promise<void>;
+    onConfirm: (
+        receivableId: string,
+        confirmationDate: string,
+        receivedAmount: number,
+        remainderDueDate?: string,
+    ) => Promise<void>;
     onCancel: (receivableId: string) => Promise<void>;
+}
+
+// Parse a BRL-ish string ("600", "600,00", "1.200,50") into a number in reais.
+function parseAmount(s: string): number {
+    let t = s.trim().replace(/[^0-9.,]/g, '');
+    if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(t);
+    return Number.isFinite(n) ? n : 0;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -31,7 +44,18 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
     const [confirming, setConfirming] = useState(false);
     const [cancelling, setCancelling] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showRemainderPicker, setShowRemainderPicker] = useState(false);
     const [confirmDate, setConfirmDate] = useState(new Date().toISOString().split('T')[0]);
+    const [receivedStr, setReceivedStr] = useState('');
+    const [remainderDueDate, setRemainderDueDate] = useState('');
+
+    // Reset editable fields whenever a different parcela is opened.
+    React.useEffect(() => {
+        if (receivable) {
+            setReceivedStr(receivable.amount.toFixed(2).replace('.', ','));
+            setRemainderDueDate(receivable.due_date);
+        }
+    }, [receivable?.id]);
 
     if (!receivable) return null;
 
@@ -42,10 +66,19 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
     const totalDeductions = receivable.tax_amount + receivable.card_fee_amount +
         receivable.anticipation_amount + receivable.location_amount;
 
+    const received = parseAmount(receivedStr);
+    const remainder = Math.round((receivable.amount - received) * 100) / 100;
+    const isPartial = received > 0 && remainder > 0;
+    const isValid = received > 0 && received <= receivable.amount;
+
     const handleConfirm = async () => {
+        if (!isValid) {
+            Alert.alert('Valor inválido', `Informe um valor entre R$ 0,01 e ${formatCurrency(receivable.amount)}.`);
+            return;
+        }
         setConfirming(true);
         try {
-            await onConfirm(receivable.id, confirmDate);
+            await onConfirm(receivable.id, confirmDate, received, isPartial ? remainderDueDate : undefined);
             onClose();
         } catch (error: any) {
             Alert.alert('Erro', error?.message || 'Falha ao confirmar parcela');
@@ -161,6 +194,49 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
                         </View>
                     )}
 
+                    {/* Amount actually received (allows partial payment) */}
+                    {isActive && (
+                        <View className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+                            <Text className="font-semibold text-gray-900 mb-3">Valor recebido agora</Text>
+                            <View className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 flex-row items-center">
+                                <Text className="text-gray-500 mr-2">R$</Text>
+                                <TextInput
+                                    value={receivedStr}
+                                    onChangeText={setReceivedStr}
+                                    keyboardType="decimal-pad"
+                                    className="flex-1 text-gray-900 text-base"
+                                    placeholder="0,00"
+                                />
+                            </View>
+                            {received > receivable.amount && (
+                                <Text className="text-xs text-red-600 mt-2">
+                                    O valor não pode ser maior que a parcela ({formatCurrency(receivable.amount)}).
+                                </Text>
+                            )}
+
+                            {isPartial && (
+                                <View className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <Text className="text-sm text-amber-800 mb-2">
+                                        Restante de <Text className="font-semibold">{formatCurrency(remainder)}</Text> ficará agendado como nova parcela.
+                                    </Text>
+                                    <Text className="text-xs text-amber-800 mb-2">Novo vencimento do restante</Text>
+                                    <TouchableOpacity
+                                        onPress={() => setShowRemainderPicker(true)}
+                                        className="bg-white border border-amber-200 rounded-lg px-3 py-3 flex-row items-center justify-between"
+                                    >
+                                        <Text className="text-gray-900">
+                                            {(() => {
+                                                const [y, m, d] = remainderDueDate.split('-');
+                                                return `${d}/${m}/${y}`;
+                                            })()}
+                                        </Text>
+                                        <Calendar size={20} color="#6B7280" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
                     {/* Confirm date picker for active receivables */}
                     {isActive && (
                         <View className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
@@ -188,12 +264,12 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
                     <View className="p-4 border-t border-gray-200 bg-white gap-3">
                         <TouchableOpacity
                             onPress={handleConfirm}
-                            disabled={confirming || cancelling}
-                            className="bg-green-600 rounded-xl px-6 py-4 items-center flex-row justify-center gap-2"
+                            disabled={confirming || cancelling || !isValid}
+                            className={`rounded-xl px-6 py-4 items-center flex-row justify-center gap-2 ${isValid ? 'bg-green-600' : 'bg-green-300'}`}
                         >
                             <CheckCircle size={20} color="#FFFFFF" />
                             <Text className="text-white font-semibold">
-                                {confirming ? 'Confirmando...' : 'Confirmar Recebimento'}
+                                {confirming ? 'Confirmando...' : isPartial ? 'Confirmar Valor Parcial' : 'Confirmar Recebimento'}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -218,6 +294,18 @@ export function ReceivableDetailModal({ receivable, onClose, onConfirm, onCancel
                         const m = String(date.getMonth() + 1).padStart(2, '0');
                         const d = String(date.getDate()).padStart(2, '0');
                         setConfirmDate(`${y}-${m}-${d}`);
+                    }}
+                />
+
+                <DatePickerModal
+                    visible={showRemainderPicker}
+                    onClose={() => setShowRemainderPicker(false)}
+                    initialDate={new Date(remainderDueDate + 'T12:00:00')}
+                    onSelectDate={(date) => {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        setRemainderDueDate(`${y}-${m}-${d}`);
                     }}
                 />
             </SafeAreaView>

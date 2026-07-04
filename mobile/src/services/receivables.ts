@@ -105,6 +105,8 @@ export const receivablesService = {
         receivableId: string,
         confirmationDate?: string,
         budgetLocation?: string | null,
+        receivedAmount?: number,
+        remainderDueDate?: string,
     ): Promise<PaymentReceivable> {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Usuário não autenticado');
@@ -123,6 +125,72 @@ export const receivablesService = {
 
         const date = confirmationDate || new Date().toISOString().split('T')[0];
 
+        // --- Partial payment support ---
+        // A parcela can be confirmed for less than its full amount (e.g. patient
+        // owes 600 but only pays 200). We confirm what was received and leave the
+        // remainder as a new pending parcela in the same split group. Deduction/net
+        // amounts are scaled proportionally.
+        const fullAmount = Number(r.amount);
+        let received = receivedAmount != null ? Math.round(Number(receivedAmount) * 100) / 100 : fullAmount;
+        if (!Number.isFinite(received) || received <= 0 || received >= fullAmount) {
+            received = fullAmount;
+        }
+        const isPartial = received < fullAmount;
+        const remainder = Math.round((fullAmount - received) * 100) / 100;
+        const ratio = received / fullAmount;
+        const scale = (v: unknown) => Math.round(Number(v || 0) * ratio * 100) / 100;
+
+        const usedNet = isPartial ? scale(r.net_amount) : r.net_amount;
+        const usedTax = isPartial ? scale(r.tax_amount) : r.tax_amount;
+        const usedCardFee = isPartial ? scale(r.card_fee_amount) : r.card_fee_amount;
+        const usedAntic = isPartial ? scale(r.anticipation_amount) : r.anticipation_amount;
+        const usedLoc = isPartial ? scale(r.location_amount) : r.location_amount;
+
+        if (isPartial) {
+            const { data: groupRows } = await supabase
+                .from('payment_receivables')
+                .select('split_index')
+                .eq('split_group_id', r.split_group_id);
+            const nextIndex = (groupRows || []).reduce(
+                (max: number, g: any) => Math.max(max, Number(g.split_index)), Number(r.split_index),
+            ) + 1;
+            const leftover = (orig: unknown, used: number) =>
+                Math.round((Number(orig || 0) - used) * 100) / 100;
+
+            const { error: remError } = await supabase.from('payment_receivables').insert({
+                clinic_id: r.clinic_id,
+                patient_id: r.patient_id,
+                budget_id: r.budget_id,
+                split_group_id: r.split_group_id,
+                split_index: nextIndex,
+                amount: remainder,
+                payment_method: r.payment_method,
+                installments: r.installments,
+                brand: r.brand || null,
+                card_machine_id: (r as any).card_machine_id || null,
+                due_date: remainderDueDate || r.due_date,
+                status: 'pending',
+                tooth_index: r.tooth_index,
+                tooth_description: r.tooth_description,
+                tax_rate: r.tax_rate,
+                tax_amount: leftover(r.tax_amount, usedTax),
+                card_fee_rate: r.card_fee_rate,
+                card_fee_amount: leftover(r.card_fee_amount, usedCardFee),
+                anticipation_rate: r.anticipation_rate,
+                anticipation_amount: leftover(r.anticipation_amount, usedAntic),
+                location_rate: r.location_rate,
+                location_amount: leftover(r.location_amount, usedLoc),
+                net_amount: leftover(r.net_amount, usedNet),
+                payer_is_patient: r.payer_is_patient,
+                payer_type: r.payer_type,
+                payer_name: r.payer_name,
+                payer_cpf: r.payer_cpf,
+                pj_source_id: r.pj_source_id,
+                created_by: user.id,
+            });
+            if (remError) throw remError;
+        }
+
         const methodLabels: Record<string, string> = {
             credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
         };
@@ -133,7 +201,7 @@ export const receivablesService = {
 
         const tx = await financialService.create({
             type: 'income',
-            amount: r.amount,
+            amount: received,
             description: `${r.tooth_description} ${paymentTag} [Parcela confirmada]`,
             category: 'Tratamento',
             date,
@@ -141,15 +209,15 @@ export const receivablesService = {
             related_entity_id: r.budget_id,
             location: budgetLocation || null,
             payment_method: r.payment_method,
-            net_amount: r.net_amount,
+            net_amount: usedNet,
             tax_rate: r.tax_rate,
-            tax_amount: r.tax_amount,
+            tax_amount: usedTax,
             card_fee_rate: r.card_fee_rate,
-            card_fee_amount: r.card_fee_amount,
+            card_fee_amount: usedCardFee,
             anticipation_rate: r.anticipation_rate,
-            anticipation_amount: r.anticipation_amount,
+            anticipation_amount: usedAntic,
             location_rate: r.location_rate,
-            location_amount: r.location_amount,
+            location_amount: usedLoc,
             payer_is_patient: r.payer_is_patient,
             payer_type: r.payer_type,
             payer_name: r.payer_name,
@@ -158,14 +226,24 @@ export const receivablesService = {
             card_machine_id: (r as any).card_machine_id || null,
         } as any);
 
+        const updatePayload: Record<string, unknown> = {
+            status: 'confirmed',
+            confirmed_at: new Date().toISOString(),
+            confirmed_by: user.id,
+            financial_transaction_id: tx.id,
+        };
+        if (isPartial) {
+            updatePayload.amount = received;
+            updatePayload.net_amount = usedNet;
+            updatePayload.tax_amount = usedTax;
+            updatePayload.card_fee_amount = usedCardFee;
+            updatePayload.anticipation_amount = usedAntic;
+            updatePayload.location_amount = usedLoc;
+        }
+
         const { data: updated, error: updateError } = await supabase
             .from('payment_receivables')
-            .update({
-                status: 'confirmed',
-                confirmed_at: new Date().toISOString(),
-                confirmed_by: user.id,
-                financial_transaction_id: tx.id,
-            })
+            .update(updatePayload)
             .eq('id', receivableId)
             .select()
             .single();

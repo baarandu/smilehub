@@ -602,10 +602,13 @@ export default function Financial() {
               onClose={() => setConfirmingReceivable(null)}
               receivable={confirmingReceivable}
               loading={confirmReceivable.isPending}
-              onConfirm={async (id, date) => {
+              onConfirm={async (id, date, receivedAmount, remainderDueDate) => {
                 try {
-                  await confirmReceivable.mutateAsync({ receivableId: id, confirmationDate: date });
-                  toast.success('Recebimento confirmado e lançado no financeiro');
+                  await confirmReceivable.mutateAsync({ receivableId: id, confirmationDate: date, receivedAmount, remainderDueDate });
+                  const isPartial = receivedAmount < confirmingReceivable.amount;
+                  toast.success(isPartial
+                    ? 'Valor parcial confirmado. O restante ficou agendado como nova parcela.'
+                    : 'Recebimento confirmado e lançado no financeiro');
                   setConfirmingReceivable(null);
                   refetchReceivables();
                   loadData();

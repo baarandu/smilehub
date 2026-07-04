@@ -40,11 +40,13 @@ export function useReceivablesDueToday() {
 export function useConfirmReceivable() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ receivableId, confirmationDate, budgetLocation }: {
+    mutationFn: ({ receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate }: {
       receivableId: string;
       confirmationDate?: string;
       budgetLocation?: string | null;
-    }) => receivablesService.confirmReceivable(receivableId, confirmationDate, budgetLocation),
+      receivedAmount?: number;
+      remainderDueDate?: string;
+    }) => receivablesService.confirmReceivable(receivableId, confirmationDate, budgetLocation, receivedAmount, remainderDueDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['receivables'] });
       queryClient.invalidateQueries({ queryKey: ['budgets'] });

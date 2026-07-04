@@ -12,8 +12,21 @@ interface ConfirmReceivableDialogProps {
   open: boolean;
   onClose: () => void;
   receivable: PaymentReceivable;
-  onConfirm: (receivableId: string, confirmationDate: string) => Promise<void>;
+  onConfirm: (
+    receivableId: string,
+    confirmationDate: string,
+    receivedAmount: number,
+    remainderDueDate?: string,
+  ) => Promise<void>;
   loading?: boolean;
+}
+
+// Parse a BRL-ish string ("600", "600,00", "1.200,50") into a number in reais.
+function parseAmount(s: string): number {
+  let t = s.trim().replace(/[^0-9.,]/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(t);
+  return Number.isFinite(n) ? n : 0;
 }
 
 const METHOD_LABELS: Record<string, string> = {
@@ -26,13 +39,26 @@ const METHOD_ICONS: Record<string, typeof CreditCard> = {
 
 export function ConfirmReceivableDialog({ open, onClose, receivable, onConfirm, loading }: ConfirmReceivableDialogProps) {
   const [confirmDate, setConfirmDate] = useState(new Date().toISOString().split('T')[0]);
+  const [receivedStr, setReceivedStr] = useState(formatMoney(receivable.amount));
+  const [remainderDueDate, setRemainderDueDate] = useState(receivable.due_date);
 
   const Icon = METHOD_ICONS[receivable.payment_method] || CreditCard;
   const methodLabel = METHOD_LABELS[receivable.payment_method] || receivable.payment_method;
   const isOverdue = receivable.status === 'overdue';
 
+  const received = parseAmount(receivedStr);
+  const remainder = Math.round((receivable.amount - received) * 100) / 100;
+  const isPartial = received > 0 && remainder > 0;
+  const isValid = received > 0 && received <= receivable.amount;
+
   const handleConfirm = async () => {
-    await onConfirm(receivable.id, confirmDate);
+    if (!isValid) return;
+    await onConfirm(
+      receivable.id,
+      confirmDate,
+      received,
+      isPartial ? remainderDueDate : undefined,
+    );
   };
 
   return (
@@ -80,6 +106,40 @@ export function ConfirmReceivableDialog({ open, onClose, receivable, onConfirm, 
             )}
           </div>
 
+          {/* Amount actually received (allows partial payment) */}
+          <div className="space-y-2">
+            <Label className="text-sm">Valor recebido agora</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">R$</span>
+              <Input
+                inputMode="decimal"
+                className="pl-9"
+                value={receivedStr}
+                onChange={(e) => setReceivedStr(e.target.value)}
+              />
+            </div>
+            {received > receivable.amount && (
+              <p className="text-xs text-red-600">
+                O valor não pode ser maior que a parcela (R$ {formatMoney(receivable.amount)}).
+              </p>
+            )}
+          </div>
+
+          {/* Partial payment: remainder stays scheduled */}
+          {isPartial && (
+            <div className="space-y-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800">
+                Restante de <span className="font-semibold">R$ {formatMoney(remainder)}</span> ficará agendado como nova parcela.
+              </p>
+              <Label className="text-xs text-amber-800">Novo vencimento do restante</Label>
+              <Input
+                type="date"
+                value={remainderDueDate}
+                onChange={(e) => setRemainderDueDate(e.target.value)}
+              />
+            </div>
+          )}
+
           {/* Confirmation date */}
           <div className="space-y-2">
             <Label className="text-sm">Data do Recebimento</Label>
@@ -98,7 +158,7 @@ export function ConfirmReceivableDialog({ open, onClose, receivable, onConfirm, 
             <Button
               className="flex-1 bg-emerald-600 hover:bg-emerald-700"
               onClick={handleConfirm}
-              disabled={loading}
+              disabled={loading || !isValid}
             >
               {loading ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...</>

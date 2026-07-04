@@ -76,9 +76,15 @@ export function ReceivablesTab({ loading: parentLoading, onRefresh, refreshing }
         return receivables.filter(r => r.status === statusFilter);
     }, [receivables, statusFilter]);
 
-    const handleConfirm = async (receivableId: string, confirmationDate: string) => {
-        await receivablesService.confirmReceivable(receivableId, confirmationDate);
-        Alert.alert('Sucesso', 'Parcela confirmada!');
+    const handleConfirm = async (
+        receivableId: string,
+        confirmationDate: string,
+        receivedAmount?: number,
+        remainderDueDate?: string,
+    ) => {
+        await receivablesService.confirmReceivable(receivableId, confirmationDate, null, receivedAmount, remainderDueDate);
+        const isPartial = receivedAmount != null && selectedReceivable != null && receivedAmount < selectedReceivable.amount;
+        Alert.alert('Sucesso', isPartial ? 'Valor parcial confirmado. O restante ficou agendado.' : 'Parcela confirmada!');
         handleRefresh();
     };
 
