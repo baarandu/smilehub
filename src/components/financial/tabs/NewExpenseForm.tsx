@@ -29,6 +29,7 @@ import {
     dbDateToDisplay,
     generateInstallments,
     generateFixedExpenses,
+    FixedExpenseFrequency,
     extractPaymentMethod,
     parseExpenseDescription
 } from '@/utils/expense';
@@ -57,6 +58,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
 
     // Fixed Expenses (recurring same value)
     const [isFixedExpense, setIsFixedExpense] = useState(false);
+    const [fixedFrequency, setFixedFrequency] = useState<FixedExpenseFrequency>('monthly');
     const [numMonthsStr, setNumMonthsStr] = useState('12');
     const [fixedExpenseList, setFixedExpenseList] = useState<InstallmentItem[]>([]);
 
@@ -108,12 +110,12 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             setFixedExpenseList([]);
             return;
         }
-        const months = parseInt(numMonthsStr) || 1;
-        if (months < 2) return;
-        const monthlyVal = getNumericValue(value);
-        const items = generateFixedExpenses(monthlyVal, months, date);
+        const count = parseInt(numMonthsStr) || 1;
+        if (count < 2) return;
+        const periodVal = getNumericValue(value);
+        const items = generateFixedExpenses(periodVal, count, date, fixedFrequency);
         setFixedExpenseList(items);
-    }, [isFixedExpense, numMonthsStr, value, date]);
+    }, [isFixedExpense, numMonthsStr, value, date, fixedFrequency]);
 
     // Auto-detect payment status based on date for simple expenses
     useEffect(() => {
@@ -139,6 +141,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
         setNumInstallmentsStr('2');
         setInstallmentList([]);
         setIsFixedExpense(false);
+        setFixedFrequency('monthly');
         setNumMonthsStr('12');
         setFixedExpenseList([]);
         setCategory('Outros');
@@ -291,10 +294,11 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
 
     const createFixedExpenses = async (receiptUrl: string | null = null) => {
         const recurrenceId = generateUUID();
-        const numMonths = parseInt(numMonthsStr);
+        const numPeriods = parseInt(numMonthsStr);
+        const periodLabel = fixedFrequency === 'weekly' ? 'Semana' : 'Mês';
         await Promise.all(fixedExpenseList.map((item, i) => {
             const dbDate = dateToDbFormat(item.date);
-            let finalDesc = `${description} (${paymentMethod}) (Mês ${i + 1}/${numMonths})`;
+            let finalDesc = `${description} (${paymentMethod}) (${periodLabel} ${i + 1}/${numPeriods})`;
             if (observations) finalDesc += ` - ${observations}`;
             return financialService.createTransaction({
                 type: 'expense',
@@ -439,7 +443,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                     <Repeat className="h-5 w-5 text-slate-600" />
                     <div>
                         <span className="font-medium text-slate-700 text-sm">Despesa Fixa Recorrente?</span>
-                        <p className="text-xs text-slate-500">Ex: aluguel, CRO (mesmo valor por mês)</p>
+                        <p className="text-xs text-slate-500">Ex: aluguel, CRO (mesmo valor por período)</p>
                     </div>
                 </div>
                 <Switch
@@ -454,10 +458,23 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
             {/* Fixed Expense List */}
             {isFixedExpense && (
                 <div className="space-y-4 p-4 rounded-xl border border-slate-200 bg-slate-50/50">
+                    <div className="flex items-center justify-between gap-2">
+                        <Label>Frequência</Label>
+                        <Select value={fixedFrequency} onValueChange={(v) => setFixedFrequency(v as FixedExpenseFrequency)}>
+                            <SelectTrigger className="w-36 h-8 bg-white">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="monthly">Mensal</SelectItem>
+                                <SelectItem value="weekly">Semanal</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="flex items-center justify-between">
-                        <Label>Configurar Meses</Label>
+                        <Label>{fixedFrequency === 'weekly' ? 'Configurar Semanas' : 'Configurar Meses'}</Label>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Meses:</span>
+                            <span className="text-xs text-muted-foreground">{fixedFrequency === 'weekly' ? 'Semanas:' : 'Meses:'}</span>
                             <Input
                                 value={numMonthsStr}
                                 onChange={(e) => setNumMonthsStr(e.target.value)}
@@ -470,7 +487,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
 
                     {fixedExpenseList.length > 0 && value && (
                         <p className="text-xs text-slate-600 bg-white p-2 rounded-lg border border-slate-200">
-                            {numMonthsStr} meses de <span className="font-semibold">R$ {value}</span> = Total: <span className="font-semibold">R$ {formatCurrency(getNumericValue(value) * (parseInt(numMonthsStr) || 0))}</span>
+                            {numMonthsStr} {fixedFrequency === 'weekly' ? 'semanas' : 'meses'} de <span className="font-semibold">R$ {value}</span> = Total: <span className="font-semibold">R$ {formatCurrency(getNumericValue(value) * (parseInt(numMonthsStr) || 0))}</span>
                         </p>
                     )}
 
@@ -478,7 +495,7 @@ export function NewExpenseForm({ onSuccess, transactionToEdit }: NewExpenseFormP
                         {fixedExpenseList.length > 0 ? (
                             fixedExpenseList.map((item, index) => (
                                 <div key={item.id} className="flex gap-2 items-center">
-                                    <span className="text-xs text-muted-foreground w-12 font-medium">Mês {index + 1}</span>
+                                    <span className="text-xs text-muted-foreground w-12 font-medium">{fixedFrequency === 'weekly' ? 'Sem' : 'Mês'} {index + 1}</span>
                                     <Input
                                         value={item.date}
                                         onChange={(e) => {

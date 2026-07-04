@@ -172,11 +172,15 @@ export function generateInstallments(
     return items;
 }
 
-// Generate fixed expenses list (same value repeated each month)
+// Frequency options for fixed recurring expenses
+export type FixedExpenseFrequency = 'monthly' | 'weekly';
+
+// Generate fixed expenses list (same value repeated each period)
 export function generateFixedExpenses(
-    monthlyValue: number,
-    months: number,
-    startDateStr: string
+    periodValue: number,
+    count: number,
+    startDateStr: string,
+    frequency: FixedExpenseFrequency = 'monthly'
 ): InstallmentItem[] {
     if (!startDateStr || startDateStr.length !== 10) return [];
 
@@ -186,9 +190,13 @@ export function generateFixedExpenses(
     const baseDateObj = new Date(year, month - 1, day);
 
     const items: InstallmentItem[] = [];
-    for (let i = 0; i < months; i++) {
+    for (let i = 0; i < count; i++) {
         const nextDate = new Date(baseDateObj);
-        nextDate.setMonth(nextDate.getMonth() + i);
+        if (frequency === 'weekly') {
+            nextDate.setDate(nextDate.getDate() + i * 7);
+        } else {
+            nextDate.setMonth(nextDate.getMonth() + i);
+        }
 
         const d = String(nextDate.getDate()).padStart(2, '0');
         const m = String(nextDate.getMonth() + 1).padStart(2, '0');
@@ -197,8 +205,8 @@ export function generateFixedExpenses(
         items.push({
             id: i,
             date: `${d}/${m}/${y}`,
-            value: formatCurrency(monthlyValue),
-            rawValue: monthlyValue
+            value: formatCurrency(periodValue),
+            rawValue: periodValue
         });
     }
     return items;

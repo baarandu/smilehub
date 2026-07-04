@@ -16,6 +16,7 @@ import {
     dbDateToDisplay,
     generateInstallments,
     generateFixedExpenses,
+    FixedExpenseFrequency,
     extractPaymentMethod,
     parseExpenseDescription
 } from '../../utils/expense';
@@ -48,6 +49,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
 
     // Fixed Expenses (recurring same value)
     const [isFixedExpense, setIsFixedExpense] = useState(false);
+    const [fixedFrequency, setFixedFrequency] = useState<FixedExpenseFrequency>('monthly');
     const [numMonthsStr, setNumMonthsStr] = useState('12');
     const [fixedExpenseList, setFixedExpenseList] = useState<InstallmentItem[]>([]);
 
@@ -60,6 +62,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
     // Select Modal States
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showFrequencyModal, setShowFrequencyModal] = useState(false);
 
     useEffect(() => {
         if (visible) {
@@ -98,12 +101,12 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
             setFixedExpenseList([]);
             return;
         }
-        const months = parseInt(numMonthsStr) || 1;
-        if (months < 2) return;
-        const monthlyVal = getNumericValue(value);
-        const items = generateFixedExpenses(monthlyVal, months, date);
+        const count = parseInt(numMonthsStr) || 1;
+        if (count < 2) return;
+        const periodVal = getNumericValue(value);
+        const items = generateFixedExpenses(periodVal, count, date, fixedFrequency);
         setFixedExpenseList(items);
-    }, [isFixedExpense, numMonthsStr, value, date]);
+    }, [isFixedExpense, numMonthsStr, value, date, fixedFrequency]);
 
     const resetForm = () => {
         setDescription('');
@@ -116,6 +119,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
         setNumInstallmentsStr('2');
         setInstallmentList([]);
         setIsFixedExpense(false);
+        setFixedFrequency('monthly');
         setNumMonthsStr('12');
         setFixedExpenseList([]);
         setCategory('Outros');
@@ -289,10 +293,11 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
 
     const createFixedExpenses = async () => {
         const recurrenceId = generateUUID();
-        const numMonths = parseInt(numMonthsStr);
+        const numPeriods = parseInt(numMonthsStr);
+        const periodLabel = fixedFrequency === 'weekly' ? 'Semana' : 'Mês';
         await Promise.all(fixedExpenseList.map((item, i) => {
             const dbDate = dateToDbFormat(item.date);
-            let finalDesc = `${description} (${paymentMethod}) (Mês ${i + 1}/${numMonths})`;
+            let finalDesc = `${description} (${paymentMethod}) (${periodLabel} ${i + 1}/${numPeriods})`;
             if (observations) finalDesc += ` - ${observations}`;
             return financialService.create({
                 type: 'expense',
@@ -387,7 +392,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                         ) : (
                             <View className="flex-row gap-4 mb-4">
                                 <View className="flex-1">
-                                    <Text className="text-sm font-semibold text-gray-700 mb-2">Valor Mensal</Text>
+                                    <Text className="text-sm font-semibold text-gray-700 mb-2">{fixedFrequency === 'weekly' ? 'Valor Semanal' : 'Valor Mensal'}</Text>
                                     <TextInput className="bg-gray-50 border border-gray-200 rounded-xl p-3 font-semibold text-gray-900" placeholder="R$ 0,00" keyboardType="numeric" value={value} onChangeText={handleValueChange} />
                                 </View>
                                 <View className="flex-1">
@@ -413,7 +418,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                 <Repeat size={20} color="#4B5563" />
                                 <View className="flex-1">
                                     <Text className="font-medium text-gray-700">Despesa Fixa Recorrente?</Text>
-                                    <Text className="text-xs text-gray-500">Ex: aluguel, CRO (mesmo valor por mês)</Text>
+                                    <Text className="text-xs text-gray-500">Ex: aluguel, CRO (mesmo valor por período)</Text>
                                 </View>
                             </View>
                             <Switch
@@ -431,9 +436,20 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                         {isFixedExpense && (
                             <View className="mb-6 bg-gray-50 p-3 rounded-xl border border-gray-100">
                                 <View className="flex-row items-center justify-between mb-4">
-                                    <Text className="text-sm font-semibold text-gray-700">Configurar Meses</Text>
+                                    <Text className="text-sm font-semibold text-gray-700">Frequência</Text>
+                                    <TouchableOpacity
+                                        onPress={() => setShowFrequencyModal(true)}
+                                        className="bg-white border border-gray-200 rounded-lg p-2 flex-row items-center justify-between gap-2 min-w-[120px]"
+                                    >
+                                        <Text className="text-sm text-gray-900">{fixedFrequency === 'weekly' ? 'Semanal' : 'Mensal'}</Text>
+                                        <ChevronDown size={16} color="#6B7280" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View className="flex-row items-center justify-between mb-4">
+                                    <Text className="text-sm font-semibold text-gray-700">{fixedFrequency === 'weekly' ? 'Configurar Semanas' : 'Configurar Meses'}</Text>
                                     <View className="flex-row items-center gap-2">
-                                        <Text className="text-xs text-gray-500">Meses:</Text>
+                                        <Text className="text-xs text-gray-500">{fixedFrequency === 'weekly' ? 'Semanas:' : 'Meses:'}</Text>
                                         <TextInput className="bg-white border border-gray-200 rounded-lg p-2 w-12 text-center text-sm" keyboardType="numeric" value={numMonthsStr} onChangeText={setNumMonthsStr} maxLength={2} />
                                     </View>
                                 </View>
@@ -441,7 +457,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                 {fixedExpenseList.length > 0 && value && (
                                     <View className="bg-white p-2 rounded-lg border border-gray-200 mb-3">
                                         <Text className="text-xs text-gray-600">
-                                            {numMonthsStr} meses de <Text className="font-semibold">R$ {value}</Text> = Total: <Text className="font-semibold">R$ {formatCurrency(getNumericValue(value) * (parseInt(numMonthsStr) || 0))}</Text>
+                                            {numMonthsStr} {fixedFrequency === 'weekly' ? 'semanas' : 'meses'} de <Text className="font-semibold">R$ {value}</Text> = Total: <Text className="font-semibold">R$ {formatCurrency(getNumericValue(value) * (parseInt(numMonthsStr) || 0))}</Text>
                                         </Text>
                                     </View>
                                 )}
@@ -450,7 +466,7 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                                     <View className="gap-3">
                                         {fixedExpenseList.map((item, index) => (
                                             <View key={item.id} className="flex-row gap-2 items-center">
-                                                <Text className="text-xs text-gray-500 w-12 font-medium">Mês {index + 1}</Text>
+                                                <Text className="text-xs text-gray-500 w-12 font-medium">{fixedFrequency === 'weekly' ? 'Sem' : 'Mês'} {index + 1}</Text>
                                                 <View className="flex-1">
                                                     <TextInput
                                                         className="bg-white border border-gray-200 rounded-lg p-2 text-xs text-center"
@@ -580,6 +596,16 @@ export function NewExpenseModal({ visible, onClose, onSave, transactionToEdit }:
                 options={PAYMENT_METHODS}
                 selectedValue={paymentMethod}
                 title="Forma de Pagamento"
+            />
+
+            {/* Frequency Select Modal */}
+            <SelectModal
+                visible={showFrequencyModal}
+                onClose={() => setShowFrequencyModal(false)}
+                onSelect={(val) => setFixedFrequency(val === 'Semanal' ? 'weekly' : 'monthly')}
+                options={['Mensal', 'Semanal']}
+                selectedValue={fixedFrequency === 'weekly' ? 'Semanal' : 'Mensal'}
+                title="Frequência da Despesa"
             />
         </Modal>
     );
