@@ -271,6 +271,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         payer_cpf: payerData?.payer_cpf || null,
                         pj_source_id: payerData?.pj_source_id || null,
                         card_machine_id: cardMachineId || null,
+                        tooth_index: paymentItem.index,
                     } as any);
                 }
             }
@@ -421,6 +422,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                             payer_cpf: payerData?.payer_cpf || null,
                             pj_source_id: payerData?.pj_source_id || null,
                             card_machine_id: cardMachineId || null,
+                            tooth_index: idx,
                         } as any);
                     }
                 }
