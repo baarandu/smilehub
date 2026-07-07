@@ -235,7 +235,13 @@ serve(async (req) => {
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  let str = typeof value === "object" ? JSON.stringify(value) : String(value);
+  // Neutralize CSV formula injection: a cell starting with = + - @ (or tab/CR)
+  // is executed as a formula by Excel/LibreOffice. Prefix a non-numeric one
+  // with an apostrophe so it is treated as text.
+  if (typeof value !== "number" && /^\s*[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
   // Escape quotes and wrap in quotes if contains comma, quote, or newline
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return '"' + str.replace(/"/g, '""') + '"';
@@ -259,14 +265,14 @@ function generateCSV(data: Record<string, unknown>): string {
   // Metadata
   sections.push("=== METADADOS DA EXPORTAÇÃO ===");
   const meta = data.export_metadata as Record<string, unknown>;
-  sections.push(Object.entries(meta).map(([k, v]) => `${k},${csvEscape(v)}`).join("\n"));
+  sections.push(Object.entries(meta).map(([k, v]) => `${csvEscape(k)},${csvEscape(v)}`).join("\n"));
 
   // Patient
   sections.push("\n=== DADOS DO PACIENTE ===");
   const patient = data.patient as Record<string, unknown>;
   sections.push(Object.entries(patient)
     .filter(([, v]) => v !== undefined)
-    .map(([k, v]) => `${k},${csvEscape(v)}`)
+    .map(([k, v]) => `${csvEscape(k)},${csvEscape(v)}`)
     .join("\n"));
 
   // Sections with arrays

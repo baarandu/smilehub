@@ -704,9 +704,13 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                 </div>`;
         }
 
-        const letterheadCss = useLetterhead && letterheadUrl ? `
+        // Strip characters that could break out of the CSS url('...') context.
+        // A legitimate Supabase storage URL never contains these raw, so this
+        // does not affect real letterheads; it just neutralizes CSS/HTML injection.
+        const safeLetterheadUrl = String(letterheadUrl ?? '').replace(/["'()\\\s<>]/g, '');
+        const letterheadCss = useLetterhead && safeLetterheadUrl ? `
                     body {
-                        background-image: url('${letterheadUrl}');
+                        background-image: url('${safeLetterheadUrl}');
                         background-size: 100% 100%;
                         background-repeat: no-repeat;
                         background-position: center;
@@ -715,7 +719,7 @@ export function DocumentsModal({ open, onClose }: DocumentsModalProps) {
                     }
                     @media print {
                         body {
-                            background-image: url('${letterheadUrl}') !important;
+                            background-image: url('${safeLetterheadUrl}') !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
