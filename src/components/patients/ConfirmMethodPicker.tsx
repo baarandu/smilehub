@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Banknote, CreditCard, Smartphone } from 'lucide-react';
+import { AlertCircle, Banknote, CreditCard, Smartphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { settingsService } from '@/services/settings';
 import { useCardMachines } from '@/hooks/useCardMachines';
@@ -193,6 +193,13 @@ export function ConfirmMethodPicker({ receivable, onChange }: Props) {
             <span>Taxa de cartão</span>
             <span className="font-medium">{cardFeeRate.toFixed(2)}%</span>
           </div>
+
+          {cardFeeRate === 0 && (
+            <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>Nenhuma taxa cadastrada para esta maquininha/bandeira — o líquido ficará igual ao bruto.</span>
+            </div>
+          )}
         </div>
       )}
     </div>

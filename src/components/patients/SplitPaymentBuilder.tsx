@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Trash2, Banknote, CreditCard, Smartphone, Calendar, Zap, Clock, SplitSquareHorizontal } from 'lucide-react';
+import { Plus, Trash2, Banknote, CreditCard, Smartphone, Calendar, Zap, Clock, SplitSquareHorizontal, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -417,6 +417,16 @@ export function SplitPaymentBuilder({
                 <span className="text-emerald-600 font-medium">
                   R$ {formatMoney(calculateBreakdown(portion).netAmount)}
                 </span>
+              </div>
+            )}
+
+            {/* Warn when a card portion resolves to 0% fee (no config registered) */}
+            {(portion.method === 'credit' || portion.method === 'debit')
+              && parseInt(portion.amount || '0', 10) > 0
+              && calculateBreakdown(portion).cardFeeRate === 0 && (
+              <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>Nenhuma taxa cadastrada para esta maquininha/bandeira — o líquido ficará igual ao bruto.</span>
               </div>
             )}
           </div>
