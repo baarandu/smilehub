@@ -114,6 +114,7 @@ export const receivablesService = {
           pj_source_id: portion.payerData?.pj_source_id || null,
           card_machine_id: machineForPortion,
           tooth_index: toothIndex,
+          installments: portion.method === 'credit' ? (portion.installments || 1) : 1,
         } as any);
 
         // Update receivable with the transaction ID
@@ -285,6 +286,7 @@ export const receivablesService = {
       pj_source_id: r.pj_source_id,
       card_machine_id: effMachineId,
       tooth_index: r.tooth_index,
+      installments: effMethod === 'credit' ? (effInstallments || 1) : 1,
     } as any);
 
     // Update receivable status (shrink to received amount if partial; persist the

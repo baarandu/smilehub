@@ -93,6 +93,16 @@ function resolvePaymentMethod(t: Transaction): string | null {
     return raw;
 }
 
+// Número de parcelas do cartão. Usa a coluna `installments` quando presente e
+// cai para o marcador "(i/N)" da descrição em transações antigas ao parcelamento.
+function resolveCardInstallments(t: Transaction): number | null {
+    const stored = (t as any).installments as number | null | undefined;
+    if (stored && stored > 0) return stored;
+    const m = /\((\d+)\/(\d+)\)/.exec(t.description || '');
+    if (m) return parseInt(m[2], 10);
+    return null;
+}
+
 export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) {
     const [subTab, setSubTab] = useState<IncomeSubTab>('gross');
 
@@ -868,6 +878,17 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         })()}
                                     </span>
                                 </div>
+                                {(selectedTransaction as any).payment_method === 'credit' && resolveCardInstallments(selectedTransaction) && (
+                                    <div className="flex justify-between py-2 border-b">
+                                        <span className="text-muted-foreground">Parcelamento</span>
+                                        <span className="font-medium">
+                                            {(() => {
+                                                const n = resolveCardInstallments(selectedTransaction)!;
+                                                return n === 1 ? 'À vista (1x)' : `${n}x`;
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
                                 {(selectedTransaction.tax_amount !== undefined && selectedTransaction.tax_amount !== null && selectedTransaction.tax_amount > 0) && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Imposto ({(selectedTransaction as any).tax_rate || 0}%)</span>
@@ -876,7 +897,15 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                 )}
                                 {selectedTransaction.card_fee_amount !== null && selectedTransaction.card_fee_amount > 0 && (
                                     <div className="flex justify-between py-2 border-b">
-                                        <span className="text-muted-foreground">Taxa de Cartão ({(selectedTransaction as any).card_fee_rate || 0}%)</span>
+                                        <span className="text-muted-foreground">
+                                            Taxa de Cartão ({(selectedTransaction as any).card_fee_rate || 0}%
+                                            {(() => {
+                                                const n = (selectedTransaction as any).payment_method === 'credit'
+                                                    ? resolveCardInstallments(selectedTransaction)
+                                                    : null;
+                                                return n ? ` em ${n}x` : '';
+                                            })()})
+                                        </span>
                                         <span className="font-medium text-red-500">- {formatCurrency(selectedTransaction.card_fee_amount)}</span>
                                     </div>
                                 )}

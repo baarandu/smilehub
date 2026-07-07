@@ -348,6 +348,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           pj_source_id: payerData?.pj_source_id || null,
           card_machine_id: cardMachineId || null,
           tooth_index: selectedItem.toothIndex,
+          installments: method === 'credit' ? (installments || 1) : 1,
         } as any);
       }
       } // End of method !== 'credit_balance'

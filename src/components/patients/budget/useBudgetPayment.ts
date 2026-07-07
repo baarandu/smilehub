@@ -272,6 +272,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         pj_source_id: payerData?.pj_source_id || null,
                         card_machine_id: cardMachineId || null,
                         tooth_index: paymentItem.index,
+                        installments: method === 'credit' ? (installments || 1) : 1,
                     } as any);
                 }
             }
@@ -423,6 +424,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                             pj_source_id: payerData?.pj_source_id || null,
                             card_machine_id: cardMachineId || null,
                             tooth_index: idx,
+                            installments: method === 'credit' ? (installments || 1) : 1,
                         } as any);
                     }
                 }
