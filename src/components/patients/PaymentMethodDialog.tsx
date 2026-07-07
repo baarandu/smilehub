@@ -171,10 +171,11 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
     const [isLoadingSettings, setIsLoadingSettings] = useState(true);
     const [taxRate, setTaxRate] = useState(0);
     const [cardFees, setCardFees] = useState<CardFeeConfig[]>([]);
+    const [feesLoading, setFeesLoading] = useState(false);
     const [clinicBrands, setClinicBrands] = useState<{ id: string; name: string }[]>([]);
 
     // Card Machines
-    const { data: machines = [] } = useCardMachines(false);
+    const { data: machines = [], isLoading: machinesLoading } = useCardMachines(false);
     const [selectedMachineId, setSelectedMachineId] = useState<string>('');
     const isCardMethod = selectedMethod === 'credit' || selectedMethod === 'debit';
     // A split (pagamento misto) that includes a card portion also needs a maquininha selected.
@@ -231,6 +232,30 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             setSplitValid(false);
         }
     }, [open]);
+
+    // Load card fees whenever the machines list resolves. The machines query may
+    // still be in flight when the dialog opens, so loading fees a single time at
+    // open would leave cardFees empty and silently zero every card fee.
+    useEffect(() => {
+        if (!open) return;
+        const machineIds = machines.map(m => m.id);
+        if (machineIds.length === 0) {
+            setCardFees([]);
+            return;
+        }
+        let cancelled = false;
+        setFeesLoading(true);
+        supabase
+            .from('card_fee_config')
+            .select('*')
+            .in('card_machine_id', machineIds)
+            .then(({ data }) => {
+                if (cancelled) return;
+                setCardFees((data || []) as CardFeeConfig[]);
+                setFeesLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [open, machines]);
 
     useEffect(() => {
         if (!open || !selectedMachineId) {
@@ -289,18 +314,6 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
             }
 
             setTaxRate(totalTax);
-
-            // Load fees for all machines in the clinic (so we have rates ready when machine is picked)
-            const machineIds = machines.map(m => m.id);
-            if (machineIds.length > 0) {
-                const { data } = await supabase
-                    .from('card_fee_config')
-                    .select('*')
-                    .in('card_machine_id', machineIds);
-                setCardFees((data || []) as CardFeeConfig[]);
-            } else {
-                setCardFees([]);
-            }
         } catch (error) {
             console.error('Error loading financial settings:', error);
         } finally {
@@ -436,7 +449,7 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                     </div>
                 </div>
 
-                {isLoadingSettings ? (
+                {isLoadingSettings || machinesLoading || feesLoading ? (
                     <div className="flex justify-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin text-[#a03f3d]" />
                     </div>
