@@ -42,6 +42,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Transaction } from '@/components/financial/types';
+import { CardFeeSelector, type CardFeeSelection } from '@/components/financial/CardFeeSelector';
 import { financialService } from '@/services/financial';
 import { locationsService, Location } from '@/services/locations';
 import { useQuery } from '@tanstack/react-query';
@@ -74,8 +75,8 @@ function resolvePaymentMethod(t: Transaction): string | null {
     const pm = (t as any).payment_method as string | null | undefined;
     if (pm) {
         const p = pm.toLowerCase();
-        if (p === 'credit' || p === 'crédito') return 'Cartão de Crédito';
-        if (p === 'debit' || p === 'débito') return 'Cartão de Débito';
+        if (p === 'credit' || p === 'crédito' || p === 'credito') return 'Cartão de Crédito';
+        if (p === 'debit' || p === 'débito' || p === 'debito') return 'Cartão de Débito';
         if (p === 'pix') return 'Pix';
         if (p === 'cash' || p === 'dinheiro') return 'Dinheiro';
         return pm; // already a label (e.g. 'Cartão de Crédito', 'Boleto', 'Transferência')
@@ -878,7 +879,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         })()}
                                     </span>
                                 </div>
-                                {(selectedTransaction as any).payment_method === 'credit' && resolveCardInstallments(selectedTransaction) && (
+                                {resolvePaymentMethod(selectedTransaction) === 'Cartão de Crédito' && resolveCardInstallments(selectedTransaction) && (
                                     <div className="flex justify-between py-2 border-b">
                                         <span className="text-muted-foreground">Parcelamento</span>
                                         <span className="font-medium">
@@ -900,7 +901,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                         <span className="text-muted-foreground">
                                             Taxa de Cartão ({(selectedTransaction as any).card_fee_rate || 0}%
                                             {(() => {
-                                                const n = (selectedTransaction as any).payment_method === 'credit'
+                                                const n = resolvePaymentMethod(selectedTransaction) === 'Cartão de Crédito'
                                                     ? resolveCardInstallments(selectedTransaction)
                                                     : null;
                                                 return n ? ` em ${n}x` : '';
@@ -1074,6 +1075,12 @@ function NewIncomeDialog({
     const [revenueType, setRevenueType] = useState<RevenueType>('clinic');
     const [dentistId, setDentistId] = useState('');
     const [saving, setSaving] = useState(false);
+    const [cardSel, setCardSel] = useState<CardFeeSelection | null>(null);
+
+    const cardMethodCode: 'credit' | 'debit' | null =
+        paymentMethod === 'Cartão de Crédito' ? 'credit'
+            : paymentMethod === 'Cartão de Débito' ? 'debit'
+                : null;
 
     const reset = () => {
         setDescription('');
@@ -1082,6 +1089,7 @@ function NewIncomeDialog({
         setPaymentMethod('Pix');
         setRevenueType('clinic');
         setDentistId('');
+        setCardSel(null);
     };
 
     const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1104,15 +1112,25 @@ function NewIncomeDialog({
 
         setSaving(true);
         try {
+            const feeRate = cardMethodCode ? (cardSel?.cardFeeRate || 0) : 0;
+            const feeAmount = Math.round(value * feeRate) / 100;
+            const methodTag = cardMethodCode && cardSel?.brand
+                ? `${paymentMethod} - ${cardSel.brand.toUpperCase()}`
+                : paymentMethod;
+
             await financialService.createTransaction({
                 type: 'income',
                 amount: value,
-                net_amount: value,
-                description: `${description.trim()} (${paymentMethod})`,
+                net_amount: value - feeAmount,
+                description: `${description.trim()} (${methodTag})`,
                 category: revenueType === 'clinic' ? 'Receita da Clínica' : 'Receita Manual',
                 date: dateToDbFormat(date),
                 location: null,
                 payment_method: paymentMethod,
+                card_fee_rate: cardMethodCode ? feeRate : null,
+                card_fee_amount: cardMethodCode ? feeAmount : null,
+                card_machine_id: cardMethodCode ? (cardSel?.cardMachineId || null) : null,
+                installments: cardMethodCode === 'credit' ? (cardSel?.installments || 1) : 1,
                 revenue_type: revenueType,
                 dentist_id: revenueType === 'individual' ? dentistId : null,
                 payment_status: 'paid',
@@ -1222,6 +1240,10 @@ function NewIncomeDialog({
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {cardMethodCode && (
+                        <CardFeeSelector key={cardMethodCode} method={cardMethodCode} onChange={setCardSel} />
+                    )}
 
                     {revenueType === 'individual' && (
                         <div className="space-y-2">

@@ -25,6 +25,7 @@ import { useCreateSession, useUpdateSession } from '@/hooks/useOrthodontics';
 import { appointmentsService } from '@/services/appointments';
 import { orthodonticsService } from '@/services/orthodontics';
 import { financialService } from '@/services/financial';
+import { CardFeeSelector, type CardFeeSelection } from '@/components/financial/CardFeeSelector';
 import { useQueryClient } from '@tanstack/react-query';
 import type {
   OrthodonticCase,
@@ -69,6 +70,7 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
   const [registerPayment, setRegisterPayment] = useState(true);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('pix');
+  const [cardSel, setCardSel] = useState<CardFeeSelection | null>(null);
   const [step, setStep] = useState<'form' | 'schedule'>('form');
   const [nextDate, setNextDate] = useState('');
   const [nextTime, setNextTime] = useState('09:00');
@@ -169,13 +171,26 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
           const amount = parseFloat(paymentAmount);
           if (amount > 0) {
             try {
+              const isCard = paymentMethod === 'credit' || paymentMethod === 'debit';
+              const feeRate = isCard ? (cardSel?.cardFeeRate || 0) : 0;
+              const feeAmount = Math.round(amount * feeRate) / 100;
+              const brandTag = isCard && cardSel?.brand ? ` - ${cardSel.brand.toUpperCase()}` : '';
+              const methodLabels: Record<string, string> = {
+                pix: 'PIX', cash: 'Dinheiro', credit: 'Crédito', debit: 'Débito',
+              };
+
               await financialService.createTransaction({
                 type: 'income',
                 amount,
-                description: `Manutenção Orto — ${orthoCase.patient_name || 'Paciente'}`,
+                net_amount: amount - feeAmount,
+                description: `Manutenção Orto — ${orthoCase.patient_name || 'Paciente'} (${methodLabels[paymentMethod] || paymentMethod}${brandTag})`,
                 category: 'Manutenção Ortodôntica',
                 patient_id: orthoCase.patient_id,
                 payment_method: paymentMethod,
+                card_fee_rate: isCard ? feeRate : null,
+                card_fee_amount: isCard ? feeAmount : null,
+                card_machine_id: isCard ? (cardSel?.cardMachineId || null) : null,
+                installments: paymentMethod === 'credit' ? (cardSel?.installments || 1) : 1,
                 date: form.appointmentDate,
                 related_entity_id: orthoCase.id,
               } as any);
@@ -495,13 +510,20 @@ export function SessionFormDialog({ open, onOpenChange, orthoCase, session }: Se
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pix">Pix</SelectItem>
-                            <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                            <SelectItem value="credito">Cartão Crédito</SelectItem>
-                            <SelectItem value="debito">Cartão Débito</SelectItem>
+                            <SelectItem value="cash">Dinheiro</SelectItem>
+                            <SelectItem value="credit">Cartão Crédito</SelectItem>
+                            <SelectItem value="debit">Cartão Débito</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
+                  )}
+                  {registerPayment && (paymentMethod === 'credit' || paymentMethod === 'debit') && (
+                    <CardFeeSelector
+                      key={paymentMethod}
+                      method={paymentMethod as 'credit' | 'debit'}
+                      onChange={setCardSel}
+                    />
                   )}
                 </div>
               </>
