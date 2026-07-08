@@ -1,4 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// O módulo de migração importa o client Supabase, que exige env vars na carga.
+// parseXML é puro — um mock vazio basta.
+vi.mock('@/lib/supabase', () => ({ supabase: {} }));
+
 import { parseXML } from '@/services/migration';
 
 // XML no formato típico de export do Simples Dental (contatos de pacientes)

@@ -6,9 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Transaction } from '@/components/financial';
 import { IncomeTab } from '@/components/financial/tabs/IncomeTab';
 import { ExpensesTab } from '@/components/financial/tabs/ExpensesTab';
-// NOTE: there is an older file named `ClosureTab` without .tsx extension.
-// Import the correct TSX implementation.
-import { ClosureTab } from '@/components/financial/tabs/ClosureTab 2';
+import { ClosureTab } from '@/components/financial/tabs/ClosureTab';
 import { NfseTab } from '@/components/financial/tabs/NfseTab';
 import { AccountantChecklistTab } from '@/components/financial/tabs/AccountantChecklistTab';
 import { TaxDeadlinesCalendar } from '@/components/tax-deadlines/TaxDeadlinesCalendar';

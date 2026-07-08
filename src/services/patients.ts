@@ -20,7 +20,7 @@ export async function getPatients(page?: number, limit?: number, clinicId?: stri
     return [];
   }
 
-  let query = supabase
+  const query = supabase
     .from('patients_secure')
     .select('*')
     .eq('clinic_id', effectiveClinicId)
@@ -305,7 +305,7 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
     conditions.push(`cpf_last4.ilike.%${cpfSearch}%`);
   }
 
-  let q = supabase
+  const q = supabase
     .from('patients_secure')
     .select('*')
     .or(conditions.join(','))

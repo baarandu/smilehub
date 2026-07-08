@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const { mockGetUser, mockOnAuthStateChange, mockFromFn } = vi.hoisted(() => {
   const mockGetUser = vi.fn();
@@ -43,7 +44,12 @@ describe('ClinicContext — logout state reset', () => {
   it('resets all state to defaults when user is null (logged out)', async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
 
-    render(createElement(ClinicProvider, null, createElement(TestConsumer)));
+    const queryClient = new QueryClient();
+    render(createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      createElement(ClinicProvider, null, createElement(TestConsumer)),
+    ));
 
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');

@@ -21,7 +21,7 @@ export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogPro
   const [description, setDescription] = useState('');
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '');
+    const val = e.target.value.replace(/\D/g, '');
     if (!val) {
       setAmountStr('');
       return;
