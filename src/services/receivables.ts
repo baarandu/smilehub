@@ -17,12 +17,16 @@ export const receivablesService = {
     splitGroupId: string,
     budgetLocation?: string | null,
     cardMachineId?: string | null,
+    creditUsed: number = 0,
   ): Promise<PaymentReceivable[]> {
     const { clinicId } = await getClinicContext();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Usuário não autenticado');
 
     const created: PaymentReceivable[] = [];
+    // O crédito abatido do item é registrado na primeira transação imediata,
+    // apenas para exibição no detalhe da receita (não altera valores).
+    let creditToRecord = Math.max(0, creditUsed);
 
     for (let i = 0; i < portions.length; i++) {
       const portion = portions[i];
@@ -115,7 +119,9 @@ export const receivablesService = {
           card_machine_id: machineForPortion,
           tooth_index: toothIndex,
           installments: portion.method === 'credit' ? (portion.installments || 1) : 1,
+          credit_used: creditToRecord,
         } as any);
+        creditToRecord = 0;
 
         // Update receivable with the transaction ID
         await supabase

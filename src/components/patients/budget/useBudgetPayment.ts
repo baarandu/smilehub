@@ -265,6 +265,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         location_rate: targetLocationRate,
                         location_amount: locationAmountPerTx,
                         discount_amount: (breakdown?.discountAmount || 0) / numTransactions,
+                        credit_used: safeCreditUsed / numTransactions,
                         payer_is_patient: payerData?.payer_is_patient ?? true,
                         payer_type: payerData?.payer_type || 'PF',
                         payer_name: payerData?.payer_name || null,
@@ -417,6 +418,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                             location_rate: itemLocationRate,
                             location_amount: locationPerInstallment,
                             discount_amount: (itemOriginalValue - itemValue) / numInstallments,
+                            credit_used: (safeCreditUsed * ratio) / numInstallments,
                             payer_is_patient: payerData?.payer_is_patient ?? true,
                             payer_type: payerData?.payer_type || 'PF',
                             payer_name: payerData?.payer_name || null,
@@ -517,6 +519,11 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             const budgetLocation = parsed.location || null;
             const splitGroupId = crypto.randomUUID();
 
+            // Cover any remaining balance with the patient's credit.
+            const itemValueCents = Math.round(getItemValue(selectedTooth) * 100);
+            const methodCents = portions.reduce((sum, p) => sum + Math.round(p.amount * 100), 0);
+            const creditAppliedCents = Math.max(0, Math.min(Math.round(creditUsed * 100), itemValueCents - methodCents));
+
             // Create receivables (immediate ones also create financial_transactions)
             const receivables = await receivablesService.createSplitPayment(
                 budget.id,
@@ -527,12 +534,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 splitGroupId,
                 budgetLocation,
                 cardMachineId || null,
+                creditAppliedCents / 100,
             );
 
-            // Cover any remaining balance with the patient's credit.
-            const itemValueCents = Math.round(getItemValue(selectedTooth) * 100);
-            const methodCents = portions.reduce((sum, p) => sum + Math.round(p.amount * 100), 0);
-            const creditAppliedCents = Math.max(0, Math.min(Math.round(creditUsed * 100), itemValueCents - methodCents));
             if (creditAppliedCents > 0) {
                 await patientCreditsService.addTransaction({
                     patientId,
@@ -728,6 +732,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                 const receivables = slices.length > 0
                     ? await receivablesService.createSplitPayment(
                         budget.id, patientId, m.idx, toothDescription, itemPortions, splitGroupId, budgetLocation, cardMachineId || null,
+                        creditAppliedCents / 100,
                     )
                     : [];
 

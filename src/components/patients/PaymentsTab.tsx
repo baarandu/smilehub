@@ -339,6 +339,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           location_rate: targetLocationRate,
           location_amount: locationAmountPerTx,
           discount_amount: discountAmount / numTransactions,
+          credit_used: creditUsed / numTransactions,
           // Payer data
           revenue_type: payerData?.revenue_type || 'individual',
           payer_is_patient: payerData?.payer_is_patient ?? true,

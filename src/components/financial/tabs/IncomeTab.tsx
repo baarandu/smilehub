@@ -803,28 +803,43 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                 </p>
                             </div>
 
-                            {/* Discount Info (only when a discount was applied at payment) */}
-                            {((selectedTransaction as any).discount_amount || 0) > 0 && (
+                            {/* Discount / patient credit applied at payment */}
+                            {(((selectedTransaction as any).discount_amount || 0) > 0 || ((selectedTransaction as any).credit_used || 0) > 0) && (
                                 <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-lg space-y-2">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Valor Original</span>
                                         <span className="font-medium text-muted-foreground line-through">
-                                            {formatCurrency(selectedTransaction.amount + ((selectedTransaction as any).discount_amount || 0))}
+                                            {formatCurrency(selectedTransaction.amount + ((selectedTransaction as any).discount_amount || 0) + ((selectedTransaction as any).credit_used || 0))}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-emerald-700">Desconto</span>
-                                        <span className="font-semibold text-emerald-700">
-                                            - {formatCurrency((selectedTransaction as any).discount_amount || 0)}
-                                        </span>
-                                    </div>
+                                    {((selectedTransaction as any).discount_amount || 0) > 0 && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-emerald-700">Desconto</span>
+                                            <span className="font-semibold text-emerald-700">
+                                                - {formatCurrency((selectedTransaction as any).discount_amount || 0)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {((selectedTransaction as any).credit_used || 0) > 0 && (
+                                        <>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-emerald-700">Crédito do paciente consumido</span>
+                                                <span className="font-semibold text-emerald-700">
+                                                    - {formatCurrency((selectedTransaction as any).credit_used || 0)}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-emerald-600/80">
+                                                O valor do crédito entrou no Financeiro na data em que o crédito foi adicionado.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
                             {/* Amount Info */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-slate-50 p-4 rounded-lg">
-                                    <p className="text-sm text-muted-foreground">{((selectedTransaction as any).discount_amount || 0) > 0 ? 'Valor com Desconto' : 'Valor Bruto'}</p>
+                                    <p className="text-sm text-muted-foreground">{(((selectedTransaction as any).discount_amount || 0) > 0 || ((selectedTransaction as any).credit_used || 0) > 0) ? 'Valor Recebido' : 'Valor Bruto'}</p>
                                     <p className="text-xl font-bold text-green-600">{formatCurrency(selectedTransaction.amount)}</p>
                                 </div>
                                 <div className="bg-slate-50 p-4 rounded-lg">
@@ -873,6 +888,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                                 if (pm === 'debit') return 'Cartão de Débito';
                                                 if (pm === 'pix') return 'PIX';
                                                 if (pm === 'cash') return 'Dinheiro';
+                                                if (pm === 'transfer') return 'Transferência';
                                                 return pm;
                                             }
                                             return 'Não informado';

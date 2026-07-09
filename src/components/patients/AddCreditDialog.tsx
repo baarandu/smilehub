@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Coins } from 'lucide-react';
+import { Loader2, Coins, Banknote, Smartphone, ArrowLeftRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAddPatientCreditTransaction } from '@/hooks/usePatientCredits';
+import { financialService } from '@/services/financial';
+import { toLocalDateString } from '@/utils/formatters';
 
 interface AddCreditDialogProps {
   open: boolean;
@@ -13,13 +15,21 @@ interface AddCreditDialogProps {
   patientId: string;
 }
 
+const PAYMENT_METHODS = [
+  { id: 'cash', label: 'Dinheiro', icon: Banknote },
+  { id: 'pix', label: 'PIX', icon: Smartphone },
+  { id: 'transfer', label: 'Transferência', icon: ArrowLeftRight },
+];
+
 export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogProps) {
   const { toast } = useToast();
   const addTransaction = useAddPatientCreditTransaction();
-  
+
   const [amountStr, setAmountStr] = useState('');
   const [description, setDescription] = useState('');
-  
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
     if (!val) {
@@ -44,25 +54,51 @@ export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogPro
       toast({ variant: 'destructive', title: 'Descrição obrigatória', description: 'Por favor, informe o motivo do crédito.' });
       return;
     }
+    if (!paymentMethod) {
+      toast({ variant: 'destructive', title: 'Forma de pagamento obrigatória', description: 'Informe como o valor do crédito foi recebido.' });
+      return;
+    }
 
     try {
+      setIsSaving(true);
+
+      // O dinheiro do crédito entra no caixa agora; a receita é lançada aqui
+      // (regime de caixa). O consumo do crédito não gera nova transação.
+      const tx = await financialService.createTransaction({
+        type: 'income',
+        amount,
+        description: `Crédito do paciente — ${description.trim()}`,
+        category: 'Crédito do Paciente',
+        date: toLocalDateString(new Date()),
+        patient_id: patientId,
+        payment_method: paymentMethod,
+        net_amount: amount,
+      } as any);
+
       await addTransaction.mutateAsync({
         patientId,
         type: 'credit',
         amount,
-        description: description.trim()
+        description: description.trim(),
+        relatedTransactionId: tx.id,
       });
-      toast({ title: 'Crédito adicionado', description: 'O saldo do paciente foi atualizado com sucesso.' });
+
+      toast({ title: 'Crédito adicionado', description: 'Saldo atualizado e receita lançada no Financeiro.' });
       onClose();
       // Reset form
       setTimeout(() => {
         setAmountStr('');
         setDescription('');
+        setPaymentMethod(null);
       }, 300);
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'Erro', description: err.message || 'Falha ao adicionar crédito.' });
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const isPending = isSaving || addTransaction.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -73,7 +109,7 @@ export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogPro
             Adicionar Crédito
           </DialogTitle>
           <DialogDescription>
-            Insira o valor que o paciente pagou a mais ou que ficará de crédito para o futuro.
+            Insira o valor que o paciente pagou a mais ou que ficará de crédito para o futuro. O valor é lançado como receita no Financeiro na data de hoje.
           </DialogDescription>
         </DialogHeader>
 
@@ -92,6 +128,27 @@ export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogPro
             </div>
           </div>
           <div className="space-y-2">
+            <Label>Forma de Pagamento</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {PAYMENT_METHODS.map((m) => {
+                const Icon = m.icon;
+                const selected = paymentMethod === m.id;
+                return (
+                  <Button
+                    key={m.id}
+                    type="button"
+                    variant={selected ? 'default' : 'outline'}
+                    className={selected ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                    onClick={() => setPaymentMethod(m.id)}
+                  >
+                    <Icon className="w-4 h-4 mr-1.5" />
+                    {m.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="description">Motivo / Observação</Label>
             <Input
               id="description"
@@ -103,11 +160,11 @@ export function AddCreditDialog({ open, onClose, patientId }: AddCreditDialogPro
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={addTransaction.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={isPending}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={addTransaction.isPending} className="bg-emerald-600 hover:bg-emerald-700">
-            {addTransaction.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleSave} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700">
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirmar Crédito
           </Button>
         </DialogFooter>
