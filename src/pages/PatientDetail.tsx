@@ -27,7 +27,19 @@ export default function PatientDetail() {
   const { data: patient, isLoading, error, refetch } = usePatient(id || '');
   const deletePatient = useDeletePatient();
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const { roles } = useClinic();
+  const { roles, clinicId } = useClinic();
+
+  // Trocar a clínica ativa com a ficha aberta (ou abrir por link de outra
+  // clínica) permitia criar orçamentos/pagamentos no paciente errado —
+  // registros que "sumiam" das duas clínicas. Fora da clínica do paciente,
+  // volta para a lista.
+  useEffect(() => {
+    const patientClinicId = (patient as any)?.clinic_id;
+    if (patient && clinicId && patientClinicId && patientClinicId !== clinicId) {
+      toast.error('Este paciente pertence a outra clínica. Selecione a clínica dele para acessar a ficha.');
+      navigate('/pacientes');
+    }
+  }, [patient, clinicId]);
 
   // Secretaries (who are not also dentists/admins) cannot see anamnese - default to budgets tab
   const isSecretary = roles.length > 0 && roles.every(r => r === 'assistant' || r === 'viewer');
