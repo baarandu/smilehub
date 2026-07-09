@@ -195,6 +195,9 @@ export const nfseDocumentsService = {
       .eq('clinic_id', clinicId)
       .eq('type', 'income')
       .eq('patient_id', patientId)
+      // Crédito do paciente não recebe nota fiscal — a nota é do procedimento
+      // que consumiu o crédito.
+      .or('category.is.null,category.neq."Crédito do Paciente"')
       .gte('date', sinceStr)
       .order('date', { ascending: false });
     if (error) throw error;
