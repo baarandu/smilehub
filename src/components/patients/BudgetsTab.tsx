@@ -107,8 +107,24 @@ export function BudgetsTab({ patientId, patientName, onNavigateToPayments }: Bud
     };
 
     const handleHardDelete = async (id: string) => {
+        let impactMsg = '';
+        try {
+            const impact = await budgetsService.getHardDeleteImpact(id);
+            const parts: string[] = [];
+            if (impact.txCount > 0) {
+                parts.push(`${impact.txCount} receita(s) no Financeiro (R$ ${impact.txTotal.toFixed(2).replace('.', ',')})`);
+            }
+            if (impact.nfseCount > 0) {
+                parts.push(`${impact.nfseCount} marcação(ões) de nota fiscal emitida`);
+            }
+            if (parts.length > 0) {
+                impactMsg = ` ATENÇÃO: também serão apagadas ${parts.join(' e ')} deste orçamento.`;
+            }
+        } catch {
+            // Sem o resumo de impacto, o aviso genérico abaixo ainda vale.
+        }
         if (!await confirm({
-            description: 'Excluir definitivamente este orçamento? Esta ação é IRREVERSÍVEL e também apaga as parcelas e recebimentos vinculados. Não há backup para recuperar.',
+            description: `Excluir definitivamente este orçamento? Esta ação é IRREVERSÍVEL e também apaga as parcelas e recebimentos vinculados.${impactMsg} Não há backup para recuperar.`,
             variant: 'destructive',
             confirmLabel: 'Excluir definitivamente',
         })) return;

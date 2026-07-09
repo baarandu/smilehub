@@ -163,10 +163,56 @@ export const budgetsService = {
         if (error) throw error;
     },
 
+    // O que a exclusão definitiva vai levar junto — usado no diálogo de
+    // confirmação da lixeira para o usuário saber o impacto antes de apagar.
+    async getHardDeleteImpact(id: string): Promise<{ txCount: number; txTotal: number; nfseCount: number }> {
+        const { clinicId } = await getClinicContext();
+        const [txRes, nfseRes] = await Promise.all([
+            supabase
+                .from('financial_transactions')
+                .select('amount')
+                .eq('clinic_id', clinicId)
+                .eq('type', 'income')
+                .eq('related_entity_id', id),
+            supabase
+                .from('nfse_documents')
+                .select('id', { count: 'exact', head: true })
+                .eq('clinic_id', clinicId)
+                .eq('budget_id', id)
+                .eq('issued_externally', true),
+        ]);
+        const txs = txRes.data || [];
+        return {
+            txCount: txs.length,
+            txTotal: txs.reduce((s, t: any) => s + Number(t.amount || 0), 0),
+            nfseCount: nfseRes.count || 0,
+        };
+    },
+
     // Exclusão DEFINITIVA (apaga de vez; dispara o CASCADE das parcelas).
     // Usada apenas pelo "excluir definitivamente" dentro da lixeira.
     async hardDelete(id: string): Promise<void> {
         const { clinicId } = await getClinicContext();
+
+        // Receitas lançadas pelos pagamentos deste orçamento: sem ele viram
+        // receita órfã, presa para sempre em "pagamentos sem nota" na aba
+        // Notas Fiscais. Excluir de vez = esses pagamentos não valem.
+        await supabase
+            .from('financial_transactions')
+            .delete()
+            .eq('clinic_id', clinicId)
+            .eq('type', 'income')
+            .eq('related_entity_id', id);
+
+        // Marcações "nota fiscal emitida" são por item do orçamento e perdem o
+        // sentido sem ele (a FK só anularia o budget_id, deixando a marcação
+        // órfã). Notas reais anexadas (com XML/PDF) são preservadas.
+        await supabase
+            .from('nfse_documents')
+            .delete()
+            .eq('clinic_id', clinicId)
+            .eq('budget_id', id)
+            .eq('issued_externally', true);
 
         await supabase
             .from('budget_items')
