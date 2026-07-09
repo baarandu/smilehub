@@ -468,7 +468,16 @@ export function PaymentMethodDialog({ open, onClose, onConfirm, onConfirmSplit, 
                                 <Switch
                                     id="split-toggle"
                                     checked={isSplitMode}
-                                    onCheckedChange={setIsSplitMode}
+                                    onCheckedChange={(checked) => {
+                                        setIsSplitMode(checked);
+                                        // Desconto/crédito digitados no modo simples não são enviados
+                                        // no confirm do modo dividido — lá o crédito é o restante não
+                                        // alocado, calculado pelo SplitPaymentBuilder sobre o valor cheio.
+                                        if (checked) {
+                                            setDiscountStr('');
+                                            setCreditUsedStr('');
+                                        }
+                                    }}
                                 />
                             </div>
                         )}
