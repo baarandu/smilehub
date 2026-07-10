@@ -45,6 +45,7 @@ import { Transaction } from '@/components/financial/types';
 import { CardFeeSelector, type CardFeeSelection } from '@/components/financial/CardFeeSelector';
 import { financialService } from '@/services/financial';
 import { locationsService, Location } from '@/services/locations';
+import { useClinic } from '@/contexts/ClinicContext';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -139,8 +140,11 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     };
 
     // Load Locations
+    // Escopado por clínica: getAll filtra pela clínica ativa, então a chave
+    // precisa mudar junto — senão a troca de clínica serve locais da anterior.
+    const { clinicId } = useClinic();
     const { data: locations = [] } = useQuery({
-        queryKey: ['locations'],
+        queryKey: ['locations', clinicId],
         queryFn: locationsService.getAll
     });
 
@@ -233,10 +237,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
         return acc;
     }, {} as Record<string, number>);
 
+    // Receitas sem local entram como "Sem local definido" — sem isso o card
+    // soma só um subconjunto e não fecha com a Receita Bruta/Líquida do topo.
+    const SEM_LOCAL = 'Sem local definido';
     const incomeByLocation = filteredTransactions
-        .filter(t => t.location)
         .reduce((acc, t) => {
-            const loc = t.location!;
+            const loc = t.location || SEM_LOCAL;
             const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
             acc[loc] = (acc[loc] || 0) + amount;
             return acc;
@@ -612,12 +618,12 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
                                     {Object.entries(incomeByLocation).sort((a, b) => b[1] - a[1]).map(([loc, amount]) => (
                                         <div key={loc} className="flex items-center justify-between py-1">
                                             <div className="flex items-center gap-2">
-                                                <div className="p-1 bg-green-50 rounded">
-                                                    <MapPin className="h-3 w-3 text-green-600" />
+                                                <div className={`p-1 rounded ${loc === SEM_LOCAL ? 'bg-gray-100' : 'bg-green-50'}`}>
+                                                    <MapPin className={`h-3 w-3 ${loc === SEM_LOCAL ? 'text-gray-400' : 'text-green-600'}`} />
                                                 </div>
-                                                <span className="text-xs font-medium truncate max-w-[120px]" title={loc}>{loc}</span>
+                                                <span className={`text-xs truncate max-w-[120px] ${loc === SEM_LOCAL ? 'text-muted-foreground' : 'font-medium'}`} title={loc}>{loc}</span>
                                             </div>
-                                            <span className="text-xs font-bold text-green-600">{formatCurrency(amount)}</span>
+                                            <span className={`text-xs font-bold ${loc === SEM_LOCAL ? 'text-gray-400' : 'text-green-600'}`}>{formatCurrency(amount)}</span>
                                         </div>
                                     ))}
                                 </div>

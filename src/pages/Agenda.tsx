@@ -91,7 +91,9 @@ export default function Agenda() {
   const { data: appointments = [], isLoading: loading } = useAppointmentsByDate(dateString);
   const { data: monthDates = [] } = useMonthDates(monthStart, monthEnd);
   const { data: locations = [] } = useQuery({
-    queryKey: ['locations'],
+    // Escopado por clínica: getAll filtra pela clínica ativa, então a chave
+    // precisa mudar junto — senão a troca de clínica serve locais da anterior.
+    queryKey: ['locations', clinicId],
     queryFn: () => locationsService.getAll(),
   });
   const { data: dentists = [] } = useQuery({

@@ -20,6 +20,13 @@ export interface LocationUpdate {
   address?: string | null;
 }
 
+// Espaço no início/fim ou duplicado no nome cria "locais" visualmente iguais
+// mas distintos como chave de agrupamento (ex.: dois "Clínica Essência" no
+// card Receita por Local).
+function normalizeName(name: string): string {
+  return name.replace(/\s+/g, ' ').trim();
+}
+
 export const locationsService = {
   async getAll(): Promise<Location[]> {
     const { clinicId } = await getClinicContext();
@@ -37,7 +44,7 @@ export const locationsService = {
     const { clinicId } = await getClinicContext();
     const { data, error } = await supabase
       .from('locations')
-      .insert({ ...location, clinic_id: clinicId })
+      .insert({ ...location, name: normalizeName(location.name), clinic_id: clinicId })
       .select()
       .single();
 
@@ -46,13 +53,16 @@ export const locationsService = {
   },
 
   async update(id: string, location: LocationUpdate): Promise<Location> {
+    const payload = location.name != null
+      ? { ...location, name: normalizeName(location.name) }
+      : location;
     const { data, error } = await supabase
       .from('locations')
-      .update(location)
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   },

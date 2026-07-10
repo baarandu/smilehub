@@ -52,6 +52,7 @@ import { Transaction } from '@/components/financial/types'; // Assuming types ex
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { financialService } from '@/services/financial';
 import { locationsService } from '@/services/locations';
+import { useClinic } from '@/contexts/ClinicContext';
 import { toast } from 'sonner';
 import { NewExpenseForm } from './NewExpenseForm'; // We'll create this form component next
 import { supabase } from '@/lib/supabase';
@@ -116,8 +117,11 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
     const [locationFilter, setLocationFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
 
+    // Escopado por clínica: getAll filtra pela clínica ativa, então a chave
+    // precisa mudar junto — senão a troca de clínica serve locais da anterior.
+    const { clinicId } = useClinic();
     const { data: locations = [] } = useQuery({
-        queryKey: ['locations'],
+        queryKey: ['locations', clinicId],
         queryFn: locationsService.getAll
     });
 

@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { locationsService } from '@/services/locations';
+import { useClinic } from '@/contexts/ClinicContext';
 import { settingsService } from '@/services/settings';
 import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -70,8 +71,11 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
         queryFn: settingsService.getTaxes
     });
 
+    // Escopado por clínica: getAll filtra pela clínica ativa, então a chave
+    // precisa mudar junto — senão a troca de clínica serve locais da anterior.
+    const { clinicId } = useClinic();
     const { data: locations = [] } = useQuery({
-        queryKey: ['locations'],
+        queryKey: ['locations', clinicId],
         queryFn: locationsService.getAll
     });
 
