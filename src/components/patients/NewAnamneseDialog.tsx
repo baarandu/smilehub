@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateAnamnese, useUpdateAnamnese } from '@/hooks/useAnamneses';
+import { useClinic } from '@/contexts/ClinicContext';
 import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
@@ -90,6 +91,7 @@ export function NewAnamneseDialog({
 }: NewAnamneseDialogProps) {
   const createAnamnese = useCreateAnamnese();
   const updateAnamnese = useUpdateAnamnese();
+  const { clinicId } = useClinic();
   const { data: existingSignatures } = useRecordSignatures('anamnesis', anamnese?.id);
   const isSigned = (existingSignatures?.length || 0) > 0;
   const [saving, setSaving] = useState(false);
@@ -285,6 +287,11 @@ export function NewAnamneseDialog({
 
       const anamneseData = {
         patient_id: patientId,
+        // Sem isso o banco preenche clinic_id via default legado (clínica mais
+        // antiga do usuário, não a ativa) e o trigger de consistência rejeita
+        // pacientes de outras clínicas. A clínica ativa é a do paciente —
+        // PatientDetail redireciona quando não é.
+        ...(clinicId ? { clinic_id: clinicId } : {}),
         date: form.date,
         medical_treatment: form.medicalTreatment,
         medical_treatment_details: form.medicalTreatment ? form.medicalTreatmentDetails || null : null,

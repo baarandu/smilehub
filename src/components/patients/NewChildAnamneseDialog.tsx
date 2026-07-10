@@ -19,6 +19,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateChildAnamnesis, useUpdateChildAnamnesis } from '@/hooks/useChildAnamneses';
+import { useClinic } from '@/contexts/ClinicContext';
 import { toast } from 'sonner';
 import type { ChildAnamnesis } from '@/types/childAnamnesis';
 import { ptBR } from 'date-fns/locale';
@@ -236,6 +237,7 @@ export function NewChildAnamneseDialog({
 }: NewChildAnamneseDialogProps) {
   const createAnamnesis = useCreateChildAnamnesis();
   const updateAnamnesis = useUpdateChildAnamnesis();
+  const { clinicId } = useClinic();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
 
@@ -545,6 +547,11 @@ export function NewChildAnamneseDialog({
 
       const data: any = {
         patient_id: patientId,
+        // Sem isso o banco preenche clinic_id via default legado (clínica mais
+        // antiga do usuário, não a ativa) e o trigger de consistência rejeita
+        // pacientes de outras clínicas. A clínica ativa é a do paciente —
+        // PatientDetail redireciona quando não é.
+        ...(clinicId ? { clinic_id: clinicId } : {}),
         date: form.date,
         // Histórico Médico
         pregnancy_type: form.pregnancyType || null,
