@@ -118,8 +118,35 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
 
     const grandTotal = teeth.reduce((sum, t) => sum + payment.getItemValue(t), 0);
 
+    // Items ticked in the pending/approved checkboxes (indexes into `teeth`).
+    const selectedIndices = [...new Set([...selectedPendingItems, ...selectedApprovedItems])];
+
+    // With items selected, delete ONLY them; without selection, the whole budget.
     const handleDelete = async () => {
-        if (!await confirm({ description: 'Mover este orçamento para a lixeira? Você poderá restaurá-lo depois.', variant: 'destructive', confirmLabel: 'Excluir' })) return;
+        if (selectedIndices.length > 0 && selectedIndices.length < teeth.length) {
+            const names = selectedIndices.map(i => getToothDisplayName(teeth[i].tooth)).join(', ');
+            if (!await confirm({
+                description: `Excluir ${selectedIndices.length === 1 ? `o item "${names}"` : `os ${selectedIndices.length} itens selecionados (${names})`}? Os demais itens do orçamento serão mantidos.`,
+                variant: 'destructive',
+                confirmLabel: 'Excluir',
+            })) return;
+            try {
+                setUpdating(true);
+                await budgetsService.removeItems(budget.id, selectedIndices);
+                toast({ title: "Itens excluídos", description: `${selectedIndices.length} item(ns) removido(s) do orçamento.` });
+                setSelectedPendingItems(new Set());
+                setSelectedApprovedItems(new Set());
+                onUpdate();
+            } catch (error) {
+                const detail = (error as any)?.message || (error as any)?.details || "Falha ao excluir itens";
+                toast({ variant: "destructive", title: "Erro", description: detail });
+            } finally {
+                setUpdating(false);
+            }
+            return;
+        }
+
+        if (!await confirm({ description: 'Mover este orçamento INTEIRO para a lixeira? Você poderá restaurá-lo depois. Para excluir só alguns itens, selecione-os antes.', variant: 'destructive', confirmLabel: 'Excluir' })) return;
         try {
             setUpdating(true);
             await budgetsService.delete(budget.id);
@@ -534,7 +561,9 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                     )}
                     <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={handleDelete}>
                         <Trash2 className="w-4 h-4 mr-1" />
-                        Excluir Plano
+                        {selectedIndices.length > 0 && selectedIndices.length < teeth.length
+                            ? `Excluir (${selectedIndices.length})`
+                            : 'Excluir Plano'}
                     </Button>
                 </div>
             </DialogContent>

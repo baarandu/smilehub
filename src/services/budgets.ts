@@ -183,9 +183,14 @@ export const budgetsService = {
     },
 
     // Remove um único item (dente/tratamento) do orçamento, preservando os demais.
-    // Itens pagos ou parcialmente pagos têm receitas, parcelas e notas vinculadas
-    // e não podem ser removidos por aqui.
     async removeItem(budgetId: string, itemIndex: number): Promise<{ budgetDeleted: boolean }> {
+        return this.removeItems(budgetId, [itemIndex]);
+    },
+
+    // Remove itens específicos do orçamento, preservando os demais. Itens pagos
+    // ou parcialmente pagos têm receitas, parcelas e notas vinculadas e não
+    // podem ser removidos por aqui.
+    async removeItems(budgetId: string, itemIndices: number[]): Promise<{ budgetDeleted: boolean }> {
         const { clinicId } = await getClinicContext();
 
         const { data: budget, error } = await supabase
@@ -204,19 +209,25 @@ export const budgetsService = {
             throw new Error('Não foi possível ler os itens deste orçamento.');
         }
         const teeth: any[] = Array.isArray(parsed.teeth) ? parsed.teeth : [];
-        const item = teeth[itemIndex];
-        if (!item) throw new Error('Item não encontrado no orçamento.');
-        if (item.status === 'paid' || item.status === 'completed' || item.status === 'partially_paid') {
-            throw new Error('Itens pagos ou parcialmente pagos não podem ser removidos.');
+
+        const indices = [...new Set(itemIndices)].sort((a, b) => b - a);
+        if (indices.length === 0) throw new Error('Nenhum item selecionado.');
+        for (const idx of indices) {
+            const item = teeth[idx];
+            if (!item) throw new Error('Item não encontrado no orçamento.');
+            if (item.status === 'paid' || item.status === 'completed' || item.status === 'partially_paid') {
+                throw new Error('Itens pagos ou parcialmente pagos não podem ser removidos.');
+            }
         }
 
-        // Último item → o orçamento ficaria vazio; vai inteiro para a lixeira.
-        if (teeth.length === 1) {
+        // Sem itens restantes o orçamento ficaria vazio; vai inteiro para a lixeira.
+        if (indices.length >= teeth.length) {
             await this.delete(budgetId);
             return { budgetDeleted: true };
         }
 
-        const newTeeth = teeth.filter((_, i) => i !== itemIndex);
+        const removeSet = new Set(indices);
+        const newTeeth = teeth.filter((_, i) => !removeSet.has(i));
         const value = newTeeth.reduce((sum, t) => sum + getToothNetValue(t), 0);
         const treatment = [...new Set(newTeeth.flatMap(t => t.treatments || []))].join(', ');
 
@@ -227,7 +238,10 @@ export const budgetsService = {
             status: calculateBudgetStatus(newTeeth),
         });
 
-        await this.reindexItemRefs(budgetId, itemIndex);
+        // Descendente: cada ajuste é aplicado sobre os índices como estavam antes dele.
+        for (const idx of indices) {
+            await this.reindexItemRefs(budgetId, idx);
+        }
         return { budgetDeleted: false };
     },
 
