@@ -35,6 +35,10 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     const [dentists, setDentists] = useState<{ id: string; name: string }[]>([]);
     const [responsibleDentistId, setResponsibleDentistId] = useState('');
     const [teethList, setTeethList] = useState<ToothEntry[]>([]);
+    // Position of each item in the budget as saved in the DB (null = new item).
+    // Needed to re-point parcelas/notas/próteses (linked by index) after removals.
+    const [origIndices, setOrigIndices] = useState<(number | null)[]>([]);
+    const [removedOrigIndices, setRemovedOrigIndices] = useState<number[]>([]);
 
     const [locationsModalOpen, setLocationsModalOpen] = useState(false);
 
@@ -62,7 +66,11 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                             ...t,
                             status: t.status || 'pending',
                         })));
+                        setOrigIndices(parsed.teeth.map((_: ToothEntry, i: number) => i));
+                    } else {
+                        setOrigIndices([]);
                     }
+                    setRemovedOrigIndices([]);
                     // Load location if available
                     if (parsed.location) {
                         setLocation(parsed.location);
@@ -78,6 +86,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                     }
                 } catch (e) {
                     setTeethList([]);
+                    setOrigIndices([]);
+                    setRemovedOrigIndices([]);
                     setLocationRate('');
                     setLocation('');
                     setResponsibleDentistId('');
@@ -89,6 +99,8 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                 setLocation('');
                 setResponsibleDentistId('');
                 setTeethList([]);
+                setOrigIndices([]);
+                setRemovedOrigIndices([]);
             }
         }
     }, [open, budget]);
@@ -168,6 +180,7 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
     const handleAddItem = (item: ToothEntry) => {
         setTeethList(prev => [...prev, item]);
+        setOrigIndices(prev => [...prev, null]);
     };
 
     const handleUpdateItem = (item: ToothEntry, index: number) => {
@@ -186,6 +199,20 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
     };
 
     const removeTooth = (index: number) => {
+        const item = teethList[index];
+        if (item && (item.status === 'paid' || item.status === 'completed' || item.status === 'partially_paid')) {
+            toast({
+                variant: "destructive",
+                title: "Item pago",
+                description: "Itens pagos ou parcialmente pagos não podem ser removidos do orçamento.",
+            });
+            return;
+        }
+        const orig = origIndices[index];
+        if (orig != null) {
+            setRemovedOrigIndices(prev => [...prev, orig]);
+        }
+        setOrigIndices(origIndices.filter((_, i) => i !== index));
         setTeethList(teethList.filter((_, i) => i !== index));
         if (editingItemIndex === index) {
             setEditingItemIndex(null);
@@ -251,6 +278,14 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
 
                 // Sync updated rates to existing financial transactions
                 await financialService.syncBudgetRates(budget.id, teethList);
+
+                // Re-point index-linked records (parcelas, notas, próteses) of the
+                // items that moved up after removals. Descending order so each
+                // shift is applied against the indices as they were before it.
+                for (const idx of [...removedOrigIndices].sort((a, b) => b - a)) {
+                    await budgetsService.reindexItemRefs(budget.id, idx);
+                }
+                setRemovedOrigIndices([]);
 
                 toast({ title: "Sucesso", description: "Orçamento atualizado com sucesso!" });
             } else {

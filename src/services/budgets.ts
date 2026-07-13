@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Budget, BudgetInsert, BudgetUpdate, BudgetItem, BudgetItemInsert, BudgetWithItems } from '@/types/database';
-import { calculateBudgetStatus } from '@/utils/budgetUtils';
+import { calculateBudgetStatus, getToothNetValue } from '@/utils/budgetUtils';
 import { getClinicContext } from './clinicContext';
 import { logger } from '@/utils/logger';
 
@@ -150,6 +150,85 @@ export const budgetsService = {
         if (!deleted || deleted.length === 0) {
             throw new Error('Não foi possível excluir o orçamento. Verifique se você tem permissão.');
         }
+    },
+
+    // Parcelas, receitas, notas fiscais e ordens de prótese apontam para o item
+    // pela POSIÇÃO dele no array `teeth` do notes. Quando um item é removido,
+    // os itens seguintes descem uma posição — sem este ajuste esses vínculos
+    // passariam a apontar para o item errado.
+    async reindexItemRefs(budgetId: string, removedIndex: number): Promise<void> {
+        const { clinicId } = await getClinicContext();
+
+        const shift = async (table: string, indexCol: string, budgetCol: string) => {
+            const { data, error } = await (supabase as any)
+                .from(table)
+                .select(`id, ${indexCol}`)
+                .eq('clinic_id', clinicId)
+                .eq(budgetCol, budgetId)
+                .gt(indexCol, removedIndex);
+            if (error) throw error;
+            for (const row of (data || [])) {
+                const { error: upError } = await (supabase as any)
+                    .from(table)
+                    .update({ [indexCol]: row[indexCol] - 1 })
+                    .eq('id', row.id);
+                if (upError) throw upError;
+            }
+        };
+
+        await shift('payment_receivables', 'tooth_index', 'budget_id');
+        await shift('financial_transactions', 'tooth_index', 'related_entity_id');
+        await shift('nfse_documents', 'tooth_index', 'budget_id');
+        await shift('prosthesis_orders', 'budget_tooth_index', 'budget_id');
+    },
+
+    // Remove um único item (dente/tratamento) do orçamento, preservando os demais.
+    // Itens pagos ou parcialmente pagos têm receitas, parcelas e notas vinculadas
+    // e não podem ser removidos por aqui.
+    async removeItem(budgetId: string, itemIndex: number): Promise<{ budgetDeleted: boolean }> {
+        const { clinicId } = await getClinicContext();
+
+        const { data: budget, error } = await supabase
+            .from('budgets')
+            .select('id, notes')
+            .eq('id', budgetId)
+            .eq('clinic_id', clinicId)
+            .is('deleted_at', null)
+            .single();
+        if (error) throw error;
+
+        let parsed: any;
+        try {
+            parsed = JSON.parse((budget as any).notes || '{}');
+        } catch {
+            throw new Error('Não foi possível ler os itens deste orçamento.');
+        }
+        const teeth: any[] = Array.isArray(parsed.teeth) ? parsed.teeth : [];
+        const item = teeth[itemIndex];
+        if (!item) throw new Error('Item não encontrado no orçamento.');
+        if (item.status === 'paid' || item.status === 'completed' || item.status === 'partially_paid') {
+            throw new Error('Itens pagos ou parcialmente pagos não podem ser removidos.');
+        }
+
+        // Último item → o orçamento ficaria vazio; vai inteiro para a lixeira.
+        if (teeth.length === 1) {
+            await this.delete(budgetId);
+            return { budgetDeleted: true };
+        }
+
+        const newTeeth = teeth.filter((_, i) => i !== itemIndex);
+        const value = newTeeth.reduce((sum, t) => sum + getToothNetValue(t), 0);
+        const treatment = [...new Set(newTeeth.flatMap(t => t.treatments || []))].join(', ');
+
+        await this.update(budgetId, {
+            notes: JSON.stringify({ ...parsed, teeth: newTeeth }),
+            value,
+            treatment,
+            status: calculateBudgetStatus(newTeeth),
+        });
+
+        await this.reindexItemRefs(budgetId, itemIndex);
+        return { budgetDeleted: false };
     },
 
     // Restaura um orçamento da lixeira.

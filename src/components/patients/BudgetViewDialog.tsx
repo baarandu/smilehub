@@ -135,6 +135,34 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
         }
     };
 
+    // Delete a single item (tooth/treatment) keeping the rest of the budget.
+    const handleDeleteItem = async (index: number) => {
+        const item = teeth[index];
+        const isLast = teeth.length === 1;
+        const description = isLast
+            ? 'Este é o único item do orçamento, então o orçamento inteiro será movido para a lixeira. Você poderá restaurá-lo depois.'
+            : `Excluir o item "${getToothDisplayName(item.tooth)}" (R$ ${formatMoney(payment.getItemValue(item))})? Os demais itens do orçamento serão mantidos.`;
+        if (!await confirm({ description, variant: 'destructive', confirmLabel: 'Excluir' })) return;
+        try {
+            setUpdating(true);
+            const { budgetDeleted } = await budgetsService.removeItem(budget.id, index);
+            if (budgetDeleted) {
+                toast({ title: "Movido para a lixeira", description: "O orçamento ficou sem itens e foi movido para a lixeira." });
+                onDelete?.(budget.id);
+                onUpdate();
+                onClose();
+            } else {
+                toast({ title: "Item excluído", description: "O item foi removido do orçamento." });
+                onUpdate();
+            }
+        } catch (error) {
+            const detail = (error as any)?.message || "Falha ao excluir o item";
+            toast({ variant: "destructive", title: "Erro", description: detail });
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     // Toggle selection functions
     const togglePendingSelection = (originalIndex: number) => {
         setSelectedPendingItems(prev => {
@@ -377,6 +405,11 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                                                     </div>
                                                 </button>
                                             )}
+                                            {!isPartial && (
+                                                <button onClick={() => handleDeleteItem(index)} disabled={updating} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Excluir item">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -422,6 +455,9 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                                                     <p className="font-semibold text-gray-900 text-sm">R$ {formatMoney(total)}</p>
                                                     <p className="text-[#a03f3d] text-xs">Aprovar</p>
                                                 </div>
+                                            </button>
+                                            <button onClick={() => handleDeleteItem(index)} disabled={updating} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Excluir item">
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
                                     );
@@ -498,7 +534,7 @@ export function BudgetViewDialog({ budget, open, onClose, onUpdate, onDelete, on
                     )}
                     <Button variant="outline" size="sm" className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200" onClick={handleDelete}>
                         <Trash2 className="w-4 h-4 mr-1" />
-                        Excluir
+                        Excluir Plano
                     </Button>
                 </div>
             </DialogContent>

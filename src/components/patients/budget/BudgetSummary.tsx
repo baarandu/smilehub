@@ -67,14 +67,16 @@ export function BudgetSummary({ items, discountAmount = 0, coveredAmount = 0, su
                                             <Pencil className="w-4 h-4" />
                                         </Button>
                                     )}
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-slate-400 hover:text-red-500"
-                                        onClick={(e) => { e.stopPropagation(); onRemoveItem(idx); }}
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    {item.status !== 'paid' && item.status !== 'completed' && item.status !== 'partially_paid' && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-slate-400 hover:text-red-500"
+                                            onClick={(e) => { e.stopPropagation(); onRemoveItem(idx); }}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                 </div>
 
                                 <div className="font-semibold text-[#6b2a28] mb-1">
