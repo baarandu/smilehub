@@ -78,12 +78,17 @@ export interface ChildAnamnesis {
 
   // Hábitos Parafuncionais
   nail_biting: boolean;
+  nail_biting_details: string | null;
   object_biting: boolean;
+  object_biting_details: string | null;
   thumb_sucking: boolean;
+  thumb_sucking_details: string | null;
   prolonged_pacifier: boolean;
+  prolonged_pacifier_details: string | null;
   teeth_grinding: boolean;
   teeth_grinding_details: string | null;
   mouth_breathing: boolean;
+  mouth_breathing_details: string | null;
 
   // Comportamento na Consulta
   behavior: string | null;

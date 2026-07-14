@@ -162,12 +162,17 @@ const emptyForm = {
   sleepsAfterSugarLiquid: false,
   // Hábitos Parafuncionais
   nailBiting: false,
+  nailBitingDetails: '',
   objectBiting: false,
+  objectBitingDetails: '',
   thumbSucking: false,
+  thumbSuckingDetails: '',
   prolongedPacifier: false,
+  prolongedPacifierDetails: '',
   teethGrinding: false,
   teethGrindingDetails: '',
   mouthBreathing: false,
+  mouthBreathingDetails: '',
   // Comportamento
   behavior: '',
   managementTechniques: false,
@@ -311,12 +316,17 @@ export function NewChildAnamneseDialog({
           sugarBeforeBed: anamnesis.sugar_before_bed || false,
           sleepsAfterSugarLiquid: anamnesis.sleeps_after_sugar_liquid || false,
           nailBiting: anamnesis.nail_biting || false,
+          nailBitingDetails: anamnesis.nail_biting_details || '',
           objectBiting: anamnesis.object_biting || false,
+          objectBitingDetails: anamnesis.object_biting_details || '',
           thumbSucking: anamnesis.thumb_sucking || false,
+          thumbSuckingDetails: anamnesis.thumb_sucking_details || '',
           prolongedPacifier: anamnesis.prolonged_pacifier || false,
+          prolongedPacifierDetails: anamnesis.prolonged_pacifier_details || '',
           teethGrinding: anamnesis.teeth_grinding || false,
           teethGrindingDetails: anamnesis.teeth_grinding_details || '',
           mouthBreathing: anamnesis.mouth_breathing || false,
+          mouthBreathingDetails: anamnesis.mouth_breathing_details || '',
           behavior: anamnesis.behavior || '',
           managementTechniques: anamnesis.management_techniques || false,
           managementTechniquesDetails: anamnesis.management_techniques_details || '',
@@ -478,15 +488,30 @@ export function NewChildAnamneseDialog({
       ...(d.sugarBeforeBed != null && { sugarBeforeBed: d.sugarBeforeBed === true }),
       ...(d.sleepsAfterSugarLiquid != null && { sleepsAfterSugarLiquid: d.sleepsAfterSugarLiquid === true }),
       // Hábitos Parafuncionais
-      ...(d.nailBiting != null && { nailBiting: d.nailBiting === true }),
-      ...(d.objectBiting != null && { objectBiting: d.objectBiting === true }),
-      ...(d.thumbSucking != null && { thumbSucking: d.thumbSucking === true }),
-      ...(d.prolongedPacifier != null && { prolongedPacifier: d.prolongedPacifier === true }),
+      ...(d.nailBiting?.value != null && {
+        nailBiting: b(d.nailBiting),
+        nailBitingDetails: det(d.nailBiting),
+      }),
+      ...(d.objectBiting?.value != null && {
+        objectBiting: b(d.objectBiting),
+        objectBitingDetails: det(d.objectBiting),
+      }),
+      ...(d.thumbSucking?.value != null && {
+        thumbSucking: b(d.thumbSucking),
+        thumbSuckingDetails: det(d.thumbSucking),
+      }),
+      ...(d.prolongedPacifier?.value != null && {
+        prolongedPacifier: b(d.prolongedPacifier),
+        prolongedPacifierDetails: det(d.prolongedPacifier),
+      }),
       ...(d.teethGrinding?.value != null && {
         teethGrinding: b(d.teethGrinding),
         teethGrindingDetails: det(d.teethGrinding),
       }),
-      ...(d.mouthBreathing != null && { mouthBreathing: d.mouthBreathing === true }),
+      ...(d.mouthBreathing?.value != null && {
+        mouthBreathing: b(d.mouthBreathing),
+        mouthBreathingDetails: det(d.mouthBreathing),
+      }),
       // Comportamento
       ...(d.behavior != null && { behavior: d.behavior }),
       ...(d.managementTechniques?.value != null && {
@@ -623,12 +648,17 @@ export function NewChildAnamneseDialog({
         sleeps_after_sugar_liquid: form.sleepsAfterSugarLiquid,
         // Hábitos Parafuncionais
         nail_biting: form.nailBiting,
+        nail_biting_details: form.nailBiting ? form.nailBitingDetails || null : null,
         object_biting: form.objectBiting,
+        object_biting_details: form.objectBiting ? form.objectBitingDetails || null : null,
         thumb_sucking: form.thumbSucking,
+        thumb_sucking_details: form.thumbSucking ? form.thumbSuckingDetails || null : null,
         prolonged_pacifier: form.prolongedPacifier,
+        prolonged_pacifier_details: form.prolongedPacifier ? form.prolongedPacifierDetails || null : null,
         teeth_grinding: form.teethGrinding,
         teeth_grinding_details: form.teethGrinding ? form.teethGrindingDetails || null : null,
         mouth_breathing: form.mouthBreathing,
+        mouth_breathing_details: form.mouthBreathing ? form.mouthBreathingDetails || null : null,
         // Comportamento
         behavior: form.behavior || null,
         management_techniques: form.managementTechniques,
@@ -996,12 +1026,12 @@ export function NewChildAnamneseDialog({
             <Separator />
             <h3 className="font-semibold text-foreground">Hábitos Parafuncionais</h3>
 
-            <QuestionField label="Rói unhas?" value={form.nailBiting} onValueChange={(v) => setForm({ ...form, nailBiting: v })} showDetails={false} />
-            <QuestionField label="Morde objetos?" value={form.objectBiting} onValueChange={(v) => setForm({ ...form, objectBiting: v })} showDetails={false} />
-            <QuestionField label="Chupa dedo?" value={form.thumbSucking} onValueChange={(v) => setForm({ ...form, thumbSucking: v })} showDetails={false} />
-            <QuestionField label="Usa chupeta prolongadamente?" value={form.prolongedPacifier} onValueChange={(v) => setForm({ ...form, prolongedPacifier: v })} showDetails={false} />
+            <QuestionField label="Rói unhas?" value={form.nailBiting} onValueChange={(v) => setForm({ ...form, nailBiting: v })} details={form.nailBitingDetails} onDetailsChange={(t) => setForm({ ...form, nailBitingDetails: t })} detailsPlaceholder="Observações (ex: já roeu e parou, frequência...)" />
+            <QuestionField label="Morde objetos?" value={form.objectBiting} onValueChange={(v) => setForm({ ...form, objectBiting: v })} details={form.objectBitingDetails} onDetailsChange={(t) => setForm({ ...form, objectBitingDetails: t })} detailsPlaceholder="Observações (quais objetos, frequência...)" />
+            <QuestionField label="Chupa dedo?" value={form.thumbSucking} onValueChange={(v) => setForm({ ...form, thumbSucking: v })} details={form.thumbSuckingDetails} onDetailsChange={(t) => setForm({ ...form, thumbSuckingDetails: t })} detailsPlaceholder="Observações (até que idade, frequência...)" />
+            <QuestionField label="Usa chupeta prolongadamente?" value={form.prolongedPacifier} onValueChange={(v) => setForm({ ...form, prolongedPacifier: v })} details={form.prolongedPacifierDetails} onDetailsChange={(t) => setForm({ ...form, prolongedPacifierDetails: t })} detailsPlaceholder="Observações (até que idade, momentos de uso...)" />
             <QuestionField label="Range os dentes?" value={form.teethGrinding} onValueChange={(v) => setForm({ ...form, teethGrinding: v })} details={form.teethGrindingDetails} onDetailsChange={(t) => setForm({ ...form, teethGrindingDetails: t })} detailsPlaceholder="Noturno ou diurno?" />
-            <QuestionField label="Respira pela boca?" value={form.mouthBreathing} onValueChange={(v) => setForm({ ...form, mouthBreathing: v })} showDetails={false} />
+            <QuestionField label="Respira pela boca?" value={form.mouthBreathing} onValueChange={(v) => setForm({ ...form, mouthBreathing: v })} details={form.mouthBreathingDetails} onDetailsChange={(t) => setForm({ ...form, mouthBreathingDetails: t })} detailsPlaceholder="Observações (ex: só quando está com sinusite...)" />
 
             {/* ===== 7. COMPORTAMENTO NA CONSULTA ===== */}
             <Separator />

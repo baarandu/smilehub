@@ -104,12 +104,12 @@ export function ChildAnamneseSummaryDialog({ open, onOpenChange, anamnesis }: Pr
   ];
 
   const habitItems: SectionItem[] = [
-    { label: 'Rói unhas', value: a.nail_biting },
-    { label: 'Morde objetos', value: a.object_biting },
-    { label: 'Chupa dedo', value: a.thumb_sucking },
-    { label: 'Chupeta prolongada', value: a.prolonged_pacifier },
+    { label: 'Rói unhas', value: a.nail_biting, details: a.nail_biting_details },
+    { label: 'Morde objetos', value: a.object_biting, details: a.object_biting_details },
+    { label: 'Chupa dedo', value: a.thumb_sucking, details: a.thumb_sucking_details },
+    { label: 'Chupeta prolongada', value: a.prolonged_pacifier, details: a.prolonged_pacifier_details },
     { label: 'Range os dentes', value: a.teeth_grinding, details: a.teeth_grinding_details },
-    { label: 'Respira pela boca', value: a.mouth_breathing },
+    { label: 'Respira pela boca', value: a.mouth_breathing, details: a.mouth_breathing_details },
   ];
 
   const behaviorItems: SectionItem[] = [

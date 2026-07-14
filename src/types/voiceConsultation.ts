@@ -187,12 +187,12 @@ export interface ExtractedChildAnamnesisData {
   sugarFrequency: string | null;
   sugarBeforeBed: boolean | null;
   sleepsAfterSugarLiquid: boolean | null;
-  nailBiting: boolean | null;
-  objectBiting: boolean | null;
-  thumbSucking: boolean | null;
-  prolongedPacifier: boolean | null;
+  nailBiting: AnamnesisCondition;
+  objectBiting: AnamnesisCondition;
+  thumbSucking: AnamnesisCondition;
+  prolongedPacifier: AnamnesisCondition;
   teethGrinding: AnamnesisCondition;
-  mouthBreathing: boolean | null;
+  mouthBreathing: AnamnesisCondition;
   behavior: string | null;
   managementTechniques: AnamnesisCondition;
   dentition: string | null;
