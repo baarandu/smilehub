@@ -33,6 +33,14 @@ export function useRecentClinics(limit: number = 10) {
     });
 }
 
+export function useActiveUsersSeries(days: number = 90) {
+    return useQuery({
+        queryKey: ['admin', 'active-users-series', days],
+        queryFn: () => analyticsService.getActiveUsersSeries(days),
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
 export function useStripeMetrics() {
     return useQuery({
         queryKey: ['admin', 'stripe-metrics'],

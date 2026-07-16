@@ -2911,6 +2911,15 @@ export type Database = {
           trial_ends_at: string
         }[]
       }
+      admin_get_active_users_series: {
+        Args: { p_days?: number }
+        Returns: {
+          day: string
+          dau: number
+          wau: number
+          mau: number
+        }[]
+      }
       admin_get_user_activity: {
         Args: never
         Returns: {

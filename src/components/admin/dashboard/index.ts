@@ -6,3 +6,4 @@ export { RevenueChart } from './RevenueChart';
 export { ClinicsList } from './ClinicsList';
 export { UsersTable } from './UsersTable';
 export { UserActivityTable } from './UserActivityTable';
+export { ActiveUsersChart } from './ActiveUsersChart';

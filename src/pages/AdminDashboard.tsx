@@ -10,6 +10,7 @@ import {
     ClinicsList,
     UsersTable,
     UserActivityTable,
+    ActiveUsersChart,
 } from '@/components/admin/dashboard';
 import {
     useOverviewMetrics,
@@ -17,6 +18,7 @@ import {
     useSubscriptionStats,
     useRecentClinics,
     useStripeMetrics,
+    useActiveUsersSeries,
 } from '@/hooks/useAdminAnalytics';
 import type { PeriodValue } from '@/services/admin/analytics';
 
@@ -33,6 +35,7 @@ export default function AdminDashboard() {
     const { data: subscriptionStats, isLoading: statsLoading } = useSubscriptionStats();
     const { data: clinics, isLoading: clinicsLoading } = useRecentClinics(10);
     const { data: stripeMetrics, isLoading: stripeLoading } = useStripeMetrics();
+    const { data: activeUsers, isLoading: activeUsersLoading } = useActiveUsersSeries(90);
 
     return (
         <div className="container mx-auto p-6 max-w-7xl space-y-6">
@@ -71,6 +74,12 @@ export default function AdminDashboard() {
                         metrics={metrics}
                         stripeMetrics={stripeMetrics}
                         isLoading={metricsLoading || stripeLoading}
+                    />
+
+                    {/* Active Users (DAU/WAU/MAU) */}
+                    <ActiveUsersChart
+                        data={activeUsers}
+                        isLoading={activeUsersLoading}
                     />
 
                     {/* Charts Grid */}

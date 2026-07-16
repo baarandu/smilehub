@@ -39,6 +39,13 @@ export interface ClinicInfo {
     createdAt: string;
 }
 
+export interface ActiveUsersData {
+    date: string;
+    dau: number;
+    wau: number;
+    mau: number;
+}
+
 export interface StripeMetrics {
     mrr: number;
     activeSubscriptionsCount: number;
@@ -248,6 +255,30 @@ export const analyticsService = {
             subscriptionStatus: clinic.subscriptionStatus,
             usersCount: clinic.usersCount || 0,
             createdAt: clinic.createdAt,
+        }));
+    },
+
+    /**
+     * Get daily/weekly/monthly active users series - uses RPC to bypass RLS
+     */
+    async getActiveUsersSeries(days: number = 90): Promise<ActiveUsersData[]> {
+        const { data, error } = await supabase.rpc('admin_get_active_users_series', {
+            p_days: days,
+        });
+
+        if (error) {
+            logger.error('Error fetching active users series:', error);
+            return [];
+        }
+
+        return ((data || []) as any[]).map((row: any) => ({
+            date: new Date(row.day + 'T00:00:00').toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'short',
+            }),
+            dau: row.dau || 0,
+            wau: row.wau || 0,
+            mau: row.mau || 0,
         }));
     },
 
