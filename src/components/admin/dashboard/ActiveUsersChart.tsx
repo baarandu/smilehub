@@ -95,7 +95,7 @@ export function ActiveUsersChart({ data, isLoading }: ActiveUsersChartProps) {
                     </ResponsiveContainer>
                 </ChartContainer>
                 <p className="mt-2 text-xs text-muted-foreground">
-                    Baseado em acoes registradas no sistema (criacao/edicao de pacientes, agendamentos, financeiro etc).
+                    Baseado em acoes registradas no sistema e em sessoes ativas (heartbeat a cada 5 min).
                 </p>
             </CardContent>
         </Card>

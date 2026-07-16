@@ -3265,6 +3265,7 @@ export type Database = {
             }
             Returns: string
           }
+      record_heartbeat: { Args: never; Returns: undefined }
       seed_default_tax_rates: {
         Args: { p_clinic_id: string }
         Returns: undefined

@@ -39,6 +39,7 @@ import { supabase } from '@/lib/supabase';
 import { TrialBanner } from '@/components/subscription/TrialBanner';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { subscriptionService } from '@/services/subscription';
 import { planHasFeature, getFeaturesForPlan } from '@/lib/planFeatures';
 import { OnboardingModal, OnboardingFloatingButton } from '@/components/onboarding';
@@ -80,6 +81,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { role, clinicId, clinicName, isAdmin, isDentist, isSuperAdmin, availableClinics, switchClinic } = useClinic();
   const hasMultipleClinics = availableClinics.length > 1;
   const { returnToOnboardingIfNeeded } = useOnboarding();
+
+  // Registra atividade do usuario para as metricas do painel admin
+  useHeartbeat();
 
   // Profile Settings Modal (triggered from onboarding steps)
   const [showProfileSettings, setShowProfileSettings] = useState(false);
