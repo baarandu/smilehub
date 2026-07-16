@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CreditCard, CheckCircle, Calculator, Clock, Calendar, AlertCircle, Banknote, Smartphone, MoreHorizontal, X, FilePlus2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -205,21 +205,34 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // isSubmitting só bloqueia após o re-render; um duplo clique dispara o fluxo
+  // duas vezes e duplica a receita. O ref bloqueia de forma síncrona.
+  const submittingRef = useRef(false);
 
   // ... (existing code)
 
   const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
-    if (!selectedItem || isSubmitting) return;
+    if (!selectedItem || submittingRef.current) return;
 
     try {
+      submittingRef.current = true;
       setIsSubmitting(true);
-      const budget = budgets.find(b => b.id === selectedItem.budgetId);
+      // Busca fresca: o estado local pode estar defasado e reconfirmar um item
+      // já pago duplicaria a receita.
+      const budget = await budgetsService.getById(selectedItem.budgetId);
       if (!budget) return;
 
       const parsed = JSON.parse(budget.notes || '{}');
       const teeth = parsed.teeth as ToothEntry[];
 
       if (!teeth) return;
+
+      const currentStatus = teeth[selectedItem.toothIndex]?.status;
+      if (currentStatus === 'paid' || currentStatus === 'completed') {
+        toast({ title: "Item já pago", description: "Este item já consta como pago — nenhum novo lançamento foi feito." });
+        loadData();
+        return;
+      }
 
       // 1. Log Credit Usage (if any)
       if (creditUsed > 0) {
@@ -380,6 +393,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       console.error(error);
       toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
       setSelectedItem(null);
     }

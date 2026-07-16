@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { budgetsService } from '@/services/budgets';
 import { financialService } from '@/services/financial';
 import { prosthesisService } from '@/services/prosthesis';
@@ -30,6 +30,9 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
     const [paymentItem, setPaymentItem] = useState<{ index: number; tooth: ToothEntry } | null>(null);
     const [paymentBatch, setPaymentBatch] = useState<{ indices: number[]; teeth: ToothEntry[]; totalValue: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // isSubmitting só bloqueia após o re-render; um duplo clique dispara o fluxo
+    // duas vezes e duplica a receita. O ref bloqueia de forma síncrona.
+    const submittingRef = useRef(false);
 
     const autoCreateProsthesisOrder = async (tooth: ToothEntry, toothIndex: number, budgetId: string): Promise<boolean> => {
         if (!clinicId) return false;
@@ -175,9 +178,10 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
     };
 
     const handleConfirmPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
-        if (!paymentItem || isSubmitting || !patientId) return;
+        if (!paymentItem || submittingRef.current || !patientId) return;
 
         try {
+            submittingRef.current = true;
             setIsSubmitting(true);
 
             const refreshedBudget = await budgetsService.getById(budget.id);
@@ -188,6 +192,12 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const selectedTooth = currentTeeth[paymentItem.index];
+            // Reconfirmação com dados desatualizados (ex.: lista ainda não recarregada)
+            // duplicaria a receita deste item.
+            if (selectedTooth.status === 'paid' || selectedTooth.status === 'completed') {
+                toast({ title: "Item já pago", description: "Este item já consta como pago — nenhum novo lançamento foi feito." });
+                return;
+            }
             const originalAmount = getItemValue(selectedTooth);
             const totalAmount = breakdown?.grossAmount ?? originalAmount;
             const safeCreditUsed = Math.max(0, Math.min(creditUsed, originalAmount));
@@ -318,15 +328,17 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
         } finally {
+            submittingRef.current = false;
             setIsSubmitting(false);
             setPaymentItem(null);
         }
     };
 
     const handleConfirmBatchPayment = async (method: string, installments: number, brand?: string, breakdown?: any, payerData?: PayerData, cardMachineId?: string | null, creditUsed: number = 0, paymentDate?: string) => {
-        if (!paymentBatch || isSubmitting || !patientId) return;
+        if (!paymentBatch || submittingRef.current || !patientId) return;
 
         try {
+            submittingRef.current = true;
             setIsSubmitting(true);
 
             const refreshedBudget = await budgetsService.getById(budget.id);
@@ -337,6 +349,12 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const { indices } = paymentBatch;
+            // Reconfirmação com dados desatualizados duplicaria as receitas. O rateio
+            // usa o total do lote, então qualquer item já pago invalida o lote inteiro.
+            if (indices.some(idx => currentTeeth[idx]?.status === 'paid' || currentTeeth[idx]?.status === 'completed')) {
+                toast({ title: "Itens já pagos", description: "Um ou mais itens já constam como pagos — nenhum novo lançamento foi feito." });
+                return;
+            }
             const totalAmount = breakdown?.grossAmount ?? paymentBatch.totalValue;
             const safeCreditUsed = Math.max(0, Math.min(creditUsed, paymentBatch.totalValue));
 
@@ -496,15 +514,17 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento." });
         } finally {
+            submittingRef.current = false;
             setIsSubmitting(false);
             setPaymentBatch(null);
         }
     };
 
     const handleConfirmSplitPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null, creditUsed: number = 0) => {
-        if (!paymentItem || isSubmitting || !patientId) return;
+        if (!paymentItem || submittingRef.current || !patientId) return;
 
         try {
+            submittingRef.current = true;
             setIsSubmitting(true);
 
             const refreshedBudget = await budgetsService.getById(budget.id);
@@ -515,6 +535,10 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const selectedTooth = currentTeeth[paymentItem.index];
+            if (selectedTooth.status === 'paid' || selectedTooth.status === 'completed') {
+                toast({ title: "Item já pago", description: "Este item já consta como pago — nenhum novo lançamento foi feito." });
+                return;
+            }
             const toothDescription = `${selectedTooth.treatments.join(', ')} - ${getToothDisplayName(selectedTooth.tooth)}`;
             const budgetLocation = parsed.location || null;
             const splitGroupId = crypto.randomUUID();
@@ -600,15 +624,17 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento dividido." });
         } finally {
+            submittingRef.current = false;
             setIsSubmitting(false);
             setPaymentItem(null);
         }
     };
 
     const handleConfirmSplitBatchPayment = async (portions: SplitPaymentPortion[], cardMachineId?: string | null, creditUsed: number = 0) => {
-        if (!paymentBatch || isSubmitting || !patientId) return;
+        if (!paymentBatch || submittingRef.current || !patientId) return;
 
         try {
+            submittingRef.current = true;
             setIsSubmitting(true);
 
             const refreshedBudget = await budgetsService.getById(budget.id);
@@ -619,6 +645,10 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             if (!currentTeeth) return;
 
             const { indices } = paymentBatch;
+            if (indices.some(idx => currentTeeth[idx]?.status === 'paid' || currentTeeth[idx]?.status === 'completed')) {
+                toast({ title: "Itens já pagos", description: "Um ou mais itens já constam como pagos — nenhum novo lançamento foi feito." });
+                return;
+            }
             const budgetLocation = parsed.location || null;
 
             // Per-item metadata, in the order the items were selected.
@@ -789,6 +819,7 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
             console.error(error);
             toast({ variant: "destructive", title: "Erro", description: "Falha ao registrar pagamento dividido." });
         } finally {
+            submittingRef.current = false;
             setIsSubmitting(false);
             setPaymentBatch(null);
         }
