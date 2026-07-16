@@ -4,17 +4,92 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders, handleCorsOptions } from "../_shared/cors.ts";
 import {
   extractBearerToken,
+  validateEmail,
   validateUUID,
   validateRequired,
   validateMaxLength,
   ValidationError,
 } from "../_shared/validation.ts";
-import { createErrorResponse, logError } from "../_shared/errorHandler.ts";
+import { createErrorResponse } from "../_shared/errorHandler.ts";
 import { checkRateLimit } from "../_shared/rateLimit.ts";
 import { createLogger } from "../_shared/logger.ts";
 
 const SUPERSIGN_API = "https://api.sign.supersign.com.br";
 const FUNCTION_NAME = "supersign-envelope";
+
+function sanitizePdfFileName(title: string): string {
+  const normalized = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._ -]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 80);
+
+  return `${normalized || "documento"}.pdf`;
+}
+
+function normalizeBrazilianPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  // Prepend country code for local BR numbers (DDD + 8/9 digits)
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+  return digits;
+}
+
+async function readSafeResponseText(res: Response): Promise<string> {
+  try {
+    return (await res.text()).slice(0, 1000);
+  } catch {
+    return "";
+  }
+}
+
+function buildSuperSignUserMessage(status: number): string {
+  if (status === 400 || status === 422) {
+    return "O serviço de assinatura recusou os dados do documento. Confira e-mail, telefone e tente novamente.";
+  }
+  if (status === 401 || status === 403) {
+    return "Serviço de assinatura digital não autorizado. Verifique a configuração da SuperSign.";
+  }
+  if (status === 429) {
+    return "Serviço de assinatura temporariamente ocupado. Tente novamente em alguns minutos.";
+  }
+  return "Serviço de assinatura digital temporariamente indisponível. Tente novamente.";
+}
+
+function normalizeEnvelopeStatus(status: unknown): string {
+  const normalized = String(status || "").toUpperCase();
+  const allowed = new Set([
+    "PENDING_UPLOAD",
+    "DRAFT",
+    "PROCESSING",
+    "SENT",
+    "SEALING",
+    "COMPLETED",
+    "EXPIRED",
+    "VOIDED",
+    "ERROR",
+  ]);
+
+  if (allowed.has(normalized)) return normalized;
+  if (["CREATED", "PENDING", "WAITING", "OPEN"].includes(normalized)) return "DRAFT";
+  if (["DONE", "SIGNED", "FINISHED"].includes(normalized)) return "COMPLETED";
+  if (["CANCELED", "CANCELLED"].includes(normalized)) return "VOIDED";
+  return "PROCESSING";
+}
+
+function normalizeSignatoryStatus(status: unknown): string {
+  const normalized = String(status || "").toUpperCase();
+  const allowed = new Set(["PENDING", "WAITING_TURN", "VIEWED", "SIGNED", "REJECTED"]);
+
+  if (allowed.has(normalized)) return normalized;
+  if (["CREATED", "SENT", "WAITING", "OPEN"].includes(normalized)) return "PENDING";
+  if (["DONE", "COMPLETED", "FINISHED"].includes(normalized)) return "SIGNED";
+  if (["DECLINED", "REFUSED"].includes(normalized)) return "REJECTED";
+  return "PENDING";
+}
 
 serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
@@ -125,6 +200,7 @@ async function handleCreate(
 
   const dentistName = profile?.full_name || "Dentista";
   const dentistEmail = profile?.email || user.email;
+  validateEmail(dentistEmail, "email do dentista");
 
   logger.info("Step 5: Downloading PDF from storage", { pdfStoragePath });
 
@@ -140,31 +216,17 @@ async function handleCreate(
 
   const pdfBuffer = new Uint8Array(await pdfData.arrayBuffer());
 
-  // Create a signed URL so SuperSign can download the PDF (bucket may not be public)
-  const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-    .from("exams")
-    .createSignedUrl(pdfStoragePath, 3600); // 1 hour expiry
-
-  if (signedUrlError || !signedUrlData?.signedUrl) {
-    logger.error("Failed to create signed URL", { error: signedUrlError?.message });
-    throw new Error("Erro ao gerar URL do PDF.");
-  }
-
-  const pdfUrl = signedUrlData.signedUrl;
-  logger.info("Step 5b: Signed URL created", { pdfUrl: pdfUrl.substring(0, 80) + "..." });
-
   // Document ID for referencing in fields
   const documentId = crypto.randomUUID();
 
-  // Build signatories
+  // Build signatories (schema: id, name, email, qualification, authMethod, phoneNumber)
   const signatories: any[] = [
     {
       id: crypto.randomUUID(),
       name: dentistName,
       email: dentistEmail,
-      qualification: dentistEmail,
+      qualification: "Dentista",
       authMethod: "EMAIL",
-      role: "SIGNER",
     },
   ];
 
@@ -172,15 +234,17 @@ async function handleCreate(
     const patientSignatory: any = {
       id: crypto.randomUUID(),
       name: patient.name,
-      qualification: patient.email || patient.phone || patient.name,
-      role: "SIGNER",
+      qualification: "Paciente",
     };
 
+    if (patient.email) {
+      patientSignatory.email = validateEmail(patient.email, "email do paciente");
+    }
+
     if (patientDeliveryMethod === "WHATSAPP" && patient.phone) {
-      patientSignatory.phone = patient.phone.replace(/\D/g, "");
-      patientSignatory.authMethod = "SMS";
+      patientSignatory.phoneNumber = normalizeBrazilianPhone(patient.phone);
+      patientSignatory.authMethod = "WHATSAPP";
     } else if (patient.email) {
-      patientSignatory.email = patient.email;
       patientSignatory.authMethod = "EMAIL";
     } else {
       throw new ValidationError(
@@ -203,6 +267,8 @@ async function handleCreate(
       width: 30,
       height: 8,
     },
+    // SuperSign exige um record em properties mesmo para SIGNATURE
+    properties: {},
   }));
 
   // Create envelope on SuperSign
@@ -210,12 +276,12 @@ async function handleCreate(
   const supersignAccountId = Deno.env.get("SUPERSIGN_ACCOUNT_ID");
 
   if (!supersignToken || !supersignAccountId) {
-    throw new Error("Erro de configuração do serviço de assinatura digital");
+    throw new ValidationError("Serviço de assinatura digital não configurado. Verifique a integração da SuperSign.");
   }
 
   const envelopePayload = {
     title,
-    documents: [{ id: documentId, fileName: `${title}.pdf`, url: pdfUrl, contentType: "application/pdf" }],
+    documents: [{ id: documentId, fileName: sanitizePdfFileName(title), contentType: "application/pdf" }],
     signatories,
     fields,
     message: `Documento "${title}" para assinatura digital.`,
@@ -234,17 +300,26 @@ async function handleCreate(
   });
 
   if (!envelopeRes.ok) {
-    const errBody = await envelopeRes.text();
-    logger.error("SuperSign API error", { status: envelopeRes.status, body: errBody.substring(0, 300) });
-    throw new Error("Erro ao criar envelope: " + errBody.substring(0, 200));
+    const errBody = await readSafeResponseText(envelopeRes);
+    logger.error("SuperSign API error", { status: envelopeRes.status, body: errBody.substring(0, 500) });
+    throw new ValidationError(buildSuperSignUserMessage(envelopeRes.status));
   }
 
   const envelopeData = await envelopeRes.json();
 
   const envelopeId = envelopeData.id || envelopeData.envelopeId;
   const uploadDetails = envelopeData.uploadDetails || [];
+  if (!envelopeId) {
+    logger.error("SuperSign response missing envelope id", { responseKeys: Object.keys(envelopeData || {}) });
+    throw new ValidationError("Serviço de assinatura não retornou o envelope. Tente novamente.");
+  }
 
-  // Upload PDF to SuperSign (if they want us to upload instead of fetching from URL)
+  // Upload PDF content — required, since the envelope is created without a document URL
+  if (uploadDetails.length === 0) {
+    logger.error("SuperSign response missing uploadDetails", { envelopeId });
+    throw new ValidationError("Serviço de assinatura não retornou a URL de upload. Tente novamente.");
+  }
+
   if (uploadDetails.length > 0) {
     const uploadUrl = uploadDetails[0].uploadUrl;
     const upDocId = uploadDetails[0].documentId;
@@ -259,8 +334,9 @@ async function handleCreate(
     });
 
     if (!uploadRes.ok) {
-      logger.error("SuperSign PDF upload failed", { status: uploadRes.status });
-      throw new Error("Erro ao enviar PDF para assinatura.");
+      const errBody = await readSafeResponseText(uploadRes);
+      logger.error("SuperSign PDF upload failed", { status: uploadRes.status, body: errBody.substring(0, 500) });
+      throw new ValidationError(buildSuperSignUserMessage(uploadRes.status));
     }
   }
 
@@ -296,14 +372,14 @@ async function handleCreate(
       created_by: user.id,
       envelope_id: envelopeId,
       title,
-      status: envelopeData.status || "DRAFT",
+      status: normalizeEnvelopeStatus(envelopeData.status || fullEnvelope.status || "DRAFT"),
       document_template_id: documentTemplateId,
       original_pdf_url: pdfStoragePath,
       dentist_signatory_id: dentistSig.id || null,
-      dentist_status: dentistSig.status || "PENDING",
+      dentist_status: normalizeSignatoryStatus(dentistSig.status || "PENDING"),
       dentist_signature_token: dentistSig.signatureToken || null,
       patient_signatory_id: patientSig?.id || null,
-      patient_status: patientSig?.status || null,
+      patient_status: patientSig ? normalizeSignatoryStatus(patientSig.status || "PENDING") : null,
       patient_delivery_method: needsPatientSignature ? (patientDeliveryMethod || "EMAIL") : null,
       supersign_data: envelopeData,
     })
@@ -390,17 +466,17 @@ async function handleStatus(
         const patientSig = envelopeSignatories[1] || null;
 
         const updates: Record<string, any> = {
-          status: envelope.status || sig.status,
-          dentist_status: dentistSig.status || sig.dentist_status,
+          status: normalizeEnvelopeStatus(envelope.status || sig.status),
+          dentist_status: normalizeSignatoryStatus(dentistSig.status || sig.dentist_status),
           dentist_signature_token: dentistSig.signatureToken || sig.dentist_signature_token,
           supersign_data: envelope,
         };
 
         if (patientSig) {
-          updates.patient_status = patientSig.status || sig.patient_status;
+          updates.patient_status = normalizeSignatoryStatus(patientSig.status || sig.patient_status);
         }
 
-        if (envelope.status === "COMPLETED" && !sig.completed_at) {
+        if (updates.status === "COMPLETED" && !sig.completed_at) {
           updates.completed_at = new Date().toISOString();
         }
 
