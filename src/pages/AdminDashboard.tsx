@@ -9,6 +9,7 @@ import {
     RevenueChart,
     ClinicsList,
     UsersTable,
+    UserActivityTable,
 } from '@/components/admin/dashboard';
 import {
     useOverviewMetrics,
@@ -55,6 +56,7 @@ export default function AdminDashboard() {
                 <TabsList>
                     <TabsTrigger value="overview">Visao Geral</TabsTrigger>
                     <TabsTrigger value="users">Usuarios & Assinaturas</TabsTrigger>
+                    <TabsTrigger value="activity">Atividade & Uso</TabsTrigger>
                 </TabsList>
 
                 {/* Overview Tab */}
@@ -103,6 +105,11 @@ export default function AdminDashboard() {
                 {/* Users Tab */}
                 <TabsContent value="users">
                     <UsersTable />
+                </TabsContent>
+
+                {/* Activity Tab */}
+                <TabsContent value="activity">
+                    <UserActivityTable />
                 </TabsContent>
             </Tabs>
         </div>

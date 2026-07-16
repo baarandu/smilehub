@@ -2911,6 +2911,29 @@ export type Database = {
           trial_ends_at: string
         }[]
       }
+      admin_get_user_activity: {
+        Args: never
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          created_at: string
+          clinic_id: string
+          clinic_name: string
+          subscription_status: string
+          plan_name: string
+          trial_ends_at: string
+          last_sign_in_at: string
+          last_activity_at: string
+          patients_count: number
+          patients_last_30d: number
+          patients_prev_30d: number
+          appointments_count: number
+          budgets_count: number
+          transactions_count: number
+          anamneses_count: number
+        }[]
+      }
       admin_get_overview_metrics: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: Json
