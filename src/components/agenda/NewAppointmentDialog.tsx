@@ -116,13 +116,17 @@ export function NewAppointmentDialog({
 
   useEffect(() => {
     if (open) {
+      // Com 1 único local o seletor fica oculto e o auto-fill acima não
+      // re-executa na abertura (deps [locations]), então este reset precisa
+      // preencher o local — senão a consulta é gravada sem local.
+      const defaultLocation = locations.length === 1 ? locations[0].name : '';
       if (appointmentToEdit) {
         setForm({
           patientId: appointmentToEdit.patient_id,
           patientName: appointmentToEdit.patients?.name || '',
           date: appointmentToEdit.date || '',
           time: appointmentToEdit.time?.slice(0, 5) || '',
-          location: appointmentToEdit.location || '',
+          location: appointmentToEdit.location || defaultLocation,
           notes: appointmentToEdit.notes || '',
           procedure: appointmentToEdit.procedure_name || '',
           dentistId: appointmentToEdit.dentist_id || '',
@@ -130,7 +134,7 @@ export function NewAppointmentDialog({
         });
       } else {
         const defaultDentistId = dentists.length === 1 ? dentists[0].id : '';
-        setForm({ patientId: '', patientName: '', date: '', time: '', location: '', notes: '', procedure: '', dentistId: defaultDentistId, isWalkIn: false });
+        setForm({ patientId: '', patientName: '', date: '', time: '', location: defaultLocation, notes: '', procedure: '', dentistId: defaultDentistId, isWalkIn: false });
       }
       setPatientSearch('');
       setShowPatientList(false);
