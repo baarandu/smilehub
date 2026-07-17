@@ -80,10 +80,15 @@ export function NewProcedureDialog({
   useEffect(() => {
     if (open) {
       queryClient.invalidateQueries({ queryKey: ['budgets', patientId] });
+      // Com 1 único local o seletor fica oculto (ProcedureForm), então o reset
+      // precisa preencher o local aqui — o efeito de auto-fill do filho roda
+      // antes deste reset e seria sobrescrito, deixando o campo vazio e
+      // invisível ("Local de Atendimento é obrigatório" sem como resolver).
+      const defaultLocation = locations.length === 1 ? locations[0].name : '';
       if (procedure) {
         setForm({
           date: procedure.date,
-          location: procedure.location || '',
+          location: procedure.location || defaultLocation,
           status: (procedure.status as ProcedureFormState['status']) || 'in_progress',
         });
         setDescription(procedure.description || '');
@@ -93,7 +98,7 @@ export function NewProcedureDialog({
       } else {
         setForm({
           date: new Date().toISOString().split('T')[0],
-          location: '',
+          location: defaultLocation,
           status: 'in_progress',
         });
         setDescription('');
@@ -156,7 +161,9 @@ export function NewProcedureDialog({
       return;
     }
 
-    if (!form.location) {
+    // Sem locais cadastrados o seletor nem é exibido — exigir local aqui
+    // deixaria o formulário impossível de salvar (coluna é nullable).
+    if (!form.location && locations.length > 0) {
       toast.error('Local de Atendimento é obrigatório');
       return;
     }
