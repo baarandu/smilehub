@@ -74,6 +74,10 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
   const unmarkExternalNfse = useUnmarkExternalNfse();
   const [nfseTarget, setNfseTarget] = useState<ItemToPay | null>(null);
   const [togglingNfseKey, setTogglingNfseKey] = useState<string | null>(null);
+  // togglingNfseKey só bloqueia após o re-render; um duplo clique/toggle rápido
+  // dispara o fluxo duas vezes e cria nota fiscal duplicada. O ref bloqueia de
+  // forma síncrona, como em submittingRef (handleConfirmPayment).
+  const togglingNfseKeysRef = useRef<Set<string>>(new Set());
 
   const findFullNfseForItem = (item: ItemToPay) =>
     nfseDocs.find(
@@ -413,6 +417,8 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   const handleToggleExternalNfse = async (item: ItemToPay, checked: boolean) => {
     const key = `${item.budgetId}-${item.toothIndex}`;
+    if (togglingNfseKeysRef.current.has(key)) return;
+    togglingNfseKeysRef.current.add(key);
     setTogglingNfseKey(key);
     try {
       if (checked) {
@@ -441,6 +447,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         description: error?.message || 'Erro ao atualizar status da nota fiscal',
       });
     } finally {
+      togglingNfseKeysRef.current.delete(key);
       setTogglingNfseKey(null);
     }
   };
