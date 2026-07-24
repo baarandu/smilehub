@@ -86,6 +86,7 @@ export async function createPatient(patient: PatientInsert): Promise<Patient> {
     ...patient,
     clinic_id: clinicId,
     user_id: userId,
+    created_by: userId,
   };
 
   const { data: inserted, error: insertError } = await supabase
