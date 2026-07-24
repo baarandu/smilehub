@@ -26,9 +26,11 @@ import { RevenueExpensesChart } from '@/components/dashboard-preview/RevenueExpe
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 import { useDashboardAnalytics } from '@/hooks/useDashboardAnalytics';
 import { useOverdueSummary, useReceivablesDueToday } from '@/hooks/useReceivables';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isAdmin } = useClinic();
   const queryClient = useQueryClient();
   const { data: analytics, isLoading: loadingAnalytics } = useDashboardAnalytics();
 
@@ -254,7 +256,7 @@ export default function Dashboard() {
       </div>
 
       {/* Overdue / Due Today Cards */}
-      {((overdueSummary?.total_count ?? 0) > 0 || (receivablesDueToday?.length ?? 0) > 0) && (
+      {isAdmin && ((overdueSummary?.total_count ?? 0) > 0 || (receivablesDueToday?.length ?? 0) > 0) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {(overdueSummary?.total_count ?? 0) > 0 && (
             <div onClick={() => navigate('/financeiro', { state: { tab: 'receivables' } })} className="cursor-pointer">
@@ -306,9 +308,11 @@ export default function Dashboard() {
       </div>
 
       {/* Revenue vs Expenses */}
-      <SectionErrorBoundary fallbackMessage="Erro ao carregar gráfico financeiro">
-        <RevenueExpensesChart />
-      </SectionErrorBoundary>
+      {isAdmin && (
+        <SectionErrorBoundary fallbackMessage="Erro ao carregar gráfico financeiro">
+          <RevenueExpensesChart />
+        </SectionErrorBoundary>
+      )}
 
       {/* Pending Budgets Modal */}
       <PendingBudgetsDialog

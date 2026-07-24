@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Settings, ChevronLeft, ChevronRight, RefreshCw, DollarSign, TrendingUp, TrendingDown, ClipboardList, CalendarClock, CheckCircle, AlertCircle, Clock, CreditCard, Banknote, Smartphone, MoreHorizontal, X, MessageCircle, User, ChevronDown, ChevronUp, ExternalLink, FileText, ClipboardCheck, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatMoney, formatDisplayDate } from '@/utils/budgetUtils';
+import { useClinic } from '@/contexts/ClinicContext';
 import { getWhatsAppNumber, toLocalDateString } from '@/utils/formatters';
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ const MONTH_NAMES = [
 ];
 
 export default function Financial() {
+  const { isAdmin } = useClinic();
   const location = useLocation();
   const navigate = useNavigate();
   const now = new Date();
@@ -171,6 +173,11 @@ export default function Financial() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Apenas admin pode acessar esta página
+  if (!isAdmin) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   return (
     <div className="space-y-6">
