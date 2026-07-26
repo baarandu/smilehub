@@ -221,7 +221,7 @@ export function UsersTable() {
                                     </TableRow>
                                 ) : (
                                     filteredUsers?.map((user) => (
-                                        <TableRow key={user.id}>
+                                        <TableRow key={`${user.id}-${user.clinic_id}`}>
                                             <TableCell>
                                                 <div>
                                                     <p className="font-medium">{user.full_name || '-'}</p>
