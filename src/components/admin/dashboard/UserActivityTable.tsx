@@ -38,6 +38,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { csvBlob } from '@/utils/csv';
+import { useActivePlans, useSetClinicPlan, useClearClinicPlanOverride } from '@/hooks/useAdminPlanOverride';
 
 interface UserActivity {
     id: string;
@@ -47,7 +48,9 @@ interface UserActivity {
     clinic_id: string | null;
     clinic_name: string | null;
     subscription_status: string | null;
+    plan_id: string | null;
     plan_name: string | null;
+    is_admin_override: boolean;
     trial_ends_at: string | null;
     last_sign_in_at: string | null;
     last_activity_at: string | null;
@@ -129,6 +132,43 @@ function getSubscriptionBadge(status: string | null) {
     return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
+function PlanSelector({ user }: { user: UserActivity }) {
+    const { data: plans } = useActivePlans();
+    const { mutate: setPlan, isPending: settingPlan } = useSetClinicPlan();
+    const { mutate: clearOverride, isPending: clearing } = useClearClinicPlanOverride();
+
+    if (!user.clinic_id) return <span className="text-muted-foreground">-</span>;
+
+    return (
+        <div className="flex items-center gap-2">
+            <Select
+                value={user.plan_id ?? undefined}
+                disabled={settingPlan || clearing || !plans?.length}
+                onValueChange={(planId) => setPlan({ clinicId: user.clinic_id!, planId })}
+            >
+                <SelectTrigger className="h-8 w-[150px] text-xs">
+                    <SelectValue placeholder="Sem plano" />
+                </SelectTrigger>
+                <SelectContent>
+                    {plans?.map((p) => (
+                        <SelectItem key={p.id} value={p.id} className="text-xs">{p.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            {user.is_admin_override && (
+                <Badge
+                    variant="outline"
+                    className="text-[10px] cursor-pointer whitespace-nowrap"
+                    title="Override manual do admin — clique para reverter ao fluxo normal"
+                    onClick={() => clearOverride({ clinicId: user.clinic_id! })}
+                >
+                    Manual ×
+                </Badge>
+            )}
+        </div>
+    );
+}
+
 function PatientsTrend({ user }: { user: UserActivity }) {
     const diff = user.patients_last_30d - user.patients_prev_30d;
 
@@ -208,13 +248,13 @@ function getRiskAlerts(users: UserActivity[]): RiskAlert[] {
 function exportCsv(users: UserActivity[]) {
     const rows: unknown[][] = [
         [
-            'Nome', 'Email', 'Clínica', 'Plano', 'Status assinatura', 'Engajamento',
+            'Nome', 'Email', 'Clínica', 'Plano', 'Override manual', 'Status assinatura', 'Engajamento',
             'Última atividade', 'Último login', 'Pacientes', 'Pacientes (30d)',
             'Pacientes (30d anteriores)', 'Agendamentos', 'Orçamentos',
             'Transações', 'Anamneses', 'Cadastro',
         ],
         ...users.map((u) => [
-            u.full_name, u.email, u.clinic_name, u.plan_name,
+            u.full_name, u.email, u.clinic_name, u.plan_name, u.is_admin_override ? 'Sim' : 'Não',
             u.subscription_status || 'sem assinatura', ENGAGEMENT_CONFIG[getEngagement(u)].label,
             u.last_activity_at ? format(new Date(u.last_activity_at), 'dd/MM/yyyy HH:mm') : '',
             u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd/MM/yyyy HH:mm') : '',
@@ -376,6 +416,7 @@ export function UserActivityTable() {
                                     <TableHead>Usuario</TableHead>
                                     <TableHead>Clinica</TableHead>
                                     <TableHead>Assinatura</TableHead>
+                                    <TableHead>Plano</TableHead>
                                     <TableHead>Engajamento</TableHead>
                                     <TableHead>Ultima atividade</TableHead>
                                     <TableHead>Pacientes</TableHead>
@@ -385,7 +426,7 @@ export function UserActivityTable() {
                             <TableBody>
                                 {filteredUsers?.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                                             Nenhum usuario encontrado
                                         </TableCell>
                                     </TableRow>
@@ -403,6 +444,9 @@ export function UserActivityTable() {
                                             </TableCell>
                                             <TableCell>
                                                 {getSubscriptionBadge(user.subscription_status)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <PlanSelector user={user} />
                                             </TableCell>
                                             <TableCell>
                                                 <EngagementBadge engagement={getEngagement(user)} />

@@ -163,9 +163,18 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription, status
     // 4. Check for existing subscription
     const { data: existingSub } = await supabase
         .from('subscriptions')
-        .select('id')
+        .select('id, is_admin_override')
         .eq('clinic_id', clinicId)
         .limit(1)
+
+    // Clinics under an admin-granted plan override must not be silently overwritten
+    // by Stripe events (e.g. a stale/unrelated subscription renewing). The admin must
+    // explicitly clear the override (admin_clear_clinic_plan_override) before Stripe
+    // data is trusted again for this clinic.
+    if (existingSub && existingSub.length > 0 && existingSub[0].is_admin_override) {
+        log.info("SKIP: clinic has an active admin plan override, ignoring Stripe event", { clinicId })
+        return
+    }
 
     const periodStart = safeTimestampToISO(subscription.current_period_start) || new Date().toISOString()
     const periodEnd = safeTimestampToISO(subscription.current_period_end) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // Default 30 days

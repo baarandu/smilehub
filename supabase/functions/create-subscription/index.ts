@@ -145,9 +145,15 @@ serve(async (req) => {
             // Check for existing subscription
             const { data: existingSub } = await supabase
                 .from('subscriptions')
-                .select('id')
+                .select('id, is_admin_override')
                 .eq('clinic_id', clinicId)
                 .limit(1);
+
+            // Clinics under an admin-granted plan override must not be silently
+            // overwritten by a coupon checkout — admin must clear the override first.
+            if (existingSub && existingSub.length > 0 && existingSub[0].is_admin_override) {
+                throw new Error("Esta clínica está sob um plano concedido manualmente pelo admin. Peça para o admin remover o override antes de assinar.");
+            }
 
             const subscriptionData: any = {
                 clinic_id: clinicId,
