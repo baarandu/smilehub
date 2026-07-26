@@ -61,6 +61,43 @@ export async function getClinicContextSafe(): Promise<{ userId: string; clinicId
  * Get clinic context including role information.
  * Returns null if user is not authenticated or clinic is not found.
  */
+export interface ClinicSubscriptionStatus {
+  clinicId: string;
+  hasSubscription: boolean;
+  isValid: boolean; // active, or trialing with current_period_end still in the future
+}
+
+/**
+ * Get the subscription validity of every clinic the user belongs to.
+ * Used by PrivateRoute to avoid blocking a user out of the app when only their
+ * currently-selected clinic (not all of them) has an expired/invalid subscription.
+ */
+export async function getAllClinicSubscriptionStatuses(userId: string): Promise<ClinicSubscriptionStatus[]> {
+  const { data: rows } = await supabase
+    .from('clinic_users')
+    .select('clinic_id')
+    .eq('user_id', userId);
+
+  const clinicIds = [...new Set((rows || []).map((r: any) => r.clinic_id))];
+  if (clinicIds.length === 0) return [];
+
+  const { data: subs } = await supabase
+    .from('subscriptions')
+    .select('clinic_id, status, current_period_end')
+    .in('clinic_id', clinicIds)
+    .in('status', ['active', 'trialing'])
+    .order('created_at', { ascending: false });
+
+  const now = new Date();
+  return clinicIds.map((clinicId) => {
+    const sub = (subs || []).find((s: any) => s.clinic_id === clinicId);
+    if (!sub) return { clinicId, hasSubscription: false, isValid: false };
+    const isValid = sub.status === 'active'
+      || (sub.status === 'trialing' && new Date(sub.current_period_end) > now);
+    return { clinicId, hasSubscription: true, isValid };
+  });
+}
+
 export async function getClinicContextWithRole(): Promise<{
   userId: string;
   clinicId: string;

@@ -3,14 +3,17 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { checkTermsAccepted } from '@/services/terms';
-import { getClinicContextSafe } from '@/services/clinicContext';
+import { getClinicContextSafe, getAllClinicSubscriptionStatuses } from '@/services/clinicContext';
 import { TermsAcceptanceModal } from './TermsAcceptanceModal';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useClinic } from '@/contexts/ClinicContext';
 
 export function PrivateRoute() {
     const { checkAndShowOnboarding } = useOnboarding();
+    const { refetch: refetchClinic } = useClinic();
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const autoSwitchedTo = useRef<string | null>(null);
 
     // Add Super Admin and Subscription logic
     const [isChecking, setIsChecking] = useState(true);
@@ -68,47 +71,42 @@ export function PrivateRoute() {
             // 2. Check Clinic Subscription (depends on clinicUser)
 
             if (clinicUser) {
-                // Fetch subscription with current_period_end to check expiration
-                const { data: subscriptions } = await supabase
-                    .from('subscriptions')
-                    .select('status, plan_id, current_period_end')
-                    .eq('clinic_id', clinicUser.clinic_id)
-                    .in('status', ['active', 'trialing'])
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .returns<{ status: string; plan_id: string; current_period_end: string }[]>();
+                // Check the subscription of EVERY clinic this user belongs to, not just
+                // the currently-selected one — a user can be a member of multiple clinics
+                // (e.g. their own trial clinic + an active clinic they were invited to),
+                // and an expired trial on one must not lock them out of another they
+                // still have valid access to.
+                const statuses = await getAllClinicSubscriptionStatuses(session.user.id);
+                const selectedStatus = statuses.find((s) => s.clinicId === clinicUser.clinic_id);
+                const anyValid = statuses.find((s) => s.isValid);
+                const anySubscriptionAtAll = statuses.some((s) => s.hasSubscription);
 
-                const subscription = subscriptions?.[0];
-
-                if (subscription) {
-                    // Check if subscription is active (not expired)
-                    if (subscription.status === 'active') {
-                        // Active paid subscription - allow access
-                        if (mounted) {
-                            setIsAllowed(true);
-                            setIsTrialExpired(false);
-                        }
-                    } else if (subscription.status === 'trialing') {
-                        // Trial - check if not expired
-                        const periodEnd = new Date(subscription.current_period_end);
-                        const now = new Date();
-
-                        if (periodEnd > now) {
-                            // Trial still valid
-                            if (mounted) {
-                                setIsAllowed(true);
-                                setIsTrialExpired(false);
-                            }
-                        } else {
-                            // Trial expired
-                            if (mounted) {
-                                setIsAllowed(false);
-                                setIsTrialExpired(true);
-                            }
-                        }
+                if (selectedStatus?.isValid) {
+                    // Unchanged path: currently-selected clinic is fine.
+                    if (mounted) {
+                        setIsAllowed(true);
+                        setIsTrialExpired(false);
+                    }
+                } else if (anyValid) {
+                    // Selected clinic is invalid/expired, but another membership is valid —
+                    // silently switch to it instead of blocking the user out.
+                    if (autoSwitchedTo.current !== anyValid.clinicId) {
+                        autoSwitchedTo.current = anyValid.clinicId;
+                        localStorage.setItem('selected_clinic_id', anyValid.clinicId);
+                        refetchClinic();
+                    }
+                    if (mounted) {
+                        setIsAllowed(true);
+                        setIsTrialExpired(false);
+                    }
+                } else if (anySubscriptionAtAll) {
+                    // Every membership is invalid (expired trial / canceled / past_due).
+                    if (mounted) {
+                        setIsAllowed(false);
+                        setIsTrialExpired(true);
                     }
                 } else {
-                    // No subscription found
+                    // No subscription row anywhere yet (e.g. clinic mid-provisioning).
                     if (mounted) {
                         setIsAllowed(false);
                         setIsTrialExpired(false);
