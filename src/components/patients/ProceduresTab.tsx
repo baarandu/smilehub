@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { Hospital, Plus, MapPin, Calendar as CalendarIcon, SquarePen, Trash2, User, LinkIcon, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useProcedures, useDeleteProcedure } from '@/hooks/useProcedures';
 import { locationsService, type Location } from '@/services/locations';
 import { NewProcedureDialog } from './NewProcedureDialog';
 import { ProcedureViewDialog } from './ProcedureViewDialog';
+import { OrthodonticEvolutionTab } from './OrthodonticEvolutionTab';
 import { RecordSignatureBadge, SignaturePadDialog } from '@/components/clinical-signatures';
 import { usePlanFeature } from '@/hooks/usePlanFeature';
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt';
@@ -114,6 +116,13 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
 
   return (
     <>
+      <Tabs defaultValue="list">
+        <TabsList>
+          <TabsTrigger value="list">Procedimentos</TabsTrigger>
+          <TabsTrigger value="orthodontic-evolution">Evolução Ortodôntica</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-4">
       <div className="bg-card rounded-xl p-6 border border-border">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-foreground">Procedimentos Realizados</h3>
@@ -230,6 +239,12 @@ export function ProceduresTab({ patientId, patientName, patientEmail }: Procedur
           </div>
         )}
       </div>
+        </TabsContent>
+
+        <TabsContent value="orthodontic-evolution" className="mt-4">
+          <OrthodonticEvolutionTab patientId={patientId} />
+        </TabsContent>
+      </Tabs>
 
       <ProcedureViewDialog
         open={showViewDialog}

@@ -7,6 +7,8 @@ export { EditPatientDialog } from './EditPatientDialog';
 export { PatientHeader } from './PatientHeader';
 export { AppointmentsTab } from './AppointmentsTab';
 export { ProceduresTab } from './ProceduresTab';
+export { OrthodonticEvolutionTab } from './OrthodonticEvolutionTab';
+export { NewOrthodonticEvolutionDialog } from './NewOrthodonticEvolutionDialog';
 export { PaymentsTab } from './PaymentsTab';
 export { PatientInfoTab } from './PatientInfoTab';
 export { NewProcedureDialog } from './NewProcedureDialog';
