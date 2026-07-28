@@ -23,7 +23,7 @@ export interface LocationUpdate {
 // Espaço no início/fim ou duplicado no nome cria "locais" visualmente iguais
 // mas distintos como chave de agrupamento (ex.: dois "Clínica Essência" no
 // card Receita por Local).
-function normalizeName(name: string): string {
+export function normalizeName(name: string): string {
   return name.replace(/\s+/g, ' ').trim();
 }
 

@@ -31,7 +31,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
-import { locationsService } from '@/services/locations';
+import { locationsService, normalizeName } from '@/services/locations';
 import { useClinic } from '@/contexts/ClinicContext';
 import { settingsService } from '@/services/settings';
 import { useState, useMemo, useRef } from 'react';
@@ -178,7 +178,7 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
 
     const filteredTransactions = useMemo(() => {
         return safeTransactions.filter(t => {
-            if (locationFilter !== 'all' && t.location !== locationFilter) return false;
+            if (locationFilter !== 'all' && (!t.location || normalizeName(t.location) !== normalizeName(locationFilter))) return false;
 
             if (methodFilter !== 'all') {
                 if (t.type === 'income') {
@@ -212,7 +212,7 @@ export function ClosureTab({ transactions, loading, periodStart, periodEnd }: Cl
     const feesByLocation = income
         .filter(t => t.location)
         .reduce((acc, t) => {
-            const loc = t.location!;
+            const loc = normalizeName(t.location!);
             const explicit = Number((t as any).location_amount || 0);
 
             const gross = Number(t.amount || 0);

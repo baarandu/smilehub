@@ -44,7 +44,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Transaction } from '@/components/financial/types';
 import { CardFeeSelector, type CardFeeSelection } from '@/components/financial/CardFeeSelector';
 import { financialService } from '@/services/financial';
-import { locationsService, Location } from '@/services/locations';
+import { locationsService, normalizeName, Location } from '@/services/locations';
 import { useClinic } from '@/contexts/ClinicContext';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -192,7 +192,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
 
             // Location
             if (locationFilter !== 'all') {
-                if (t.location !== locationFilter) return false;
+                if (!t.location || normalizeName(t.location) !== normalizeName(locationFilter)) return false;
             }
 
             // Dentist
@@ -242,7 +242,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     const SEM_LOCAL = 'Sem local definido';
     const incomeByLocation = filteredTransactions
         .reduce((acc, t) => {
-            const loc = t.location || SEM_LOCAL;
+            const loc = t.location ? normalizeName(t.location) : SEM_LOCAL;
             const amount = subTab === 'gross' ? t.amount : (t.net_amount || t.amount);
             acc[loc] = (acc[loc] || 0) + amount;
             return acc;
@@ -251,7 +251,7 @@ export function IncomeTab({ transactions, loading, onRefresh }: IncomeTabProps) 
     const feesByLocation = filteredTransactions
         .filter(t => t.location && (t.location_amount || 0) > 0)
         .reduce((acc, t) => {
-            const loc = t.location!;
+            const loc = normalizeName(t.location!);
             // Need precise correct typing if possible, assuming location_amount exists
             const amount = (t as any).location_amount || 0;
             acc[loc] = (acc[loc] || 0) + amount;

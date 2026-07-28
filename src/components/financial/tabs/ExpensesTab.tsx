@@ -51,7 +51,7 @@ import {
 import { Transaction } from '@/components/financial/types'; // Assuming types exist or will be shared
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { financialService } from '@/services/financial';
-import { locationsService } from '@/services/locations';
+import { locationsService, normalizeName } from '@/services/locations';
 import { useClinic } from '@/contexts/ClinicContext';
 import { toast } from 'sonner';
 import { NewExpenseForm } from './NewExpenseForm'; // We'll create this form component next
@@ -152,7 +152,7 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
             }
 
             if (locationFilter !== 'all') {
-                if (t.location !== locationFilter) return false;
+                if (!t.location || normalizeName(t.location) !== normalizeName(locationFilter)) return false;
             }
 
             if (categoryFilter !== 'all') {
@@ -195,7 +195,8 @@ export function ExpensesTab({ transactions, loading, onRefresh }: ExpensesTabPro
             const totalFee = explicit + implicit;
 
             if (totalFee > 0) {
-                locationBreakdown[t.location] = (locationBreakdown[t.location] || 0) + totalFee;
+                const loc = normalizeName(t.location);
+                locationBreakdown[loc] = (locationBreakdown[loc] || 0) + totalFee;
                 totalLocationFees += totalFee;
             }
         });
