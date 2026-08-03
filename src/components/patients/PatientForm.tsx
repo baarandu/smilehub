@@ -140,8 +140,13 @@ export function PatientForm({
   const [form, setForm] = useState<PatientFormData>({ ...emptyForm, ...initialData });
   const debouncedName = useDebounce(form.name, 300);
 
-  // Busca pacientes existentes pelo nome (apenas no cadastro, não na edição)
-  const { data: existingPatients } = usePatientSearch(isEditing ? '' : debouncedName);
+  // Busca pacientes existentes pelo nome (apenas no cadastro, não na edição).
+  // A busca também retorna pacientes cujo responsável tem o nome digitado;
+  // para o aviso de duplicado só interessa o nome do próprio paciente.
+  const { data: searchMatches } = usePatientSearch(isEditing ? '' : debouncedName);
+  const existingPatients = searchMatches?.filter((p) =>
+    p.name.toLowerCase().includes(debouncedName.trim().toLowerCase())
+  );
   const showDuplicateWarning = !isEditing && existingPatients && existingPatients.length > 0;
 
   // Check for exact duplicate (same name + same phone, ignoring accents/case)

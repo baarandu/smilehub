@@ -296,7 +296,14 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
   const digitsOnly = sanitized.replace(/\D/g, '');
 
   // Build OR conditions
-  const conditions = [`name.ilike.%${sanitized}%`];
+  // Além do nome do paciente, busca pelos responsáveis (mãe, pai, responsável
+  // legal) — caso comum: NF emitida no nome do responsável de paciente criança.
+  const conditions = [
+    `name.ilike.%${sanitized}%`,
+    `mother_name.ilike.%${sanitized}%`,
+    `father_name.ilike.%${sanitized}%`,
+    `legal_guardian.ilike.%${sanitized}%`,
+  ];
 
   if (digitsOnly.length >= 2) {
     // Search phone by digits (matches against phone_digits column — no formatting needed)

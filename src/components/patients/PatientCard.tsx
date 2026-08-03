@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Phone, Mail, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Phone, Mail, ChevronRight, AlertTriangle, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Patient } from '@/types/database';
 
@@ -10,6 +10,7 @@ interface PatientCardProps {
 
 export const PatientCard = memo(function PatientCard({ patient, index }: PatientCardProps) {
   const navigate = useNavigate();
+  const guardianName = patient.legal_guardian || patient.mother_name || patient.father_name;
 
   const getInitials = (name: string) => {
     return name
@@ -53,6 +54,12 @@ export const PatientCard = memo(function PatientCard({ patient, index }: Patient
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               <Mail className="w-3.5 h-3.5" />
               <span className="truncate">{patient.email}</span>
+            </div>
+          )}
+          {guardianName && (
+            <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+              <Users className="w-3.5 h-3.5" />
+              <span className="truncate">Resp.: {guardianName}</span>
             </div>
           )}
         </div>
