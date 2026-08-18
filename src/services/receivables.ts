@@ -470,6 +470,39 @@ export const receivablesService = {
     return (data || []) as PaymentReceivable[];
   },
 
+  /**
+   * Real payment date (financial transaction date) for each receivable ID.
+   * Used by the patient payment history to show when each parcela was actually
+   * received — splitPayments saved before paidDate existed only carry due_date.
+   */
+  async getPaidDatesForReceivables(receivableIds: string[]): Promise<Record<string, string>> {
+    if (receivableIds.length === 0) return {};
+
+    const { data, error } = await supabase
+      .from('payment_receivables')
+      .select('id, financial_transaction_id')
+      .in('id', receivableIds)
+      .not('financial_transaction_id', 'is', null);
+
+    if (error) throw error;
+
+    const txToReceivable: Record<string, string> = {};
+    (data || []).forEach((r: any) => { txToReceivable[r.financial_transaction_id] = r.id; });
+    const txIds = Object.keys(txToReceivable);
+    if (txIds.length === 0) return {};
+
+    const { data: txs, error: txError } = await supabase
+      .from('financial_transactions')
+      .select('id, date')
+      .in('id', txIds);
+
+    if (txError) throw txError;
+
+    const result: Record<string, string> = {};
+    (txs || []).forEach((t: any) => { result[txToReceivable[t.id]] = t.date; });
+    return result;
+  },
+
   async getReceivablesByGroup(splitGroupId: string): Promise<PaymentReceivable[]> {
     const { data, error } = await supabase
       .from('payment_receivables')
@@ -523,13 +556,27 @@ export const receivablesService = {
       return;
     }
 
-    // 3. Update splitPayments array on the tooth
+    // 3. Update splitPayments array on the tooth. due_date is only the scheduled
+    // date; the real payment date lives on the linked financial transaction.
+    const txIds = groupReceivables
+      .map(r => r.financial_transaction_id)
+      .filter(Boolean) as string[];
+    const txDates: Record<string, string> = {};
+    if (txIds.length > 0) {
+      const { data: txs } = await supabase
+        .from('financial_transactions')
+        .select('id, date')
+        .in('id', txIds);
+      (txs || []).forEach((t: any) => { txDates[t.id] = t.date; });
+    }
+
     teeth[toothIndex].splitPayments = groupReceivables.map(r => ({
       receivableId: r.id,
       amount: r.amount,
       method: r.payment_method,
       dueDate: r.due_date,
       status: r.status,
+      paidDate: r.financial_transaction_id ? txDates[r.financial_transaction_id] : undefined,
     }));
 
     // 4. Determine new tooth status
@@ -551,7 +598,12 @@ export const receivablesService = {
 
     if (allActiveConfirmed && fullyCovered) {
       teeth[toothIndex].status = 'paid';
-      teeth[toothIndex].paymentDate = toLocalDateString(new Date());
+      // Payment date of the tooth = date of the last money-in, not the day the
+      // sync happened (a backdated confirmation would otherwise show "today").
+      const paidDates = Object.values(txDates).sort();
+      teeth[toothIndex].paymentDate = paidDates.length
+        ? paidDates[paidDates.length - 1]
+        : toLocalDateString(new Date());
     } else if (anyPending || confirmedAmount > 0) {
       teeth[toothIndex].status = 'partially_paid';
     }

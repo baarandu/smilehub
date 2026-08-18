@@ -589,6 +589,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                     method: r.payment_method,
                     dueDate: r.due_date,
                     status: r.status,
+                    // Immediate portions hit the financeiro on their due_date
+                    paidDate: r.status === 'confirmed' ? r.due_date : undefined,
                 })),
             };
 
@@ -790,6 +792,8 @@ export function useBudgetPayment({ budget, patientId, parsedNotes, onSuccess, to
                         method: r.payment_method,
                         dueDate: r.due_date,
                         status: r.status,
+                        // Immediate portions hit the financeiro on their due_date
+                        paidDate: r.status === 'confirmed' ? r.due_date : undefined,
                     })),
                 } as ToothEntry;
             }

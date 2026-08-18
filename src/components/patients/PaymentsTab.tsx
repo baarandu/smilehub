@@ -15,6 +15,7 @@ import { getPatientById } from '@/services/patients';
 import { incomeTaxService } from '@/services/incomeTaxService';
 import type { PJSource } from '@/types/incomeTax';
 import { usePatientReceivables, useConfirmReceivable, useCancelReceivable } from '@/hooks/useReceivables';
+import { receivablesService } from '@/services/receivables';
 import { ConfirmReceivableDialog } from './ConfirmReceivableDialog';
 import type { PaymentReceivable } from '@/types/receivables';
 import { useNfseByPatient, useMarkExternalNfse, useUnmarkExternalNfse } from '@/hooks/useNfseDocuments';
@@ -57,6 +58,17 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
 
   const [selectedItem, setSelectedItem] = useState<ItemToPay | null>(null);
   const [budgets, setBudgets] = useState<BudgetWithItems[]>([]);
+
+  // Real payment date per receivable (splitPayments saved before paidDate
+  // existed only carry the scheduled due_date, which can differ from when
+  // the money actually came in).
+  const [splitPaidDates, setSplitPaidDates] = useState<Record<string, string>>({});
+
+  type SplitPayment = NonNullable<ToothEntry['splitPayments']>[number];
+  const getSplitPaidDate = (sp: SplitPayment): string | null => {
+    if (sp.status !== 'confirmed') return null;
+    return sp.paidDate || splitPaidDates[sp.receivableId] || sp.dueDate || null;
+  };
 
   // Patient and PJ data for payer selection
   const [patientData, setPatientData] = useState<{ name: string; cpf: string | null } | null>(null);
@@ -118,7 +130,12 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       ]);
 
       setBudgets(data);
-      processItems(data);
+      const missingPaidDateIds = processItems(data);
+      if (missingPaidDateIds.length > 0) {
+        receivablesService.getPaidDatesForReceivables(missingPaidDateIds)
+          .then(setSplitPaidDates)
+          .catch(() => { /* keeps due_date fallback */ });
+      }
 
       if (patient) {
         setPatientData({ name: patient.name, cpf: patient.cpf || null });
@@ -132,7 +149,7 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
     }
   };
 
-  const processItems = (data: BudgetWithItems[]) => {
+  const processItems = (data: BudgetWithItems[]): string[] => {
     const toPay: ItemToPay[] = [];
     const history: ItemToPay[] = [];
     let paidTotal = 0;
@@ -202,6 +219,18 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
       total: grandTotal,
       discount: discountTotal
     });
+
+    // Confirmed splits recorded before paidDate existed need the real payment
+    // date fetched from their linked financial transaction.
+    const missingPaidDateIds: string[] = [];
+    history.forEach(item => {
+      (item.tooth.splitPayments || []).forEach(sp => {
+        if (sp.status === 'confirmed' && !sp.paidDate) {
+          missingPaidDateIds.push(sp.receivableId);
+        }
+      });
+    });
+    return missingPaidDateIds;
   };
 
   const handlePaymentClick = (item: ItemToPay) => {
@@ -722,10 +751,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                                 const methodLabels: Record<string, string> = {
                                   credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
                                 };
+                                const paidDate = getSplitPaidDate(sp);
                                 return (
-                                  <Badge key={spIdx} variant="secondary" className="text-[10px] h-5">
-                                    R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
-                                  </Badge>
+                                  <div key={spIdx} className="w-full">
+                                    <Badge variant="secondary" className="text-[10px] h-5">
+                                      R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
+                                      {paidDate ? ` - ${formatDisplayDate(paidDate)}` : ''}
+                                    </Badge>
+                                  </div>
                                 );
                               })}
                             </>
@@ -736,10 +769,14 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                                   const methodLabels: Record<string, string> = {
                                     credit: 'Crédito', debit: 'Débito', pix: 'PIX', cash: 'Dinheiro',
                                   };
+                                  const paidDate = getSplitPaidDate(sp);
                                   return (
-                                    <Badge key={spIdx} variant="secondary" className="text-[10px] h-5">
-                                      R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
-                                    </Badge>
+                                    <div key={spIdx} className="w-full">
+                                      <Badge variant="secondary" className="text-[10px] h-5">
+                                        R$ {formatMoney(sp.amount)} - {methodLabels[sp.method] || sp.method}
+                                        {paidDate ? ` - ${formatDisplayDate(paidDate)}` : ''}
+                                      </Badge>
+                                    </div>
                                   );
                                 })
                               ) : (
@@ -750,7 +787,9 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
                                         item.tooth.paymentMethod === 'credit_balance' ? 'Crédito do paciente' : 'Dinheiro'}
                                 </Badge>
                               )}
-                              {item.tooth.paymentDate && (
+                              {/* With splits, each payment already shows its own date;
+                                  the tooth-level date would repeat the last one. */}
+                              {splits.length === 0 && item.tooth.paymentDate && (
                                 <span className="text-xs text-slate-400 flex items-center gap-1">
                                   <CheckCircle className="w-3 h-3" />
                                   {formatDisplayDate(item.tooth.paymentDate)}

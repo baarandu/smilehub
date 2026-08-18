@@ -115,6 +115,8 @@ export type ToothEntry = {
         method: string;
         dueDate: string;
         status: string;
+        /** Actual date the money came in (financial transaction date), not the scheduled due date. */
+        paidDate?: string;
     }>;
 };
 
