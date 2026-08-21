@@ -109,12 +109,19 @@ export const appointmentsService = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
+    // .select() para detectar quando o RLS bloqueia o DELETE em silêncio: sem
+    // isso o Supabase retorna sucesso mesmo apagando 0 linhas, e o app exibia
+    // "excluída com sucesso" enquanto a consulta continuava na tela.
+    const { data, error } = await supabase
       .from('appointments')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
 
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Nenhuma consulta foi excluída. Você pode não ter permissão para excluir este agendamento.');
+    }
   },
 
   async countToday(clinicId?: string): Promise<number> {
