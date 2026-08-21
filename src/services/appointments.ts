@@ -7,6 +7,16 @@ import type {
   AppointmentWithPatient
 } from '@/types/database';
 
+// Consultas nesses status não ocupam mais o horário: o paciente remarcou,
+// desistiu (cancelou) ou faltou. Nesses casos a secretária deve conseguir
+// reagendar outro paciente no mesmo horário sem precisar apagar o histórico.
+export const SLOT_FREEING_STATUSES: Appointment['status'][] = ['cancelled', 'rescheduled', 'no_show'];
+
+// Uma consulta ainda ocupa o horário quando NÃO está em um status que o libera.
+export function appointmentBlocksSlot(status: Appointment['status'] | null | undefined): boolean {
+  return !SLOT_FREEING_STATUSES.includes(status as Appointment['status']);
+}
+
 export const appointmentsService = {
   async getAll(clinicId?: string, page?: number, pageSize = 500): Promise<AppointmentWithPatient[]> {
     let query = supabase

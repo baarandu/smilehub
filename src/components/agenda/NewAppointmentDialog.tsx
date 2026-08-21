@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { scheduleSettingsService, computeWeekIndex, type ScheduleSetting, type ProfessionalScheduleCycle } from '@/services/scheduleSettings';
+import { appointmentBlocksSlot } from '@/services/appointments';
 import { LocationsModal } from '@/components/profile/LocationsModal';
 import type { NewAppointmentDialogProps } from './types';
 
@@ -210,7 +211,7 @@ export function NewAppointmentDialog({
 
   const activeDentistId = form.dentistId || (dentists.length === 1 ? dentists[0].id : '');
   const bookedTimes = existingAppointments
-    .filter(a => (!activeDentistId || !a.dentist_id || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
+    .filter(a => appointmentBlocksSlot(a.status) && (!activeDentistId || !a.dentist_id || a.dentist_id === activeDentistId) && a.id !== appointmentToEdit?.id)
     .map(a => a.time?.slice(0, 5) || '');
 
   const availableSlots = dayOfWeek >= 0

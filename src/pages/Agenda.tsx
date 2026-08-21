@@ -6,6 +6,7 @@ import { appointmentsService } from '@/services/appointments';
 import { locationsService } from '@/services/locations';
 import { scheduleSettingsService } from '@/services/scheduleSettings';
 import { useAppointmentsByDate, useMonthDates, useAppointmentSearch } from '@/hooks/useAppointments';
+import { appointmentBlocksSlot } from '@/services/appointments';
 import { useCreatePatient } from '@/hooks/usePatients';
 import { useClinic } from '@/contexts/ClinicContext';
 import type { AppointmentWithPatient, Patient, PatientFormData } from '@/types/database';
@@ -183,9 +184,11 @@ export default function Agenda() {
       return;
     }
 
-    // Check for time conflict (per dentist if specified, include unassigned)
+    // Check for time conflict (per dentist if specified, include unassigned).
+    // Consultas remarcadas/canceladas/faltas não ocupam mais o horário.
     const timeConflict = appointments.find(
-      apt => apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
+      apt => appointmentBlocksSlot(apt.status) &&
+        apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
         (!data.dentistId || !apt.dentist_id || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
@@ -217,9 +220,11 @@ export default function Agenda() {
   };
 
   const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string; isWalkIn?: boolean }) => {
-    // Check for time conflict per dentist (exclude current appointment, include unassigned)
+    // Check for time conflict per dentist (exclude current appointment, include unassigned).
+    // Consultas remarcadas/canceladas/faltas não ocupam mais o horário.
     const timeConflict = appointments.find(
-      apt => apt.id !== id && apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
+      apt => apt.id !== id && appointmentBlocksSlot(apt.status) &&
+        apt.time?.slice(0, 5) === data.time.slice(0, 5) &&
         (!data.dentistId || !apt.dentist_id || apt.dentist_id === data.dentistId)
     );
     if (timeConflict) {
