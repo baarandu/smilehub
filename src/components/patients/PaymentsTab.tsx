@@ -278,6 +278,10 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
         queryClient.invalidateQueries({ queryKey: ['patient-credits', patientId] });
       }
 
+      // Data efetiva do recebimento — declarada fora do bloco abaixo porque
+      // também é usada ao marcar o item como pago (mais adiante).
+      const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
+
       // 2. Create Financial Transactions (if a payment method other than just credit was used)
       if (method !== 'credit_balance') {
         const discountAmount = breakdown?.discountAmount || 0;
@@ -322,8 +326,6 @@ export function PaymentsTab({ patientId }: PaymentsTabProps) {
           netAmountPerTx = txAmount - locationAmountPerTx;
         }
       }
-
-      const effectivePaymentDate = paymentDate || toLocalDateString(new Date());
 
       // Ensure selected payment date is valid YYYY-MM-DD
       let paymentDateStr = effectivePaymentDate;
