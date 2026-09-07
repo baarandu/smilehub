@@ -610,6 +610,22 @@ export const financialService = {
         }
     },
 
+    // Reatribuir o dentista responsável de um orçamento também precisa
+    // re-atribuir a receita já lançada dele. Sem isso, o financeiro fica preso
+    // no dentista original (bug: orçamento mostra o novo, financeiro o antigo).
+    // Preservamos receita atrelada a maquininha (dentista é override deliberado)
+    // e receita da clínica (dentist_id null por definição).
+    async syncBudgetDentist(budgetId: string, dentistId: string | null): Promise<void> {
+        const { error } = await supabase
+            .from('financial_transactions')
+            .update({ dentist_id: dentistId })
+            .eq('related_entity_id', budgetId)
+            .eq('type', 'income')
+            .is('card_machine_id', null)
+            .or('revenue_type.is.null,revenue_type.neq.clinic');
+        if (error) throw error;
+    },
+
     /**
      * Migração: Recalcula taxas de localização de transações em lote
      * Corrige transações que usavam média das taxas em vez de cálculo individual

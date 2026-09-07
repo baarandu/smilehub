@@ -279,6 +279,13 @@ export function NewBudgetDialog({ patientId, open, onClose, onSuccess, budget }:
                 // Sync updated rates to existing financial transactions
                 await financialService.syncBudgetRates(budget.id, teethList);
 
+                // Se o dentista responsável mudou, re-atribuir a receita já
+                // lançada (senão o financeiro fica no dentista antigo).
+                await financialService.syncBudgetDentist(
+                    budget.id,
+                    responsibleDentistId || (budget as any).created_by || null
+                );
+
                 // Re-point index-linked records (parcelas, notas, próteses) of the
                 // items that moved up after removals. Descending order so each
                 // shift is applied against the indices as they were before it.
