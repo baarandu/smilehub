@@ -174,11 +174,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       };
       localStorage.setItem(getStorageKey(), JSON.stringify(state));
 
-      // Auto-open onboarding on first access if not all steps completed
-      const isFirst = !stored;
-      if (isFirst && !dismissed && detected.length < ONBOARDING_STEPS.length) {
-        setIsOnboardingOpen(true);
-      }
+      // Onboarding não abre mais sozinho — só quando o usuário clica no
+      // botão "Guia de Configuração". Isso evita o modal reaparecendo toda
+      // vez que o app abre (principalmente no celular).
     });
   }, [clinicId, getStorageKey, detectCompletedSteps]);
 

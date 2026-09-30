@@ -5,11 +5,9 @@ import { Loader2 } from 'lucide-react';
 import { checkTermsAccepted } from '@/services/terms';
 import { getClinicContextSafe, getAllClinicSubscriptionStatuses } from '@/services/clinicContext';
 import { TermsAcceptanceModal } from './TermsAcceptanceModal';
-import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useClinic } from '@/contexts/ClinicContext';
 
 export function PrivateRoute() {
-    const { checkAndShowOnboarding } = useOnboarding();
     const { refetch: refetchClinic } = useClinic();
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -195,8 +193,8 @@ export function PrivateRoute() {
                     open={needsTermsAcceptance}
                     onAccepted={() => {
                         setNeedsTermsAcceptance(false);
-                        // After accepting terms, open the onboarding setup guide
-                        checkAndShowOnboarding();
+                        // O guia de configuração não abre mais automaticamente;
+                        // fica acessível pelo botão "Guia de Configuração".
                     }}
                 />
             )}

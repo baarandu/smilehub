@@ -86,7 +86,7 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
   if (showSuccess && isCompleted) {
     return (
       <Dialog open={isOnboardingOpen} onOpenChange={setIsOnboardingOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <div className="text-center py-6 space-y-4">
             <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
               <PartyPopper className="w-8 h-8 text-green-600" />
@@ -126,8 +126,8 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
 
   return (
     <Dialog open={isOnboardingOpen} onOpenChange={setIsOnboardingOpen}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="text-center pb-2">
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-lg max-h-[90dvh] flex flex-col gap-3 p-4 sm:p-6">
+        <DialogHeader className="text-center pb-2 pr-6">
           <div className="mx-auto mb-3">
             <div className="w-14 h-14 bg-gradient-to-br from-[#a03f3d] to-[#c45653] rounded-2xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-7 h-7 text-white" />
@@ -155,7 +155,7 @@ export function OnboardingModal({ onOpenClinicSettings }: OnboardingModalProps) 
         </div>
 
         {/* Steps List */}
-        <div className="space-y-2 py-2">
+        <div className="space-y-2 py-2 flex-1 min-h-0 overflow-y-auto">
           {steps.map((step, index) => {
             const Icon = STEP_ICONS[step.icon] || Building2;
             const isNext = !step.completed && steps.slice(0, index).every(s => s.completed);
