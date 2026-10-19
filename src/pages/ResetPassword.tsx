@@ -22,7 +22,17 @@ export default function ResetPassword() {
         const verifyToken = async () => {
             const tokenHash = searchParams.get('token_hash');
             const type = searchParams.get('type');
-            const hash = window.location.hash;
+            const hashParams = new URLSearchParams(window.location.hash.slice(1));
+            const urlError =
+                hashParams.get('error_description') || searchParams.get('error_description');
+
+            if (urlError) {
+                const expired =
+                    (hashParams.get('error_code') || searchParams.get('error_code')) === 'otp_expired';
+                toast.error(expired ? 'Link expirado ou já utilizado. Solicite um novo.' : urlError);
+                setTimeout(() => navigate('/forgot-password'), 3000);
+                return;
+            }
 
             if (tokenHash && type === 'recovery') {
                 const { data, error } = await supabase.auth.verifyOtp({
@@ -38,18 +48,17 @@ export default function ResetPassword() {
                 }
 
                 setVerifying(false);
-            } else if (hash && hash.includes('access_token')) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+            } else {
+                // Implicit flow: supabase-js consumes #access_token and clears the hash
+                // during client init, possibly before this effect runs. getSession()
+                // awaits that init, so the recovery session is there either way.
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
-                    toast.error('Link inválido ou expirado');
-                    setTimeout(() => navigate('/login'), 3000);
+                    toast.error('Link inválido ou expirado. Solicite um novo.');
+                    setTimeout(() => navigate('/forgot-password'), 3000);
                     return;
                 }
                 setVerifying(false);
-            } else {
-                toast.error('Link inválido - nenhum token encontrado');
-                setTimeout(() => navigate('/login'), 3000);
             }
         };
 
