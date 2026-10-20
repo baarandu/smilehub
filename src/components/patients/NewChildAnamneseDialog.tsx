@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateChildAnamnesis, useUpdateChildAnamnesis } from '@/hooks/useChildAnamneses';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { toast } from 'sonner';
 import type { ChildAnamnesis } from '@/types/childAnamnesis';
 import { ptBR } from 'date-fns/locale';
@@ -243,13 +244,16 @@ export function NewChildAnamneseDialog({
   const createAnamnesis = useCreateChildAnamnesis();
   const updateAnamnesis = useUpdateChildAnamnesis();
   const { clinicId } = useClinic();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({ ...emptyForm });
+  // Snapshot do formulário ao abrir o dialog — detecta alterações não salvas.
+  const initialFormRef = useRef<string>('');
 
   useEffect(() => {
     if (open) {
       if (anamnesis) {
-        setForm({
+        const initial = {
           date: anamnesis.date,
           pregnancyType: anamnesis.pregnancy_type || '',
           gestationalAgeWeeks: anamnesis.gestational_age_weeks || '',
@@ -367,12 +371,36 @@ export function NewChildAnamneseDialog({
           overbite: anamnesis.overbite || '',
           midlineDeviation: anamnesis.midline_deviation || false,
           observations: anamnesis.observations || '',
-        });
+        };
+        setForm(initial);
+        initialFormRef.current = JSON.stringify(initial);
       } else {
-        setForm({ ...emptyForm, date: getToday() });
+        const initial = { ...emptyForm, date: getToday() };
+        setForm(initial);
+        initialFormRef.current = JSON.stringify(initial);
       }
     }
   }, [open, anamnesis?.id]);
+
+  // Há alterações não salvas se o formulário mudou desde que o dialog abriu.
+  const isDirty = initialFormRef.current !== '' && JSON.stringify(form) !== initialFormRef.current;
+
+  // Guarda de fechamento: confirma antes de descartar dados preenchidos e não salvos.
+  const handleRequestClose = async (nextOpen: boolean) => {
+    if (nextOpen) { onOpenChange(true); return; }
+    if (saving) return;
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Sair sem salvar?',
+        description: 'Você preencheu a anamnese infantil mas ainda não clicou em Salvar. Se sair agora, os dados preenchidos serão perdidos.',
+        variant: 'destructive',
+        confirmLabel: 'Sair sem salvar',
+        cancelLabel: 'Continuar preenchendo',
+      });
+      if (!ok) return;
+    }
+    onOpenChange(false);
+  };
 
   const toggleProcedure = (proc: string) => {
     setForm(prev => ({
@@ -724,10 +752,12 @@ export function NewChildAnamneseDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleRequestClose}>
       <DialogContent
         className="max-w-3xl max-h-[90vh]"
         onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { if (saving) e.preventDefault(); }}
       >
         <DialogHeader>
           <DialogTitle>{anamnesis ? 'Editar Anamnese Infantil' : 'Nova Anamnese Infantil'}</DialogTitle>
@@ -1358,7 +1388,7 @@ export function NewChildAnamneseDialog({
         </ScrollArea>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button variant="outline" onClick={() => handleRequestClose(false)} disabled={saving}>
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
@@ -1367,5 +1397,7 @@ export function NewChildAnamneseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {ConfirmDialog}
+    </>
   );
 }

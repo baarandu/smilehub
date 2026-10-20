@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -18,6 +18,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCreateAnamnese, useUpdateAnamnese } from '@/hooks/useAnamneses';
 import { useClinic } from '@/contexts/ClinicContext';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useRecordSignatures } from '@/hooks/useClinicalSignatures';
 import { toast } from 'sonner';
 import type { Anamnese } from '@/types/database';
@@ -92,6 +93,10 @@ export function NewAnamneseDialog({
   const createAnamnese = useCreateAnamnese();
   const updateAnamnese = useUpdateAnamnese();
   const { clinicId } = useClinic();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+  // Snapshot do formulário no momento em que o dialog abre — usado para
+  // detectar alterações não salvas e avisar antes de fechar/descartar.
+  const initialFormRef = useRef<string>('');
   const { data: existingSignatures } = useRecordSignatures('anamnesis', anamnese?.id);
   const isSigned = (existingSignatures?.length || 0) > 0;
   const [saving, setSaving] = useState(false);
@@ -160,7 +165,7 @@ export function NewAnamneseDialog({
   useEffect(() => {
     if (open) {
       if (anamnese) {
-        setForm({
+        const initial = {
           date: anamnese.date,
           medicalTreatment: anamnese.medical_treatment,
           medicalTreatmentDetails: anamnese.medical_treatment_details || '',
@@ -210,9 +215,11 @@ export function NewAnamneseDialog({
           bruxismDtmOrofacialPainDetails: (anamnese as any).bruxism_dtm_orofacial_pain_details || '',
           notes: anamnese.notes || '',
           observations: anamnese.observations || '',
-        });
+        };
+        setForm(initial);
+        initialFormRef.current = JSON.stringify(initial);
       } else {
-        setForm({
+        const initial = {
           date: (() => {
             const today = new Date();
             const year = today.getFullYear();
@@ -268,10 +275,33 @@ export function NewAnamneseDialog({
           bruxismDtmOrofacialPainDetails: '',
           notes: '',
           observations: '',
-        });
+        };
+        setForm(initial);
+        initialFormRef.current = JSON.stringify(initial);
       }
     }
   }, [open, anamnese?.id]);
+
+  // Há alterações não salvas se o formulário mudou desde que o dialog abriu.
+  const isDirty = initialFormRef.current !== '' && JSON.stringify(form) !== initialFormRef.current;
+
+  // Guarda de fechamento: se houver dados preenchidos e não salvos, confirma
+  // antes de descartar (evita perder anamnese por fechar sem clicar em Salvar).
+  const handleRequestClose = async (nextOpen: boolean) => {
+    if (nextOpen) { onOpenChange(true); return; }
+    if (saving) return;
+    if (isDirty) {
+      const ok = await confirm({
+        title: 'Sair sem salvar?',
+        description: 'Você preencheu a anamnese mas ainda não clicou em Salvar. Se sair agora, os dados preenchidos serão perdidos.',
+        variant: 'destructive',
+        confirmLabel: 'Sair sem salvar',
+        cancelLabel: 'Continuar preenchendo',
+      });
+      if (!ok) return;
+    }
+    onOpenChange(false);
+  };
 
   const handleVoiceResult = (result: ExtractionResult) => {
     const mapped = extractedToFormState(result.anamnesis);
@@ -363,7 +393,8 @@ export function NewAnamneseDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleRequestClose}>
       <DialogContent
         className="max-w-3xl max-h-[90vh]"
         onInteractOutside={(e) => e.preventDefault()}
@@ -703,7 +734,7 @@ export function NewAnamneseDialog({
         </ScrollArea>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button variant="outline" onClick={() => handleRequestClose(false)} disabled={saving}>
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving || voiceActive}>
@@ -712,6 +743,8 @@ export function NewAnamneseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {ConfirmDialog}
+    </>
   );
 }
 
