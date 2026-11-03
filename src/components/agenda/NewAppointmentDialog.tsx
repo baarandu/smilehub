@@ -24,6 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import { scheduleSettingsService, computeWeekIndex, type ScheduleSetting, type ProfessionalScheduleCycle } from '@/services/scheduleSettings';
 import { appointmentBlocksSlot } from '@/services/appointments';
+import { toast } from 'sonner';
 import { LocationsModal } from '@/components/profile/LocationsModal';
 import type { NewAppointmentDialogProps } from './types';
 
@@ -240,6 +241,13 @@ export function NewAppointmentDialog({
   };
 
   const handleSubmit = () => {
+    // Dentista é obrigatória quando a clínica tem dentistas cadastradas: sem
+    // isso a consulta fica sem dentist_id e bloqueia o horário para todos,
+    // impedindo que duas dentistas atendam no mesmo horário (salas diferentes).
+    if (dentists.length > 0 && !form.dentistId) {
+      toast.error('Selecione a dentista responsável pela consulta');
+      return;
+    }
     if (appointmentToEdit && onUpdate) {
       onUpdate(appointmentToEdit.id, form);
     } else {

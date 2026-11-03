@@ -184,6 +184,13 @@ export default function Agenda() {
       return;
     }
 
+    // Dentista obrigatória quando a clínica tem dentistas: garante que toda
+    // consulta tenha dentist_id, permitindo duas dentistas no mesmo horário.
+    if (dentists.length > 0 && !data.dentistId) {
+      toast.error('Selecione a dentista responsável pela consulta');
+      return;
+    }
+
     // Check for time conflict (per dentist if specified, include unassigned).
     // Consultas remarcadas/canceladas/faltas não ocupam mais o horário.
     const timeConflict = appointments.find(
@@ -220,6 +227,12 @@ export default function Agenda() {
   };
 
   const handleUpdateAppointment = async (id: string, data: { patientId: string; date: string; time: string; location: string; notes: string; procedure: string; dentistId: string; isWalkIn?: boolean }) => {
+    // Dentista obrigatória quando a clínica tem dentistas cadastradas.
+    if (dentists.length > 0 && !data.dentistId) {
+      toast.error('Selecione a dentista responsável pela consulta');
+      return;
+    }
+
     // Check for time conflict per dentist (exclude current appointment, include unassigned).
     // Consultas remarcadas/canceladas/faltas não ocupam mais o horário.
     const timeConflict = appointments.find(
