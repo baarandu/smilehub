@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addDays, format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,8 +31,13 @@ export function TimeEntryDialog({ open, onOpenChange, userId, entry, defaultDate
   const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
+  // Reseta o formulário só quando o dialog abre (ou troca de registro) — não a cada
+  // re-render da página, que acontece a cada minuto e apagaria o que foi digitado.
+  const defaultDateRef = useRef(defaultDate);
+  defaultDateRef.current = defaultDate;
   useEffect(() => {
     if (!open) return;
+    const defaultDate = defaultDateRef.current;
     setError(null);
     if (entry) {
       const inAt = new Date(entry.clock_in);
@@ -47,7 +52,7 @@ export function TimeEntryDialog({ open, onOpenChange, userId, entry, defaultDate
       setTimeOut('');
       setNextDay(false);
     }
-  }, [open, entry, defaultDate]);
+  }, [open, entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     setError(null);

@@ -144,6 +144,19 @@ BEGIN
     RAISE EXCEPTION 'Você não é membro desta clínica';
   END IF;
 
+  -- Ponto esquecido aberto de dia anterior: fechar agora lançaria 24h+.
+  -- Só o admin corrige (informando a saída real).
+  IF EXISTS (
+    SELECT 1 FROM time_entries
+    WHERE clinic_id = p_clinic_id
+      AND user_id = v_uid
+      AND clock_out IS NULL
+      AND (clock_in AT TIME ZONE 'America/Sao_Paulo')::date
+          < (now() AT TIME ZONE 'America/Sao_Paulo')::date
+  ) THEN
+    RAISE EXCEPTION 'Seu ponto de um dia anterior ficou aberto. Peça ao administrador para corrigir.';
+  END IF;
+
   UPDATE time_entries
      SET clock_out = now()
    WHERE clinic_id = p_clinic_id

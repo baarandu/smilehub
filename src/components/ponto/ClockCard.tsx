@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
-import { LogIn, LogOut } from 'lucide-react';
+import { AlertTriangle, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { formatMinutes, type TimeEntry } from '@/utils/timesheet';
+import { formatMinutes, isStaleOpen, type TimeEntry } from '@/utils/timesheet';
 
 interface ClockCardProps {
   openEntry: TimeEntry | null;
@@ -23,6 +23,21 @@ export function ClockCard({ openEntry, loading, pending, onClockIn, onClockOut }
 
   const since = openEntry ? new Date(openEntry.clock_in) : null;
 
+  // Esqueceu de sair num dia anterior: fechar agora lançaria 24h+ — só o admin corrige.
+  if (openEntry && since && isStaleOpen(openEntry, now)) {
+    return (
+      <Card>
+        <CardContent className="flex items-start gap-3 p-5 text-amber-800">
+          <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-semibold">Seu ponto de {format(since, "dd/MM 'às' HH:mm")} ficou aberto.</p>
+            <p className="text-sm">Peça ao administrador para informar a hora de saída. Depois disso você poderá bater o ponto normalmente.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5">
@@ -33,7 +48,6 @@ export function ClockCard({ openEntry, loading, pending, onClockIn, onClockOut }
           ) : since ? (
             <p className="text-lg font-semibold text-emerald-700">
               Trabalhando desde {format(since, 'HH:mm')}
-              {format(since, 'yyyy-MM-dd') !== format(now, 'yyyy-MM-dd') && ` de ${format(since, 'dd/MM')}`}
               {' — '}
               {formatMinutes(Math.max(0, differenceInMinutes(now, since)))}
             </p>

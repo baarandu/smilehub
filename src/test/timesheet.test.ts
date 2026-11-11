@@ -4,6 +4,7 @@ import {
   summarizeWeek,
   formatMinutes,
   hasOverlap,
+  isStaleOpen,
   type TimeEntry,
 } from '@/utils/timesheet';
 
@@ -128,5 +129,17 @@ describe('hasOverlap', () => {
   });
   it('candidato aberto (sem saída) sobrepõe tudo depois da entrada', () => {
     expect(hasOverlap(existing, { clock_in: d(10, 7), clock_out: null })).toBe(true);
+  });
+});
+
+describe('isStaleOpen', () => {
+  it('aberto de dia anterior é stale', () => {
+    expect(isStaleOpen(entry(d(10, 8), null), d(11, 7))).toBe(true);
+  });
+  it('aberto de hoje não é stale', () => {
+    expect(isStaleOpen(entry(d(10, 8), null), d(10, 18))).toBe(false);
+  });
+  it('fechado nunca é stale', () => {
+    expect(isStaleOpen(entry(d(10, 8), d(10, 12)), d(12))).toBe(false);
   });
 });

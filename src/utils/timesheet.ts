@@ -25,6 +25,11 @@ export interface WeekSummary {
   openStaleEntries: TimeEntry[]; // abertos de dia anterior a `now` — não somam
 }
 
+/** Ponto aberto iniciado em dia anterior a `now` — não soma e só o admin fecha. */
+export function isStaleOpen(e: TimeEntry, now: Date): boolean {
+  return !e.clock_out && !isSameDay(new Date(e.clock_in), now);
+}
+
 /** Segunda-feira 00:00 (horário local) da semana de `d`. */
 export function getWeekStart(d: Date): Date {
   return startOfWeek(d, { weekStartsOn: 1 });
@@ -57,10 +62,10 @@ export function summarizeWeek(
 
     if (e.clock_out) {
       day.minutes += differenceInMinutes(new Date(e.clock_out), inAt);
-    } else if (isSameDay(inAt, now)) {
-      day.minutes += Math.max(0, differenceInMinutes(now, inAt));
-    } else {
+    } else if (isStaleOpen(e, now)) {
       openStaleEntries.push(e);
+    } else {
+      day.minutes += Math.max(0, differenceInMinutes(now, inAt));
     }
   }
 
