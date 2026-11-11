@@ -29,6 +29,7 @@ const AccountingAgent = lazy(() => import("./pages/AccountingAgent"));
 const DentistAgent = lazy(() => import("./pages/DentistAgent"));
 const ProsthesisCenter = lazy(() => import("./pages/ProsthesisCenter"));
 const Ortodontia = lazy(() => import("./pages/Ortodontia"));
+const Ponto = lazy(() => import("./pages/Ponto"));
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -140,6 +141,7 @@ const AppContent = () => (
         <Route path="/dentista-ia" element={<AppLayout><DentistAgent /></AppLayout>} />
         <Route path="/protese" element={<AppLayout><ProsthesisCenter /></AppLayout>} />
         <Route path="/ortodontia" element={<AppLayout><Ortodontia /></AppLayout>} />
+        <Route path="/ponto" element={<AppLayout><Ponto /></AppLayout>} />
         <Route path="/planos" element={<AppLayout><Pricing /></AppLayout>} />
         <Route path="/configuracoes/matriz-risco" element={<AppLayout><LGPDRiskMatrix /></AppLayout>} />
         <Route path="/configuracoes/compliance" element={<AppLayout><ComplianceChecklist /></AppLayout>} />
