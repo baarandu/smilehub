@@ -9,12 +9,12 @@
 CREATE TABLE IF NOT EXISTS public.time_entries (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   uuid NOT NULL REFERENCES public.clinics(id) ON DELETE CASCADE,
-  user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id     uuid NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT, -- histórico de ponto deve ser preservado (retenção trabalhista)
   clock_in    timestamptz NOT NULL,
   clock_out   timestamptz NULL,
-  created_by  uuid REFERENCES auth.users(id),
+  created_by  uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_by  uuid REFERENCES auth.users(id),
+  updated_by  uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   updated_at  timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT time_entries_out_after_in CHECK (clock_out IS NULL OR clock_out > clock_in)
 );
@@ -50,6 +50,26 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public._time_entries_stamp_insert()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL THEN
+    NEW.created_by := auth.uid();
+    NEW.updated_by := auth.uid();
+  END IF;
+  NEW.created_at := now();
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tr_time_entries_stamp_insert ON public.time_entries;
+CREATE TRIGGER tr_time_entries_stamp_insert
+  BEFORE INSERT ON public.time_entries
+  FOR EACH ROW EXECUTE FUNCTION public._time_entries_stamp_insert();
+
 DROP TRIGGER IF EXISTS tr_time_entries_touch ON public.time_entries;
 CREATE TRIGGER tr_time_entries_touch
   BEFORE UPDATE ON public.time_entries
@@ -58,7 +78,7 @@ CREATE TRIGGER tr_time_entries_touch
 -- ============================================================
 -- Helpers
 -- ============================================================
-CREATE OR REPLACE FUNCTION public.is_clinic_admin(p_clinic_id uuid)
+CREATE OR REPLACE FUNCTION public.user_is_clinic_owner_or_admin(p_clinic_id uuid)
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -129,7 +149,6 @@ BEGIN
    WHERE clinic_id = p_clinic_id
      AND user_id = v_uid
      AND clock_out IS NULL
-     AND clock_in < now()
   RETURNING * INTO v_row;
 
   IF v_row.id IS NULL THEN
@@ -148,7 +167,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT is_clinic_admin(p_clinic_id) THEN
+  IF NOT user_is_clinic_owner_or_admin(p_clinic_id) THEN
     RAISE EXCEPTION 'Apenas o dono ou administrador pode alterar a jornada';
   END IF;
   IF p_hours IS NULL OR p_hours <= 0 OR p_hours > 168 THEN
@@ -159,11 +178,15 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.is_clinic_admin(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.user_is_clinic_owner_or_admin(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.clock_in(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.clock_out(uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_weekly_hours_limit(uuid, numeric) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.is_clinic_admin(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.user_is_clinic_owner_or_admin(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.clock_in(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.clock_out(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.set_weekly_hours_limit(uuid, numeric) FROM anon;
+GRANT EXECUTE ON FUNCTION public.user_is_clinic_owner_or_admin(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clock_in(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.clock_out(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_weekly_hours_limit(uuid, numeric) TO authenticated;
@@ -177,21 +200,21 @@ DROP POLICY IF EXISTS "time_entries_select" ON public.time_entries;
 CREATE POLICY "time_entries_select" ON public.time_entries FOR SELECT
   USING (
     (user_id = auth.uid() AND user_is_clinic_member(auth.uid(), clinic_id))
-    OR is_clinic_admin(clinic_id)
+    OR user_is_clinic_owner_or_admin(clinic_id)
   );
 
 DROP POLICY IF EXISTS "time_entries_insert" ON public.time_entries;
 CREATE POLICY "time_entries_insert" ON public.time_entries FOR INSERT
   WITH CHECK (
-    is_clinic_admin(clinic_id)
+    user_is_clinic_owner_or_admin(clinic_id)
     AND user_is_clinic_member(user_id, clinic_id)
   );
 
 DROP POLICY IF EXISTS "time_entries_update" ON public.time_entries;
 CREATE POLICY "time_entries_update" ON public.time_entries FOR UPDATE
-  USING (is_clinic_admin(clinic_id))
-  WITH CHECK (is_clinic_admin(clinic_id));
+  USING (user_is_clinic_owner_or_admin(clinic_id))
+  WITH CHECK (user_is_clinic_owner_or_admin(clinic_id));
 
 DROP POLICY IF EXISTS "time_entries_delete" ON public.time_entries;
 CREATE POLICY "time_entries_delete" ON public.time_entries FOR DELETE
-  USING (is_clinic_admin(clinic_id));
+  USING (user_is_clinic_owner_or_admin(clinic_id));
