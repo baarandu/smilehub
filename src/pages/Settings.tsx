@@ -20,7 +20,8 @@ import {
   ClipboardCheck,
   PenLine,
   FlaskConical,
-  HeartHandshake
+  HeartHandshake,
+  Clock
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useClinic } from "@/contexts/ClinicContext";
@@ -28,6 +29,7 @@ import { useState } from "react";
 import { LocationsModal } from "@/components/profile/LocationsModal";
 import { ProfileSettingsModal } from "@/components/profile/ProfileSettingsModal";
 import { TreatmentPlansModal } from "@/components/patients/budget/TreatmentPlansModal";
+import { WeeklyLimitDialog } from "@/components/ponto/WeeklyLimitDialog";
 
 interface SettingCardProps {
   icon: React.ElementType;
@@ -64,6 +66,7 @@ export default function Settings() {
   const { role, isAdmin } = useClinic();
   const [showLocationsModal, setShowLocationsModal] = useState(false);
   const [showTreatmentPlansModal, setShowTreatmentPlansModal] = useState(false);
+  const [showWeeklyLimit, setShowWeeklyLimit] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalTab, setProfileModalTab] = useState<'clinic' | 'team' | 'audit'>('clinic');
 
@@ -140,6 +143,14 @@ export default function Settings() {
               title="Programa de Fidelidade"
               description="Pacotes de benefícios para pacientes: consultas inclusas, descontos e brindes"
               onClick={() => setShowTreatmentPlansModal(true)}
+            />
+          )}
+          {isAdmin && (
+            <SettingCard
+              icon={Clock}
+              title="Jornada semanal"
+              description="Limite de horas usado no controle de ponto"
+              onClick={() => setShowWeeklyLimit(true)}
             />
           )}
         </div>
@@ -264,6 +275,7 @@ export default function Settings() {
         open={showLocationsModal}
         onOpenChange={setShowLocationsModal}
       />
+      <WeeklyLimitDialog open={showWeeklyLimit} onOpenChange={setShowWeeklyLimit} />
       <TreatmentPlansModal
         open={showTreatmentPlansModal}
         onOpenChange={setShowTreatmentPlansModal}
