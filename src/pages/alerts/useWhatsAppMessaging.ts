@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { evolutionApi } from '@/services/evolutionApi';
 import { getPatients } from '@/services/patients';
+import { matchesSearch } from '@/utils/search';
 import { Patient } from '@/types/database';
 import { toast } from 'sonner';
 import { getWhatsAppNumber } from '@/utils/formatters';
@@ -188,9 +189,11 @@ export function useWhatsAppMessaging({ getTemplateByType, dismissAlert }: UseWha
         setSearchQuery('');
     };
 
+    const searchDigits = searchQuery.replace(/\D/g, '');
     const filteredPatients = patients.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.phone.includes(searchQuery)
+        // legal_guardian existe na view mas falta nos tipos gerados
+        matchesSearch(searchQuery, [p.name, p.mother_name, p.father_name, (p as { legal_guardian?: string | null }).legal_guardian]) ||
+        (searchDigits.length >= 2 && (p.phone ?? '').replace(/\D/g, '').includes(searchDigits))
     );
 
     return {

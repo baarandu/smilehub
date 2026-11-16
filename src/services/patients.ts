@@ -283,45 +283,68 @@ export async function searchPatients(query: string, clinicId?: string): Promise<
     return [];
   }
 
-  // Sanitize: escape PostgREST special chars and SQL wildcards
-  const sanitized = query
-    .trim()
-    .slice(0, 100)
-    .replace(/[%_\\]/g, '\\$&')
-    .replace(/[,()]/g, '');
+  const trimmed = query.trim().slice(0, 100);
 
-  if (!sanitized) return [];
+  // Busca no banco: palavras em qualquer ordem, sem acento, em nome do paciente
+  // ou da mãe/pai/responsável legal; mais telefone e CPF (últimos 4).
+  // Ver supabase/migrations/20261116_patient_search_unaccent_tokens.sql.
+  const { data: idRows, error: rpcError } = await supabase.rpc('search_patient_ids', {
+    p_clinic_id: effectiveClinicId,
+    p_query: trimmed,
+    p_limit: 20,
+  });
 
-  // Extract only digits for phone/CPF search
-  const digitsOnly = sanitized.replace(/\D/g, '');
-
-  // Build OR conditions
-  // Além do nome do paciente, busca pelos responsáveis (mãe, pai, responsável
-  // legal) — caso comum: NF emitida no nome do responsável de paciente criança.
-  const conditions = [
-    `name.ilike.%${sanitized}%`,
-    `mother_name.ilike.%${sanitized}%`,
-    `father_name.ilike.%${sanitized}%`,
-    `legal_guardian.ilike.%${sanitized}%`,
-  ];
-
-  if (digitsOnly.length >= 2) {
-    // Search phone by digits (matches against phone_digits column — no formatting needed)
-    conditions.push(`phone_digits.ilike.%${digitsOnly}%`);
-    // Search CPF: use last 4 digits of input (cpf_last4 only stores last 4)
-    const cpfSearch = digitsOnly.length > 4 ? digitsOnly.slice(-4) : digitsOnly;
-    conditions.push(`cpf_last4.ilike.%${cpfSearch}%`);
+  if (rpcError) {
+    // RPC ainda não aplicada no banco (PGRST202 / 42883): cai na busca antiga
+    // por palavras, sem tratamento de acento.
+    if (rpcError.code === 'PGRST202' || rpcError.code === '42883') {
+      return searchPatientsLegacy(trimmed, effectiveClinicId);
+    }
+    throw rpcError;
   }
 
-  const q = supabase
+  const ids = ((idRows as unknown as { id: string }[] | null) ?? []).map((r) => r.id);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
     .from('patients_secure')
     .select('*')
-    .or(conditions.join(','))
+    .in('id', ids)
     .eq('clinic_id', effectiveClinicId)
-    .order('name')
-    .limit(20);
+    .order('name') as { data: Patient[] | null; error: any };
 
-  const { data, error } = await q as { data: Patient[] | null; error: any };
+  if (error) throw error;
+  return data || [];
+}
+
+/** Fallback sem RPC: cada palavra precisa casar em nome/mãe/pai/responsável. */
+async function searchPatientsLegacy(query: string, clinicId: string): Promise<Patient[]> {
+  // Escapa curingas SQL e remove caracteres especiais do PostgREST
+  const sanitize = (v: string) => v.replace(/[%_\\]/g, '\\$&').replace(/[,()]/g, '');
+  const tokens = query.split(/\s+/).map(sanitize).filter(Boolean);
+  const digitsOnly = query.replace(/\D/g, '');
+
+  const nameFields = ['name', 'mother_name', 'father_name', 'legal_guardian'];
+  const tokenGroup = (t: string) => `or(${nameFields.map((f) => `${f}.ilike.%${t}%`).join(',')})`;
+
+  const branches: string[] = [];
+  if (tokens.length > 0) {
+    branches.push(`and(${tokens.map(tokenGroup).join(',')})`);
+  }
+  if (digitsOnly.length >= 2) {
+    branches.push(`phone_digits.ilike.%${digitsOnly}%`);
+    const cpfSearch = digitsOnly.length > 4 ? digitsOnly.slice(-4) : digitsOnly;
+    branches.push(`cpf_last4.ilike.%${cpfSearch}%`);
+  }
+  if (branches.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('patients_secure')
+    .select('*')
+    .or(branches.join(','))
+    .eq('clinic_id', clinicId)
+    .order('name')
+    .limit(20) as { data: Patient[] | null; error: any };
 
   if (error) throw error;
   return data || [];

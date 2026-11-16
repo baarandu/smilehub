@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PatientFormData, Patient } from '@/types/database';
 import { usePatientSearch } from '@/hooks/usePatients';
+import { matchesSearch } from '@/utils/search';
 import { useDebounce } from '@/hooks/useDebounce';
 
 /** Remove accents, collapse whitespace, lowercase — for duplicate comparison */
@@ -145,7 +146,7 @@ export function PatientForm({
   // para o aviso de duplicado só interessa o nome do próprio paciente.
   const { data: searchMatches } = usePatientSearch(isEditing ? '' : debouncedName);
   const existingPatients = searchMatches?.filter((p) =>
-    p.name.toLowerCase().includes(debouncedName.trim().toLowerCase())
+    matchesSearch(debouncedName, [p.name])
   );
   const showDuplicateWarning = !isEditing && existingPatients && existingPatients.length > 0;
 

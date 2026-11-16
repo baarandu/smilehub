@@ -24,6 +24,7 @@ import { PayerDataDialog } from './PayerDataDialog';
 import { IRSummaryCards } from './IRSummaryCards';
 import type { TransactionWithIR, PJSource } from '@/types/incomeTax';
 import { formatCurrency } from '@/utils/formatters';
+import { matchesSearch as matchesTextSearch } from '@/utils/search';
 
 interface IRIncomeTabProps {
   transactions: TransactionWithIR[];
@@ -57,12 +58,12 @@ export function IRIncomeTab({
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       // Search filter (combines local and global search)
-      const searchLower = effectiveSearch.toLowerCase();
-      const matchesSearch =
-        !effectiveSearch ||
-        t.description.toLowerCase().includes(searchLower) ||
-        t.patient?.name?.toLowerCase().includes(searchLower) ||
-        t.payer_name?.toLowerCase().includes(searchLower);
+      // Palavras em qualquer ordem, sem acento (descrição, paciente, pagador)
+      const matchesSearch = matchesTextSearch(effectiveSearch, [
+        t.description,
+        t.patient?.name,
+        t.payer_name,
+      ]);
 
       // Payer type filter
       let matchesPayerType = true;
