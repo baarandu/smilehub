@@ -27,7 +27,7 @@ function formatHours(h: number): string {
 export default function Ponto() {
   const { clinicId, roles, members } = useClinic();
   // Mesma regra da RLS (user_is_clinic_owner_or_admin)
-  const canManage = roles.includes('admin') || roles.includes('owner');
+  const canManage = roles.includes('admin') || (roles as string[]).includes('owner');
 
   const [myId, setMyId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -41,10 +41,19 @@ export default function Ponto() {
     supabase.auth.getUser().then(({ data }) => setMyId(data.user?.id ?? null));
   }, []);
 
-  // Ao trocar de clínica, volta para a própria usuária
+  // Admin abre direto na funcionária (prefere secretária); demais veem o próprio ponto.
+  const defaultUserId = useMemo(() => {
+    if (!myId) return null;
+    if (!canManage) return myId;
+    const others = (members || []).filter(m => m.user_id !== myId);
+    const secretary = others.find(m => m.roles.length > 0 && m.roles.every(r => r === 'assistant' || r === 'viewer'));
+    return secretary?.user_id ?? others[0]?.user_id ?? myId;
+  }, [myId, canManage, members]);
+
+  // Ao trocar de clínica (ou carregar membros), volta para o padrão
   useEffect(() => {
-    setSelectedUserId(myId);
-  }, [myId, clinicId]);
+    setSelectedUserId(defaultUserId);
+  }, [defaultUserId, clinicId]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
@@ -99,6 +108,8 @@ export default function Ponto() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Ponto</h1>
         {canManage && members.length > 0 && (
+          <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground shrink-0">Ver ponto de:</span>
           <Select value={selectedUserId ?? undefined} onValueChange={setSelectedUserId}>
             <SelectTrigger className="sm:w-64">
               <SelectValue placeholder="Funcionária" />
@@ -112,6 +123,7 @@ export default function Ponto() {
               ))}
             </SelectContent>
           </Select>
+          </div>
         )}
       </div>
 
